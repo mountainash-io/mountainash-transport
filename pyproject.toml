@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "mountainash_utils_dataframes"
-version = "0.202403.0"
+name = "mountainash_utils_files"
+version = "0.1.0"
 description = ""
 authors = ["Nathaniel Ramm <nathaniel.ramm@mountainash.io>"]
 
