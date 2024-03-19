@@ -12,7 +12,7 @@ from mountainash_utils_files import PathHelper
 from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 from mountainash_constants import CONST_STORAGESYSTEM
 
-from paramiko import SFTPClient, SSHClient, AutoAddPolicy, SFTPAttributes
+from paramiko import SFTPClient, SSHClient,  SFTPAttributes
 
 class SFTP_FileHelper(Base_FileHelper):
 

@@ -5,10 +5,10 @@ import re
 import platform
 from functools import lru_cache
 
-from  mountainash_acdrs.utils.os_utils import is_platform_os_windows, get_platform_slash
-from mountainash_acdrs.utils.dataclass_utils import DataclassUtils
+from mountainash_utils.os_utils import is_platform_os_windows, get_platform_slash
+from mountainash_utils_dataclasses import DataclassUtils
 
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
+from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
 
 class BasePathHelper(ABC):
 

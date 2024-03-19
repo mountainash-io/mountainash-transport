@@ -537,7 +537,7 @@ class Base_FileHelper(ABC):
 
     def init_gpg(self):
 
-        self.gpg_client = GPG(homedir=self.gpg_home)
+        self.gpg_client = GPG(gnupghome=self.gpg_home)
         self.import_gpg_keys()
 
         if not self.gpg_client:

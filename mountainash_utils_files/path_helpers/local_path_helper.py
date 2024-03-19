@@ -1,7 +1,8 @@
 from upath import UPath
 from typing import Union, List, Optional
 from .base_path_helper import BasePathHelper
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+
+from mountainash_constants import CONST_STORAGESYSTEM
 
 class LocalPathHelper(BasePathHelper):
 
