@@ -7,12 +7,9 @@ from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFact
 # from mountainash_acdrs.utils.data_storage.base_data_storage import Base_FileHelper
 # from mountainash_acdrs.utils.data_storage.data_storage_factory import FileHelperFactory
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings.settings_parameters import SettingsParameters
-from mountainash_acdrs.settings import AuthSettings, get_auth_settings
-
-
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_constants import CONST_STORAGESYSTEM
 
 import shutil
 
@@ -73,8 +70,8 @@ class FileInterface:
             raise ValueError(f"Source storage system not defined in destination settings for auth namespace '{destination_auth_settings.STORAGE_NAMESPACE}'")
 
         #Storage System Validation
-        path_source_storage_system: str|None = PathUtils.identify_storage_system(path=source_path)
-        path_destination_storage_system: str|None = PathUtils.identify_storage_system(path=destination_path)
+        path_source_storage_system: str|None = PathHelper.identify_storage_system(path=source_path)
+        path_destination_storage_system: str|None = PathHelper.identify_storage_system(path=destination_path)
 
         if path_source_storage_system != settings_source_storage_system:
             raise ValueError(f"Storage system in path '{path_source_storage_system}' does not match storage system in settings '{settings_source_storage_system}'")
@@ -130,8 +127,8 @@ class FileInterface:
                     ) -> bool|Any:
 
         #Format Paths
-        u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-        u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+        u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+        u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
         if not u_source_path:
             raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -185,8 +182,8 @@ class FileInterface:
                     ) -> bool|Any:
 
         #Format Paths
-        u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-        u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+        u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+        u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
         if not u_source_path:
             raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -235,8 +232,8 @@ class FileInterface:
                     ) -> bool|Any:
 
         #Format Paths
-        u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-        u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+        u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+        u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
         if not u_source_path:
             raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -289,8 +286,8 @@ class FileInterface:
                     ) -> bool|Any:
 
         #Format Paths
-        u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-        u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+        u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+        u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
         if not u_source_path:
             raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -342,8 +339,8 @@ class FileInterface:
                     ) -> bool|Any:
 
         #Format Paths
-        u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-        u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+        u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+        u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
         if not u_source_path:
             raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -388,7 +385,7 @@ class FileInterface:
                      **kwargs) -> List[str]:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -402,7 +399,7 @@ class FileInterface:
                     **kwargs) -> bool:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -416,7 +413,7 @@ class FileInterface:
                            **kwargs) -> str:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -430,7 +427,7 @@ class FileInterface:
                  ) -> int:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -444,7 +441,7 @@ class FileInterface:
                       **kwargs) -> int:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
 
@@ -459,7 +456,7 @@ class FileInterface:
                     ) -> bool:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
 
@@ -474,7 +471,7 @@ class FileInterface:
                      ) -> bool:    
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -488,7 +485,7 @@ class FileInterface:
                          ) -> bool:
 
         if not auth_parameters:
-            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
             auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)

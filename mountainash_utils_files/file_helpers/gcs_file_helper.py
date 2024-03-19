@@ -5,8 +5,8 @@ from upath import UPath
 from smart_open import open
 from .base_file_helper import Base_FileHelper
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 
 class GCS_FileHelpere(Base_FileHelper):
 
@@ -48,7 +48,7 @@ class GCS_FileHelpere(Base_FileHelper):
         List available data sources in the specified path or directory.
         """
 
-        # formatted_path = PathUtils.format_path(path) 
+        # formatted_path = PathHelper.format_path(path) 
         # return list(formatted_path.fs.glob(path))
             
         return [str(p) for p in UPath(path).glob(kwargs.get('pattern', '*'))]
@@ -80,7 +80,7 @@ class GCS_FileHelpere(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -95,7 +95,7 @@ class GCS_FileHelpere(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -110,7 +110,7 @@ class GCS_FileHelpere(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -134,7 +134,7 @@ class GCS_FileHelpere(Base_FileHelper):
             fs = FilesystemInterface('local')
             created = fs.create_directory('data')
         """
-        u_path: UPath|None = PathUtils.format_path(path)
+        u_path: UPath|None = PathHelper.format_path(path)
 
 
         if not u_path:

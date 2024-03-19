@@ -12,11 +12,11 @@ import gzip
 import polars
 import pyarrow.parquet as pq
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.utils import DataclassUtils
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files import PathHelper
+from mountainash_utils_dataclasses import DataclassUtils
+from mountainash_constants import CONST_STORAGESYSTEM
 
-from mountainash_acdrs.settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
 
 class Base_FileHelper(ABC):
 
@@ -409,8 +409,8 @@ class Base_FileHelper(ABC):
 
             if self.ssh_keypath is not None:
 
-                u_ssh_keypath: UPath | None = PathUtils.format_path(self.ssh_keypath)
-                ssh_keypath_str: str | None = PathUtils.path_to_str(u_ssh_keypath)
+                u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
+                ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
 
                 self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
                                         username=self.ssh_username, password=self.ssh_password, 
@@ -547,8 +547,8 @@ class Base_FileHelper(ABC):
     def import_gpg_keys(self):
 
         if self.gpg_key_file and self.gpg_client:
-            u_gpg_key_file: UPath | None = PathUtils.format_path(path=self.gpg_key_file)
-            str_gpg_key_file = PathUtils.path_to_str(path=u_gpg_key_file)
+            u_gpg_key_file: UPath | None = PathHelper.format_path(path=self.gpg_key_file)
+            str_gpg_key_file = PathHelper.path_to_str(path=u_gpg_key_file)
 
             #May need more options than just a local file
             with open(uri=str_gpg_key_file, mode='rb') as file:
@@ -658,7 +658,7 @@ class Base_FileHelper(ABC):
         if mode not in valid_modes:
             raise ValueError(f"Invalid mode: {mode}")
 
-        u_path: UPath|None = PathUtils.format_path(path=path)
+        u_path: UPath|None = PathHelper.format_path(path=path)
         
         if not u_path:
             raise ValueError("Invalid path")
@@ -889,7 +889,7 @@ class Base_FileHelper(ABC):
         self.connect()
 
         #Format S3 Destination
-        u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
+        u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
 
         if self.io_client and source_stream and u_destination_path:
 
@@ -908,8 +908,8 @@ class Base_FileHelper(ABC):
                                                            
 
                 # #Validate Destination
-                # bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_destination_path)
-                # object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_destination_path)
+                # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
+                # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
 
                 # bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
                 # if not bucket_exists:
@@ -945,8 +945,8 @@ class Base_FileHelper(ABC):
         self.connect()
 
         #Format S3 Destination
-        u_destination_path = PathUtils.format_path(path=destination_path)
-        u_source_path: UPath | None = PathUtils.format_path(path=source_path)
+        u_destination_path = PathHelper.format_path(path=destination_path)
+        u_source_path: UPath | None = PathHelper.format_path(path=source_path)
 
         #Format Source
 
@@ -970,11 +970,11 @@ class Base_FileHelper(ABC):
                                                            decompress=decompress)
 
                 # # Format Source
-                # source_path_str: str | None = PathUtils.path_to_str(path=u_source_path)
+                # source_path_str: str | None = PathHelper.path_to_str(path=u_source_path)
 
                 # #validate Destination
-                # bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_destination_path)
-                # object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_destination_path)
+                # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
+                # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
                 # bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
                 # if not bucket_exists:
                 #     return False
@@ -1004,7 +1004,7 @@ class Base_FileHelper(ABC):
         self.connect()
 
         #Format Source
-        u_source_path = PathUtils.format_path(path=source_path)
+        u_source_path = PathHelper.format_path(path=source_path)
 
         #Validate source
         if not u_source_path:
@@ -1029,8 +1029,8 @@ class Base_FileHelper(ABC):
                                                            compress=compress,
                                                            decompress=decompress)
 
-                # bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_source_path)
-                # object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_source_path)
+                # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
+                # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
 
                 # get_obj = self.io_client.get_object(bucket_name=bucket_name, object_name=object_name, length=self.get_size(path=u_source_path))
 
@@ -1072,8 +1072,8 @@ class Base_FileHelper(ABC):
         self.connect()
 
         #Format Paths
-        u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
-        u_source_path: UPath | None = PathUtils.format_path(path=source_path)
+        u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
+        u_source_path: UPath | None = PathHelper.format_path(path=source_path)
  
         #Validate source        
         if not u_source_path:
@@ -1095,11 +1095,11 @@ class Base_FileHelper(ABC):
                                                            compress=compress,
                                                            decompress=decompress)
 
-                # str_destination_path: str | None = PathUtils.path_to_str(path=u_destination_path)
+                # str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
                 
                 # #Format S3 Source
-                # bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_source_path)
-                # object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_source_path)
+                # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
+                # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
 
                 # #MiniIO Client
                 # fget:  Any = self.io_client.fget_object(bucket_name=bucket_name, object_name=object_name, file_path=str_destination_path)
@@ -1128,7 +1128,7 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
-        u_path: UPath|None = PathUtils.format_path(path=path)
+        u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
@@ -1144,7 +1144,7 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
-        u_path: UPath|None = PathUtils.format_path(path=path)
+        u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
@@ -1253,4 +1253,4 @@ class Base_FileHelper(ABC):
         :param path: The path to format.
         :return: The formatted path as a string.
         """
-        return PathUtils.path_to_str(path=path)
+        return PathHelper.path_to_str(path=path)

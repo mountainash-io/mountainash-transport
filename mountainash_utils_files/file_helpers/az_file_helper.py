@@ -9,8 +9,9 @@ from azure.core.exceptions import AzureError
 
 from .base_file_helper import Base_FileHelper
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+
 class AZ_FileHelper(Base_FileHelper):
 
     def __init__(self, 
@@ -74,7 +75,7 @@ class AZ_FileHelper(Base_FileHelper):
 #         List available data sources in the specified path or directory.
 #         """
 
-#         # formatted_path = PathUtils.format_path(path) 
+#         # formatted_path = PathHelper.format_path(path) 
 #         # return list(formatted_path.fs.glob(path))
             
 #         return [str(p) for p in UPath(path).glob(kwargs.get('pattern', '*'))]
@@ -106,7 +107,7 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathUtils.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)        
 
 #         return u_path.exists()
 
@@ -118,7 +119,7 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathUtils.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)        
 
 #         return u_path.is_dir()
     
@@ -130,7 +131,7 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathUtils.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)        
 
 #         return u_path.is_file()    
 
@@ -152,7 +153,7 @@ class AZ_FileHelper(Base_FileHelper):
 #             fs = FilesystemInterface('local')
 #             created = fs.create_directory('data')
 #         """
-#         u_path: UPath = PathUtils.format_path(path)
+#         u_path: UPath = PathHelper.format_path(path)
 
 #         try:
 #             if not u_path.exists():

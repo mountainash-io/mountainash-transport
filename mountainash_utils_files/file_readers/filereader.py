@@ -4,10 +4,11 @@ import polars as pl
 from upath import UPath
 import traceback
 import io
-from mountainash_acdrs.constants.app_constants import CONST_FILESYSTEM, CONST_DATAFILEFORMAT, CONST_DATAFRAME_FRAMEWORK
-from mountainash_acdrs.utils import FilesystemInterface, DataclassUtils, BaseDataFrame, DataFrameFactory
-from mountainash_acdrs.utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_constants import CONST_DATAFILEFORMAT, CONST_DATAFRAME_FRAMEWORK
+from mountainash_utils_dataclasses import DataclassUtils
+from mountainash_utils_dataframes import BaseDataFrame, DataFrameFactory
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 from ..file_helpers import Base_FileHelper
 from ..file_interface import get_file_helper_object, FileInterface
 
@@ -69,7 +70,7 @@ class FileReader:
                       ) -> Optional[BaseDataFrame]:
         
 
-        u_file_path: UPath|None = PathUtils.format_path(path=file_path)
+        u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
         if not self.source_storage_interface.path_exists(path=u_file_path):
             print(f"File not found: {u_file_path}")
@@ -139,7 +140,7 @@ class FileReader:
                      
                      ) -> Optional[BaseDataFrame]:
 
-        u_file_path: UPath|None = PathUtils.format_path(path=file_path)
+        u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
         if not u_file_path:
             raise ValueError(f"Invalid file path: {file_path}")

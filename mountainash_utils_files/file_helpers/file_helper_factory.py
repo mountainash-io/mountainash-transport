@@ -13,11 +13,11 @@ from .s3_file_helper import S3_FileHelper
 from .s3u_file_helper import S3U_FileHelper
 
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsUtils, get_auth_settings, AuthSettings
+from mountainash_utils_files import PathHelper
+from mountainash_settings import get_auth_settings, AuthSettings
 
-from mountainash_acdrs.settings.settings_parameters import SettingsParameters
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_settings import SettingsParameters
+from mountainash_constants import CONST_STORAGESYSTEM
 
 
 
@@ -92,7 +92,7 @@ class FileHelperFactory:
         # Check the path if provided
         # Move this to the base class for validation...
         # if path:
-        #     path_storage_system = PathUtils.identify_storage_system(path=path)
+        #     path_storage_system = PathHelper.identify_storage_system(path=path)
 
         #     if path_storage_system != auth_settings.STORAGE_SYSTEM:
         #         raise ValueError(f"Storage system in path '{path_storage_system}' does not match storage system in settings '{auth_settings.STORAGE_SYSTEM}'")

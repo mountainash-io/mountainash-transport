@@ -2,33 +2,33 @@ from upath import UPath
 from typing import Union, Any, Type, Optional
 import platform
 
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
-from mountainash_acdrs.utils.path_utils import BasePathUtils, LocalPathUtils, S3PathUtils, GCSPathUtils, AZPathUtils, SFTPPathUtils, SSHPathUtils
+from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_utils_files.path_helpers import BasePathHelper, LocalPathHelper, S3PathHelper, GCSPathHelper, AZPathHelper, SFTPPathHelper, SSHPathHelper
 
 
 class PathHelper:
 
     path_util_classes = {
-        CONST_STORAGESYSTEM.LOCAL_DISK.value: LocalPathUtils,
-        CONST_STORAGESYSTEM.S3.value:   S3PathUtils,
-        CONST_STORAGESYSTEM.S3U.value:  S3PathUtils,
-        CONST_STORAGESYSTEM.GCS.value:  GCSPathUtils,
-        CONST_STORAGESYSTEM.AZ.value:   AZPathUtils,
-        CONST_STORAGESYSTEM.SFTP.value: SFTPPathUtils,
-        CONST_STORAGESYSTEM.SSH.value:  SSHPathUtils,
+        CONST_STORAGESYSTEM.LOCAL_DISK.value: LocalPathHelper,
+        CONST_STORAGESYSTEM.S3.value:   S3PathHelper,
+        CONST_STORAGESYSTEM.S3U.value:  S3PathHelper,
+        CONST_STORAGESYSTEM.GCS.value:  GCSPathHelper,
+        CONST_STORAGESYSTEM.AZ.value:   AZPathHelper,
+        CONST_STORAGESYSTEM.SFTP.value: SFTPPathHelper,
+        CONST_STORAGESYSTEM.SSH.value:  SSHPathHelper,
         # Add other filesystem formatters as needed
     }
 
 
     @classmethod
-    def _get_util_class(cls, storage_system: str) -> Type[BasePathUtils]:
+    def _get_util_class(cls, storage_system: str) -> Type[BasePathHelper]:
         """
         Returns the path utility class for the given storage system.
 
         :param storage_system: The storage system for which to get the path utility class.
         :return: The path utility class for the given storage system.
         """
-        util_class: Optional[Type[BasePathUtils]] = cls.path_util_classes.get(storage_system, None)
+        util_class: Optional[Type[BasePathHelper]] = cls.path_util_classes.get(storage_system, None)
 
         if not util_class:
             raise ValueError(f"Unsupported storage_system: {storage_system}")
@@ -46,7 +46,7 @@ class PathHelper:
         #     return path
 
         storage_system: str|None = cls.identify_storage_system(path)
-        util_class: Type[BasePathUtils] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathUtils
+        util_class: Type[BasePathHelper] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathHelper
 
         return util_class.format_path(path=path)
 
@@ -54,7 +54,7 @@ class PathHelper:
     def combine_path_and_filename(cls, path:  Optional[Union[str, UPath]], filename: Optional[str]) -> Optional[UPath]:
 
         storage_system: str | None = cls.identify_storage_system(path)
-        util_class: Type[BasePathUtils] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathUtils
+        util_class: Type[BasePathHelper] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathHelper
 
         return util_class.combine_path_and_filename(path=path, filename=filename)
 
@@ -65,7 +65,7 @@ class PathHelper:
             return None
 
         storage_system: str | None = cls.identify_storage_system(path)
-        util_class: Type[BasePathUtils] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathUtils
+        util_class: Type[BasePathHelper] = cls._get_util_class(storage_system=storage_system) if storage_system else LocalPathHelper
 
         return util_class.path_to_str(path=path)
 
@@ -78,9 +78,9 @@ class PathHelper:
         :return: A string indicating the storage system ('local', 's3', 'gcs', 'azure', 'sftp', 'ssh').
         """
 
-        return BasePathUtils.identify_storage_system(path=path)
+        return BasePathHelper.identify_storage_system(path=path)
 
     @classmethod
     def get_local_platform_slash(cls) -> str:
 
-        return BasePathUtils.get_local_platform_slash()
+        return BasePathHelper.get_local_platform_slash()

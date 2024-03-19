@@ -13,10 +13,13 @@ import io
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
-from mountainash_acdrs.constants.app_constants import CONST_FILESYSTEM, CONST_DATAFILEFORMAT, CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, CONST_ACRDS_VERSION
-from mountainash_acdrs.utils import FilesystemInterface, DataclassUtils, DataFrameUtils, BaseDataFrame, DataFrameFactory
-from mountainash_acdrs.utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings, get_app_settings, AppSettings
+from mountainash_acdrs_constants import  CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, CONST_ACRDS_VERSION
+from mountainash_constants import CONST_FILESYSTEM, CONST_DATAFILEFORMAT
+from mountainash_utils_dataclasses import  DataclassUtils
+from mountainash_utils_dataframes import   DataFrameUtils, BaseDataFrame, DataFrameFactory
+from mountainash_utils_files import PathHelper
+from mountainash_acdrs_settings import get_app_settings, AppSettings
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 
 from ..file_helpers import Base_FileHelper
 from ..file_interface import get_file_helper_object, FileInterface
@@ -87,7 +90,7 @@ class FileWriter:
         # test on s3, local, memory, azure, gcs
         # also support uploading to a database
 
-        u_output_file_path: UPath | None = PathUtils.format_path(output_file_path)
+        u_output_file_path: UPath | None = PathHelper.format_path(output_file_path)
         if not u_output_file_path:
             print(f"Invalid file path: {output_file_path}")
             return False
@@ -129,7 +132,7 @@ class FileWriter:
                       , **kwargs) -> bool:
             
 
-        u_output_file_path: UPath | None = PathUtils.format_path(path=output_file_path)
+        u_output_file_path: UPath | None = PathHelper.format_path(path=output_file_path)
         if not u_output_file_path:
             raise ValueError("Invalid file path")
 
@@ -177,7 +180,7 @@ class FileWriter:
                       compress: Optional[bool] = False
                       ):
 
-        u_output_file_path: UPath | None = PathUtils.format_path(output_file_path)
+        u_output_file_path: UPath | None = PathHelper.format_path(output_file_path)
         if not u_output_file_path:
             raise ValueError("Invalid file path")
 
@@ -221,7 +224,7 @@ class FileWriter:
                    compress: Optional[bool] = False
                    ):
 
-        u_output_file_path: UPath | None = PathUtils.format_path(output_file_path)
+        u_output_file_path: UPath | None = PathHelper.format_path(output_file_path)
         if not u_output_file_path:
             raise ValueError("Invalid file path")
 
@@ -308,7 +311,7 @@ class FileWriter:
 
 
         
-        u_xml_output_filepath: UPath | None = PathUtils.format_path(path=xml_output_filepath)
+        u_xml_output_filepath: UPath | None = PathHelper.format_path(path=xml_output_filepath)
         if not u_xml_output_filepath:
             raise ValueError("Invalid file path")
 
@@ -348,7 +351,7 @@ class FileWriter:
                     raise ValueError("Invalid file stream")
 
 
-        xml_output_filestr = PathUtils.path_to_str(u_xml_output_filepath)
+        xml_output_filestr = PathHelper.path_to_str(u_xml_output_filepath)
         
         print(f"Writing XML file to {xml_output_filestr}")
         return True

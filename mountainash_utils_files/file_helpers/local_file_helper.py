@@ -12,9 +12,9 @@ from .base_file_helper import Base_FileHelper
 # from mountainash_acdrs.utils.data_storage.base_data_storage import Base_DataStorage
 # from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_object
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, AuthSettings, get_auth_settings
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_constants import CONST_STORAGESYSTEM
 
 class Local_FileHelper(Base_FileHelper):
 
@@ -271,10 +271,10 @@ class Local_FileHelper(Base_FileHelper):
 
     # def upload_copy(self, destination_path: Optional[Union[str, UPath]], source_path: Optional[Union[str, UPath]], obj_source_storage: Base_DataStorage, overwrite: bool = False, fastmode: bool =False) -> bool:
 
-    #     # destination_path = PathUtils.format_path(destination_path)
+    #     # destination_path = PathHelper.format_path(destination_path)
 
-    #     u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-    #     u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
+    #     u_source_path: UPath|None = PathHelper.format_path(path=source_path) 
+    #     u_destination_path: UPath|None = PathHelper.format_path(path=destination_path) 
 
     #     if not u_source_path:
     #         raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
@@ -367,10 +367,10 @@ class Local_FileHelper(Base_FileHelper):
         List available data sources in the specified path or directory.
         """
 
-        # formatted_path = PathUtils.format_path(path) 
+        # formatted_path = PathHelper.format_path(path) 
         # return list(formatted_path.fs.glob(path))
             
-        u_path: UPath|None = PathUtils.format_path(path) 
+        u_path: UPath|None = PathHelper.format_path(path) 
 
         if not u_path:
             return []
@@ -395,7 +395,7 @@ class Local_FileHelper(Base_FileHelper):
         Get the size of the data at the specified path.
         """
 
-        u_path: UPath|None = PathUtils.format_path(path) 
+        u_path: UPath|None = PathHelper.format_path(path) 
 
         if not u_path:
             return 0
@@ -410,7 +410,7 @@ class Local_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -425,7 +425,7 @@ class Local_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -441,7 +441,7 @@ class Local_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)        
 
         if not u_path:
             return False
@@ -467,7 +467,7 @@ class Local_FileHelper(Base_FileHelper):
             fs = FilesystemInterface('local')
             created = fs.create_directory('data')
         """
-        u_path: Optional[UPath] = PathUtils.format_path(path)
+        u_path: Optional[UPath] = PathHelper.format_path(path)
 
         if not u_path:
             print(f"Error creating local directory: {path}")

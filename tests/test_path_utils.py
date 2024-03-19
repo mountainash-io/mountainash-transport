@@ -1,5 +1,5 @@
 import pytest
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
+from mountainash_utils_files import PathHelper
 from mountainash_constants import CONST_STORAGESYSTEM
 
 from upath import UPath
@@ -40,7 +40,7 @@ from upath import UPath
     ]
 )
 def test_identify_storage_system(path: UPath | str, expected: str):
-    result = PathUtils.identify_storage_system(path)
+    result = PathHelper.identify_storage_system(path)
     assert result == expected
 
 
@@ -90,8 +90,8 @@ def test_identify_storage_system(path: UPath | str, expected: str):
 )
 def test_format_path(path: UPath | str, expected: str):
 
-    result = PathUtils.format_path(path)
-    # result_str = PathUtils.path_to_str(result)
+    result = PathHelper.format_path(path)
+    # result_str = PathHelper.path_to_str(result)
 
     assert str(result) == str(UPath(expected))
 
@@ -111,4 +111,4 @@ def test_format_path(path: UPath | str, expected: str):
 def test_format_path_invalid(path: UPath | str):
 
     with pytest.raises(ValueError):
-        PathUtils.format_path(path)
+        PathHelper.format_path(path)

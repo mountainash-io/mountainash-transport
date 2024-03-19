@@ -8,9 +8,9 @@ from .base_file_helper import Base_FileHelper
 # from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_factory, get_data_storage_object
 import io
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files import PathHelper
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_constants import CONST_STORAGESYSTEM
 
 from paramiko import SFTPClient, SSHClient, AutoAddPolicy, SFTPAttributes
 
@@ -113,8 +113,8 @@ class SFTP_FileHelper(Base_FileHelper):
             # #TODO: Validate that the keypath exists
 
             # if self.ssh_keypath is not None:
-            #     u_ssh_keypath: UPath | None = PathUtils.format_path(self.ssh_keypath)
-            #     ssh_keypath_str: str | None = PathUtils.path_to_str(u_ssh_keypath)
+            #     u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
+            #     ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
 
             #     self.ssh_client.connect(hostname=self.hostname, port=self.port, username=self.username, password=self.password, key_filename=ssh_keypath_str)
             # else:
@@ -192,7 +192,7 @@ class SFTP_FileHelper(Base_FileHelper):
                     decompress: bool = False
                    ) -> bool|Any:
 
-        str_destination_path: str | None = PathUtils.path_to_str(path=destination_path)
+        str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
         if not str_destination_path:
             return False
         
@@ -229,8 +229,8 @@ class SFTP_FileHelper(Base_FileHelper):
             return False
 
 
-        str_destination_path: str | None = PathUtils.path_to_str(path=destination_path)
-        str_source_path: str | None = PathUtils.path_to_str(path=source_path)
+        str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
+        str_source_path: str | None = PathHelper.path_to_str(path=source_path)
 
         if not str_destination_path:
             return False
@@ -257,7 +257,7 @@ class SFTP_FileHelper(Base_FileHelper):
         if not self.io_client:
             return False
 
-        str_source_path: str | None = PathUtils.path_to_str(path=source_path)
+        str_source_path: str | None = PathHelper.path_to_str(path=source_path)
 
         if not str_source_path:
             return False
@@ -295,8 +295,8 @@ class SFTP_FileHelper(Base_FileHelper):
             return False
 
 
-        str_source_path: str | None = PathUtils.path_to_str(path=source_path)
-        str_destination_path: str | None = PathUtils.path_to_str(path=destination_path)
+        str_source_path: str | None = PathHelper.path_to_str(path=source_path)
+        str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
 
         if not str_source_path:
             return False
@@ -318,13 +318,13 @@ class SFTP_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format S3 Destination
-    #     u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
+    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
 
     #     if self.io_client:
 
     #         try:
 
-    #             str_destination_path: str | None = PathUtils.path_to_str(path=u_destination_path)
+    #             str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
     #             if not str_destination_path:
     #                 return False
 
@@ -345,12 +345,12 @@ class SFTP_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format S3 Destination
-    #     u_destination_path = PathUtils.format_path(path=destination_path)
-    #     str_destination_path: str | None = PathUtils.path_to_str(path=u_destination_path)
+    #     u_destination_path = PathHelper.format_path(path=destination_path)
+    #     str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
 
     #     #Format Source
-    #     u_source_path: UPath | None = PathUtils.format_path(path=source_path)
-    #     str_source_path: str | None = PathUtils.path_to_str(path=u_source_path)
+    #     u_source_path: UPath | None = PathHelper.format_path(path=source_path)
+    #     str_source_path: str | None = PathHelper.path_to_str(path=u_source_path)
 
     #     source_exists: bool = self.path_exists(path=u_source_path) if u_source_path else False
 
@@ -381,8 +381,8 @@ class SFTP_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format S3 Source
-    #     u_source_path = PathUtils.format_path(path=source_path)
-    #     str_source_path = PathUtils.path_to_str(path=u_source_path)
+    #     u_source_path = PathHelper.format_path(path=source_path)
+    #     str_source_path = PathHelper.path_to_str(path=u_source_path)
 
     #     #Validate source
     #     if not u_source_path:
@@ -434,11 +434,11 @@ class SFTP_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format Destination
-    #     u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
-    #     str_destination_path: str | None = PathUtils.path_to_str(path=u_destination_path)
+    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
+    #     str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
 
     #     #Format S3 Source
-    #     u_source_path: str | None = PathUtils.path_to_str(path=source_path)
+    #     u_source_path: str | None = PathHelper.path_to_str(path=source_path)
 
     #     #Validate source        
     #     if not u_source_path:
@@ -476,7 +476,7 @@ class SFTP_FileHelper(Base_FileHelper):
         List available data sources in the specified path or directory.
         """
 
-        # formatted_path = PathUtils.format_path(path) 
+        # formatted_path = PathHelper.format_path(path) 
         # return list(formatted_path.fs.glob(path))
         path_str: str | None = self.format_path_as_string(path=path)
         if not path_str:
@@ -550,7 +550,7 @@ class SFTP_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path=path)        
+        u_path: UPath|None = PathHelper.format_path(path=path)        
 
         if not u_path:
             return False
@@ -564,7 +564,7 @@ class SFTP_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathUtils.format_path(path=path)        
+        u_path: UPath|None = PathHelper.format_path(path=path)        
 
         if not u_path:
             return False
@@ -587,7 +587,7 @@ class SFTP_FileHelper(Base_FileHelper):
             fs = FilesystemInterface('local')
             created = fs.create_directory('data')
         """
-        u_path: UPath|None = PathUtils.format_path(path=path)
+        u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             print(f"Error creating local directory: {path}")

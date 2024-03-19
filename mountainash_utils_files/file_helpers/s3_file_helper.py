@@ -5,10 +5,10 @@ from upath import UPath
 from smart_open import open
 from .base_file_helper import Base_FileHelper
 
-from mountainash_acdrs.utils.path_utils.path_utils import PathUtils
-from mountainash_acdrs.utils.path_utils import S3PathUtils
-from mountainash_acdrs.settings import SettingsParameters, get_auth_settings, AuthSettings
-from mountainash_acdrs.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import S3PathHelper
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_constants import CONST_STORAGESYSTEM
 
 
 
@@ -262,8 +262,8 @@ class S3_FileHelper(Base_FileHelper):
                    ) -> bool|Any:
         
         #Validate Destination
-        bucket_name: str| None = S3PathUtils.get_path_bucketname(path=destination_path)
-        object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=destination_path)
+        bucket_name: str| None = S3PathHelper.get_path_bucketname(path=destination_path)
+        object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=destination_path)
 
         bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
         if not bucket_exists:
@@ -296,11 +296,11 @@ class S3_FileHelper(Base_FileHelper):
 
        
         # Format Source
-        source_path_str: str | None = PathUtils.path_to_str(path=source_path)
+        source_path_str: str | None = PathHelper.path_to_str(path=source_path)
 
         #Validate Destination
-        bucket_name: str| None = S3PathUtils.get_path_bucketname(path=destination_path)
-        object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=destination_path)
+        bucket_name: str| None = S3PathHelper.get_path_bucketname(path=destination_path)
+        object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=destination_path)
         bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
 
         if not bucket_exists:
@@ -342,11 +342,11 @@ class S3_FileHelper(Base_FileHelper):
         self.check_kwargs_for_compression_encryption(**kwargs)
 
 
-        str_destination_path: str | None = PathUtils.path_to_str(path=destination_path)
+        str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
         
         #Format S3 Source
-        bucket_name: str| None = S3PathUtils.get_path_bucketname(path=source_path)
-        object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=source_path)
+        bucket_name: str| None = S3PathHelper.get_path_bucketname(path=source_path)
+        object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
 
         # do it!
         fget:  Any = self.io_client.fget_object(bucket_name=bucket_name, object_name=object_name, file_path=str_destination_path) if self.io_client else None
@@ -363,15 +363,15 @@ class S3_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format S3 Destination
-    #     u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
+    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
 
     #     if self.io_client and source_stream:
 
     #         try:
 
     #             #Validate Destination
-    #             bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_destination_path)
-    #             object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_destination_path)
+    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
+    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
 
     #             bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
     #             if not bucket_exists:
@@ -399,8 +399,8 @@ class S3_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format S3 Destination
-    #     u_destination_path = PathUtils.format_path(path=destination_path)
-    #     u_source_path: UPath | None = PathUtils.format_path(path=source_path)
+    #     u_destination_path = PathHelper.format_path(path=destination_path)
+    #     u_source_path: UPath | None = PathHelper.format_path(path=source_path)
 
     #     #Format Source
 
@@ -418,11 +418,11 @@ class S3_FileHelper(Base_FileHelper):
     #         try:
 
     #             # Format Source
-    #             source_path_str: str | None = PathUtils.path_to_str(path=u_source_path)
+    #             source_path_str: str | None = PathHelper.path_to_str(path=u_source_path)
 
     #             #validate Destination
-    #             bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_destination_path)
-    #             object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_destination_path)
+    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
+    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
     #             bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
     #             if not bucket_exists:
     #                 return False
@@ -446,7 +446,7 @@ class S3_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format Source
-    #     u_source_path = PathUtils.format_path(path=source_path)
+    #     u_source_path = PathHelper.format_path(path=source_path)
 
     #     #Validate source
     #     if not u_source_path:
@@ -463,8 +463,8 @@ class S3_FileHelper(Base_FileHelper):
 
     #         try:
 
-    #             # bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_source_path)
-    #             # object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_source_path)
+    #             # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
+    #             # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
 
     #             # get_obj = self.io_client.get_object(bucket_name=bucket_name, object_name=object_name, length=self.get_size(path=u_source_path))
 
@@ -499,8 +499,8 @@ class S3_FileHelper(Base_FileHelper):
     #     self.connect()
 
     #     #Format Paths
-    #     u_destination_path: UPath | None = PathUtils.format_path(path=destination_path)
-    #     u_source_path: UPath | None = PathUtils.format_path(path=source_path)
+    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
+    #     u_source_path: UPath | None = PathHelper.format_path(path=source_path)
  
     #     #Validate source        
     #     if not u_source_path:
@@ -515,11 +515,11 @@ class S3_FileHelper(Base_FileHelper):
 
     #         try:
 
-    #             str_destination_path: str | None = PathUtils.path_to_str(path=u_destination_path)
+    #             str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
                 
     #             #Format S3 Source
-    #             bucket_name: str| None = S3PathUtils.get_path_bucketname(path=u_source_path)
-    #             object_name: str | None = S3PathUtils.get_path_folders_and_filename(path=u_source_path)
+    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
+    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
 
     #             #MiniIO Client
     #             fget:  Any = self.io_client.fget_object(bucket_name=bucket_name, object_name=object_name, file_path=str_destination_path)
@@ -544,8 +544,8 @@ class S3_FileHelper(Base_FileHelper):
 
     # def read_from_binarystream(self, source_path: Union[UPath,str], destination_stream: Any, **kwargs) -> bool:
 
-    #     source_bucket: str | None = S3PathUtils.get_path_bucketname(source_path)
-    #     source_folders_and_filename: str | None = S3PathUtils.get_path_folders_and_filename(source_path)
+    #     source_bucket: str | None = S3PathHelper.get_path_bucketname(source_path)
+    #     source_folders_and_filename: str | None = S3PathHelper.get_path_folders_and_filename(source_path)
 
     #     if not source_bucket or not source_folders_and_filename:            
     #         raise ValueError(f"Invalid source path: {source_path}")
@@ -567,8 +567,8 @@ class S3_FileHelper(Base_FileHelper):
 
     #     destination_path_str = self.format_path_as_string(path=destination_path)
 
-    #     destination_bucket: str | None = S3PathUtils.get_path_bucketname(destination_path)
-    #     destination_folders_and_filename: str | None = S3PathUtils.get_path_folders_and_filename(destination_path)
+    #     destination_bucket: str | None = S3PathHelper.get_path_bucketname(destination_path)
+    #     destination_folders_and_filename: str | None = S3PathHelper.get_path_folders_and_filename(destination_path)
 
     #     self.connect()
 
@@ -623,8 +623,8 @@ class S3_FileHelper(Base_FileHelper):
         if bucket_name:
             u_bucket_name = bucket_name
         elif path:
-            u_path = S3PathUtils.format_path(path)
-            u_bucket_name = S3PathUtils.get_path_bucketname(u_path)
+            u_path = S3PathHelper.format_path(path)
+            u_bucket_name = S3PathHelper.get_path_bucketname(u_path)
 
 
         try:
@@ -643,7 +643,7 @@ class S3_FileHelper(Base_FileHelper):
     def _find_objects(self, path: Union[str, UPath]) -> Optional[Iterator[Any]]:
 
 
-        u_path = PathUtils.format_path(path) 
+        u_path = PathHelper.format_path(path) 
         if not u_path:
             return None
         
@@ -651,11 +651,11 @@ class S3_FileHelper(Base_FileHelper):
 
         if self.io_client:
 
-            bucket_name: str | None = S3PathUtils.get_path_bucketname(u_path)
+            bucket_name: str | None = S3PathHelper.get_path_bucketname(u_path)
             if not bucket_name:
                 return None
             
-            relative_path: str | None = S3PathUtils.get_path_folders_and_filename(u_path)
+            relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
 
             if not relative_path:
                 return None
@@ -677,7 +677,7 @@ class S3_FileHelper(Base_FileHelper):
         """
         List available data sources in the specified path or directory.
         """
-        u_path: UPath | None = PathUtils.format_path(path) 
+        u_path: UPath | None = PathHelper.format_path(path) 
         if not u_path:
             return []
                 
@@ -705,7 +705,7 @@ class S3_FileHelper(Base_FileHelper):
         Get the size of the data at the specified path.
         """
 
-        u_path: UPath | None = PathUtils.format_path(path=path) 
+        u_path: UPath | None = PathHelper.format_path(path=path) 
 
         if not u_path:
             return 0
@@ -733,7 +733,7 @@ class S3_FileHelper(Base_FileHelper):
         """
 
 
-        u_path = PathUtils.format_path(path=path) 
+        u_path = PathHelper.format_path(path=path) 
         if not u_path:
             return False
         
@@ -741,7 +741,7 @@ class S3_FileHelper(Base_FileHelper):
         self.connect()
 
         objects: Iterator[Any] | None = self._find_objects(path)
-        relative_path: str | None = S3PathUtils.get_path_folders_and_filename(u_path)
+        relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
 
         if objects and relative_path:
 
@@ -753,7 +753,7 @@ class S3_FileHelper(Base_FileHelper):
 
                 if wildcard:
                     # Use regex match for wildcard patterns
-                    return S3PathUtils.wildcard_match(pattern=relative_path, target_filename=obj_key)
+                    return S3PathHelper.wildcard_match(pattern=relative_path, target_filename=obj_key)
                 else:
                     # Direct comparison for exact matches
                     if obj_key == relative_path:
@@ -780,7 +780,7 @@ class S3_FileHelper(Base_FileHelper):
         :return: True if the path exists, False otherwise.
         """
 
-        u_path: UPath | None = PathUtils.format_path(path) 
+        u_path: UPath | None = PathHelper.format_path(path) 
         if not u_path:
             return False
 
