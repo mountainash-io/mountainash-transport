@@ -8,7 +8,7 @@ from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFact
 # from mountainash_acdrs.utils.data_storage.data_storage_factory import FileHelperFactory
 
 from mountainash_utils_files import PathHelper
-from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings, SettingsUtils
 from mountainash_constants import CONST_STORAGESYSTEM
 
 import shutil
@@ -385,8 +385,13 @@ class FileInterface:
                      **kwargs) -> List[str]:
 
         if not auth_parameters:
+
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
+
+
+            
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
@@ -400,7 +405,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
@@ -414,7 +420,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
@@ -428,7 +435,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
@@ -442,7 +450,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -457,7 +466,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
@@ -472,7 +482,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
@@ -486,7 +497,8 @@ class FileInterface:
 
         if not auth_parameters:
             storage_system: str|None = PathHelper.identify_storage_system(path=path)
-            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsUtils.prepare_settings_parameters(settings_namespace=settings_namespace, settings_class=AuthSettings, STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 

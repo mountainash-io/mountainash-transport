@@ -14,12 +14,13 @@ from xsdata.formats.dataclass.serializers import XmlSerializer
 from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
 from mountainash_acdrs_constants import  CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, CONST_ACRDS_VERSION
+from mountainash_acdrs_settings import get_app_settings, AppSettings
+
 from mountainash_constants import CONST_FILESYSTEM, CONST_DATAFILEFORMAT
+from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 from mountainash_utils_dataclasses import  DataclassUtils
 from mountainash_utils_dataframes import   DataFrameUtils, BaseDataFrame, DataFrameFactory
 from mountainash_utils_files import PathHelper
-from mountainash_acdrs_settings import get_app_settings, AppSettings
-from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 
 from ..file_helpers import Base_FileHelper
 from ..file_interface import get_file_helper_object, FileInterface
@@ -286,6 +287,8 @@ class FileWriter:
 
 
         app_settings: AppSettings = get_app_settings(app_settings_parameters=self.app_settings_parameters)
+
+        #TODO: This cannot be here!
         version_map: Dict[str, str] = DataclassUtils.get_enum_values_dict_reverse_lookup(enumclass=CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, keyenumclass=CONST_ACRDS_VERSION)
         schema_location: Optional[str] = version_map.get(app_settings.BATCH_VERSION)
 
