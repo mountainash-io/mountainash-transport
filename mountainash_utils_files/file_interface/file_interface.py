@@ -381,242 +381,115 @@ class FileInterface:
             return False
 
 
-
-    # @classmethod
-    # def copy_binarystream(cls, 
-    #                 destination_path: Optional[Union[str, UPath]], source_path: Optional[Union[str, UPath]],  
-    #                 obj_destination_storage: Optional[Base_FileHelper] = None, obj_source_storage: Optional[Base_FileHelper] = None, 
-    #                 obj_destination_settings: Optional[SettingsParameters] = None, obj_source_settings: Optional[SettingsParameters] = None, 
-    #                 overwrite: bool = False, 
-    #                 fastmode: bool = True) -> bool:
-
-    #     # destination_path = PathUtils.format_path(destination_path)
-
-    #     u_source_path: UPath|None = PathUtils.format_path(path=source_path) 
-    #     u_destination_path: UPath|None = PathUtils.format_path(path=destination_path) 
-
-    #     if not u_source_path:
-    #         raise ValueError(f"upload_copy(): Invalid source path: {source_path}")
-    #     if not u_destination_path:
-    #         raise ValueError(f"upload_copy(): Invalid destination path: {destination_path}")
-
-    #     obj_destination_storage = cls.resolve_storage_object(obj_destination_storage, obj_destination_settings)
-    #     obj_source_storage = cls.resolve_storage_object(obj_source_storage, obj_source_settings)
-
-
-    #     #Fastmode turns off these pretests
-    #     # if not fastmode:
-    #     #     source_exists: bool =       obj_source_storage.path_exists(path=u_source_path)
-    #     #     source_is_file: bool =      obj_source_storage.path_is_file(path=u_source_path)
-
-    #     #     destination_exists: bool =              obj_destination_storage.path_exists(path=u_destination_path)
-    #     #     destination_parent_exists: bool =       obj_destination_storage.prepare_path_parent(path=u_destination_path)                
-    #     #     destination_parent_is_directory: bool = obj_destination_storage.path_is_dir(path=u_destination_path.parent)                
-
-
-    #     #     if not source_exists:
-    #     #         print(f"upload_copy(): Source path does not exist: {source_path}")
-    #     #         return False
-
-    #     #     if not source_is_file:
-    #     #         print(f"upload_copy(): Source path is not a file: {source_path}")
-    #     #         return False
-
-    #     #     if not destination_parent_exists:
-    #     #         print(f"upload_copy(): Destination parent path does not exist: {u_destination_path.parent}")
-    #     #         return False
-            
-    #     #     if destination_exists and not overwrite:
-    #     #         print(f"upload_copy(): Destination path already exists: {destination_path}")
-    #     #         return False
-
-    #     #     if not destination_parent_is_directory:
-    #     #         print(f"upload_copy(): Destination parent path must be a directory: {u_destination_path.parent}")
-    #     #         return False
-        
-    #     try:
-
-    #         #Will need to be able to detect types of connections...
-
-
-    #         #If here, we are ready to copy!
-
-    #         #SFTP handling
-    #         if obj_source_storage.storage_system == CONST_STORAGESYSTEM.SFTP.value and obj_destination_storage.storage_system == CONST_STORAGESYSTEM.SFTP.value:
-    #             raise ValueError("upload_copy(): SFTP to SFTP copy not supported")
-            
-    #         if obj_source_storage.storage_system == CONST_STORAGESYSTEM.SFTP.value and obj_destination_storage.storage_system != CONST_STORAGESYSTEM.SFTP.value:
-
-    #             print(f"upload_copy(): SFTP to Other")
-    #             #SFTP to Other
-    #             with obj_destination_storage.open_write_binarystream(destination_path=u_destination_path) as destination_stream:
-    #                 obj_source_storage.read_from_binarystream(source_path=u_source_path, 
-    #                                                           destination_stream=destination_stream)
-
-    #         elif obj_destination_storage.storage_system == CONST_STORAGESYSTEM.SFTP.value and obj_source_storage.storage_system != CONST_STORAGESYSTEM.SFTP.value:
-    #             #Other to SFTP
-    #             print(f"upload_copy(): SFTP to Other")
-
-    #             with obj_source_storage.open_read_binarystream(source_path=u_source_path) as destination_stream:
-    #                 obj_source_storage.write_to_binarystream(destination_path=u_destination_path, 
-    #                                                          source_stream=destination_stream)
-
-
-    #         else:
-
-    #             print(f"upload_copy(): {obj_source_storage.storage_system} to {obj_destination_storage.storage_system}")
-
-    #             with obj_source_storage.open_read_binarystream(source_path=u_source_path) as source_stream:
-
-    #                 source_size = obj_source_storage.get_size(path=u_source_path)
-    #                 obj_destination_storage.put_object_from_stream(u_destination_path, source_stream, length=source_size)
-
-
-
-    #             # print(f"upload_copy(): Copying file from {source_path} to {destination_path}")
-    #             # #Other to Other
-    #             # with obj_source_storage.open_read_binarystream(source_path=u_source_path) as source_stream:
-
-    #             #     print(f"upload_copy(): Source stream: {source_stream}")
-
-    #             #     source_size = obj_source_storage.get_size(u_source_path)
-
-    #             #     obj_destination_storage.put_object_from_stream(u_destination_path, source_stream, length=source_size)
-
-
-    #                 # with obj_destination_storage.open_write_binarystream(destination_path=u_destination_path) as destination_stream:
-
-    #                 #     print(f"upload_copy(): Destination stream: {destination_stream}")
-
-
-    #                 #     destination_stream.write(source_stream.read())
-    #                 #     # shutil.copyfileobj(source_stream, destination_stream)
-
-    #                 #     # obj_destination_storage.write_to_binarystream(destination_path=destination_stream, 
-    #                 #     #                                               source_stream=source_stream)
-
-
-
-    #         copied_destination_exists: bool = obj_destination_storage.path_exists(path=u_destination_path)
-
-    #         if not copied_destination_exists:
-    #             print(f"upload_copy(): Destination path does not exist after copy: {destination_path}")
-    #             return False
-    #         else:
-    #             print(f"upload_copy(): Success! Destination path exists after copy: {destination_path}")
-    #             return True
-
-    #     except Exception as e:
-    #         print(f"upload_copy(): Error copying file: {e}")
-    #         return False
-
-    #     return True
-
-
-    # @classmethod
-    # def open_read_stream(cls, auth_parameters: SettingsParameters, source_path: Union[str, UPath], **kwargs) -> Iterable:
-
-    #     storage_system: str = PathUtils.identify_storage_system(path=source_path)
-
-    #     obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters, storage_system=storage_system)
-
-    #     return obj_storage.open_read_stream(source_path=source_path, **kwargs)
-
-    # @classmethod
-    # def open_write_stream(cls, auth_parameters: SettingsParameters, destination_path: Union[str, UPath], data: Any, **kwargs) -> None:
-
-    #     storage_system: str = PathUtils.identify_storage_system(path=destination_path)
-
-    #     obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters, storage_system=storage_system)
-
-    #     return obj_storage.open_write_stream(destination_path=destination_path, data=data, **kwargs)
-
-
-    # @classmethod
-    # def copy_from(cls, auth_parameters: SettingsParameters, source_path: Union[str, UPath], **kwargs) -> UPath:
-
-    #     storage_system: str = PathUtils.identify_storage_system(path=source_path)
-
-    #     obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters, storage_system=storage_system)
-
-    #     return obj_storage.copy_from(source_path=source_path)
-
-    # @classmethod
-    # def copy_to(cls, auth_parameters: SettingsParameters, destination_path: Union[str, UPath], source_stream: IO) -> UPath:
-
-    #     storage_system: str = PathUtils.identify_storage_system(path=destination_path)
-
-    #     obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters, storage_system=storage_system)
-
-    #     return obj_storage.copy_to(destination_path=destination_path, source_stream=source_stream)
-
-
     @classmethod
-    def list_sources(cls, auth_parameters: SettingsParameters, path: Union[str, UPath] = "", **kwargs) -> List[str]:
+    def list_sources(cls, 
+                     auth_parameters: SettingsParameters, 
+                     path: Union[str, UPath] = "", 
+                     **kwargs) -> List[str]:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.list_sources(path, **kwargs)
 
     @classmethod
-    def path_exists(cls, auth_parameters: SettingsParameters, path: Union[str, UPath], **kwargs) -> bool:
+    def path_exists(cls, 
+                    path: Union[str, UPath], 
+                    auth_parameters: Optional[SettingsParameters]=None, 
+                    **kwargs) -> bool:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.path_exists(path=path, **kwargs)
 
     @classmethod
-    def calculate_checksum(cls, auth_parameters: SettingsParameters, path: Union[str, UPath], **kwargs) -> str:
+    def calculate_checksum(cls, 
+                           path: Union[str, UPath], 
+                           auth_parameters: Optional[SettingsParameters]=None,  
+                           **kwargs) -> str:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.calculate_checksum(path=path, **kwargs)
     
     @classmethod
-    def get_size(cls, auth_parameters: SettingsParameters, path: Union[str, UPath]) -> int:
+    def get_size(cls, 
+                 path: Union[str, UPath],
+                 auth_parameters: Optional[SettingsParameters]=None, 
+                 ) -> int:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.get_size(path=path)    
     
     @classmethod
-    def count_sources(cls, auth_parameters: SettingsParameters, path: Union[str, UPath], **kwargs) -> int:
+    def count_sources(cls, 
+                      path: Union[str, UPath], 
+                      auth_parameters: Optional[SettingsParameters]=None,
+                      **kwargs) -> int:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.count_sources(path=path, **kwargs)        
     
     @classmethod
-    def path_is_dir(cls, auth_parameters: SettingsParameters, path: Union[str, UPath]) -> bool:
+    def path_is_dir(cls, 
+                    path: Union[str, UPath],
+                    auth_parameters: Optional[SettingsParameters]=None, 
+                    ) -> bool:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
+
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.path_is_dir(path=path)    
     
     @classmethod
-    def path_is_file(cls, auth_parameters: SettingsParameters,  path: Union[str, UPath]) -> bool:    
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+    def path_is_file(cls, 
+                     path: Union[str, UPath],
+                     auth_parameters: Optional[SettingsParameters]=None,  
+                     ) -> bool:    
+
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.path_is_file(path=path)            
     
     @classmethod
-    def create_directory(cls, auth_parameters: SettingsParameters, path: Union[str, UPath]) -> bool:
+    def create_directory(cls, 
+                         path: Union[str, UPath],
+                         auth_parameters: Optional[SettingsParameters]=None, 
+                         ) -> bool:
 
-        storage_system: str|None = PathUtils.identify_storage_system(path=path)
+        if not auth_parameters:
+            storage_system: str|None = PathUtils.identify_storage_system(path=path)
+            auth_parameters = SettingsParameters(STORAGE_SYSTEM=storage_system)
 
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 

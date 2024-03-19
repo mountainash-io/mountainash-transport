@@ -956,7 +956,6 @@ class Base_FileHelper(ABC):
         if not u_source_path:
             return False
 
-        # source_exists = DataStorageFacade.path_exists(path=u_source_path)
 
         #Do it!
         if self.io_client and u_destination_path and u_source_path:
