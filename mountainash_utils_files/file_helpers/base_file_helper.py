@@ -12,7 +12,7 @@ import gzip
 import polars
 import pyarrow.parquet as pq
 
-from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_dataclasses import DataclassUtils
 from mountainash_constants import CONST_STORAGESYSTEM
 

@@ -8,7 +8,7 @@ import io
 from mountainash_constants import CONST_DATAFILEFORMAT, CONST_DATAFRAME_FRAMEWORK
 from mountainash_utils_dataclasses import DataclassUtils
 from mountainash_utils_dataframes import BaseDataFrame, DataFrameFactory
-from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 
 from ..file_helpers import Base_FileHelper

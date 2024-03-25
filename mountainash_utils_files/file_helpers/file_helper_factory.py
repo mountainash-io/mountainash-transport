@@ -13,7 +13,7 @@ from .s3_file_helper import S3_FileHelper
 from .s3u_file_helper import S3U_FileHelper
 
 
-from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import get_auth_settings, AuthSettings
 
 from mountainash_settings import SettingsParameters

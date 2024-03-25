@@ -7,7 +7,7 @@ from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFact
 # from mountainash_acdrs.utils.data_storage.base_data_storage import Base_FileHelper
 # from mountainash_acdrs.utils.data_storage.data_storage_factory import FileHelperFactory
 
-from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings, SettingsUtils
 from mountainash_constants import CONST_STORAGESYSTEM
 

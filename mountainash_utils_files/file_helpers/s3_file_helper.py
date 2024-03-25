@@ -5,7 +5,7 @@ from upath import UPath
 from smart_open import open
 from .base_file_helper import Base_FileHelper
 
-from mountainash_utils_files import PathHelper
+from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
 from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
 from mountainash_constants import CONST_STORAGESYSTEM
