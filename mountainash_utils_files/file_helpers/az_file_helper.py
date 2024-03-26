@@ -10,7 +10,8 @@ from azure.core.exceptions import AzureError
 from .base_file_helper import Base_FileHelper
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_settings import SettingsParameters
+from mountainash_auth_settings import  AuthSettings, get_auth_settings
 
 class AZ_FileHelper(Base_FileHelper):
 

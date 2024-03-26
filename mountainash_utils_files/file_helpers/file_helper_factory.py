@@ -14,7 +14,7 @@ from .s3u_file_helper import S3U_FileHelper
 
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import get_auth_settings, AuthSettings
+from mountainash_auth_settings import get_auth_settings, AuthSettings
 
 from mountainash_settings import SettingsParameters
 from mountainash_constants import CONST_STORAGESYSTEM

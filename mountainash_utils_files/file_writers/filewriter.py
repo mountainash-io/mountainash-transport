@@ -1,29 +1,25 @@
 
-from typing import  Union, Any, Optional, Dict, IO, TextIO
+from typing import  Union, Any, Optional, Dict, TextIO
 import pandas as pd
-import polars as pl
-import ibis.expr.types as ir
 from upath import UPath
 import traceback
 import pyarrow as pa
 import pyarrow.parquet as pq
 import io
 
-
 from xsdata.formats.dataclass.serializers import XmlSerializer
-from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
-from mountainash_acrds_constants import  CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, CONST_ACRDS_VERSION
-from mountainash_acrds_settings import get_app_settings, AppSettings
-
-from mountainash_constants import CONST_FILESYSTEM, CONST_DATAFILEFORMAT
-from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_constants import CONST_DATAFILEFORMAT
+from mountainash_settings import SettingsParameters
+from mountainash_auth_settings import  AuthSettings, get_auth_settings
 from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_utils_dataframes import   DataFrameUtils, BaseDataFrame, DataFrameFactory
+from mountainash_utils_dataframes import   DataFrameUtils, BaseDataFrame
 from mountainash_utils_files.path_helpers import PathHelper
 
+
+
 from ..file_helpers import Base_FileHelper
-from ..file_interface import get_file_helper_object, FileInterface
+from ..file_interface import get_file_helper_object
 
 class FileWriter:
     """
@@ -43,16 +39,16 @@ class FileWriter:
     """
 
     def __init__(self, 
-                 app_settings_parameters: SettingsParameters,
+                #  app_settings_parameters: SettingsParameters,
                  destination_auth_parameters: SettingsParameters,
-                 file_format:Optional[str] = None):
+                 file_format:str):
 
 
-        if not app_settings_parameters:
-            raise ValueError("ReportBuildOrchestrator: app_settings_parameters must be provided.")
+        # if not app_settings_parameters:
+        #     raise ValueError("ReportBuildOrchestrator: app_settings_parameters must be provided.")
 
-        #App Settings
-        self.app_settings_parameters: SettingsParameters  = app_settings_parameters
+        # #App Settings
+        # self.app_settings_parameters: SettingsParameters  = app_settings_parameters
 
 
         #FileSystem
@@ -60,6 +56,7 @@ class FileWriter:
         #     raise ValueError(f"Invalid filesystem: {filesystem}")
 
         #FileFormat
+
         if file_format and file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
             raise ValueError(f"Invalid file format: {file_format}")
         
@@ -78,6 +75,7 @@ class FileWriter:
     def write_datafile(self, 
                        df_datafile: BaseDataFrame, 
                        output_file_path: Union[UPath, str],
+                       overwrite: Optional[bool] = False,
                        encrypt: Optional[bool] = False,
                        compress: Optional[bool] = False,
                        
@@ -99,14 +97,14 @@ class FileWriter:
         try:
             #Write the dataframe to the parquet file
             if self.file_format == CONST_DATAFILEFORMAT.PARQUET.value:
-                self.write_parquet(dataframe=df_datafile, output_file_path=u_output_file_path)     
+                self.write_parquet(dataframe=df_datafile, output_file_path=u_output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)     
 
             elif self.file_format == CONST_DATAFILEFORMAT.CSV.value:
                 # raise NotImplementedError
-                self.write_csv(dataframe=df_datafile, output_file_path=output_file_path)                
+                self.write_csv(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)                
             elif self.file_format == CONST_DATAFILEFORMAT.JSON.value:
                 # raise NotImplementedError
-                self.write_json(dataframe=df_datafile, output_file_path=output_file_path)      
+                self.write_json(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)      
             elif self.file_format == CONST_DATAFILEFORMAT.DELTA.value:
                 raise NotImplementedError
                 # self.write_delta(df_datafile, output_file_path)      
@@ -127,10 +125,10 @@ class FileWriter:
     def write_parquet(self, 
                       dataframe: BaseDataFrame,
                       output_file_path: UPath, 
-                        overwrite:bool = True,
+                      overwrite: Optional[bool] = True,
                       encrypt: Optional[bool] = False,
-                      compress: Optional[bool] = False
-                      , **kwargs) -> bool:
+                      compress: Optional[bool] = False,
+                      **kwargs) -> bool:
             
 
         u_output_file_path: UPath | None = PathHelper.format_path(path=output_file_path)
@@ -142,6 +140,9 @@ class FileWriter:
         if destination_exists and overwrite is False:
             print(f"File {u_output_file_path} already exists. Overwrite is set to {overwrite}")
             return False
+
+        if not self.destination_storage_interface.path_parent_exists(path=u_output_file_path):
+            self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
 
 
         pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(df_dataframe=dataframe.df)
@@ -176,7 +177,7 @@ class FileWriter:
     def write_csv(self, 
                   dataframe: BaseDataFrame, 
                   output_file_path: Union[str, UPath],
-                         overwrite:bool = True,
+                      overwrite: Optional[bool] = True,
                       encrypt: Optional[bool] = False,
                       compress: Optional[bool] = False
                       ):
@@ -190,6 +191,10 @@ class FileWriter:
         if destination_exists and overwrite is False:
             print(f"File {u_output_file_path} already exists. Overwrite is set to {overwrite}")
             return False
+
+        if not self.destination_storage_interface.path_parent_exists(path=u_output_file_path):
+            self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
+
 
         #Convert to pandas dataframe
         pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.df)
@@ -220,7 +225,7 @@ class FileWriter:
     def write_json(self, 
                    dataframe: BaseDataFrame, 
                    output_file_path: Union[str, UPath],
-                   overwrite:bool = True,
+                   overwrite: Optional[bool] = True,
                    encrypt: Optional[bool] = False,
                    compress: Optional[bool] = False
                    ):
@@ -233,6 +238,10 @@ class FileWriter:
         if destination_exists and overwrite is False:
             print(f"File {u_output_file_path} already exists. Overwrite is set to {overwrite}")
             return False
+
+        if not self.destination_storage_interface.path_parent_exists(path=u_output_file_path):
+            self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
+
 
         #Convert to pandas dataframe
         pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.df)
@@ -283,32 +292,37 @@ class FileWriter:
         # with output_file_path.open("wb") as f:
         #     df.to_delta(f)
 
-    def get_xml_serializer(self):
+    # def get_xml_serializer(self, models_package:str) -> XmlSerializer:
 
 
-        app_settings: AppSettings = get_app_settings(app_settings_parameters=self.app_settings_parameters)
+    #     app_settings: AppSettings = get_app_settings(app_settings_parameters=self.app_settings_parameters)
 
-        #TODO: This cannot be here!
-        version_map: Dict[str, str] = DataclassUtils.get_enum_values_dict_reverse_lookup(enumclass=CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, keyenumclass=CONST_ACRDS_VERSION)
-        schema_location: Optional[str] = version_map.get(app_settings.BATCH_VERSION)
+    #     #TODO: This cannot be here!
+    #     version_map: Dict[str, str] = DataclassUtils.get_enum_values_dict_reverse_lookup(enumclass=CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, keyenumclass=CONST_ACRDS_VERSION)
+    #     schema_location: Optional[str] = version_map.get(app_settings.BATCH_VERSION)
 
 
-        xmlconfig = SerializerConfig(
-            xml_declaration=True, 
-            xml_version="1.0", 
-            encoding="UTF-8",
-            no_namespace_schema_location=schema_location,
-            pretty_print=True
-        )
+    #     xmlcontext = XmlContext(models_package = models_package)
+    
 
-        serializer = XmlSerializer(config=xmlconfig)
+    #     xmlconfig = SerializerConfig(
+    #         xml_declaration=True, 
+    #         xml_version="1.0", 
+    #         encoding="UTF-8",
+    #         no_namespace_schema_location=schema_location,
+    #         pretty_print=True
+    #     )
 
-        return serializer
+    #     serializer = XmlSerializer(config= xmlconfig, 
+    #                                context= xmlcontext)
+
+    #     return serializer
 
     def write_xml_object(self, 
                          xmlobj, 
+                         xml_serializer: XmlSerializer, 
                          xml_output_filepath: Union[UPath, str],
-                         overwrite:bool = True,
+                         overwrite: Optional[bool] = True,
                          encrypt: Optional[bool] = False,
                          compress: Optional[bool] = False) -> bool:
 
@@ -321,12 +335,17 @@ class FileWriter:
         encrypt = bool(encrypt)
         compress = bool(compress)
 
+        #Establish whether the destination is writable
         destination_exists: bool =  self.destination_storage_interface.path_exists(path=u_xml_output_filepath)
         if destination_exists and overwrite is False:
             print(f"File {u_xml_output_filepath} already exists. Overwrite is set to {overwrite}")
             return False
         
-        serializer = self.get_xml_serializer()  
+        if not self.destination_storage_interface.path_parent_exists(path=u_xml_output_filepath):
+            self.destination_storage_interface.prepare_path_parent(path=u_xml_output_filepath)
+
+
+        #serializer: XmlSerializer = self.get_xml_serializer(models_package="mountainash_acrds_core.report.report_dataclasses")  
 
         #write file to disk:
 
@@ -338,7 +357,7 @@ class FileWriter:
                 with io.StringIO() as temp_stream:
                     
                     #write to a temp stream
-                    serializer.write(out=temp_stream, obj=xmlobj)
+                    xml_serializer.write(out=temp_stream, obj=xmlobj)
                     processed_stream: io.BytesIO = self.destination_storage_interface.process_source_stream(source_stream=temp_stream, encrypt=encrypt, decrypt=compress)
 
                     output_binary_file.write(processed_stream.read())
@@ -346,12 +365,12 @@ class FileWriter:
                 return True
         
         else:
-            with self.destination_storage_interface.open_write_textstream(u_xml_output_filepath) as output_text_file:
+            with self.destination_storage_interface.open_write_textstream(destination_path=u_xml_output_filepath) as output_text_file:
 
-                if isinstance(output_text_file, TextIO):
-                    serializer.write(out=output_text_file, obj=xmlobj)
-                else:
-                    raise ValueError("Invalid file stream")
+                #if isinstance(output_text_file, TextIO):
+                xml_serializer.write(out=output_text_file, obj=xmlobj)
+                #else:
+                #    raise ValueError("Invalid file stream")
 
 
         xml_output_filestr = PathHelper.path_to_str(u_xml_output_filepath)

@@ -9,7 +9,8 @@ from .base_file_helper import Base_FileHelper
 import io
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
+from mountainash_settings import SettingsParameters
+from mountainash_auth_settings import  AuthSettings, get_auth_settings
 from mountainash_constants import CONST_STORAGESYSTEM
 
 from paramiko import SFTPClient, SSHClient,  SFTPAttributes

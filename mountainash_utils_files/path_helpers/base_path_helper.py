@@ -2,10 +2,9 @@ from abc import ABC, abstractmethod
 from upath import UPath
 from typing import Union, List, Optional
 import re
-import platform
 from functools import lru_cache
 
-from mountainash_utils.os_utils import is_platform_os_windows, get_platform_slash
+from mountainash_utils.os_utils import get_platform_slash
 from mountainash_utils_dataclasses import DataclassUtils
 
 from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX

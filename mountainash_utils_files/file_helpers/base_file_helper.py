@@ -16,7 +16,8 @@ from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_dataclasses import DataclassUtils
 from mountainash_constants import CONST_STORAGESYSTEM
 
-from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters
+from mountainash_auth_settings import  AuthSettings, get_auth_settings
 
 class Base_FileHelper(ABC):
 
@@ -642,8 +643,8 @@ class Base_FileHelper(ABC):
     def _get_smartopen_stream_generator(self, 
                                         path: Optional[Union[str, UPath]], 
                                         mode: str, 
-                                        encrypt_stream: bool = False,
-                                        decrypt_stream: bool = False,                                               
+                                        # encrypt_stream: bool = False,
+                                        # decrypt_stream: bool = False,                                               
                                         **kwargs) -> IO|TextIO|BinaryIO:
         """
         Open stream for reading or writing data.
@@ -663,8 +664,8 @@ class Base_FileHelper(ABC):
         if not u_path:
             raise ValueError("Invalid path")
 
-        if encrypt_stream and decrypt_stream:
-            raise ValueError("Cannot encrypt and decrypt at the same time")
+        # if encrypt_stream and decrypt_stream:
+        #     raise ValueError("Cannot encrypt and decrypt at the same time")
 
         #Open the raw stream       
         stream: TextIO|BinaryIO = open(uri=u_path, mode=mode, **kwargs)
@@ -694,7 +695,8 @@ class Base_FileHelper(ABC):
         mode = 'rb'
         stream: IO =  self._get_smartopen_stream_generator(path=source_path, 
                                                     mode=mode,
-                                                    transport_params=self.get_connection_client_parameters())
+                                                    transport_params=self.get_connection_client_parameters(),
+                                                    **kwargs)
     
         return stream
 
@@ -712,7 +714,8 @@ class Base_FileHelper(ABC):
         mode = 'wb'
         stream: IO =  self._get_smartopen_stream_generator(path=destination_path, 
                                                     mode=mode,
-                                                    transport_params=self.get_connection_client_parameters())
+                                                    transport_params=self.get_connection_client_parameters(),
+                                                    **kwargs)
 
         return stream
 
@@ -730,7 +733,8 @@ class Base_FileHelper(ABC):
         mode = 'r'
         return self._get_smartopen_stream_generator(path=source_path, 
                                                     mode=mode,
-                                                    transport_params=self.get_connection_client_parameters())
+                                                    transport_params=self.get_connection_client_parameters(),
+                                                    **kwargs)
 
     def open_write_textstream(self, 
                               destination_path: Optional[Union[str, UPath]], 
@@ -743,10 +747,10 @@ class Base_FileHelper(ABC):
         self.connect()
         mode = 'w'
 
-
         return self._get_smartopen_stream_generator(path=destination_path, 
                                                     mode=mode,
-                                                    transport_params=self.get_connection_client_parameters())
+                                                    transport_params=self.get_connection_client_parameters(),
+                                                    **kwargs)
 
 
 
@@ -1150,6 +1154,13 @@ class Base_FileHelper(ABC):
             return False
 
         return self.path_exists(path=u_path.parent)        
+
+
+        # destination_exists: bool =  self.destination_storage_interface.path_exists(path=u_xml_output_filepath)
+        # if destination_exists and overwrite is False:
+        #     print(f"File {u_xml_output_filepath} already exists. Overwrite is set to {overwrite}")
+        #     return False
+
 
 
     # @abstractmethod

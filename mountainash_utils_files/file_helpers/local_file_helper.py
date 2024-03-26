@@ -13,7 +13,8 @@ from .base_file_helper import Base_FileHelper
 # from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_object
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters, AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters
+from mountainash_auth_settings import  AuthSettings, get_auth_settings
 from mountainash_constants import CONST_STORAGESYSTEM
 
 class Local_FileHelper(Base_FileHelper):
@@ -83,6 +84,15 @@ class Local_FileHelper(Base_FileHelper):
         self.prefer_smartopen_on_get = False
         self.prefer_native_on_put = True
         self.prefer_smartopen_on_put = False
+
+
+        self.supports_polars_native_read_parquet = True
+        self.supports_polars_stream_read_parquet = True
+        self.supports_decrypt_polars_read_parquet = True
+        self.supports_decompress_polars_read_parquet = True
+        self.supports_pyarrow_write_parquet = True
+        self.supports_encrypt_pyarrow_write_parquet = True
+        self.supports_compress_pyarrow_write_parquet = True
 
 
     #================================================================
@@ -473,11 +483,10 @@ class Local_FileHelper(Base_FileHelper):
             print(f"Error creating local directory: {path}")
             return False
 
-
         try:
             if u_path and not u_path.exists():
                 #can I use smart open to create a folder?
-                os.makedirs(name=u_path.path, exist_ok=True)
+                u_path.mkdir(parents=True, exist_ok=True)
 
         except OSError:
             print(f"Error creating local directory: {u_path.path}")

@@ -1,5 +1,3 @@
-import os
-import hashlib
 from typing import Any, List, Union, IO, Optional, Iterator
 from upath import UPath
 from smart_open import open
@@ -7,8 +5,9 @@ from .base_file_helper import Base_FileHelper
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
-from mountainash_settings import SettingsParameters, get_auth_settings, AuthSettings
-from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_settings import SettingsParameters
+# from mountainash_auth_settings import  AuthSettings, get_auth_settings
+# from mountainash_constants import CONST_STORAGESYSTEM
 
 
 
@@ -18,7 +17,7 @@ from functools import lru_cache
 import re
 from urllib.parse import unquote
 import boto3
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError 
+# from botocore.exceptions import NoCredentialsError, PartialCredentialsError 
 from botocore.exceptions import BotoCoreError, ClientError
 import io
 
