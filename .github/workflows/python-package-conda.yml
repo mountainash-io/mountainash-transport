@@ -39,13 +39,13 @@ jobs:
     #     # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --ignore F405,W293,E231,E301,E302,E303,E501,E291,E222,W291,E741,E201,E741,F401,E241,E221,E265,E202,E272,E271,E123
 
     - name: Complexity checks with radon
+    # fail on any complexity or maintainability index of D or below
       run: |
-        conda install radon
-        #fail on any complexity or maintainability index of D or below
+        pip install radon 
         radon cc . -nd
         radon mi . -nd
 
     - name: Test with pytest
       run: |
-        conda install pytest
+        pip install pytest
         pytest
