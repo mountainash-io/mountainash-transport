@@ -1,5 +1,6 @@
+from typing import Union, Optional
+
 from upath import UPath
-from typing import Union, Any, Optional
 
 from mountainash_constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper

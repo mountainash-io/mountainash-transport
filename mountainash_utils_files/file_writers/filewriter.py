@@ -1,13 +1,13 @@
 
-from typing import  Union, Any, Optional, Dict, TextIO
-import pandas as pd
-from upath import UPath
+from typing import  Union, Any, Optional
+import io
 import traceback
+
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import io
-
 from xsdata.formats.dataclass.serializers import XmlSerializer
+from upath import UPath
 
 from mountainash_constants import CONST_DATAFILEFORMAT
 from mountainash_settings import SettingsParameters

@@ -1,27 +1,11 @@
-import os
-import hashlib
-from typing import Any, List, Union, IO, Optional, Iterator
-from upath import UPath
-from smart_open import open
-from .base_file_helper import Base_FileHelper
-
-from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
-from mountainash_constants import CONST_STORAGESYSTEM
-from mountainash_utils_files.path_helpers import S3PathHelper
-from .s3_file_helper import S3_FileHelper
-
+from typing import Any, List, Optional
 
 from minio import Minio
 from minio.error import S3Error
-from functools import lru_cache
-import re
-from urllib.parse import unquote
-import boto3
-from botocore.exceptions import NoCredentialsError, PartialCredentialsError 
-from botocore.exceptions import BotoCoreError, ClientError
-import io
+
+from mountainash_settings import SettingsParameters
+from .s3_file_helper import S3_FileHelper
+
 
 class S3U_FileHelper(S3_FileHelper):
 

@@ -1,9 +1,10 @@
+from typing import Union, Optional
+
+from urllib.parse import unquote
 from upath import UPath
-from typing import Union, Any, Optional
 
 from mountainash_constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
-from urllib.parse import unquote
 
 class S3PathHelper(BasePathHelper):
 

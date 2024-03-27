@@ -1,0 +1,41 @@
+# environment.yaml
+name: mash_utils_dataframes_p312
+dependencies:
+  - python>=3.12.0
+  - ipython
+  - pip
+  - pip:
+    - ipykernel
+    - pathlib
+    - pandas
+    - polars
+    - pydantic>=2
+    - pyarrow
+    # - lxml
+    # - simplejson
+    # - jsonschema
+    # - autopep8
+    # - pydantic-settings
+    - universal_pathlib
+    # - ruff
+    # - faker
+    # - duckdb
+    # - pysqlite3
+    # - boltons
+    # - rstr
+    # - flake8
+    # - flake8-bugbear
+    - pytest
+    - pytest_check
+    - radon
+    - functools
+    - paramiko
+    - gnupg
+    - gzip
+    - minio
+    - boto3
+    - urllib
+    - universal_pathlib
+    - smart_open[s3]
+    - paramiko
+    - python-gnupg

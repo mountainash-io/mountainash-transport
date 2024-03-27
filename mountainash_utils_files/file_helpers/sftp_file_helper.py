@@ -1,19 +1,19 @@
 import os
-import hashlib
-from typing import Any, List, Union, IO, Optional, Iterable
+import io
+from typing import Any, List, Union, IO, Optional
+
 from upath import UPath
 from smart_open import open
-from .base_file_helper import Base_FileHelper
-
-# from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_factory, get_data_storage_object
-import io
+from paramiko import SFTPClient, SSHClient,  SFTPAttributes
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
-from mountainash_constants import CONST_STORAGESYSTEM
 
-from paramiko import SFTPClient, SSHClient,  SFTPAttributes
+from .base_file_helper import Base_FileHelper
+
+# from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_factory, get_data_storage_object
+
+
 
 class SFTP_FileHelper(Base_FileHelper):
 
