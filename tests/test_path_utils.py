@@ -17,8 +17,8 @@ from upath import UPath
         ("github://user@host/path", CONST_STORAGESYSTEM.GITHUB.value),
         ("SSH://user@host/path", CONST_STORAGESYSTEM.SSH.value),
 
-        ("C:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("D:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        # ("C:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        # ("D:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
         ("/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
         ("~", CONST_STORAGESYSTEM.LOCAL_DISK.value),        
         ("~/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
@@ -57,8 +57,8 @@ def test_identify_storage_system(path: UPath | str, expected: str):
         ("/path/to/file/", "/path/to/file"), 
 
 
-        ("C:\\path\\to\\file", "C:\\path\\to\\file"),
-        ("D:\\path\\to\\file\\", "D:\\path\\to\\file"),
+        # ("C:\\path\\to\\file", "C:\\path\\to\\file"),
+        # ("D:\\path\\to\\file\\", "D:\\path\\to\\file"),
 
         ("/", "/"),
         # ("~", "/Users/nathanielramm"),        

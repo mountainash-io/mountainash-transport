@@ -1,31 +1,45 @@
 # environment.yaml
-name: mash_utils_dataframes_p312
+name: mash_utils_files_p312
 dependencies:
   - python>=3.12.0
-  - ipython
   - pip
   - pip:
-    - ipykernel
+    - pytest
+    - pytest_check
+    - radon
+    - coverage
+    - hatch
+    #Package deps
     - pathlib
     - pandas
     - polars
     - pydantic>=2
-    # - lxml
-    # - simplejson
-    # - jsonschema
-    # - autopep8
-    # - pydantic-settings
+    - pyarrow
+    - pydantic-settings
+    - boltons
+    - paramiko
+    - gnupg
+    - minio
+    - boto3
     - universal_pathlib
-    # - ruff
-    # - faker
-    # - duckdb
-    # - pysqlite3
-    # - boltons
-    # - rstr
-    # - flake8
-    # - flake8-bugbear
-    - pytest
-    # - scipy
-    # - sphinx
-    # - sphinx-rtd-theme
-    # - pytest_check
+    - smart_open[s3]
+    - paramiko
+    - python-gnupg
+    - xsdata[lxml]
+    #This package
+    - -e .
+    #Other Mountain Ash Packages
+    - -e ../mountainash-constants
+    - -e ../mountainash-settings
+    - -e ../mountainash-auth-settings
+    - -e ../mountainash-utils
+    - -e ../mountainash-utils-dataclasses
+    - -e ../mountainash-utils-dataframes
+    # - git+https://github.com/mountainash-io/mountainash-settings.git@main
+    # - git+https://github.com/mountainash-io/mountainash-auth-settings.git@main
+    # - git+https://github.com/mountainash-io/mountainash-utils.git@main
+    # - git+https://github.com/mountainash-io/mountainash-utils-dataclasses.git@main
+    # - git+https://github.com/mountainash-io/mountainash-utils-dataframes.git@main
+    # - git+https://github.com/mountainash-io/mountainash-constants.git@main
+
+

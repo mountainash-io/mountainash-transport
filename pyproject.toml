@@ -1,16 +1,183 @@
-[tool.poetry]
-name = "mountainash_utils_files"
-version = "0.1.0"
-description = ""
-authors = ["Nathaniel Ramm <nathaniel.ramm@mountainash.io>"]
-
-#[tool.poetry.dependencies]
-#python = "^3.12"
-
-[tool.poetry.dev-dependencies]
-pytest = "^5.2"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
+[project]
+name = "mountainash_utils_files"
+dynamic = ["version"]
+description = 'Mountain Ash - Utils - Files'
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Nathaniel Ramm", email = "nathaniel.ramm@discretedatascience.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "pathlib",
+  "pandas",
+  "polars",
+  "pydantic>=2",
+  "pyarrow",
+  "pydantic-settings",
+  "boltons",
+  "paramiko",
+  "gnupg",
+  "minio",
+  "boto3",
+  "universal_pathlib",
+  "smart_open[s3]",
+  "paramiko",
+  "python-gnupg",
+  "xsdata[lxml]",
+]
+
+[project.urls]
+Documentation = "https://github.com/mountainash-io/mountainash-utils-files#readme"
+Issues = "https://github.com/mountainash-io/mountainash-utils-files/issues"
+Source = "https://github.com/mountainash-io/mountainash-utils-files"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+path = "src/mountainash_utils_files/__version__.py"
+
+# Pytest and Test Coverage - Github
+[[tool.hatch.envs.test_github.matrix]]
+python = ["3.11", "3.12",  "3.10" ] # "3.8", "3.9","3.9",
+
+[tool.hatch.envs.test_github]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest_check",
+
+  "mountainash_constants @ {root:uri}/temp/mountainash-constants",
+  "mountainash_settings @ {root:uri}/temp/mountainash-settings",
+  "mountainash_auth_settings @ {root:uri}/temp/mountainash-auth-settings",
+  "mountainash_utils @ {root:uri}/temp/mountainash-utils",
+  "mountainash_utils_dataclasses @ {root:uri}/temp/mountainash-utils-dataclasses",
+  "mountainash_utils_dataframes @ {root:uri}/temp/mountainash-utils-dataframes"
+
+]
+[tool.hatch.envs.test_github.scripts]
+test = "pytest {args:tests}"
+
+
+# Pytest and Test Coverage - Local
+[[tool.hatch.envs.test.matrix]]
+python = ["3.11", "3.12",  "3.10" ] # "3.8", "3.9","3.9",
+
+[tool.hatch.envs.test]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest_check",
+
+  "mountainash_constants @ {root:uri}/../mountainash-constants",
+  "mountainash_settings @ {root:uri}/../mountainash-settings",
+  "mountainash_auth_settings @ {root:uri}/../mountainash-auth-settings",
+  "mountainash_utils @ {root:uri}/../mountainash-utils",
+  "mountainash_utils_dataclasses @ {root:uri}/../mountainash-utils-dataclasses",
+  "mountainash_utils_dataframes @ {root:uri}/../mountainash-utils-dataframes"
+
+]
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+]
+cov-html = [
+  "coverage html",
+]
+
+# Radon Complexity Checks
+[tool.hatch.envs.radon]
+dependencies = [
+  "radon",
+]
+[tool.hatch.envs.radon.scripts]
+radon-cc = "radon cc . -nd"
+radon-mi = "radon mi . -nd"
+
+# Mypy Type checks
+[tool.hatch.envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
+
+# Downstream package testing
+# [tool.hatch.envs.test_downstream]
+# dependencies = [  
+#   "pytest",
+#   "pytest_check",
+#   "mountainash_constants @ {root:uri}/../mountainash-constants",
+#   "mountainash_settings @ {root:uri}/../mountainash-settings",
+#   "mountainash_auth_settings @ {root:uri}/../mountainash-auth-settings",
+#   "mountainash_utils @ {root:uri}/../mountainash-utils",
+#   "mountainash_utils_dataclasses @ {root:uri}/../mountainash-utils-dataclasses",
+#   "mountainash_utils_dataframes @ {root:uri}/../mountainash-utils-dataframes"
+#   ]
+
+
+# [tool.hatch.envs.test_downstream.scripts]
+# test = [#"pytest {args:tests}", 
+#         "pytest ../mountainash-auth-utils-files"
+# ]
+
+# # Downstream ACRDS package testing
+# [tool.hatch.envs.test_downstream_acrds]
+# dependencies = [  
+#   "pytest",
+#   "pytest_check",
+#   "mountainash_constants @ {root:uri}/../mountainash-constants",
+#   "mountainash_acrds_utils_files @ {root:uri}/../mountainash-acrds-utils-files",
+#   "mountainash_acrds_constants @ {root:uri}/../mountainash-acrds-constants",
+#   "mountainash_utils_dataclasses @ {root:uri}/../mountainash-utils-dataclasses",
+#   "mountainash_utils @ {root:uri}/../mountainash-utils"
+#   ]
+
+# [tool.hatch.envs.test_downstream_acrds.scripts]
+# test = ["pytest ../mountainash-acrds-utils-files"]
+
+
+# Coverage Parameters
+[tool.coverage.run]
+source_pkgs = ["mountainash_utils_files", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/mountainash_utils_files/__version__.py",
+]
+
+[tool.coverage.paths]
+mountainash_utils_files = ["src/mountainash_utils_files", "*/mountainash-utils-files/src/mountainash_utils_files"]
+tests = ["tests", "*/mountainash-utils-files/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mountainash_utils_files"]

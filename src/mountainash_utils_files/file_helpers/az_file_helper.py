@@ -1,17 +1,10 @@
-# import os
-# import hashlib
-from typing import Any, List, Union, IO
-from upath import UPath
-from smart_open import open
 
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import AzureError
 
 from .base_file_helper import Base_FileHelper
 
-from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
 
 class AZ_FileHelper(Base_FileHelper):
 
