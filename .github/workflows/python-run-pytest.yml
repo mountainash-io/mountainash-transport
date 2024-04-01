@@ -60,19 +60,19 @@ jobs:
           path: temp/mountainash-utils
           fetch-depth: 1     
 
-      - name: Checkout private repositories - mountainash-dataclasses
+      - name: Checkout private repositories - mountainash-utils-dataclasses
         uses: actions/checkout@v4
         with:          
           repository: mountainash-io/mountainash-utils-dataclasses
           ref: main
           token: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
-          path: temp/mountainash-dataclasses
+          path: temp/mountainash-utils-dataclasses
           fetch-depth: 1     
 
       - name: Checkout private repositories - mountainash-utils-dataframes
         uses: actions/checkout@v4
         with:          
-          repository: mountainash-io/mountainash-utils-dataclasses-dataframes
+          repository: mountainash-io/mountainash-utils-dataframes
           ref: main
           token: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
           path: temp/mountainash-utils-dataframes
