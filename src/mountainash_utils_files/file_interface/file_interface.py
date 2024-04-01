@@ -5,7 +5,7 @@ from typing import Union, Any, Optional, List, IO
 
 from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory, get_file_helper_factory
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters
+from mountainash_settings import SettingsParameters, SettingsUtils
 from mountainash_auth_settings import  AuthSettings, get_auth_settings
 
 
@@ -39,15 +39,14 @@ class FileInterface:
 
     @classmethod
     def copy_path_to_path(cls, 
-                  source_path: UPath|str, 
-                  destination_path: UPath|str,                    
-                  source_auth_settings_parameters: SettingsParameters, 
-                  destination_auth_settings_parameters: SettingsParameters,
-                  
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                        source_path: UPath|str, 
+                        destination_path: UPath|str,                    
+                        source_auth_settings_parameters: SettingsParameters, 
+                        destination_auth_settings_parameters: SettingsParameters,
+                        encrypt: bool = False,
+                        decrypt: bool = False,
+                        compress: bool = False,
+                        decompress: bool = False
 
                  ) -> bool:
 
@@ -136,7 +135,7 @@ class FileInterface:
         obj_source_storage = cls.resolve_storage_object(obj_storage=obj_source_storage, auth_parameters=obj_source_settings)
 
         if not obj_destination_storage.supports_put_from_stream:
-            raise ValueError(f"put_object_from_stream(): Destination storage system does not support put from stream")
+            raise ValueError("put_object_from_stream(): Destination storage system does not support put from stream")
         
         #Resolve connections
         cls._init_connections(obj_destination_storage=obj_destination_storage, obj_source_storage=obj_source_storage)
@@ -191,7 +190,7 @@ class FileInterface:
         obj_source_storage = cls.resolve_storage_object(obj_storage=obj_source_storage, auth_parameters=obj_source_settings)
 
         if not obj_destination_storage.supports_put_from_path:
-            raise ValueError(f"put_object_from_stream(): Destination storage system does not support put from stream")
+            raise ValueError("put_object_from_stream(): Destination storage system does not support put from stream")
         
         #Resolve connections
         cls._init_connections(obj_destination_storage=obj_destination_storage, obj_source_storage=obj_source_storage)
@@ -241,7 +240,7 @@ class FileInterface:
         obj_source_storage = cls.resolve_storage_object(obj_storage=obj_source_storage, auth_parameters=obj_source_settings)
 
         if not obj_source_storage.supports_get_to_stream:
-            raise ValueError(f"put_object_from_stream(): Destination storage system does not support put from stream")
+            raise ValueError("put_object_from_stream(): Destination storage system does not support put from stream")
         
         #Resolve connections
         cls._init_connections(obj_destination_storage=obj_destination_storage, obj_source_storage=obj_source_storage)
@@ -295,7 +294,7 @@ class FileInterface:
         obj_source_storage = cls.resolve_storage_object(obj_storage=obj_source_storage, auth_parameters=obj_source_settings)
 
         if not obj_source_storage.supports_get_to_path:
-            raise ValueError(f"put_object_from_stream(): Destination storage system does not support put from stream")
+            raise ValueError("put_object_from_stream(): Destination storage system does not support put from stream")
         
         #Resolve connections
         cls._init_connections(obj_destination_storage=obj_destination_storage, obj_source_storage=obj_source_storage)

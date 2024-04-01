@@ -1,5 +1,4 @@
 from typing import Union, Type, Optional
-import platform
 
 from upath import UPath
 

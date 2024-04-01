@@ -3,7 +3,6 @@ import io
 from typing import Any, List, Union, IO, Optional
 
 from upath import UPath
-from smart_open import open
 from paramiko import SFTPClient, SSHClient,  SFTPAttributes
 
 from mountainash_utils_files.path_helpers import PathHelper
@@ -239,8 +238,9 @@ class SFTP_FileHelper(Base_FileHelper):
             return False
 
         # do it!
-        fget:  Any = self.io_client.put(localpath=str_source_path, remotepath=str_destination_path)
-        
+        #TODO: log some of the stats of the put method
+        self.io_client.put(localpath=str_source_path, remotepath=str_destination_path)
+
         return True        
         
 

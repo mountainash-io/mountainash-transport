@@ -1,4 +1,4 @@
-from typing import Union, Any, Optional
+from typing import Union, Optional
 
 from upath import UPath
 

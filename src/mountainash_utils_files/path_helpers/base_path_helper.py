@@ -1,6 +1,6 @@
 from typing import Union, Optional
 import re
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from upath import UPath
 

@@ -1,5 +1,4 @@
-from upath import UPath
-from typing import Union, Any, Type, Dict, Optional, List, IO, Iterable
+from typing import  Any, Type, Dict, Optional
 
 from functools import lru_cache
 
@@ -13,7 +12,6 @@ from .s3_file_helper import S3_FileHelper
 from .s3u_file_helper import S3U_FileHelper
 
 
-from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_auth_settings import get_auth_settings, AuthSettings
 
 from mountainash_settings import SettingsParameters
@@ -63,10 +61,7 @@ class FileHelperFactory:
         # The object storage, and the object retrieval lru_cache...
         # The LRU Cache needs to work on the immuatable SettingsParameters Object. Not the AuthSettinsg object.
         # WE should use the Auth_Settinsg object here. As the Settinsg PArameters do not have ALL the information we need. The could have a kwarg over-ride.
-
-        #TODO: The storage here should be based upon the Settings Object....
-        obj_auth_settings = get_auth_settings(auth_settings_parameters=auth_parameters)
-        
+       
         obj_storage: Optional[Base_FileHelper] = cls.storage_interface_objects.get(auth_parameters, None)
 
         if isinstance(obj_storage, Base_FileHelper):

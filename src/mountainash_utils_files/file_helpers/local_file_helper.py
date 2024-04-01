@@ -1,7 +1,6 @@
 import os
 from typing import Any, List, Union, IO,  Optional
 from upath import UPath
-from smart_open import open
 
 import shutil
 from .base_file_helper import Base_FileHelper

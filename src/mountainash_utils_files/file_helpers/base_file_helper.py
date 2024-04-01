@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO
 import io 
 
-from functools import lru_cache
 from smart_open import open
 from upath import UPath
 from paramiko import SSHClient, AutoAddPolicy
@@ -421,7 +420,7 @@ class Base_FileHelper(ABC):
             if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
 
                 transport = self.ssh_client.get_transport()
-                reverse_tunnel = transport.open_channel('direct-tcpip', 
+                self.reverse_tunnel = transport.open_channel('direct-tcpip', 
                                                         ('127.0.0.1', self.ssh_fwd_localport), 
                                                         ('localhost', self.ssh_fwd_remoteport))
         
@@ -921,7 +920,7 @@ class Base_FileHelper(ABC):
                 # bytes_io_stream = io.BytesIO(stream_data)
                 # put_object: Any = self.io_client.put_object(bucket_name=bucket_name, object_name=object_name, data=bytes_io_stream, length=length)
 
-                # return put_object
+                return put_object
 
             except Exception as e:
                 raise ValueError(f"Error writing to stream: {e}")
@@ -1137,7 +1136,7 @@ class Base_FileHelper(ABC):
         parent: UPath = u_path.parent
 
         if not parent.exists():
-            created = self.create_directory(path=parent)
+            self.create_directory(path=parent)
 
         return self.path_parent_exists(parent)
 

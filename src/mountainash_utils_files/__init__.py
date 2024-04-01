@@ -6,8 +6,11 @@ from .file_writers.filewriter import FileWriter
 from .file_interface import FileInterface, get_file_interface
 from .path_helpers import PathHelper
 
-__all__ = ("FileReader", 
-           "FileWriter", 
-           "FileInterface", 
-           "PathHelper", 
-           "get_file_interface")
+__all__ = (
+    "__version__",
+    "FileReader",        
+    "FileWriter", 
+    "FileInterface", 
+    "PathHelper", 
+    "get_file_interface"
+    )

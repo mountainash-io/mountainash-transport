@@ -107,6 +107,14 @@ cov-html = [
   "coverage html",
 ]
 
+# Ruff Linting Checks
+[tool.hatch.envs.ruff]
+dependencies = [
+  "ruff"
+]
+[tool.hatch.envs.ruff.scripts]
+check = "ruff check ./src"
+
 # Radon Complexity Checks
 [tool.hatch.envs.radon]
 dependencies = [

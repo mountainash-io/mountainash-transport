@@ -1,6 +1,4 @@
 from typing import Union, Optional
-
-from urllib.parse import unquote
 from upath import UPath
 
 from mountainash_constants import CONST_STORAGESYSTEM
