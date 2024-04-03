@@ -4,6 +4,7 @@ dependencies:
   - python>=3.12.0
   - pip
   - pip:
+    - ipykernel
     - pytest
     - pytest_check
     - radon
