@@ -8,6 +8,7 @@ dependencies:
     - pytest
     - pytest_check
     - radon
+    - ruff
     - coverage
     - hatch
     #Package deps
@@ -36,11 +37,5 @@ dependencies:
     - -e ../mountainash-utils
     - -e ../mountainash-utils-dataclasses
     - -e ../mountainash-utils-dataframes
-    # - git+https://github.com/mountainash-io/mountainash-settings.git@main
-    # - git+https://github.com/mountainash-io/mountainash-auth-settings.git@main
-    # - git+https://github.com/mountainash-io/mountainash-utils.git@main
-    # - git+https://github.com/mountainash-io/mountainash-utils-dataclasses.git@main
-    # - git+https://github.com/mountainash-io/mountainash-utils-dataframes.git@main
-    # - git+https://github.com/mountainash-io/mountainash-constants.git@main
 
 
