@@ -71,7 +71,21 @@ dependencies = [
 
 ]
 [tool.hatch.envs.test_github.scripts]
-test = "pytest {args:tests}"
+test = "pytest"
+test-cov = "coverage run -m pytest"
+test-xml = "coverage xml"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+  "test-xml",
+]
+cov-html = [
+  "coverage html",
+]
 
 
 # Pytest and Test Coverage - Local
@@ -93,8 +107,9 @@ dependencies = [
 
 ]
 [tool.hatch.envs.test.scripts]
-test = "pytest {args:tests}"
-test-cov = "coverage run -m pytest {args:tests}"
+test = "pytest"
+test-cov = "coverage run -m pytest"
+test-xml = "coverage xml"
 cov-report = [
   "- coverage combine",
   "coverage report",
@@ -102,10 +117,12 @@ cov-report = [
 cov = [
   "test-cov",
   "cov-report",
+  "test-xml",
 ]
 cov-html = [
   "coverage html",
 ]
+
 
 # Ruff Linting Checks
 [tool.hatch.envs.ruff]
