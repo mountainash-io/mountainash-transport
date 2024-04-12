@@ -61,7 +61,6 @@ dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
   "pytest_check",
-
   "mountainash_constants @ {root:uri}/temp/mountainash-constants",
   "mountainash_settings @ {root:uri}/temp/mountainash-settings",
   "mountainash_auth_settings @ {root:uri}/temp/mountainash-auth-settings",
@@ -97,7 +96,6 @@ dependencies = [
   "coverage[toml]>=6.5",
   "pytest",
   "pytest_check",
-
   "mountainash_constants @ {root:uri}/../mountainash-constants",
   "mountainash_settings @ {root:uri}/../mountainash-settings",
   "mountainash_auth_settings @ {root:uri}/../mountainash-auth-settings",

@@ -14,8 +14,8 @@ class S3PathHelper(BasePathHelper):
         :param namespace: The input namespace as a string.
         :return: A formatted namespace string.
         """
-        if path:
-            u_path = UPath(path)
+        u_path: UPath | None = UPath(path) if path else None
+
         if bucket_name:
             str_bucket_name: str|None = bucket_name
         else:

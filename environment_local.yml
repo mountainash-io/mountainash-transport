@@ -1,5 +1,5 @@
 # environment.yaml
-name: mash_utils_files_p312
+name: mash_utils_files_p312b
 dependencies:
   - python>=3.12.0
   - pip
@@ -20,13 +20,13 @@ dependencies:
     - pydantic-settings
     - boltons
     - paramiko
-    - gnupg
+    # - gnupg
     - minio
     - boto3
     - universal_pathlib
     - smart_open[s3]
     - paramiko
-    - python-gnupg
+    - python-gnupg 
     - xsdata[lxml]
     #This package
     - -e .

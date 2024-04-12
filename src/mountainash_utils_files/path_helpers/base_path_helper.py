@@ -11,8 +11,11 @@ from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFI
 class BasePathHelper(ABC):
 
     @classmethod
-    def format_path(cls, path: Optional[Union[str, UPath]]) -> Optional[UPath]:
-        pass
+    def format_path(cls, 
+                    path: Optional[Union[str, UPath]]
+                    ) -> Optional[UPath]:
+        
+        raise NotImplementedError("format_path must be implemented in subclasses")
 
 
     @classmethod
@@ -47,8 +50,9 @@ class BasePathHelper(ABC):
 
         if not path:
             return None
-
-        return str(object=UPath(path))
+        
+        return str(path)
+        # return str(object=UPath(path))
     
     @classmethod
     def get_local_platform_slash(cls) -> str:
@@ -121,6 +125,7 @@ class BasePathHelper(ABC):
 
         # If no prefix is found, assume it's a local path. 
         # The path handlers will need to handle the path accordingly.
+        print("Could not identify storage prefix. Assuming LOCAL_DISK be default")
         return CONST_STORAGESYSTEM.LOCAL_DISK.value
 
     @classmethod

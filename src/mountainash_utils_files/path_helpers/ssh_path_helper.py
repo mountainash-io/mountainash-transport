@@ -8,7 +8,7 @@ from .base_path_helper import BasePathHelper
 class SSHPathHelper(BasePathHelper):
 
     @classmethod
-    def format_path(cls, path: Union[str, UPath]) -> Optional[UPath]:
+    def format_path(cls, path: Optional[Union[str, UPath]] = None) -> Optional[UPath]:
         """
         Formats a given path as a valid SSH UPath object.
 
@@ -28,7 +28,7 @@ class SSHPathHelper(BasePathHelper):
             raise ValueError(f"Invalid SSH path: {clean_path_str} - {e}")
 
     @classmethod
-    def combine_path_and_filename(cls, path: Union[str, UPath], filename: str) -> Optional[UPath]:
+    def combine_path_and_filename(cls, path: Optional[Union[str, UPath]] = None, filename: Optional[str]=None) -> Optional[UPath]:
         """
         Combines directory and filename into a single UPath object, correcting for issues like doubled-up slashes.
 

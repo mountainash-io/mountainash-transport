@@ -19,7 +19,7 @@ class SFTPPathHelper(BasePathHelper):
         return f"sftp://{service_name}" if service_name else "sftp://"
 
     @classmethod
-    def format_path(cls, path: Union[str, UPath]) -> UPath:
+    def format_path(cls, path: Optional[Union[str, UPath]] = None) -> UPath:
         """
         Formats a given path as a valid SFTP UPath object.
 

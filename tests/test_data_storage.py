@@ -10,7 +10,9 @@ import random
 from upath import UPath
 
 
-auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", settings_class=AuthSettings, settings_system=CONST_STORAGESYSTEM.LOCAL_DISK.value)
+auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", 
+                                                                                settings_class=AuthSettings, 
+                                                                                STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value)
 
 @pytest.mark.parametrize(
     "path, expected",

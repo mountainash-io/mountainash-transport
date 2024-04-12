@@ -81,6 +81,9 @@ class FileInterface:
         source_attributes: dict[str, bool] = source_storage_interface.get_interface_attributes(role="source")
         destination_attributes: dict[str, bool] = destination_storage_interface.get_interface_attributes(role="destination")
 
+        print(f"copy_path_to_path: source_attributes: {source_attributes}")
+        print(f"copy_path_to_path: destination_attributes: {destination_attributes}")
+
 
         #Resolve the best way to move the data
 
