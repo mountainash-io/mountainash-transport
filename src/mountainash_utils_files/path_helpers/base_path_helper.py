@@ -3,6 +3,7 @@ import re
 from abc import ABC
 
 from upath import UPath
+from urllib.parse import urlparse
 
 from mountainash_utils.os_utils import get_platform_slash
 from mountainash_utils_dataclasses import DataclassUtils
@@ -115,18 +116,26 @@ class BasePathHelper(ABC):
         if not path_str:
             return CONST_STORAGESYSTEM.LOCAL_DISK.value
       
-        # Check if the path starts with a known storage system prefix
-        for storage_system in DataclassUtils.get_enum_attribute_names(CONST_STORAGESYSTEM_PREFIX):
+        parsed = urlparse(path_str)
+        path_scheme = parsed.scheme.lower()
 
-            prefix = CONST_STORAGESYSTEM_PREFIX.get(member=storage_system, default_val=None)  
+        if path_scheme in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM_PREFIX):
 
-            if prefix and path_str.lower().startswith(prefix.lower()):
+            storage_system = CONST_STORAGESYSTEM_PREFIX.find_member(value=path_scheme)
+            if storage_system is None:
+                raise ValueError(f"Failed to identify storage system for path: {path_str}.")
+            elif isinstance(storage_system, list) and len(storage_system) > 1:
+                raise ValueError(f"Multiple storage systems found for path: {path_str}.")
+            elif isinstance(storage_system, list) and len(storage_system) == 1:
+                return storage_system[0]
+            elif isinstance(storage_system, str):
                 return storage_system
+            else:
+                raise ValueError(f"Failed to identify storage system for path: {path_str}.")
 
-        # If no prefix is found, assume it's a local path. 
-        # The path handlers will need to handle the path accordingly.
-        print("Could not identify storage prefix. Assuming LOCAL_DISK be default")
-        return CONST_STORAGESYSTEM.LOCAL_DISK.value
+        else:
+            print("Could not identify storage prefix. Assuming LOCAL_DISK be default")
+            return CONST_STORAGESYSTEM.LOCAL_DISK.value
 
     @classmethod
     def _normalize_path_schema(cls, path_str: Optional[str], scheme_key: str) -> Optional[str]:
@@ -145,24 +154,29 @@ class BasePathHelper(ABC):
         scheme_length = len(scheme_prefix)
         candidate_path: Optional[str] = None
 
-        if path_str.lower().startswith(f"{scheme_prefix}:"):
-            existing_scheme = path_str[:scheme_length]
+        #TODO. Use urlparse to parse the path and check if the scheme is correct
+        provided_scheme_str = path_str[:scheme_length]
 
+        parsed = urlparse(path_str)
+        existing_scheme = parsed.scheme
+
+        #Correct prefix and scheme
+        if parsed.scheme == scheme_prefix:
+
+            #All good
             if path_str.startswith(f"{scheme_prefix}://"):
                 return path_str
             
+            #All good but scheme was capitalised 
+            if path_str.lower().startswith(f"{scheme_prefix}://"):
+                #Only replace the start
+                path_str.replace(f"{provided_scheme_str}:", f"{scheme_prefix}:", __count=1)
+                if path_str.startswith(f"{scheme_prefix}://"):
+                    return path_str
             else:
-                # Correct paths that start with "{scheme}:" but are missing "//"
-                candidate_path =  path_str.replace(f"{existing_scheme}:", f"{scheme_prefix}://", 1)
-                    
-        elif "://" in path_str:
-            # Handle incorrect schemes by replacing everything up to "://" with "{scheme}://"
-            candidate_path = f"{scheme_prefix}://{path_str.split('://', 1)[-1]}"
-        else:
-            # Assume it's a relative path or a path without scheme
-            candidate_path = f"{scheme_prefix}://{path_str.lstrip('/')}"
-
-        raise ValueError(f"Failed to normalize path: '{path_str}' to scheme: '{scheme_key}'. The correct path *may* be '{candidate_path}', but you should check to be sure.'")
+                #Perahaps the path was lacking slashes?
+                candidate_path = f"{scheme_prefix}://{path_str.lstrip('/')}"
+                raise ValueError(f"Failed to normalize path: '{path_str}' to scheme: '{scheme_key}'. The correct path *may* be '{candidate_path}', but you should check to be sure.'")
 
     # @classmethod
     # def identify_storage_system(cls, path: Union[str, UPath]) -> str:

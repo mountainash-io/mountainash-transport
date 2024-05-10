@@ -660,19 +660,9 @@ class Base_FileHelper(ABC):
         if not u_path:
             raise ValueError("Invalid path")
 
-        # if encrypt_stream and decrypt_stream:
-        #     raise ValueError("Cannot encrypt and decrypt at the same time")
 
         #Open the raw stream       
         stream: TextIO|BinaryIO = open(uri=u_path, mode=mode, **kwargs)
-
-
-        # if encrypt_stream:
-        #     self.encrypt_stream(source_stream=stream)  # Return the encrypted stream
-
-        # if decrypt_stream:
-        #     self.decrypt_stream(source_stream=stream)  # Return the encrypted stream
-
 
         return stream
 

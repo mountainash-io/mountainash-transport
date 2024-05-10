@@ -66,7 +66,8 @@ dependencies = [
   "mountainash_auth_settings @ {root:uri}/temp/mountainash-auth-settings",
   "mountainash_utils @ {root:uri}/temp/mountainash-utils",
   "mountainash_utils_dataclasses @ {root:uri}/temp/mountainash-utils-dataclasses",
-  "mountainash_utils_dataframes @ {root:uri}/temp/mountainash-utils-dataframes"
+  "mountainash_data @ {root:uri}/temp/mountainash-data",
+  "mountainash_utils_ssh @ {root:uri}/temp/mountainash-utils-ssh",
 
 ]
 [tool.hatch.envs.test_github.scripts]
@@ -89,7 +90,7 @@ cov-html = [
 
 # Pytest and Test Coverage - Local
 [[tool.hatch.envs.test.matrix]]
-python = ["3.11", "3.12",  "3.10" ] # "3.8", "3.9","3.9",
+python = ["3.12"]#, "3.11",  "3.10" ] # "3.8", "3.9","3.9",
 
 [tool.hatch.envs.test]
 dependencies = [
@@ -101,7 +102,8 @@ dependencies = [
   "mountainash_auth_settings @ {root:uri}/../mountainash-auth-settings",
   "mountainash_utils @ {root:uri}/../mountainash-utils",
   "mountainash_utils_dataclasses @ {root:uri}/../mountainash-utils-dataclasses",
-  "mountainash_utils_dataframes @ {root:uri}/../mountainash-utils-dataframes"
+  "mountainash_data @ {root:uri}/../mountainash-data",
+  "mountainash_utils_ssh @ {root:uri}/../mountainash-utils-ssh",
 
 ]
 [tool.hatch.envs.test.scripts]

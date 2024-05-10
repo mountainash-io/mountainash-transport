@@ -13,13 +13,11 @@ from mountainash_constants import CONST_DATAFILEFORMAT
 from mountainash_settings import SettingsParameters
 from mountainash_auth_settings import  AuthSettings, get_auth_settings
 from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_utils_dataframes import   DataFrameUtils, BaseDataFrame
+from mountainash_data import   DataFrameUtils, BaseDataFrame
+
 from mountainash_utils_files.path_helpers import PathHelper
-
-
-
-from ..file_helpers import Base_FileHelper
-from ..file_interface import get_file_helper_object
+from mountainash_utils_files.file_helpers import Base_FileHelper
+from mountainash_utils_files.file_interface import get_file_helper_object
 
 class FileWriter:
     """
@@ -39,23 +37,9 @@ class FileWriter:
     """
 
     def __init__(self, 
-                #  app_settings_parameters: SettingsParameters,
                  destination_auth_parameters: SettingsParameters,
-                 file_format:str):
+                 file_format: str):
 
-
-        # if not app_settings_parameters:
-        #     raise ValueError("ReportBuildOrchestrator: app_settings_parameters must be provided.")
-
-        # #App Settings
-        # self.app_settings_parameters: SettingsParameters  = app_settings_parameters
-
-
-        #FileSystem
-        # if not filesystem or filesystem not in DataclassUtils.get_enum_values_set(CONST_FILESYSTEM):
-        #     raise ValueError(f"Invalid filesystem: {filesystem}")
-
-        #FileFormat
 
         if file_format and file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
             raise ValueError(f"Invalid file format: {file_format}")
@@ -145,7 +129,7 @@ class FileWriter:
             self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
 
 
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(df_dataframe=dataframe.df)
+        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(df_dataframe=dataframe.materialise())
         pa_dataframe: Any = pa.Table.from_pandas(pd_dataframe)
 
    
@@ -197,7 +181,7 @@ class FileWriter:
 
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.df)
+        pd_dataframe: pd.DataFrame = dataframe.to_pandas()
 
         if encrypt or compress:
 
@@ -244,10 +228,10 @@ class FileWriter:
 
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.df)
+        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.materialise())
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.df)
+        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.materialise())
 
         if encrypt or compress:
 
@@ -275,10 +259,10 @@ class FileWriter:
     def write_delta(self, 
                     df_datafile: BaseDataFrame, 
                     output_file_path: Union[str, UPath],
-                         overwrite:bool = True,
-                      encrypt: Optional[bool] = False,
-                      compress: Optional[bool] = False
-                      ):
+                    overwrite:bool = True,
+                    encrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False
+                    ):
         
         raise NotImplementedError
         # output_file_path = UPath(output_file_path)
@@ -357,7 +341,9 @@ class FileWriter:
                 with io.StringIO() as temp_stream:
                     
                     #write to a temp stream
-                    xml_serializer.write(out=temp_stream, obj=xmlobj)
+                    #xml_serializer.write(out=temp_stream, obj=xmlobj)
+                    temp_stream.write(xml_serializer.render(obj=xmlobj))
+
                     processed_stream: io.BytesIO = self.destination_storage_interface.process_source_stream(source_stream=temp_stream, encrypt=encrypt, decrypt=compress)
 
                     output_binary_file.write(processed_stream.read())
@@ -368,7 +354,9 @@ class FileWriter:
             with self.destination_storage_interface.open_write_textstream(destination_path=u_xml_output_filepath) as output_text_file:
 
                 #if isinstance(output_text_file, TextIO):
-                xml_serializer.write(out=output_text_file, obj=xmlobj)
+                output_text_file.write(xml_serializer.render(obj=xmlobj) )
+
+                # xml_serializer.write(out=output_text_file, obj=xmlobj)
                 #else:
                 #    raise ValueError("Invalid file stream")
 

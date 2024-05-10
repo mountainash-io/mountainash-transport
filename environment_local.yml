@@ -28,6 +28,7 @@ dependencies:
     - paramiko
     - python-gnupg 
     - xsdata[lxml]
+    - ibis-framework[polars,pandas]
     #This package
     - -e .
     #Other Mountain Ash Packages
@@ -36,6 +37,7 @@ dependencies:
     - -e ../mountainash-auth-settings
     - -e ../mountainash-utils
     - -e ../mountainash-utils-dataclasses
-    - -e ../mountainash-utils-dataframes
+    - -e ../mountainash-data
+    - -e ../mountainash-utils-ssh
 
 

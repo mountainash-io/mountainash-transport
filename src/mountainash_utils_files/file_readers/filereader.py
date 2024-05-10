@@ -6,15 +6,15 @@ import pandas as pd
 import polars as pl
 from upath import UPath
 
-from mountainash_constants import CONST_DATAFILEFORMAT, CONST_DATAFRAME_FRAMEWORK
+from mountainash_constants import CONST_DATAFILEFORMAT
 from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_utils_dataframes import BaseDataFrame, DataFrameFactory
-from mountainash_utils_files.path_helpers import PathHelper
+from mountainash_data import BaseDataFrame, DataFrameFactory
 from mountainash_settings import SettingsParameters
 from mountainash_auth_settings import get_auth_settings, AuthSettings
 
-from ..file_helpers import Base_FileHelper
-from ..file_interface import get_file_helper_object
+from mountainash_utils_files.path_helpers import PathHelper
+from mountainash_utils_files.file_helpers import Base_FileHelper
+from mountainash_utils_files.file_interface import get_file_helper_object
 
 
 
@@ -22,39 +22,17 @@ from ..file_interface import get_file_helper_object
 class FileReader:
 
     def __init__(self,
-                 app_settings_parameters: SettingsParameters,
-                
                  source_auth_parameters: SettingsParameters,
-
-                #  filesystem:            Optional[str] = None, 
-                 file_format:           Optional[str] = None, 
-                 dataframe_framework:   Optional[str] = None):
-        #Will need to be initialised with the settings for a given filesystem, sourceformat, etc
-
-        if not app_settings_parameters:
-            raise ValueError("ReportBuildOrchestrator: app_settings_parameters must be provided.")
-
-        #App Settings
-        self.app_settings_parameters: SettingsParameters  = app_settings_parameters
-
+                 file_format:           str):
 
         if not source_auth_parameters :
             raise ValueError("FileReader: source_auth_parameters must be provided.")
 
 
-        # #FileSystem
-        # if not filesystem or filesystem not in DataclassUtils.get_enum_values_set(CONST_FILESYSTEM):
-        #     raise ValueError(f"Invalid filesystem: {filesystem}. It should be set as FILESYSTEM in your settings. Valid values are: {DataclassUtils.get_enum_values(CONST_FILESYSTEM)}")
-
         #FileFormat
         if not file_format or file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
             raise ValueError(f"Invalid file format: {file_format}. It should be set as DATA_FILE_FORMAT in your settings. Valid values are: {DataclassUtils.get_enum_values(CONST_DATAFILEFORMAT)}")
         
-        #Dataframe Framework
-        if not dataframe_framework or dataframe_framework not in DataclassUtils.get_enum_values_set(CONST_DATAFRAME_FRAMEWORK):
-            raise ValueError(f"Invalid dataframe framework: {dataframe_framework}. It should be set as DATAFRAME_FRAMEWORK in your settings. Valid values are: {DataclassUtils.get_enum_values(CONST_DATAFRAME_FRAMEWORK)}")
-
-
         #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
         self.source_auth_parameters: SettingsParameters = source_auth_parameters
         self.source_auth_settings: AuthSettings = get_auth_settings(self.source_auth_parameters)
@@ -62,8 +40,6 @@ class FileReader:
 
         #File and dataframe formats
         self.file_format: str = file_format  
-        self.dataframe_framework: str = dataframe_framework  
-        # self.filesystem_interface = FilesystemInterface(filesystem=self.filesystem)
             
         #Ibis Backend
         self.db_interface = None
@@ -108,7 +84,7 @@ class FileReader:
                 source_file_path: Union[UPath, str], 
                 decrypt: Optional[bool] = False,
                 decompress: Optional[bool] = False
-                ) -> Optional[IO]:
+                ) -> IO:
 
         if source_file_path is None:
             raise ValueError("The report file is not set. Please set the report file before loading the report.")
@@ -117,22 +93,22 @@ class FileReader:
         decompress = bool(decompress)
 
         try:
-            with self.source_storage_interface.open_read_binarystream(source_path=source_file_path) as xml_report_file:
+            xml_report_file =  self.source_storage_interface.open_read_binarystream(source_path=source_file_path)
 
-                if decrypt or decompress:
+            if decrypt or decompress:
 
-                    processed_stream: io.BytesIO = self.source_storage_interface.process_source_stream(source_stream=xml_report_file, 
-                                                                decrypt=decrypt, 
-                                                                decompress=decompress)        
-                    return processed_stream
-                else:
-                    return xml_report_file
+                processed_stream: io.BytesIO = self.source_storage_interface.process_source_stream(source_stream=xml_report_file, 
+                                                            decrypt=decrypt, 
+                                                            decompress=decompress)        
+                return processed_stream
+            else:
+                return xml_report_file
                 
         except Exception:
-            print(f"Error reading xml file: {source_file_path}")
-            print(traceback.format_exc())
+            raise ValueError(f"Error reading xml file: {source_file_path}")
+            # print(traceback.format_exc())
 
-            return None
+            # return None
 
 
 
@@ -150,8 +126,8 @@ class FileReader:
             raise ValueError(f"Invalid file path: {file_path}")
 
         #No point in returning a lazy frame if we are using pandas
-        if self.dataframe_framework == CONST_DATAFRAME_FRAMEWORK.PANDAS.value:
-            materialise = True
+        # if self.dataframe_framework == CONST_DATAFRAME_FRAMEWORK.PANDAS.value:
+        #     materialise = True
 
         #Just retrieve the files with Polars
         polars_dataframe: Optional[Union[pl.DataFrame, pl.LazyFrame]] = None
@@ -186,20 +162,13 @@ class FileReader:
                     polars_dataframe =  pl.read_parquet(source=parquet_stream)
 
         
-        #Target Dataframe Framework
-        if self.dataframe_framework == CONST_DATAFRAME_FRAMEWORK.POLARS.value:
+        # if isinstance(polars_dataframe, pl.LazyFrame):
+        #     polars_dataframe = polars_dataframe.collect()
 
-            dataframe_object: BaseDataFrame = DataFrameFactory.create_dataframe_object(df=polars_dataframe, dataframe_framework=self.dataframe_framework)
-            return dataframe_object
 
-        elif self.dataframe_framework == CONST_DATAFRAME_FRAMEWORK.PANDAS.value:
-            if isinstance(polars_dataframe, pl.LazyFrame):
-                polars_dataframe = polars_dataframe.collect()
+        dataframe_object = DataFrameFactory.create_ibis_dataframe_object_from_dataframe(df=polars_dataframe)
 
-            pandas_dataframe: pd.DataFrame = polars_dataframe.to_pandas() 
-            dataframe_object = DataFrameFactory.create_dataframe_object(df=pandas_dataframe, dataframe_framework=self.dataframe_framework)
-
-            return dataframe_object
+        return dataframe_object
   
 
 
