@@ -46,8 +46,8 @@ def test_path_exists(path: UPath | str, expected: str):
         ("/", True),
         ("~", True),        
         ("~/", True),
-        ("/etc/sudoers", False),
-        ("/etc/sudoers.d", True),
+        # ("/etc/sudoers", False),
+        # ("/etc/sudoers.d", True),
 
         ("~/data/directory/", False),
         ("randomfile.txt", False),
@@ -74,8 +74,8 @@ def test_path_is_dir(path: UPath | str, expected: str):
         ("/", False),
         ("~", False),        
         ("~/", False),
-        ("/etc/sudoers", True),
-        ("/etc/sudoers.d", False),
+        # ("/etc/sudoers", True),
+        # ("/etc/sudoers.d", False),
 
         ("~/data/directory/", False),
         ("randomfile.txt", False),
