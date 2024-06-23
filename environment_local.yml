@@ -35,9 +35,9 @@ dependencies:
     - -e ../mountainash-constants
     - -e ../mountainash-settings
     - -e ../mountainash-auth-settings
+    - -e ../mountainash-data
     - -e ../mountainash-utils-os
     - -e ../mountainash-utils-dataclasses
-    - -e ../mountainash-data
     - -e ../mountainash-utils-ssh
 
 

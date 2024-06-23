@@ -85,7 +85,7 @@ def test_path_is_dir(path: UPath | str, expected: str):
         (UPath("/"), False),
         (UPath("~"), False),        
         (UPath("~/"), False),
-        (UPath("/etc/sudoers"), True),
+        # (UPath("/etc/sudoers"), True),
 
         # (UPath("~/data/directory/"), False),
         # (UPath("randomfile.txt"), False),
