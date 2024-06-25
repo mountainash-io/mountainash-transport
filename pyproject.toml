@@ -55,6 +55,21 @@ path = "src/mountainash_utils_files/__version__.py"
 [tool.hatch.envs.default]
 installer = "uv"
 
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest_check",
+  "mountainash_constants @ {root:uri}/../mountainash-constants",
+  "mountainash_settings @ {root:uri}/../mountainash-settings",
+  "mountainash_auth_settings @ {root:uri}/../mountainash-auth-settings",
+  "mountainash_utils_os @ {root:uri}/../mountainash-utils-os",
+  "mountainash_utils_dataclasses @ {root:uri}/../mountainash-utils-dataclasses",
+  "mountainash_data @ {root:uri}/../mountainash-data",
+  "mountainash_utils_ssh @ {root:uri}/../mountainash-utils-ssh",
+
+]
+
+
 # Pytest and Test Coverage - Github
 [[tool.hatch.envs.test_github.matrix]]
 python = ["3.11", "3.12",  "3.10" ] # "3.8", "3.9","3.9",
@@ -89,6 +104,7 @@ cov = [
 cov-html = [
   "coverage html",
 ]
+
 
 
 # Pytest and Test Coverage - Local

@@ -15,7 +15,7 @@ git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-xml.git /workspaces/mountainash-utils-xml
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-gpg.git /workspaces/mountainash-utils-gpg
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-hamilton.git /workspaces/mountainash-utils-hamilton
-# git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-os.git /workspaces/mountainash-utils-os
+git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-os.git /workspaces/mountainash-utils-os
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-rules.git /workspaces/mountainash-utils-rules
 
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-acrds-constants.git /workspaces/mountainash-acrds-constants
