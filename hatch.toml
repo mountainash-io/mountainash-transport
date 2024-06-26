@@ -1,0 +1,168 @@
+
+[metadata]
+allow-direct-references = true
+
+[version]
+path = "src/mountainash_utils_files/__version__.py"
+
+[build.targets.wheel]
+packages = ["src/mountainash_utils_files"]
+
+#================
+# Env: default
+#================
+[envs.default]
+installer = "uv"
+dependencies = [
+  "mountainash_auth_settings @      {root:uri}/../mountainash-auth-settings",
+  "mountainash_constants @          {root:uri}/../mountainash-constants",
+  "mountainash_data @               {root:uri}/../mountainash-data",
+  "mountainash_settings @           {root:uri}/../mountainash-settings",
+
+  "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
+  "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
+  "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
+
+]
+
+
+
+#================
+# Env: test_github
+#================
+[[envs.test_github.matrix]]
+python = ["3.11", "3.12",  "3.10" ] # "3.8", "3.9","3.9",
+
+[envs.test_github]
+installer = "uv"
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest_check",
+
+  "mountainash_auth_settings @      {root:uri}/temp/mountainash-auth-settings",
+  "mountainash_constants @          {root:uri}/temp/mountainash-constants",
+  "mountainash_data @               {root:uri}/temp/mountainash-data",
+  "mountainash_settings @           {root:uri}/temp/mountainash-settings",
+
+  "mountainash_utils_dataclasses @  {root:uri}/temp/mountainash-utils-dataclasses",
+  "mountainash_utils_os @           {root:uri}/temp/mountainash-utils-os",
+  "mountainash_utils_ssh @          {root:uri}/temp/mountainash-utils-ssh",
+
+]
+[envs.test_github.scripts]
+test = "pytest"
+test-cov = "coverage run -m pytest"
+test-xml = "coverage xml"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+  "test-xml",
+]
+cov-html = [
+  "coverage html",
+]
+
+
+#================
+# Env: test
+#================
+[[envs.test.matrix]]
+python = ["3.12"]#, "3.11",  "3.10" ] # "3.8", "3.9","3.9",
+
+[envs.test]
+installer = "uv"
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+  "pytest_check",
+
+  "mountainash_auth_settings @      {root:uri}/../mountainash-auth-settings",
+  "mountainash_constants @          {root:uri}/../mountainash-constants",
+  "mountainash_data @               {root:uri}/../mountainash-data",
+  "mountainash_settings @           {root:uri}/../mountainash-settings",
+
+  "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
+  "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
+  "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
+]
+[envs.test.scripts]
+test = "pytest"
+test-cov = "coverage run -m pytest"
+test-xml = "coverage xml"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+  "test-xml",
+]
+cov-html = [
+  "coverage html",
+]
+
+#================
+# Env: ruff
+#================
+[envs.ruff]
+installer = "uv"
+dependencies = [
+  "ruff"
+]
+[envs.ruff.scripts]
+check = "ruff check ./src"
+
+#================
+# Env: radon
+#================
+# Radon Complexity Checks
+[envs.radon]
+installer = "uv"
+dependencies = [
+  "radon",
+]
+[envs.radon.scripts]
+radon-cc = "radon cc . -nd"
+radon-mi = "radon mi . -nd"
+
+#================
+# Env: mypy
+#================
+# Mypy Type checks
+[envs.mypy]
+installer = "uv"
+dependencies = [
+  "mypy>=1.0.0",
+]
+[envs.mypy.scripts]
+check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
+
+
+#================
+# Tool: Coverage
+#================
+[tool.coverage.run]
+source_pkgs = ["mountainash_utils_files", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/mountainash_utils_files/__version__.py",
+]
+
+[tool.coverage.paths]
+mountainash_utils_files = ["src/mountainash_utils_files", "*/mountainash-utils-files/src/mountainash_utils_files"]
+tests = ["tests", "*/mountainash-utils-files/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__:",
+  "if TYPE_CHECKING:",
+]
+
