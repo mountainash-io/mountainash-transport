@@ -144,25 +144,4 @@ dependencies = [
 check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
 
 
-#================
-# Tool: Coverage
-#================
-[tool.coverage.run]
-source_pkgs = ["mountainash_utils_files", "tests"]
-branch = true
-parallel = true
-omit = [
-  "src/mountainash_utils_files/__version__.py",
-]
-
-[tool.coverage.paths]
-mountainash_utils_files = ["src/mountainash_utils_files", "*/mountainash-utils-files/src/mountainash_utils_files"]
-tests = ["tests", "*/mountainash-utils-files/tests"]
-
-[tool.coverage.report]
-exclude_lines = [
-  "no cov",
-  "if __name__ == .__main__:",
-  "if TYPE_CHECKING:",
-]
 
