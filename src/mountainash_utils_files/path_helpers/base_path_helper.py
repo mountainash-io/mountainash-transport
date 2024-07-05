@@ -131,10 +131,10 @@ class BasePathHelper(ABC):
             elif isinstance(storage_system, str):
                 return storage_system
             else:
-                raise ValueError(f"Failed to identify storage system for path: {path_str}.")
+                raise ValueError(f"Failed to identify storage system for path: {path_str}")
 
         else:
-            print("Could not identify storage prefix. Assuming LOCAL_DISK be default")
+            print(f"Could not identify storage prefix in {path} - Assuming LOCAL_DISK")
             return CONST_STORAGESYSTEM.LOCAL_DISK.value
 
     @classmethod
