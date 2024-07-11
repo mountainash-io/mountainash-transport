@@ -46,7 +46,10 @@ class FileReader:
 
 
     def read_datafile(self, 
-                      file_path: Union[UPath, str]
+                      file_path: Union[UPath, str],
+                    materialise:Optional[bool] = False,
+                    decrypt:Optional[bool] = False,
+                    decompress:Optional[bool] = False                      
                       ) -> Optional[BaseDataFrame]:
         
 
@@ -59,7 +62,11 @@ class FileReader:
         try:
             #Write the dataframe to the parquet file
             if self.file_format == CONST_DATAFILEFORMAT.PARQUET.value:
-                df_datafile = self.read_parquet(file_path=file_path)       
+                df_datafile = self.read_parquet(file_path=file_path,
+                                                materialise = materialise,
+                                                decrypt = decrypt,
+                                                decompress = decompress
+                                                )       
 
             elif self.file_format == CONST_DATAFILEFORMAT.CSV.value:
                 raise NotImplementedError

@@ -28,7 +28,7 @@ dependencies:
     - paramiko
     - python-gnupg 
     - xsdata[lxml]
-    - ibis-framework[polars,pandas]
+    - ibis-framework[polars,pandas,sqlite,duckdb] == 9.0.0
     #This package
     - -e .
     #Other Mountain Ash Packages
