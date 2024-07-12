@@ -24,11 +24,11 @@ classifiers = [
 ]
 dependencies = [
   "pandas==2.2.2",
-  "polars==0.20.31",
+  "polars==1.1.0",
   "pydantic==2.7.4",
   "pydantic-settings==2.2.1",
   "universal_pathlib==0.2.2",
-  "pyarrow==15.0.2",
+  "pyarrow==16.1.0",
   "boltons==24.0.0",
   "paramiko==3.4.0",
   "gnupg==2.3.1",
