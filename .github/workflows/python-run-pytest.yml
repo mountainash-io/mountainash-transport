@@ -3,7 +3,11 @@ name: Pytest Runner
 on: 
   push:
     paths:
-      - 'src/mountainash_utils_files/**'    
+      - 'src/mountainash_utils_files/**'  
+  pull_request:
+    paths:
+      - 'src/mountainash_utils_files/**'          
+    
   workflow_dispatch:
 
 jobs:
