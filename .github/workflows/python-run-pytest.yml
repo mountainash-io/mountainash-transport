@@ -95,10 +95,10 @@ jobs:
       # mountainash-data
       - name: Check if branch exists - mountainash-data
         id: check_branch_data
-        env:
-          GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
+        # env:
+        #   GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${{GH_TOKEN}}@github.com/mountainash-io/mountainash-data.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://${{secrets.CLONE_PRIVATE_REPOS_TOKEN}}@github.com/mountainash-io/mountainash-data.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-data
         if: steps.check_branch_data.outputs.EXISTS == 'true'
