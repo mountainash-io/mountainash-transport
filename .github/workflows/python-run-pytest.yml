@@ -42,7 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-auth-settings.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-auth-settings.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-auth-settings
         if: steps.check_branch_auth_settings.outputs.EXISTS == 'true'
@@ -70,7 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-constants.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-constants.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-constants
         if: steps.check_branch_constants.outputs.EXISTS == 'true'
@@ -98,7 +98,7 @@ jobs:
         # env:
         #   GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${{secrets.CLONE_PRIVATE_REPOS_TOKEN}}@github.com/mountainash-io/mountainash-data.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${{secrets.CLONE_PRIVATE_REPOS_TOKEN}}@github.com/mountainash-io/mountainash-data.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-data
         if: steps.check_branch_data.outputs.EXISTS == 'true'
@@ -129,7 +129,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-settings.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-settings.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-settings
         if: steps.check_branch_settings.outputs.EXISTS == 'true'
@@ -161,7 +161,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-dataclasses.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-dataclasses.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-utils-dataclasses
         if: steps.check_branch_utils_dataclasses.outputs.EXISTS == 'true'
@@ -192,7 +192,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-os.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-os.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-utils-os
         if: steps.check_branch_utils_os.outputs.EXISTS == 'true'
@@ -222,7 +222,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CLONE_PRIVATE_REPOS_TOKEN }}
         run: |
-          git ls-remote --exit-code --heads https://${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-ssh.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
+          git ls-remote --exit-code --heads https://x-access-token:${GH_TOKEN}@github.com/mountainash-io/mountainash-utils-ssh.git ${{ env.BRANCH_NAME }} && echo "EXISTS=true" >> $GITHUB_OUTPUT || echo "EXISTS=false" >> $GITHUB_OUTPUT
 
       - name: Checkout matching branch - mountainash-utils-ssh
         if: steps.check_branch_utils_ssh.outputs.EXISTS == 'true'
