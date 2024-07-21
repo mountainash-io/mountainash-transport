@@ -2,7 +2,6 @@ from typing import  Union, Optional, IO
 import traceback
 import io
 
-import pandas as pd
 import polars as pl
 from upath import UPath
 
