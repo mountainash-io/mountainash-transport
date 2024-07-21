@@ -158,7 +158,7 @@ class BasePathHelper(ABC):
         provided_scheme_str = path_str[:scheme_length]
 
         parsed = urlparse(path_str)
-        existing_scheme = parsed.scheme
+        # existing_scheme = parsed.scheme
 
         #Correct prefix and scheme
         if parsed.scheme == scheme_prefix:

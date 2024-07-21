@@ -294,7 +294,7 @@ class FileWriter:
     #         xml_version="1.0", 
     #         encoding="UTF-8",
     #         no_namespace_schema_location=schema_location,
-    #         pretty_print=True
+    #         indent="  "
     #     )
 
     #     serializer = XmlSerializer(config= xmlconfig, 
