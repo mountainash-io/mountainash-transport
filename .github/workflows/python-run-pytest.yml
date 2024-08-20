@@ -18,18 +18,21 @@ jobs:
         python-version: [ "3.12"] #, "3.8", "3.9", "3.10","3.11",]
 
     steps:
+      # Current Branch
+      - name: Get branch name
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+          fetch-depth: 0
+
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-
-      # Current Branch
-      - name: Get branch name
-        shell: bash
-        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})" >> $GITHUB_ENV
 
       #Set the ORGNAME
       - name: Set ORGNAME - mountainash-io
@@ -243,3 +246,9 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: mountainash-io/mountainash-utils-files
+
+      # Sonarcloud analysis          
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}             
