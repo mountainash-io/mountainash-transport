@@ -5,12 +5,14 @@ import io
 from smart_open import open
 from upath import UPath
 from paramiko import SSHClient, AutoAddPolicy
-from gnupg import GPG 
 import gzip
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_dataclasses import DataclassUtils
 from mountainash_constants import CONST_STORAGESYSTEM
+
+from mountainash_utils_gpg import GPG_Helper
+from mountainash_utils_ssh import SSH_Helper
 
 from mountainash_settings import SettingsParameters
 from mountainash_auth_settings import  AuthSettings, get_auth_settings
@@ -37,14 +39,12 @@ class Base_FileHelper(ABC):
 
     io_client: Optional[Any]
     ssh_client: Optional[Any]
+    ssh_helper: Optional[SSH_Helper]
 
     compression_type: str
     encryption_type: str
 
-    gpg_home: str
-    gpg_key_id: str
-    gpg_key_file: str|UPath
-    gpg_client: GPG
+    gpg_helper: Optional[GPG_Helper]
 
     #Controls initialsation of the storage system
     requires_io_connection: bool
@@ -55,71 +55,71 @@ class Base_FileHelper(ABC):
     enable_decrypt_on_read: bool
 
 
-    supports_native_get_to_stream: bool
-    supports_native_put_from_stream: bool
-    supports_native_get_to_local_path: bool
-    supports_native_put_from_local_path: bool
-    supports_native_get_to_native_path: bool
-    supports_native_put_from_native_path: bool
+    # supports_native_get_to_stream: bool
+    # supports_native_put_from_stream: bool
+    # supports_native_get_to_local_path: bool
+    # supports_native_put_from_local_path: bool
+    # supports_native_get_to_native_path: bool
+    # supports_native_put_from_native_path: bool
 
-    supports_encrypt_native_get_to_stream: bool
-    supports_encrypt_native_put_from_stream: bool
-    supports_encrypt_native_get_to_local_path: bool
-    supports_encrypt_native_put_from_local_path: bool
-    supports_encrypt_native_get_to_native_path: bool
-    supports_encrypt_native_put_from_native_path: bool
+    # supports_encrypt_native_get_to_stream: bool
+    # supports_encrypt_native_put_from_stream: bool
+    # supports_encrypt_native_get_to_local_path: bool
+    # supports_encrypt_native_put_from_local_path: bool
+    # supports_encrypt_native_get_to_native_path: bool
+    # supports_encrypt_native_put_from_native_path: bool
 
-    supports_decrypt_native_get_to_stream: bool
-    supports_decrypt_native_put_from_stream: bool
-    supports_decrypt_native_get_to_local_path: bool
-    supports_decrypt_native_put_from_local_path: bool
-    supports_decrypt_native_get_to_native_path: bool
-    supports_decrypt_native_put_from_native_path: bool
+    # supports_decrypt_native_get_to_stream: bool
+    # supports_decrypt_native_put_from_stream: bool
+    # supports_decrypt_native_get_to_local_path: bool
+    # supports_decrypt_native_put_from_local_path: bool
+    # supports_decrypt_native_get_to_native_path: bool
+    # supports_decrypt_native_put_from_native_path: bool
 
-    supports_compress_native_get_to_stream: bool
-    supports_compress_native_put_from_stream: bool
-    supports_compress_native_get_to_local_path: bool
-    supports_compress_native_put_from_local_path: bool
-    supports_compress_native_get_to_native_path: bool
-    supports_compress_native_put_from_native_path: bool
+    # supports_compress_native_get_to_stream: bool
+    # supports_compress_native_put_from_stream: bool
+    # supports_compress_native_get_to_local_path: bool
+    # supports_compress_native_put_from_local_path: bool
+    # supports_compress_native_get_to_native_path: bool
+    # supports_compress_native_put_from_native_path: bool
 
-    supports_decompress_native_get_to_stream: bool
-    supports_decompress_native_put_from_stream: bool
-    supports_decompress_native_get_to_local_path: bool
-    supports_decompress_native_put_from_local_path: bool
-    supports_decompress_native_get_to_native_path: bool
-    supports_decompress_native_put_from_native_path: bool
+    # supports_decompress_native_get_to_stream: bool
+    # supports_decompress_native_put_from_stream: bool
+    # supports_decompress_native_get_to_local_path: bool
+    # supports_decompress_native_put_from_local_path: bool
+    # supports_decompress_native_get_to_native_path: bool
+    # supports_decompress_native_put_from_native_path: bool
 
-    supports_smartopen_read_stream: bool
-    supports_encrypt_smartopen_read_stream: bool
-    supports_decrypt_smartopen_read_stream: bool
-    supports_compress_smartopen_read_stream: bool
-    supports_decompress_smartopen_read_stream: bool
+    # supports_smartopen_read_stream: bool
+    # supports_encrypt_smartopen_read_stream: bool
+    # supports_decrypt_smartopen_read_stream: bool
+    # supports_compress_smartopen_read_stream: bool
+    # supports_decompress_smartopen_read_stream: bool
 
-    supports_smartopen_write_stream: bool
-    supports_encrypt_smartopen_write_stream: bool
-    supports_decrypt_smartopen_write_stream: bool
-    supports_compress_smartopen_write_stream: bool
-    supports_decompress_smartopen_write_stream: bool
+    # supports_smartopen_write_stream: bool
+    # supports_encrypt_smartopen_write_stream: bool
+    # supports_decrypt_smartopen_write_stream: bool
+    # supports_compress_smartopen_write_stream: bool
+    # supports_decompress_smartopen_write_stream: bool
 
-    supports_get_to_stream: bool
-    supports_get_to_path: bool
-    supports_put_from_stream: bool
-    supports_put_from_path: bool
+    # supports_get_to_stream: bool
+    # supports_get_to_path: bool
+    # supports_put_from_stream: bool
+    # supports_put_from_path: bool
 
 
-    supports_polars_native_read_parquet: bool
-    supports_polars_stream_read_parquet: bool
-    supports_decrypt_polars_read_parquet: bool
-    supports_decompress_polars_read_parquet: bool
-    supports_pyarrow_write_parquet: bool
-    supports_encrypt_pyarrow_write_parquet: bool
-    supports_compress_pyarrow_write_parquet: bool
+    # supports_polars_native_read_parquet: bool
+    # supports_polars_stream_read_parquet: bool
+    # supports_decrypt_polars_read_parquet: bool
+    # supports_decompress_polars_read_parquet: bool
+    # supports_pyarrow_write_parquet: bool
+    # supports_encrypt_pyarrow_write_parquet: bool
+    # supports_compress_pyarrow_write_parquet: bool
 
-    prefer_native_on_get: bool
-    prefer_smartopen_on_get: bool
-    prefer_native_on_put: bool
-    prefer_smartopen_on_put: bool
+    # prefer_native_on_get: bool
+    # prefer_smartopen_on_get: bool
+    # prefer_native_on_put: bool
+    # prefer_smartopen_on_put: bool
 
     def __init__(self, 
                  auth_parameters: SettingsParameters,
@@ -389,61 +389,48 @@ class Base_FileHelper(ABC):
 
     def connect_ssh(self):
         """Connect to the SFTP server"""
-
-        connected: bool = self.check_if_ssh_connected()
+        ...
+        # connected: bool = self.check_if_ssh_connected()
         
-        if not connected:
+        # if not connected:
 
-            if self.ssh_client is not None:
-                self.ssh_client.close()
+        #     if self.ssh_client is not None:
+        #         self.ssh_client.close()
 
-            self.ssh_client = SSHClient()
-            self.ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-            #set crypto policy
-            #self.ssh_client.get_transport().set_ciphers('aes128-cbc')
+        #     self.ssh_client = SSHClient()
+        #     self.ssh_client.set_missing_host_key_policy(AutoAddPolicy())
+        #     #set crypto policy
+        #     #self.ssh_client.get_transport().set_ciphers('aes128-cbc')
 
-            #TODO: Validate that the keypath exists
+        #     #TODO: Validate that the keypath exists
 
-            if self.ssh_keypath is not None:
+        #     if self.ssh_keypath is not None:
 
-                u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
-                ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
+        #         u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
+        #         ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
 
-                self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
-                                        username=self.ssh_username, password=self.ssh_password, 
-                                        key_filename=ssh_keypath_str)
-            else:
-                self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
-                                        username=self.ssh_username, password=self.ssh_password)
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
+        #                                 username=self.ssh_username, password=self.ssh_password, 
+        #                                 key_filename=ssh_keypath_str)
+        #     else:
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
+        #                                 username=self.ssh_username, password=self.ssh_password)
 
-            # Forward the remote port to the local port
-            if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
+        #     # Forward the remote port to the local port
+        #     if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
 
-                transport = self.ssh_client.get_transport()
-                self.reverse_tunnel = transport.open_channel('direct-tcpip', 
-                                                        ('127.0.0.1', self.ssh_fwd_localport), 
-                                                        ('localhost', self.ssh_fwd_remoteport))
+        #         transport = self.ssh_client.get_transport()
+        #         self.reverse_tunnel = transport.open_channel('direct-tcpip', 
+        #                                                 ('127.0.0.1', self.ssh_fwd_localport), 
+        #                                                 ('localhost', self.ssh_fwd_remoteport))
         
         return self.check_if_ssh_connected()
 
 
     def check_if_ssh_connected(self):
         """Check if the SFTP server is connected"""
+        ...
 
-        connected = True
-
-        if self.ssh_client is None:
-            connected = False
-        else:
-            try:
-                transport = self.ssh_client.get_transport()
-                peername: Any | None = transport.getpeername()  if transport else None  
-                connected: bool =  peername is not None
-
-            except OSError:
-                connected =  False
-            
-        return connected
 
     #================================================================
     # GZip Compression operations
@@ -534,7 +521,7 @@ class Base_FileHelper(ABC):
 
     def init_gpg(self):
 
-        self.gpg_client = GPG(gnupghome=self.gpg_home)
+        self.gpg_client = GPG_Helper(gnupghome=self.gpg_home)
         self.import_gpg_keys()
 
         if not self.gpg_client:

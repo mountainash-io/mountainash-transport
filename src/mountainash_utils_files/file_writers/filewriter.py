@@ -129,8 +129,7 @@ class FileWriter:
             self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
 
 
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(df_dataframe=dataframe.materialise())
-        pa_dataframe: Any = pa.Table.from_pandas(pd_dataframe)
+        pa_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_arrow(df=dataframe)
 
    
         if encrypt or compress:
@@ -279,7 +278,7 @@ class FileWriter:
     # def get_xml_serializer(self, models_package:str) -> XmlSerializer:
 
 
-    #     app_settings: AppSettings = get_app_settings(app_settings_parameters=self.app_settings_parameters)
+    #     app_settings: AppSettings = get_app_settings(settings_parameters=self.settings_parameters)
 
     #     #TODO: This cannot be here!
     #     version_map: Dict[str, str] = DataclassUtils.get_enum_values_dict_reverse_lookup(enumclass=CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, keyenumclass=CONST_ACRDS_VERSION)
