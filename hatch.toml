@@ -1,4 +1,3 @@
-
 [metadata]
 allow-direct-references = true
 
@@ -22,7 +21,7 @@ dependencies = [
   "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
   "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
   "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
-
+  "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
 ]
 
 
@@ -48,7 +47,7 @@ dependencies = [
   "mountainash_utils_dataclasses @  {root:uri}/temp/mountainash-utils-dataclasses",
   "mountainash_utils_os @           {root:uri}/temp/mountainash-utils-os",
   "mountainash_utils_ssh @          {root:uri}/temp/mountainash-utils-ssh",
-
+  "mountainash_utils_gpg @          {root:uri}/temp/mountainash-utils-gpg",
 ]
 [envs.test_github.scripts]
 test = "pytest"
@@ -89,6 +88,7 @@ dependencies = [
   "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
   "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
   "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
+  "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
 ]
 [envs.test.scripts]
 test = "pytest"
@@ -147,6 +147,3 @@ dependencies = [
 ]
 [envs.mypy.scripts]
 check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
-
-
-
