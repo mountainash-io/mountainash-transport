@@ -7,6 +7,31 @@ path = "src/mountainash_utils_files/__version__.py"
 [build.targets.wheel]
 packages = ["src/mountainash_utils_files"]
 
+[hooks.version]
+type = "calendar"
+# increment = "build"
+
+
+[envs.build_github]
+installer = "uv"
+dependencies = [
+  "cyclonedx-bom==4.5.0",
+
+  "mountainash_auth_settings @  {root:uri}/temp/mountainash-auth-settings",
+  "mountainash_constants @      {root:uri}/temp/mountainash-constants",
+  "mountainash_data @           {root:uri}/temp/mountainash-data",
+  "mountainash_settings @       {root:uri}/temp/mountainash-settings",
+  
+  "mountainash_utils_dataclasses @      {root:uri}/temp/mountainash-utils-dataclasses",
+  "mountainash_utils_gpg @              {root:uri}/temp/mountainash-utils-gpg",
+  "mountainash_utils_os @               {root:uri}/temp/mountainash-utils-os",
+  "mountainash_utils_ssh @              {root:uri}/temp/mountainash-utils-ssh",
+]
+[envs.build_github.scripts]
+sbom-all = "cyclonedx-py environment > ./sbom-full.xml"
+sbom-direct = "cyclonedx-py requirements > ./sbom-direct.xml"
+export-requirements = "hatch dep show requirements > ./requirements.txt"   
+
 #================
 # Env: default
 #================
@@ -91,20 +116,38 @@ dependencies = [
   "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
 ]
 [envs.test.scripts]
+# Basic test commands
 test = "pytest"
-test-cov = "coverage run -m pytest"
-test-xml = "coverage xml"
-cov-report = [
-  "- coverage combine",
-  "coverage report",
+test-file = "pytest {args}"  # For specific file targeting
+test-changed = "pytest --picked"  # Only changed files
+
+# Coverage commands
+test-cov = [
+    "coverage run -m pytest",
+    "coverage json --pretty-print",  # JSON output for agent consumption
+    "coverage xml",                  # XML for CI tools
+    "coverage html"                  # HTML for human review
 ]
-cov = [
-  "test-cov",
-  "cov-report",
-  "test-xml",
+
+# Targeted testing with coverage
+test-cov-file = [
+    "coverage run -m pytest {args}",
+    "coverage json --pretty-print"
 ]
-cov-html = [
-  "coverage html",
+
+# Performance testing
+test-perf = "pytest --benchmark-only"
+test-perf-file = "pytest --benchmark-only {args}"
+
+# Combined report generation
+test-full-report = [
+    "pytest --json-report --json-report-file=pytest_report.json",
+    "coverage run -m pytest",
+    "coverage json --pretty-print",
+    "coverage xml"
+]
+test-cov-junit = [
+ "pytest --cov --junitxml=junit.xml"
 ]
 
 #================
