@@ -7,9 +7,10 @@ from upath import UPath
 
 from mountainash_constants import CONST_DATAFILEFORMAT
 from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_data import BaseDataFrame, DataFrameFactory
-from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import get_auth_settings, AuthSettings
+from mountainash_data import BaseDataFrame, IbisDataFrame
+from mountainash_settings import SettingsParameters, get_settings
+from pydantic_settings import BaseSettings
+
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper
@@ -34,7 +35,7 @@ class FileReader:
         
         #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
         self.source_auth_parameters: SettingsParameters = source_auth_parameters
-        self.source_auth_settings: AuthSettings = get_auth_settings(self.source_auth_parameters)
+        self.source_auth_settings: BaseSettings = get_settings(self.source_auth_parameters)
         self.source_storage_interface: Base_FileHelper = get_file_helper_object(source_auth_parameters)
 
         #File and dataframe formats
@@ -172,7 +173,7 @@ class FileReader:
         #     polars_dataframe = polars_dataframe.collect()
 
 
-        dataframe_object = DataFrameFactory.create_ibis_dataframe_object_from_dataframe(df=polars_dataframe)
+        dataframe_object = IbisDataFrame(df=polars_dataframe)
 
         return dataframe_object
   
