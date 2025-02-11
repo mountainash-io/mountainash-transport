@@ -39,7 +39,7 @@ jobs:
             echo "FALLBACK_BRANCH=${{ github.event.inputs.fallback_branch }}" >> $GITHUB_ENV
           elif [ "${{ github.event_name }}" = "pull_request_target" ]; then
             echo "FALLBACK_BRANCH=${{ github.base_ref }}" >> $GITHUB_ENV
-          else:
+          else
             echo "FALLBACK_BRANCH=develop" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v4
@@ -52,6 +52,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          check-latest: true
 
       #Set the ORGNAME
       - name: Set ORGNAME - mountainash-io
