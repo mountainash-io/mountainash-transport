@@ -13,7 +13,7 @@ from mountainash_settings import SettingsParameters, get_settings
 from pydantic_settings import BaseSettings
 
 from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_data import BaseDataFrame, IbisDataFrame
+from mountainash_data import BaseDataFrame
 from mountainash_data.dataframes.utils import   DataFrameUtils
 
 from mountainash_utils_files.path_helpers import PathHelper
