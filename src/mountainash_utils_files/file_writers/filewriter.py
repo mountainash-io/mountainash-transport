@@ -1,10 +1,9 @@
 
-from typing import  Union, Any, Optional
+from typing import  Union, Optional
 import io
 import traceback
 
 import pandas as pd
-import pyarrow as pa
 import pyarrow.parquet as pq
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from upath import UPath

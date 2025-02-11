@@ -4,7 +4,6 @@ import io
 
 from smart_open import open
 from upath import UPath
-from paramiko import SSHClient, AutoAddPolicy
 import gzip
 
 from mountainash_utils_files.path_helpers import PathHelper
