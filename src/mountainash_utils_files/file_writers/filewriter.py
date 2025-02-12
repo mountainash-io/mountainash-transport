@@ -1,19 +1,20 @@
 
-from typing import  Union, Any, Optional
+from typing import  Union, Optional
 import io
 import traceback
 
 import pandas as pd
-import pyarrow as pa
 import pyarrow.parquet as pq
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from upath import UPath
 
 from mountainash_constants import CONST_DATAFILEFORMAT
-from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters, get_settings
+from pydantic_settings import BaseSettings
+
 from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_data import   DataFrameUtils, BaseDataFrame
+from mountainash_data import BaseDataFrame
+from mountainash_data.dataframes.utils import   DataFrameUtils
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper
@@ -46,7 +47,7 @@ class FileWriter:
         
         #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
         self.destination_auth_parameters: SettingsParameters = destination_auth_parameters
-        self.destination_auth_settings: AuthSettings = get_auth_settings(self.destination_auth_parameters)
+        self.destination_auth_settings: BaseSettings = get_settings(self.destination_auth_parameters)
         self.destination_storage_interface: Base_FileHelper = get_file_helper_object(destination_auth_parameters)
 
 

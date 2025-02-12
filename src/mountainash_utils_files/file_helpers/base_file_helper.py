@@ -4,24 +4,21 @@ import io
 
 from smart_open import open
 from upath import UPath
-from paramiko import SSHClient, AutoAddPolicy
 import gzip
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_constants import CONST_STORAGESYSTEM
 
 from mountainash_utils_gpg import GPG_Helper
 from mountainash_utils_ssh import SSH_Helper
 
-from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters, get_settings
+from pydantic_settings import  BaseSettings 
 
 class Base_FileHelper(ABC):
 
     storage_system: str
     auth_parameters: SettingsParameters
-    auth_settings: AuthSettings
+    auth_settings: BaseSettings
 
     io_hostname: str
     io_port: int
@@ -126,15 +123,15 @@ class Base_FileHelper(ABC):
                  ) -> None:
 
         self.io_auth_parameters = auth_parameters
-        self.io_auth_settings: AuthSettings = get_auth_settings(auth_settings_parameters=auth_parameters)
-        self.storage_system = self.io_auth_settings.STORAGE_SYSTEM
+        self.io_auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
+        self.storage_system = self.io_auth_settings.PROVIDER_TYPE
 
         self.compression_type = self.io_auth_settings.COMPRESSION_TYPE
         self.encryption_type = self.io_auth_settings.ENCRYPTION_TYPE
 
 
-        if self.io_auth_settings.STORAGE_SYSTEM not in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM):
-            raise ValueError(f"Invalid storage system: {self.io_auth_settings.STORAGE_SYSTEM}. Check your auth settings value STORAGE_SYSTEM. Valid values are: {DataclassUtils.get_enum_values_set(CONST_STORAGESYSTEM)}")
+        # if self.io_auth_settings.STORAGE_SYSTEM not in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM):
+        #     raise ValueError(f"Invalid storage system: {self.io_auth_settings.STORAGE_SYSTEM}. Check your auth settings value STORAGE_SYSTEM. Valid values are: {DataclassUtils.get_enum_values_set(CONST_STORAGESYSTEM)}")
 
         # if self.io_auth_settings.ENCRYPTION_TYPE and self.io_auth_settings.ENCRYPTION_TYPE not in DataclassUtils.get_enum_values_set(enumclass=CONST_ENCRYPTION_TYPE):
         #     raise ValueError(f"Invalid storage system: {self.io_auth_settings.ENCRYPTION_TYPE}. Check your auth settings value ENCRYPTION_TYPE. Valid values are: {DataclassUtils.get_enum_values_set(CONST_ENCRYPTION_TYPE)}")
@@ -261,7 +258,7 @@ class Base_FileHelper(ABC):
 
         file_feature_attributes = [
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_get_to_stream",
 
                 f"{role}supports_native_get":       True,
@@ -279,7 +276,7 @@ class Base_FileHelper(ABC):
                 f"{role}supports_decompress":   self.supports_decompress_native_get_to_stream,
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_get_to_path",
 
 
@@ -300,7 +297,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_put_from_stream",
 
                 f"{role}supports_native_get":       False,
@@ -320,7 +317,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_put_from_path",
 
                 f"{role}supports_native_get":       False,
@@ -339,7 +336,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+            #     f"{role}storage_system": self.storage_system,
                 f"{role}method": "smartopen_read_stream",
 
                 f"{role}supports_native_get":       False,
@@ -359,7 +356,7 @@ class Base_FileHelper(ABC):
  
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "smartopen_write_stream",
 
                 f"{role}supports_native_get":       False,
@@ -475,7 +472,6 @@ class Base_FileHelper(ABC):
         print(f"Compressing stream: {source_stream}")
 
         #Note that smartopen suppports compression natively!
-
 
         # Compress the data from source_stream and write it to destination_stream
         with gzip.GzipFile(fileobj=destination_stream, mode='wb', **kwargs) as gzip_file:
@@ -661,7 +657,7 @@ class Base_FileHelper(ABC):
         Read data from the specified source.
         """
 
-        print(f"{self.storage_system}: open_read_binarystream: {source_path}")
+        # print(f"{self.storage_system}: open_read_binarystream: {source_path}")
 
         self.connect()
 
@@ -681,7 +677,7 @@ class Base_FileHelper(ABC):
         """
         Write data to the specified destination.
         """
-        print(f"{self.storage_system}: open_write_binarystream: {destination_path}")
+        # print(f"{self.storage_system}: open_write_binarystream: {destination_path}")
 
         self.connect()
         mode = 'wb'
@@ -700,7 +696,7 @@ class Base_FileHelper(ABC):
         """
         Read data from the specified source.
         """
-        print(f"{self.storage_system}: open_read_textstream: {source_path}")
+        # print(f"{self.storage_system}: open_read_textstream: {source_path}")
         
         self.connect()
         mode = 'r'
@@ -715,7 +711,7 @@ class Base_FileHelper(ABC):
         """
         Write data to the specified destination.
         """
-        print(f"{self.storage_system}: open_write_textstream: {destination_path}")
+        # print(f"{self.storage_system}: open_write_textstream: {destination_path}")
 
         self.connect()
         mode = 'w'

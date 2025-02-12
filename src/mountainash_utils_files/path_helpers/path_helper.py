@@ -77,6 +77,7 @@ class PathHelper:
         :param path: The path as a string or UPath object.
         :return: A string indicating the storage system ('local', 's3', 'gcs', 'azure', 'sftp', 'ssh').
         """
+        print(f"Identifying storage system for path: {path}")
 
         return BasePathHelper.identify_storage_system(path=path)
 

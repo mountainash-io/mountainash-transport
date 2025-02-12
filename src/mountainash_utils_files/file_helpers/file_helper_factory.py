@@ -9,23 +9,22 @@ from .base_file_helper import Base_FileHelper
 from .local_file_helper import Local_FileHelper
 from .sftp_file_helper import SFTP_FileHelper
 from .s3_file_helper import S3_FileHelper
-from .s3u_file_helper import S3U_FileHelper 
 
 
-from mountainash_auth_settings import get_auth_settings, AuthSettings
+from mountainash_settings import SettingsParameters, get_settings
+from pydantic_settings import  BaseSettings 
 
-from mountainash_settings import SettingsParameters
-from mountainash_constants import CONST_STORAGESYSTEM
-
-
-
+from mountainash_settings.settings.auth.storage.constants import (
+    CONST_STORAGE_PROVIDER_TYPE,
+)
 class FileHelperFactory:
 
     path_util_classes: Dict[str, Type[Base_FileHelper]] = {
-        CONST_STORAGESYSTEM.LOCAL_DISK.value: Local_FileHelper,
-        CONST_STORAGESYSTEM.SFTP.value:       SFTP_FileHelper,
-        CONST_STORAGESYSTEM.S3.value:         S3_FileHelper,
-        CONST_STORAGESYSTEM.S3U.value:        S3U_FileHelper,
+
+        CONST_STORAGE_PROVIDER_TYPE.LOCAL.value: Local_FileHelper,
+        CONST_STORAGE_PROVIDER_TYPE.SFTP.value:       SFTP_FileHelper,
+        CONST_STORAGE_PROVIDER_TYPE.S3.value:         S3_FileHelper,
+        # CONST_STORAGE_PROVIDER_TYPE.S3U.value:        S3U_FileHelper,
 
         
         # CONST_STORAGESYSTEM.GCS.value:        GCS_FileHelper(),
@@ -78,11 +77,11 @@ class FileHelperFactory:
                               #**kwargs
                               ) -> Base_FileHelper:
 
-        auth_settings: AuthSettings = get_auth_settings(auth_settings_parameters=auth_parameters)
+        auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
 
 
-        if not auth_settings.STORAGE_SYSTEM:
-            raise ValueError(f"Storage system not defined in settings for auth namespace '{auth_settings.STORAGE_NAMESPACE}'")
+        # if not auth_settings.STORAGE_SYSTEM:
+        #     raise ValueError(f"Storage system not defined in settings for auth namespace '{auth_settings.STORAGE_NAMESPACE}'")
         
         # Check the path if provided
         # Move this to the base class for validation...
@@ -103,7 +102,7 @@ class FileHelperFactory:
         if cls.is_storage_initialised(auth_parameters=auth_parameters):
 
             #If it was already initialised, why are we trying to re-initialse it? Fail if parameters have changed. Pass if the same, but with a warning.
-            cls.validate_init_existing_storage_interface(auth_parameters=auth_parameters, storage_system=auth_settings.STORAGE_SYSTEM)
+            cls.validate_init_existing_storage_interface(auth_parameters=auth_parameters, storage_system=auth_settings.PROVIDER_TYPE)
             
             #Get the existing settings object
             obj_storage: Base_FileHelper = cls._get_storage_interface_object(auth_parameters=auth_parameters)
@@ -113,7 +112,7 @@ class FileHelperFactory:
         else:
 
             #Create the Storage Interface object
-            storage_class: Type[Base_FileHelper] = cls._get_util_class(storage_system=auth_settings.STORAGE_SYSTEM)
+            storage_class: Type[Base_FileHelper] = cls._get_util_class(storage_system=auth_settings.PROVIDER_TYPE)
 
             #HEre is where we create a storage system interface object, and where we can set kwargs!
             obj_storage = storage_class(auth_parameters)

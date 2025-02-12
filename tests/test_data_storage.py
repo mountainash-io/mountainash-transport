@@ -2,17 +2,18 @@ import pytest
 from mountainash_utils_files import FileInterface#, get_file_interface
 # from mountainash_utils_files.file_helpers import FileHelperFactory, Base_FileHelper
 
-from mountainash_constants import CONST_STORAGESYSTEM
-from mountainash_settings import SettingsUtils, SettingsParameters
-from mountainash_auth_settings import AuthSettings
+# from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_settings import  SettingsParameters
+from mountainash_settings.settings.auth.storage.providers import  LocalStorageAuthSettings
 
 import random
 from upath import UPath
 
 
-auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", 
-                                                                                settings_class=AuthSettings, 
-                                                                                STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value)
+auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", 
+                                                                                settings_class=LocalStorageAuthSettings, 
+                                                                                # STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value
+                                                                                )
 
 @pytest.mark.parametrize(
     "path, expected",
