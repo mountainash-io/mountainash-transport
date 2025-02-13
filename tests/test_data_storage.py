@@ -115,7 +115,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 #     storage_facade: FileInterface = get_file_interface()  
 
 #     #Auth
-#     local_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", settings_class=AuthSettings)
+#     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
 #     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
     
 #     copied: bool = storage_facade.copy_binarystream(destination_path=destination_path, source_path=source_path, obj_destination_storage=local_storage, obj_source_storage=local_storage)
@@ -139,7 +139,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 #     storage_facade: FileInterface = get_file_interface()  
 
 #     #Auth
-#     s3_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="s3_warehouse", 
+#     s3_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="s3_warehouse", 
 #                                                                                           settings_class=AuthSettings, 
 #                                                                                           settings_system=CONST_STORAGESYSTEM.S3.value,
 #                                                                                           USERNAME="minio",
@@ -149,7 +149,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 
 #     s3_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=s3_auth_parameters, storage_system=CONST_STORAGESYSTEM.S3.value) 
     
-#     local_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", settings_class=AuthSettings)
+#     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
 #     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
 
 

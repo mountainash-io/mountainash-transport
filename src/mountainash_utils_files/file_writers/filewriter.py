@@ -130,7 +130,7 @@ class FileWriter:
             self.destination_storage_interface.prepare_path_parent(path=u_output_file_path)
 
 
-        pa_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_arrow(df=dataframe)
+        pa_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pyarrow(df=dataframe)
 
    
         if encrypt or compress:
