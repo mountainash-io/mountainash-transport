@@ -8,7 +8,6 @@ from smart_open import open
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, get_settings
 from mountainash_settings.settings.auth.storage.ssh import SSHStorageAuth
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
 
 from .base_file_helper import Base_FileHelper
 
