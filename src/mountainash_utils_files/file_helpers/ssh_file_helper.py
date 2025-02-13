@@ -6,8 +6,8 @@ from upath import UPath
 from smart_open import open
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
+from mountainash_settings import SettingsParameters, get_settings
+from mountainash_settings.settings.auth.storage.ssh import SSHStorageAuth
 
 from .base_file_helper import Base_FileHelper
 
@@ -18,7 +18,7 @@ class SSH_FileHelper(Base_FileHelper):
                  auth_parameters: SettingsParameters
                  ) -> None:
 
-        auth_settings: AuthSettings = get_auth_settings(auth_settings_parameters=auth_parameters)
+        auth_settings: SSHStorageAuth = get_settings(settings_parameters=auth_parameters)
 
         #If using this class, you will need to configure ssh multiplexing (connection reuse)
         # Set a short time limit so that multiple files can be transferred in quick succession

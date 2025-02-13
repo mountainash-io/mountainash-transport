@@ -17,7 +17,6 @@ installer = "uv"
 dependencies = [
   "cyclonedx-bom==4.5.0",
 
-#  "mountainash_auth_settings @  {root:uri}/temp/mountainash-auth-settings",
   "mountainash_constants @      {root:uri}/temp/mountainash-constants",
   "mountainash_data @           {root:uri}/temp/mountainash-data",
   "mountainash_settings @       {root:uri}/temp/mountainash-settings",
@@ -38,7 +37,6 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 [envs.default]
 installer = "uv"
 dependencies = [
-  # "mountainash_auth_settings @      {root:uri}/../mountainash-auth-settings",
   "mountainash_constants @          {root:uri}/../mountainash-constants",
   "mountainash_data @               {root:uri}/../mountainash-data",
   "mountainash_settings @           {root:uri}/../mountainash-settings",
@@ -64,7 +62,6 @@ dependencies = [
   "pytest==8.1.1",
   "pytest-check==2.3.1",
 
-  # "mountainash_auth_settings @      {root:uri}/temp/mountainash-auth-settings",
   "mountainash_constants @          {root:uri}/temp/mountainash-constants",
   "mountainash_data @               {root:uri}/temp/mountainash-data",
   "mountainash_settings @           {root:uri}/temp/mountainash-settings",
@@ -105,7 +102,6 @@ dependencies = [
   "pytest==8.1.1",
   "pytest-check==2.3.1",
 
-  # "mountainash_auth_settings @      {root:uri}/../mountainash-auth-settings",
   "mountainash_constants @          {root:uri}/../mountainash-constants",
   "mountainash_data @               {root:uri}/../mountainash-data",
   "mountainash_settings @           {root:uri}/../mountainash-settings",
