@@ -6,7 +6,6 @@ git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-datacontracts.git /workspaces/mountainash-datacontracts
 git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-settings.git /workspaces/mountainash-settings
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-syntheticdata.git /workspaces/mountainash-syntheticdata
-git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-auth-settings.git /workspaces/mountainash-auth-settings
 
 # git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils.git /workspaces/mountainash-utils
 git clone --depth 1 https://${CLONE_PRIVATE_REPOS_TOKEN}@github.com/mountainash-io/mountainash-utils-dataclasses.git /workspaces/mountainash-utils-dataclasses
