@@ -2,17 +2,23 @@ from typing import  Any, Type, Dict, Optional
 
 from functools import lru_cache
 
-from .base_file_helper import Base_FileHelper
+from pydantic_settings import  BaseSettings 
+
 
 
 # from mountainash_acdrs.utils.file_helper.base_file_helper import Base_FileHelper
+from .base_file_helper import Base_FileHelper
 from .local_file_helper import Local_FileHelper
 from .sftp_file_helper import SFTP_FileHelper
 from .s3_file_helper import S3_FileHelper
+from .r2_file_helper import R2_FileHelper
 
 
 from mountainash_settings import SettingsParameters, get_settings
-from pydantic_settings import  BaseSettings 
+from mountainash_settings.settings.auth.storage import StorageAuthBase
+from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
+
+
 
 from mountainash_settings.settings.auth.storage.constants import (
     CONST_STORAGE_PROVIDER_TYPE,
@@ -24,6 +30,8 @@ class FileHelperFactory:
         CONST_STORAGE_PROVIDER_TYPE.LOCAL.value: Local_FileHelper,
         CONST_STORAGE_PROVIDER_TYPE.SFTP.value:       SFTP_FileHelper,
         CONST_STORAGE_PROVIDER_TYPE.S3.value:         S3_FileHelper,
+        CONST_STORAGE_PROVIDER_TYPE.R2.value:         R2_FileHelper,
+
         # CONST_STORAGE_PROVIDER_TYPE.S3U.value:        S3U_FileHelper,
 
         
@@ -71,14 +79,21 @@ class FileHelperFactory:
 
     @classmethod
     def get_storage_interface(cls, 
-                              auth_parameters: SettingsParameters, 
+                              auth_parameters: Optional[SettingsParameters] = None, 
                             #   storage_system: Optional[str] = None, 
                               #path: Optional[Union[str,UPath]] =  None,
                               #**kwargs
                               ) -> Base_FileHelper:
 
+
+        if auth_parameters is None:
+            auth_parameters: SettingsParameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
+
+
         auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
 
+        if not isinstance(auth_settings, StorageAuthBase):
+            raise ValueError(f"Settings object for namespace '{auth_parameters}' found, but is not an StorageAuthBase object.")
 
         # if not auth_settings.STORAGE_SYSTEM:
         #     raise ValueError(f"Storage system not defined in settings for auth namespace '{auth_settings.STORAGE_NAMESPACE}'")

@@ -1,3 +1,5 @@
+#file: src/mountainash_utils_files/file_helpers/s3_file_helper.py
+
 from typing import Any, List, Union, IO, Optional, Iterator
 from upath import UPath
 from .base_file_helper import Base_FileHelper
@@ -6,14 +8,9 @@ from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
 from mountainash_settings import SettingsParameters
 
-
-
 from minio import Minio
 from minio.error import S3Error
 from urllib.parse import unquote
-import boto3
-# from botocore.exceptions import NoCredentialsError, PartialCredentialsError 
-from botocore.exceptions import BotoCoreError, ClientError
 import io
 
 class S3_FileHelper(Base_FileHelper):
@@ -28,26 +25,16 @@ class S3_FileHelper(Base_FileHelper):
         self.requires_io_connection = True
         self.requires_ssh_connection = False
 
-        """Initialize the S3 object"""
-        # self.hostname =     self.auth_settings.HOST
-        # self.port =         self.auth_settings.PORT
-        # self.username =     self.auth_settings.USERNAME
-        # self.password =     self.auth_settings.PASSWORD
-        # self.ssh_keypath =  self.auth_settings.KEY_PATH
-
-        self.endpoint = f"https://{self.io_auth_settings.HOST}:{self.io_auth_settings.PORT}"
-        self.access_key = self.io_auth_settings.USERNAME
-        self.secret_key = self.io_auth_settings.PASSWORD
-        self.access_token = self.io_auth_settings.TOKEN
+        self.endpoint_url = f"{self.io_auth_settings.ENDPOINT_URL}"
+        self.access_key = self.io_auth_settings.ACCESS_KEY_ID if self.io_auth_settings.ACCESS_KEY_ID else None
+        self.secret_key = self.io_auth_settings.SECRET_ACCESS_KEY.get_secret_value() if self.io_auth_settings.SECRET_ACCESS_KEY else None
+        self.use_ssl = self.io_auth_settings.USE_SSL
 
         #S3 specific 
-        self.bucket =     self.io_auth_settings.STORAGE_NAMESPACE
-        self.service_name =     's3'
+        self.bucket = self.io_auth_settings.BUCKET
+        self.service_name = self.io_auth_settings.BUCKET
 
-        if not self.io_auth_settings.STORAGE_NAMESPACE:
-            raise ValueError(f"Invalid S3 bucket name: {self.io_auth_settings.STORAGE_NAMESPACE}")
-
-        self.io_client: Optional[Any] = None
+        self.io_client: Optional[Minio] = None
         self.connect()
 
         self.set_interface_attributes()
@@ -108,6 +95,8 @@ class S3_FileHelper(Base_FileHelper):
         self.prefer_native_on_put = True
         self.prefer_smartopen_on_put = False
 
+        self.supports_directories = False
+
 
 
     #================================================================
@@ -125,13 +114,14 @@ class S3_FileHelper(Base_FileHelper):
                 self.io_client = None
 
             try:
-
-                self.io_client = boto3.client(
-                    endpoint_url=self.endpoint,
-                    service_name= 's3',
-                    aws_access_key_id=self.access_key,
-                    aws_secret_access_key=self.secret_key,
-                    use_ssl=False
+                # Extract hostname and port from endpoint_url
+                endpoint = self.endpoint_url.replace('http://', '').replace('https://', '')
+                
+                self.io_client = Minio(
+                    endpoint=endpoint,
+                    access_key=self.access_key,
+                    secret_key=self.secret_key,
+                    secure=self.use_ssl
                 )
 
                 # Test the connection by listing buckets
@@ -141,7 +131,7 @@ class S3_FileHelper(Base_FileHelper):
                 else:
                     print('Connection to S3 failed.')
                     return False
-            except (BotoCoreError, ClientError, S3Error) as e:
+            except S3Error as e:
                 print(f'Error connecting to S3: {e}')
                 return False
         else:
@@ -153,35 +143,18 @@ class S3_FileHelper(Base_FileHelper):
         if not self.io_client:
             return False
 
-        try:
-            
-            buckets = self.io_client.list_buckets()
-            # If we can list any bucket successfully, the connection is successful
-            return any(buckets['Buckets'])
+        try:            
+            # List objects in bucket with a limit of 1 to minimize data transfer
+            objects = self.io_client.list_objects(self.bucket, recursive=True, max_keys=1)
+            return any(objects)
         except S3Error as e:
             print(f'Failed to list S3 buckets: {e}')
             return False
 
     def get_connection_client_parameters(self) -> dict:
-
-        session = boto3.Session(
-            aws_access_key_id=      self.access_key,
-            aws_secret_access_key=  self.secret_key,
-        )
-
         transport_params: dict[str, Minio | Any | None] = {
-            'client':  session.client(service_name='s3')
+            'client': self.io_client
         }
-
-        # 'client': {
-        #     'endpoint_url': self.endpoint,
-        #     'aws_access_key_id': self.access_key,
-        #     'aws_secret_access_key': self.secret_key #,
-        #     # 'region_name': 'us-east-1'  # Use appropriate region or leave as default if not applicable.
-        # }
-
-
-
         return transport_params
 
 
@@ -264,20 +237,22 @@ class S3_FileHelper(Base_FileHelper):
             return False
 
         #Process source stream
-
         processed_source_stream: io.BytesIO = self.process_source_stream(source_stream=source_stream,
                                                                         encrypt=encrypt, 
                                                                         decrypt=decrypt,
                                                                         compress=compress,
                                                                         decompress=decompress)
 
-        # stream_data = source_stream.read(length)
-        # bytes_io_stream = io.BytesIO(stream_data)
-
         # do it!
-        put_object: Any = self.io_client.put_object(bucket_name=bucket_name, object_name=object_name, data=processed_source_stream, length=length) if self.io_client else False
-
-        return put_object
+        try:
+            result = self.io_client.put_object(bucket_name=bucket_name, 
+                                             object_name=object_name, 
+                                             data=processed_source_stream, 
+                                             length=length) if self.io_client else False
+            return result
+        except S3Error as e:
+            print(f"Error putting object: {e}")
+            return False
 
         
     def _native_put_object_from_path(self, 
@@ -286,9 +261,8 @@ class S3_FileHelper(Base_FileHelper):
                    **kwargs            
                    ) -> bool:
         
-        self.check_kwargs_for_compression_encryption(**kwargs)
+        self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
 
-       
         # Format Source
         source_path_str: str | None = PathHelper.path_to_str(path=source_path)
 
@@ -301,9 +275,14 @@ class S3_FileHelper(Base_FileHelper):
             return False
 
         # do it!
-        self.io_client.fput_object(bucket_name=bucket_name, object_name=object_name, file_path=source_path_str) if self.io_client else None
-        
-        return True        
+        try:
+            self.io_client.fput_object(bucket_name=bucket_name, 
+                                     object_name=object_name, 
+                                     file_path=source_path_str) if self.io_client else None
+            return True
+        except S3Error as e:
+            print(f"Error putting object from path: {e}")
+            return False
         
 
     def _native_get_object_to_stream(self,
@@ -316,15 +295,26 @@ class S3_FileHelper(Base_FileHelper):
                     decompress: bool = False
                    ) -> bool:
 
-        with self.open_read_binarystream(source_path=source_path) as source_stream:
+        bucket_name: str| None = S3PathHelper.get_path_bucketname(path=source_path)
+        object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
 
-            self.copy_stream_to_stream(source_stream=source_stream, destination_stream=destination_stream,
-                                    encrypt=encrypt, 
-                                    decrypt=decrypt, 
-                                    compress=compress, 
-                                    decompress=decompress)   
-        
-        return True
+        if not bucket_name or not object_name:
+            return False
+
+        try:
+            response = self.io_client.get_object(bucket_name=bucket_name, object_name=object_name)
+            source_stream = io.BytesIO(response.read())
+            
+            self.copy_stream_to_stream(source_stream=source_stream, 
+                                     destination_stream=destination_stream,
+                                     encrypt=encrypt, 
+                                     decrypt=decrypt, 
+                                     compress=compress, 
+                                     decompress=decompress)
+            return True
+        except S3Error as e:
+            print(f"Error getting object to stream: {e}")
+            return False
         
 
     def _native_get_object_to_path(self, 
@@ -333,8 +323,7 @@ class S3_FileHelper(Base_FileHelper):
                     **kwargs
                    ) -> bool|Any:
         
-        self.check_kwargs_for_compression_encryption(**kwargs)
-
+        self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
 
         str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
         
@@ -343,266 +332,17 @@ class S3_FileHelper(Base_FileHelper):
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
 
         # do it!
-        fget:  Any = self.io_client.fget_object(bucket_name=bucket_name, object_name=object_name, file_path=str_destination_path) if self.io_client else None
+        try:
+            result = self.io_client.fget_object(bucket_name=bucket_name, 
+                                              object_name=object_name, 
+                                              file_path=str_destination_path) if self.io_client else None
+            return result
+        except S3Error as e:
+            print(f"Error getting object to path: {e}")
+            return False
 
-        return fget
 
 
-
-    # def put_object_from_stream(self,
-    #                destination_path: Optional[Union[str, UPath]], 
-    #                source_stream: IO[Any], 
-    #                length: int) -> bool|Any:
-
-    #     self.connect()
-
-    #     #Format S3 Destination
-    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
-
-    #     if self.io_client and source_stream:
-
-    #         try:
-
-    #             #Validate Destination
-    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
-    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
-
-    #             bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
-    #             if not bucket_exists:
-    #                 return False
-
-    #             #MiniIO Client
-    #             stream_data = source_stream.read(length)
-    #             bytes_io_stream = io.BytesIO(stream_data)
-    #             put_object: Any = self.io_client.put_object(bucket_name=bucket_name, object_name=object_name, data=bytes_io_stream, length=length)
-
-    #             return put_object
-
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to stream: {e}")
-    #     else:
-    #         return False
-
-    # def put_object_from_path(self, 
-    #                destination_path: Optional[Union[str, UPath]], 
-    #                source_path: Optional[Union[str, UPath]]
-    #                ) -> bool:
-
-    #     #This can only be used if the source interface is local or the same as the destination
-
-    #     self.connect()
-
-    #     #Format S3 Destination
-    #     u_destination_path = PathHelper.format_path(path=destination_path)
-    #     u_source_path: UPath | None = PathHelper.format_path(path=source_path)
-
-    #     #Format Source
-
-    #     #Validate Destintion
-
-    #     #Validate source
-    #     if not u_source_path:
-    #         return False
-
-    #     # source_exists = FileHelperFacade.path_exists(path=u_source_path)
-
-    #     #Do it!
-    #     if self.io_client and bucket_name and bucket_exists and object_name and source_path_str:
-
-    #         try:
-
-    #             # Format Source
-    #             source_path_str: str | None = PathHelper.path_to_str(path=u_source_path)
-
-    #             #validate Destination
-    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
-    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_destination_path)
-    #             bucket_exists: bool = self._bucket_exists(bucket_name=bucket_name)
-    #             if not bucket_exists:
-    #                 return False
-
-
-    #             #MiniIO Client
-    #             self.io_client.fput_object(bucket_name=bucket_name, object_name=object_name, file_path=source_path_str)
-                
-    #             return True
-
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to stream: {e}")
-    #     else:
-    #         return False
-
-
-    # def get_object_to_stream(self,
-    #                source_path: Optional[Union[str, UPath]], 
-    #                destination_stream: IO[Any]) -> bool:
-
-    #     self.connect()
-
-    #     #Format Source
-    #     u_source_path = PathHelper.format_path(path=source_path)
-
-    #     #Validate source
-    #     if not u_source_path:
-    #         return False
-
-    #     source_exists = self.path_exists(path=u_source_path)
-
-    #     if not source_exists:
-    #         print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
-    #         return False
-
-    #     #Do it!        
-    #     if self.io_client and source_exists:
-
-    #         try:
-
-    #             # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
-    #             # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
-
-    #             # get_obj = self.io_client.get_object(bucket_name=bucket_name, object_name=object_name, length=self.get_size(path=u_source_path))
-
-    #             #MiniIO Client
-    #             source_stream = self.open_read_binarystream(source_path=source_path)
-    #             source_file_size = self.get_size(path=u_source_path)
-
-    #             stream_data = source_stream.read(source_file_size)
-    #             bytes_io_stream = io.BytesIO(stream_data)
-
-    #             # with self.open_read_binarystream(source_path=source_path) as source_stream:
-
-    #             #     stream_data = source_stream.read()
-    #             #     bytes_io_stream = io.BytesIO(stream_data)
-
-    #             destination_stream.write(bytes_io_stream)
-                
-    #             return True
-
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to stream: {e}")
-    #     else:
-    #         return False
-
-    # def get_object_to_path(self, 
-    #                source_path: Optional[Union[str, UPath]], 
-    #                destination_path: Optional[Union[str, UPath]]
-    #                ) -> bool|Any:
-
-    #     #This can only be used if the destination interface is local or the same as the source
-
-    #     self.connect()
-
-    #     #Format Paths
-    #     u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
-    #     u_source_path: UPath | None = PathHelper.format_path(path=source_path)
- 
-    #     #Validate source        
-    #     if not u_source_path:
-    #         return False
-
-    #     source_exists = self.path_exists(path=u_source_path)
-    #     if not source_exists:
-    #         print(f"get_object_to_path(): Source does not exist: {u_source_path}")
-    #         return False
-
-    #     if self.io_client and source_exists and u_destination_path:
-
-    #         try:
-
-    #             str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
-                
-    #             #Format S3 Source
-    #             bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
-    #             object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
-
-    #             #MiniIO Client
-    #             fget:  Any = self.io_client.fget_object(bucket_name=bucket_name, object_name=object_name, file_path=str_destination_path)
-
-    #             return fget
-
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to path: {e}")
-    #     else:
-    #         return False
-
-
-
-
-    # def read_from_binarystream(self, source_path: Union[UPath,str], destination_stream: Any, **kwargs) -> bool:
-    #     self.connect()
-    #     return True
-
-    # def write_to_binarystream(self, destination_path: Union[UPath,str], source_stream: Any, **kwargs) -> bool:
-    #     self.connect()
-    #     return True
-
-    # def read_from_binarystream(self, source_path: Union[UPath,str], destination_stream: Any, **kwargs) -> bool:
-
-    #     source_bucket: str | None = S3PathHelper.get_path_bucketname(source_path)
-    #     source_folders_and_filename: str | None = S3PathHelper.get_path_folders_and_filename(source_path)
-
-    #     if not source_bucket or not source_folders_and_filename:            
-    #         raise ValueError(f"Invalid source path: {source_path}")
-        
-    #     self.connect()
-
-    #     if self.io_client:            
-    #         try:
-    #             self.io_client.fget_object(bucket_name=source_bucket, object_name=source_folders_and_filename, file_path=destination_stream)
-
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to stream: {e}")
-        
-    #     return True
-
-
-
-    # def write_to_binarystream(self, destination_path: Union[UPath,str], source_stream: Any, **kwargs) -> bool:
-
-    #     destination_path_str = self.format_path_as_string(path=destination_path)
-
-    #     destination_bucket: str | None = S3PathHelper.get_path_bucketname(destination_path)
-    #     destination_folders_and_filename: str | None = S3PathHelper.get_path_folders_and_filename(destination_path)
-
-    #     self.connect()
-
-    #     if not destination_bucket or not destination_folders_and_filename:
-    #         raise ValueError(f"Invalid destination path: {destination_path_str}")
-            
-    #     if self.io_client:
-    #         try:
-    #             self.io_client.put_object(destination_bucket, destination_folders_and_filename, data=source_stream, length=-1)
-    #         except Exception as e:
-    #             raise ValueError(f"Error writing to stream: {e}")
-        
-    #     return True
-
-
-    # @classmethod
-    # def read_data(cls, source_path: Union[str, UPath], **kwargs) -> Any:
-    #     """
-    #     Read data from the specified source.
-    #     """
-    #     mode = kwargs.get('mode', 'r')  # Default mode is text; use 'rb' for binary
-    #     with open(source_path, mode) as file:
-    #         return file.read()
-
-    # @classmethod
-    # def write_data(cls, destination_path: Union[str, UPath], data: Any, **kwargs):
-    #     """
-    #     Write data to the specified destination.
-    #     """
-    #     mode = kwargs.get('mode', 'w')  # Default mode is text; use 'wb' for binary
-    #     with open(destination_path, mode) as file:
-    #         file.write(data)
-
-    # @classmethod
-    # def copy_to(cls, destination_path: Union[str, UPath], source_file: IO):
-    #     pass
-
-    # @classmethod
-    # def copy_from(cls, source_path: Union[str, UPath]) -> IO:
-    #     pass
 
     #================================================================
     # Filesystem operations
@@ -620,23 +360,13 @@ class S3_FileHelper(Base_FileHelper):
             u_path = S3PathHelper.format_path(path)
             u_bucket_name = S3PathHelper.get_path_bucketname(u_path)
 
-
         try:
-
-            #MiniIO Client
-            buckets = self.io_client.list_buckets()
-            # If we can list any bucket successfully, the connection is successful
-
-            return  u_bucket_name in buckets
+            return self.io_client.bucket_exists(u_bucket_name)
         except S3Error as e:
-            print(f'Failed to list S3 buckets: {e}')
+            print(f'Failed to check bucket existence: {e}')
             return False
 
-
-
     def _find_objects(self, path: Union[str, UPath]) -> Optional[Iterator[Any]]:
-
-
         u_path = PathHelper.format_path(path) 
         if not u_path:
             return None
@@ -644,13 +374,15 @@ class S3_FileHelper(Base_FileHelper):
         self.connect()
 
         if self.io_client:
-
             bucket_name: str | None = S3PathHelper.get_path_bucketname(u_path)
             if not bucket_name:
+                print(f'Failed to get bucket name from path: {u_path}')
                 return None
             
             relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
-
+            if not relative_path:
+                print(f'Failed to get relative path from path: {u_path}')
+                return None
             if not relative_path:
                 return None
 
@@ -662,123 +394,130 @@ class S3_FileHelper(Base_FileHelper):
             else:
                 prefix_relative_path = relative_path
 
-            objects: Iterator[Any] = self.io_client.list_objects(bucket_name=bucket_name, prefix=prefix_relative_path, recursive=True)
-
-            return objects
-
+            try:
+                objects: Iterator[Any] = self.io_client.list_objects(bucket_name=bucket_name, 
+                                                                   prefix=prefix_relative_path, 
+                                                                   recursive=True)
+                return objects
+            except S3Error as e:
+                print(f"Error listing objects: {e}")
+                return None
 
     def list_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> Optional[List[str|None]]:
-        """
-        List available data sources in the specified path or directory.
-        """
+        """List available data sources in the specified path or directory."""
+
         u_path: UPath | None = PathHelper.format_path(path) 
         if not u_path:
             return []
-                
+
+        bucket_name: str | None = S3PathHelper.get_path_bucketname(u_path)
+        relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
+
+        # print(f"Listing sources... in bucket_name: {bucket_name} with prefix {u_path.root}")
+
         self.connect()
+
         if self.io_client:
-            return [obj.object_name for obj in self.io_client.list_objects(bucket_name=u_path.root, prefix=u_path.path, recursive=True)]
+            try:
+                objects = self.io_client.list_objects(bucket_name=bucket_name, 
+                                                    prefix=relative_path, 
+                                                    recursive=True)
+
+                return [obj.object_name for obj in objects]
+            except S3Error as e:
+                print(f"Error listing sources: {e}")
+                return []
             
-    @classmethod
-    def calculate_checksum(cls, path: Union[str, UPath], algorithm: str = 'sha256') -> None:
-        """
-        Calculate the checksum of the data at the specified path.
-        """
-        pass
-        # hash_alg = hashlib.new(algorithm)
-        # with open(path, 'rb') as file:
-        #     for chunk in iter(lambda: file.read(4096), b""):
-        #         hash_alg.update(chunk)
-        # return hash_alg.hexdigest()
-
-
-
-
     def get_size(self, path: Union[str, UPath]) -> int:
-        """
-        Get the size of the data at the specified path.
-        """
-
+        """Get the size of the data at the specified path."""
         u_path: UPath | None = PathHelper.format_path(path=path) 
-
         if not u_path:
             return 0
 
         self.connect()
         if self.io_client:
-
-            objects: Iterator[Any] | None = self._find_objects(path=u_path)
-            
-            object_sizes: list[int] = [ obj.size if obj else 0 for obj in objects ] if objects else []
-
-            return sum( object_sizes )
-        
+            try:
+                objects: Iterator[Any] | None = self._find_objects(path=u_path)
+                object_sizes: list[int] = [obj.size if obj else 0 for obj in objects] if objects else []
+                return sum(object_sizes)
+            except S3Error as e:
+                print(f"Error getting size: {e}")
+                return 0
         return 0
 
-
-        
-
-    def path_exists(self,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-
-
+    def path_exists(self, path: Union[str, UPath]) -> bool:
+        """Checks if the specified path exists."""
         u_path = PathHelper.format_path(path=path) 
         if not u_path:
             return False
-        
 
         self.connect()
 
-        objects: Iterator[Any] | None = self._find_objects(path)
-        relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
+        try:
+            objects: Iterator[Any] | None = self._find_objects(path)
+            relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
 
-        if objects and relative_path:
+            if objects and relative_path:
+                wildcard: bool = True if '*' in relative_path else False
 
-            wildcard: bool = True if '*' in relative_path else False
+                for obj in objects:
+                    obj_key = unquote(obj.object_name)
 
-            for obj in objects:
-                # Extract object key and ensure it's unquoted for comparison
-                obj_key = unquote(obj.object_name if hasattr(obj, 'object_name') else obj.key)
+                    if wildcard:
+                        if S3PathHelper.wildcard_match(pattern=relative_path, target_filename=obj_key):
+                            return True
+                    else:
+                        if obj_key == relative_path:
+                            return True
 
-                if wildcard:
-                    # Use regex match for wildcard patterns
-                    return S3PathHelper.wildcard_match(pattern=relative_path, target_filename=obj_key)
-                else:
-                    # Direct comparison for exact matches
-                    if obj_key == relative_path:
-                        return True
+            return False
+        except S3Error as e:
+            print(f"Error checking path existence: {e}")
+            return False
 
-        return False
+    def path_is_dir(self, path: Union[str, UPath]) -> bool:
+        """Checks if the specified path is a directory."""
+        # S3 doesn't have true directories, but we can check if there are objects with this prefix
+        u_path = PathHelper.format_path(path=path)
+        if not u_path:
+            return False
 
+        try:
+            bucket_name = S3PathHelper.get_path_bucketname(u_path)
+            prefix = S3PathHelper.get_path_folders_and_filename(u_path)
+            if not prefix:
+                return False
 
+            # Ensure prefix ends with '/'
+            if not prefix.endswith('/'):
+                prefix += '/'
 
-    def path_is_dir(self,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-        return False
+            objects = self.io_client.list_objects(bucket_name=bucket_name,
+                                                prefix=prefix,
+                                                recursive=False)
+            return any(objects)
+        except S3Error as e:
+            print(f"Error checking if path is directory: {e}")
+            return False
     
-    def path_is_file(self,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-
+    def path_is_file(self, path: Union[str, UPath]) -> bool:
+        """Checks if the specified path is a file."""
         u_path: UPath | None = PathHelper.format_path(path) 
         if not u_path:
             return False
 
-        return self.path_exists(path)        
+        try:
+            bucket_name = S3PathHelper.get_path_bucketname(u_path)
+            object_name = S3PathHelper.get_path_folders_and_filename(u_path)
+            
+            if not bucket_name or not object_name:
+                return False
+
+            # Try to get object stats - will raise exception if object doesn't exist
+            self.io_client.stat_object(bucket_name, object_name)
+            return True
+        except S3Error:
+            return False
 
     @classmethod
     def create_directory(

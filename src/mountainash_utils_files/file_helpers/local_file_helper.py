@@ -1,3 +1,5 @@
+#file: src/mountainash_utils_files/file_helpers/local_file_helper.py
+
 import os
 from typing import Any, List, Union, IO,  Optional
 from upath import UPath
@@ -18,7 +20,7 @@ class Local_FileHelper(Base_FileHelper):
                  auth_parameters: SettingsParameters,
                  ) -> None:
 
-        super().__init__(auth_parameters)
+        # super().__init__(auth_parameters)
 
         self.requires_io_connection = False
         self.requires_ssh_connection = False
@@ -87,6 +89,8 @@ class Local_FileHelper(Base_FileHelper):
         self.supports_pyarrow_write_parquet = True
         self.supports_encrypt_pyarrow_write_parquet = True
         self.supports_compress_pyarrow_write_parquet = True
+
+        self.support_directories = True
 
 
     #================================================================

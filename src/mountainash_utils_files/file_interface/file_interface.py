@@ -1,3 +1,6 @@
+#file: src/mountainash_utils_files/file_interface/file_interface.py
+
+
 from upath import UPath
 from functools import lru_cache
 from typing import Union, Any, Optional, List, IO
@@ -18,8 +21,8 @@ class FileInterface:
 
     @classmethod
     def resolve_storage_object(cls, 
-                                obj_storage: Optional[Base_FileHelper],
-                                auth_parameters: Optional[SettingsParameters]
+                                obj_storage: Optional[Base_FileHelper] = None,
+                                auth_parameters: Optional[SettingsParameters] = None
                                ) -> Base_FileHelper:
        
         if obj_storage:
@@ -510,9 +513,7 @@ def get_file_interface() -> FileInterface:
     return FileInterface()    
 
 @lru_cache(maxsize=None)
-def get_file_helper_object(auth_parameters: SettingsParameters, 
-                            #    storage_system: Optional[str] = None,
-                            #   path: Optional[str|UPath] =  None
+def get_file_helper_object(auth_parameters: Optional[SettingsParameters] = None
                                ) -> Base_FileHelper:
 
     factory: FileHelperFactory = get_file_helper_factory()

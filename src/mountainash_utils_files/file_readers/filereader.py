@@ -1,4 +1,5 @@
-from typing import  Union, Optional, IO
+import typing as t
+
 import traceback
 import io
 
@@ -6,15 +7,18 @@ import polars as pl
 from upath import UPath
 
 from mountainash_constants import CONST_DATAFILEFORMAT
-from mountainash_utils_dataclasses import DataclassUtils
+# from mountainash_utils_dataclasses import DataclassUtils
 from mountainash_data import BaseDataFrame, IbisDataFrame
 from mountainash_settings import SettingsParameters, get_settings
-from pydantic_settings import BaseSettings
+from mountainash_settings.settings.auth.storage import StorageAuthBase
+from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
+
+# from pydantic_settings import BaseSettings
 
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_utils_files.file_helpers import Base_FileHelper
-from mountainash_utils_files.file_interface import get_file_helper_object
+# from mountainash_utils_files.file_helpers import Base_FileHelper
+# from mountainash_utils_files.file_interface import get_file_helper_object
 
 
 
@@ -22,35 +26,46 @@ from mountainash_utils_files.file_interface import get_file_helper_object
 class FileReader:
 
     def __init__(self,
-                 source_auth_parameters: SettingsParameters,
-                 file_format:           str):
+                 source_auth_parameters: t.Optional[SettingsParameters] = None,
+                 ):
 
-        if not source_auth_parameters :
-            raise ValueError("FileReader: source_auth_parameters must be provided.")
+
+        if source_auth_parameters is None:
+            self.source_auth_parameters: SettingsParameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
+        else:
+            self.source_auth_parameters: t.Optional[SettingsParameters] = source_auth_parameters
 
 
         #FileFormat
-        if not file_format or file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
-            raise ValueError(f"Invalid file format: {file_format}. It should be set as DATA_FILE_FORMAT in your settings. Valid values are: {DataclassUtils.get_enum_values(CONST_DATAFILEFORMAT)}")
+        # if not file_format or file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
+        #     raise ValueError(f"Invalid file format: {file_format}. It should be set as DATA_FILE_FORMAT in your settings. Valid values are: {DataclassUtils.get_enum_values(CONST_DATAFILEFORMAT)}")
         
-        #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
-        self.source_auth_parameters: SettingsParameters = source_auth_parameters
-        self.source_auth_settings: BaseSettings = get_settings(self.source_auth_parameters)
-        self.source_storage_interface: Base_FileHelper = get_file_helper_object(source_auth_parameters)
+        # #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
+        # self.source_auth_parameters: SettingsParameters = source_auth_parameters
+        # self.source_auth_settings: BaseSettings = get_settings(self.source_auth_parameters)
+        # self.source_storage_interface: Base_FileHelper = get_file_helper_object(source_auth_parameters)
 
         #File and dataframe formats
-        self.file_format: str = file_format  
+        # self.file_format: str = file_format  
             
         #Ibis Backend
         self.db_interface = None
 
+    def get_auth_settings(self) -> StorageAuthBase:
+        
+        settings = get_settings(self.destination_auth_parameters)
+        if not isinstance(settings, StorageAuthBase):
+            raise ValueError("Settings must be of type StorageAuthBase")
+        return settings
+
+
 
     def read_datafile(self, 
-                      file_path: Union[UPath, str],
-                    materialise:Optional[bool] = False,
-                    decrypt:Optional[bool] = False,
-                    decompress:Optional[bool] = False                      
-                      ) -> Optional[BaseDataFrame]:
+                      file_path: t.Union[UPath, str],
+                    materialise:t.Optional[bool] = False,
+                    decrypt:t.Optional[bool] = False,
+                    decompress:t.Optional[bool] = False                      
+                      ) -> t.Optional[BaseDataFrame]:
         
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
@@ -88,10 +103,10 @@ class FileReader:
             return None
         
     def read_xml_to_stream(self,
-                source_file_path: Union[UPath, str], 
-                decrypt: Optional[bool] = False,
-                decompress: Optional[bool] = False
-                ) -> IO:
+                source_file_path: t.Union[UPath, str], 
+                decrypt: t.Optional[bool] = False,
+                decompress: t.Optional[bool] = False
+                ) -> t.IO:
 
         if source_file_path is None:
             raise ValueError("The report file is not set. Please set the report file before loading the report.")
@@ -120,12 +135,12 @@ class FileReader:
 
 
     def read_parquet(self, 
-                     file_path: Union[UPath, str], 
-                     materialise:Optional[bool] = False,
-                     decrypt:Optional[bool] = False,
-                     decompress:Optional[bool] = False
+                     file_path: t.Union[UPath, str], 
+                     materialise:t.Optional[bool] = False,
+                     decrypt:t.Optional[bool] = False,
+                     decompress:t.Optional[bool] = False
                      
-                     ) -> Optional[BaseDataFrame]:
+                     ) -> t.Optional[BaseDataFrame]:
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
@@ -137,7 +152,7 @@ class FileReader:
         #     materialise = True
 
         #Just retrieve the files with Polars
-        polars_dataframe: Optional[Union[pl.DataFrame, pl.LazyFrame]] = None
+        polars_dataframe: t.Optional[t.Union[pl.DataFrame, pl.LazyFrame]] = None
 
         if decrypt or decompress:
             decrypt = bool(decrypt)

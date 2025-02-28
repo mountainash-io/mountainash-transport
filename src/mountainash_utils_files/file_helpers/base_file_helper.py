@@ -1,6 +1,10 @@
+#file: src/mountainash_utils_files/file_helpers/base_file_helper.py
+
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO
+from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO, Tuple
 import io 
+import os
+import shutil
 
 from smart_open import open
 from upath import UPath
@@ -20,22 +24,23 @@ class Base_FileHelper(ABC):
     auth_parameters: SettingsParameters
     auth_settings: BaseSettings
 
-    io_hostname: str
-    io_port: int
-    io_username: str
-    io_password: str
-    io_keypath: str|UPath
+    # io_hostname: str
+    # io_port: int
+    # io_username: str
+    # io_password: str
+    # io_keypath: str|UPath
 
-    ssh_hostname: str
-    ssh_port: int
-    ssh_fwd_remoteport: int
-    ssh_fwd_localport: int
-    ssh_username: str
-    ssh_password: str
-    ssh_keypath: str|UPath
+    # ssh_hostname: str
+    # ssh_port: int
+    # ssh_fwd_remoteport: int
+    # ssh_fwd_localport: int
+    # ssh_username: str
+    # ssh_password: str
+    # ssh_keypath: str|UPath
 
     io_client: Optional[Any]
-    ssh_client: Optional[Any]
+
+    # ssh_client: Optional[Any]
     ssh_helper: Optional[SSH_Helper]
 
     compression_type: str
@@ -118,16 +123,19 @@ class Base_FileHelper(ABC):
     # prefer_native_on_put: bool
     # prefer_smartopen_on_put: bool
 
+    # supports_directories: bool
+
+
     def __init__(self, 
-                 auth_parameters: SettingsParameters,
+                #  auth_parameters: SettingsParameters,
                  ) -> None:
 
-        self.io_auth_parameters = auth_parameters
-        self.io_auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
-        self.storage_system = self.io_auth_settings.PROVIDER_TYPE
+        # self.io_auth_parameters = auth_parameters
+        # self.io_auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
+        # self.storage_system = self.io_auth_settings.PROVIDER_TYPE
 
-        self.compression_type = self.io_auth_settings.COMPRESSION_TYPE
-        self.encryption_type = self.io_auth_settings.ENCRYPTION_TYPE
+        # self.compression_type = self.io_auth_settings.COMPRESSION_TYPE
+        # self.encryption_type = self.io_auth_settings.ENCRYPTION_TYPE
 
 
         # if self.io_auth_settings.STORAGE_SYSTEM not in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM):
@@ -436,9 +444,9 @@ class Base_FileHelper(ABC):
     def check_kwargs_for_compression_encryption(self, calling_function_name: str, **kwargs) -> None:
 
         compress: bool = kwargs.get('compress', False)
-        encrypt: bool = kwargs.get('compress', False)
-        decompress: bool = kwargs.get('compress', False)
-        decrypt: bool = kwargs.get('compress', False)
+        encrypt: bool = kwargs.get('encrypt', False)
+        decompress: bool = kwargs.get('decompress', False)
+        decrypt: bool = kwargs.get('decrypt', False)
 
         if compress or encrypt or decompress or decrypt:
             raise Exception(f"{calling_function_name}(): Compression and encryption operations are not supported for this operation.")
@@ -732,10 +740,11 @@ class Base_FileHelper(ABC):
                    destination_path: UPath, 
                    source_stream: IO, 
                    length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False) -> bool:
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
+                    ) -> bool:
         pass
         
     @abstractmethod
@@ -752,10 +761,10 @@ class Base_FileHelper(ABC):
                    source_path: UPath, 
                    destination_stream: IO, 
                    length: int,           
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
         pass
         
@@ -772,10 +781,10 @@ class Base_FileHelper(ABC):
 
     def process_source_stream(self,
                     source_stream: IO, 
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                     ) -> io.BytesIO:
         
         if not source_stream:
@@ -819,6 +828,7 @@ class Base_FileHelper(ABC):
 
         destination_stream = io.BytesIO()
         destination_stream.write(source_stream.read())
+
         destination_stream.seek(0)
 
         return destination_stream         
@@ -827,10 +837,10 @@ class Base_FileHelper(ABC):
     def copy_stream_to_stream(self,
                    source_stream: IO|io.BytesIO, 
                    destination_stream: IO|io.BytesIO,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                     ) -> bool:
       
 
@@ -845,24 +855,126 @@ class Base_FileHelper(ABC):
 
         return True
 
+
+
+
+    def get_stream_size(self, stream: IO) -> Tuple[IO, int]:
+        """
+        Determine the length of a stream using the most appropriate method based on the stream's capabilities.
+        Returns both the stream (possibly modified) and its length.
+        
+        Args:
+            stream: An IO stream object
+            
+        Returns:
+            Tuple containing:
+                - The stream object (possibly modified if buffering was needed)
+                - The length of the stream in bytes
+        """
+        # Check if stream is None
+        if stream is None:
+            raise ValueError("Cannot determine length of None stream")
+        
+        # First try the most efficient method - seek and tell
+        try:
+            # Store current position
+            current_pos = stream.tell()
+            
+            # Try to seek to end
+            stream.seek(0, 2)  # 2 means seek from end
+            length = stream.tell()
+            
+            # Reset to original position
+            stream.seek(current_pos)
+            
+            return stream, length
+
+        except (AttributeError, io.UnsupportedOperation):
+            # Stream doesn't support seeking or tell
+            pass
+        
+        # Check if it's a file with a name attribute (regular files)
+        try:
+            if hasattr(stream, 'name') and isinstance(stream.name, str):
+
+                try:
+                    # Get file size from the filesystem
+                    file_size = os.path.getsize(stream.name)
+                    return stream, file_size
+                except (OSError, FileNotFoundError):
+                    # File might be temporary or not accessible
+                    pass
+        except Exception:
+            # Any other issues with file handling, continue to next method
+            pass
+        
+        # Last resort: buffer the entire stream
+        try:
+            # Create a BytesIO buffer
+            buffer = io.BytesIO()
+            
+            # Store current position if possible
+            try:
+                current_pos = stream.tell()
+            except (AttributeError, io.UnsupportedOperation):
+                current_pos = None
+            
+            # Try to reset to beginning if possible
+            try:
+                stream.seek(0)
+            except (AttributeError, io.UnsupportedOperation):
+                # If we can't seek, we'll just read from current position
+                pass
+            
+            # Copy all content to buffer
+            shutil.copyfileobj(stream, buffer)
+            
+            # Get the length
+            length = buffer.tell()
+            
+            # Reset buffer to beginning
+            buffer.seek(0)
+            
+            # Try to reset original stream if we moved it
+            if current_pos is not None:
+                try:
+                    stream.seek(current_pos)
+                    return stream, length  # Return original stream if we could reset it
+                except (AttributeError, io.UnsupportedOperation):
+                    pass
+            
+            # Return the buffer as the new stream
+            return buffer, length
+            
+        except Exception as e:
+            raise ValueError(f"Could not determine stream length: {str(e)}")        
+
+
     #================================================================
     # Generic File operations
 
 
     def put_object_from_stream(self,
-                   destination_path: Optional[Union[str, UPath]], 
+                   destination_path: Union[str, UPath], 
                    source_stream: IO, 
-                   length: int,
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                   length: Optional[int] = None,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         self.connect()
 
         #Format S3 Destination
         u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
+
+        if not length:
+
+            print("Determining stream length. This requires processing the full stream before writing to the destination. put_object_from_stream() may not be appropriate for large source streams.")
+
+            source_stream, length = self.get_stream_size(source_stream)          
+            print(f"stream length: {length}")
 
         if self.io_client and source_stream and u_destination_path:
 
@@ -901,12 +1013,12 @@ class Base_FileHelper(ABC):
             return False
 
     def put_object_from_path(self, 
-                   destination_path: Optional[Union[str, UPath]], 
-                   source_path: Optional[Union[str, UPath]],
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   destination_path: Union[str, UPath], 
+                   source_path: Union[str, UPath],
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool:
 
         if compress or encrypt or decompress or decrypt:
@@ -965,13 +1077,13 @@ class Base_FileHelper(ABC):
 
 
     def get_object_to_stream(self,
-                   source_path: Optional[Union[str, UPath]], 
+                   source_path: Union[str, UPath], 
                    destination_stream: IO,
-                   length: int,
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   length: Optional[int] = None,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool:
 
         self.connect()
@@ -984,6 +1096,10 @@ class Base_FileHelper(ABC):
             return False
 
         source_exists = self.path_exists(path=u_source_path)
+
+        if not length:
+            length = self.get_size(source_path=u_source_path)   
+
 
         if not source_exists:
             print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
@@ -1029,12 +1145,12 @@ class Base_FileHelper(ABC):
             return False
 
     def get_object_to_path(self, 
-                   source_path: Optional[Union[str, UPath]], 
-                   destination_path: Optional[Union[str, UPath]],
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   source_path: Union[str, UPath], 
+                   destination_path: Union[str, UPath],
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool|Any:
 
         #This can only be used if the destination interface is local or the same as the source
@@ -1101,10 +1217,15 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
+
+        if not self.supports_directories:
+            return True
+
         u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
+
         
         parent: UPath = u_path.parent
 
@@ -1117,10 +1238,17 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
+
+        if not self.supports_directories:
+            return True
+
+
         u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
+
+
 
         return self.path_exists(path=u_path.parent)        
 
@@ -1178,16 +1306,16 @@ class Base_FileHelper(ABC):
         """
         pass
 
-    @abstractmethod
-    def calculate_checksum(self, path: Optional[Union[str, UPath]], algorithm: str = 'sha256') -> str:
-        """
-        Calculate the checksum of the data at the specified path.
+    # @abstractmethod
+    # def calculate_checksum(self, path: Optional[Union[str, UPath]], algorithm: str = 'sha256') -> str:
+    #     """
+    #     Calculate the checksum of the data at the specified path.
 
-        :param path: The path to the data.
-        :param algorithm: The hashing algorithm to use (e.g., 'md5', 'sha1', 'sha256').
-        :return: The calculated checksum as a hexadecimal string.
-        """
-        pass
+    #     :param path: The path to the data.
+    #     :param algorithm: The hashing algorithm to use (e.g., 'md5', 'sha1', 'sha256').
+    #     :return: The calculated checksum as a hexadecimal string.
+    #     """
+    #     pass
 
     @abstractmethod
     def get_size(self, path: Optional[Union[str, UPath]]) -> int:
