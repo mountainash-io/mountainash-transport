@@ -60,7 +60,7 @@ class R2_FileHelper(S3_FileHelper):
                 self.io_client = Minio(
                     endpoint=settings.ENDPOINT, #.replace('https://', '').replace('http://', ''),
                     access_key=settings.ACCESS_KEY_ID,
-                    secret_key=settings.SECRET_ACCESS_KEY.get_secret_value(),
+                    secret_key=settings.SECRET_ACCESS_KEY,
                     secure=settings.USE_SSL,
                     region='auto'
                 )
@@ -103,7 +103,7 @@ class R2_FileHelper(S3_FileHelper):
         client = Minio(
             endpoint=settings.ENDPOINT, #.replace('https://', '').replace('http://', ''),
             access_key=settings.ACCESS_KEY_ID,
-            secret_key=settings.SECRET_ACCESS_KEY.get_secret_value(),
+            secret_key=settings.SECRET_ACCESS_KEY,
             secure=settings.USE_SSL,
         )
 

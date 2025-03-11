@@ -27,7 +27,7 @@ class S3_FileHelper(Base_FileHelper):
 
         self.endpoint_url = f"{self.io_auth_settings.ENDPOINT_URL}"
         self.access_key = self.io_auth_settings.ACCESS_KEY_ID if self.io_auth_settings.ACCESS_KEY_ID else None
-        self.secret_key = self.io_auth_settings.SECRET_ACCESS_KEY.get_secret_value() if self.io_auth_settings.SECRET_ACCESS_KEY else None
+        self.secret_key = self.io_auth_settings.SECRET_ACCESS_KEY if self.io_auth_settings.SECRET_ACCESS_KEY else None
         self.use_ssl = self.io_auth_settings.USE_SSL
 
         #S3 specific 

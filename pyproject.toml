@@ -80,7 +80,7 @@ all = [
   "python-gnupg==0.5.2",   
 ]
 
-
+  
 
 [project.urls]
 Documentation = "https://github.com/mountainash-io/mountainash-utils-files#readme"
@@ -89,7 +89,7 @@ Source = "https://github.com/mountainash-io/mountainash-utils-files"
 
 #================
 # Tool: Coverage
-#================
+#================ 
 [tool.coverage.run]
 source_pkgs = ["mountainash_utils_files", "tests"]
 branch = true
