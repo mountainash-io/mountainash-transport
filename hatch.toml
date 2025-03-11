@@ -7,10 +7,6 @@ path = "src/mountainash_utils_files/__version__.py"
 [build.targets.wheel]
 packages = ["src/mountainash_utils_files"]
 
-[hooks.version]
-type = "calendar"
-# increment = "build"
-
 
 [envs.build_github]
 installer = "uv"
@@ -47,7 +43,13 @@ dependencies = [
   # "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
 ]
 
+#================
+# Env: tower
+#================
+[envs.tower]
+installer = "uv"
 
+dependencies = []
 
 #================
 # Env: test_github
