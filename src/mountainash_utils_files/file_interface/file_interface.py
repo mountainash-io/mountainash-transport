@@ -383,19 +383,17 @@ class FileInterface:
 
     @classmethod
     def list_sources(cls, 
+                     path: Union[str, UPath], 
                      auth_parameters: SettingsParameters, 
-                     path: Union[str, UPath] = "", 
                      **kwargs) -> List[str]:
 
-        # if not auth_parameters:
 
-        #     storage_system: str|None = PathHelper.identify_storage_system(path=path)
-        #     settings_namespace: str = f"default_{storage_system}"
-        #     auth_parameters = SettingsParameters.create(namespace=settings_namespace, settings_class=LocalStorageAuthSettings)
+        if not auth_parameters:
+            storage_system: str|None = PathHelper.identify_storage_system(path=path)
+            settings_namespace: str = f"default_{storage_system}"
+            auth_parameters = SettingsParameters.create(namespace=settings_namespace, settings_class=LocalStorageAuthSettings)
 
-
-            
-
+          
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
         return obj_storage.list_sources(path, **kwargs)

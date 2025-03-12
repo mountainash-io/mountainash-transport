@@ -370,7 +370,7 @@ class Local_FileHelper(Base_FileHelper):
 
 
     
-    def list_sources(self, path: Optional[Union[str, UPath]] = "", **kwargs) -> List[str]:
+    def list_sources(self, path: Union[str, UPath], pattern: Optional[str] = "*", **kwargs) -> List[str]:
         """
         List available data sources in the specified path or directory.
         """
@@ -383,7 +383,7 @@ class Local_FileHelper(Base_FileHelper):
         if not u_path:
             return []
 
-        return [str(p) for p in u_path.glob(kwargs.get('pattern', '*'))]
+        return [str(p) for p in u_path.glob(pattern)]
 
     
     def calculate_checksum(self, path: Optional[Union[str, UPath]], algorithm: str = 'sha256') -> None:

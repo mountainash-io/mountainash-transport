@@ -1284,7 +1284,7 @@ class Base_FileHelper(ABC):
 
 
     @abstractmethod
-    def list_sources(self, path: Optional[Union[str, UPath]] = "", **kwargs) -> List[str]:
+    def list_sources(self, path: Union[str, UPath], **kwargs) -> List[str]:
         """
         List available data sources in the specified path or directory.
 
@@ -1336,13 +1336,11 @@ class Base_FileHelper(ABC):
         pass
 
     @abstractmethod
-    def create_directory(cls, path: Optional[Union[str, UPath]]) -> bool :
+    def create_directory(self, path: Optional[Union[str, UPath]]) -> bool :
         pass
 
 
-
-    @classmethod
-    def count_sources(cls, path: Optional[Union[str, UPath]], **kwargs) -> int:
+    def count_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> int:
         """
         List available data sources in the specified path or directory.
 
@@ -1350,7 +1348,7 @@ class Base_FileHelper(ABC):
         :param kwargs: Additional arguments specific to the storage system.
         :return: A list of identifiers for the available data sources.
         """
-        return len(cls.list_sources(path=path, **kwargs))
+        return len(self.list_sources(path=path, **kwargs))
     
 
     @classmethod
