@@ -49,6 +49,7 @@ class SSH_FileHelper(Base_FileHelper):
         self.supports_get_to_local_path = True
         self.supports_put_from_local_path = True
 
+        self.supports_directories = True
 
     def connect(self) -> bool:
         return self.connect_ssh()

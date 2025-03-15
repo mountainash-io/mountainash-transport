@@ -90,7 +90,7 @@ class Local_FileHelper(Base_FileHelper):
         self.supports_encrypt_pyarrow_write_parquet = True
         self.supports_compress_pyarrow_write_parquet = True
 
-        self.support_directories = True
+        self.supports_directories = True
 
 
     #================================================================

@@ -93,6 +93,8 @@ class SFTP_FileHelper(Base_FileHelper):
         self.prefer_native_on_put = True
         self.prefer_smartopen_on_put = False
 
+        self.supports_directories = True
+
 
 
     def connect(self) -> bool:
