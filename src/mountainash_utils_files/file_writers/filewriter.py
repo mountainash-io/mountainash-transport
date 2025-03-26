@@ -18,6 +18,8 @@ from mountainash_settings.settings.auth.storage.providers import LocalStorageAut
 from mountainash_data import BaseDataFrame
 from mountainash_data.dataframes.utils import   DataFrameUtils
 
+from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory
 # from mountainash_utils_files.storage_interface import get_file_helper_object
@@ -154,7 +156,8 @@ class FileWriter:
 
         pa_dataframe: pa.DataFrame = DataFrameUtils.cast_dataframe_to_pyarrow(df=dataframe)
 
-   
+        settings = get_settings(self.destination_auth_parameters)
+
         if encrypt or compress:
 
             encrypt = bool(encrypt)
@@ -172,12 +175,40 @@ class FileWriter:
         
         else:
 
-            with io.BytesIO() as temp_stream:
 
-                pq.write_table(table=pa_dataframe, where=temp_stream, compression="snappy")
-                temp_stream.seek(0)  # Reset stream position to beginning
-                storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("S3"):
 
+                # with io.BytesIO() as temp_stream:
+
+                #     pq.write_table(table=pa_dataframe, where=temp_stream, compression="snappy")
+                #     temp_stream.seek(0)  # Reset stream position to beginning
+                #     storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as parquet_output_stream:
+                    pq.write_table(table=pa_dataframe, where=parquet_output_stream, compression="snappy")
+
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("R2"):
+
+                with io.BytesIO() as temp_stream:
+
+                    pq.write_table(table=pa_dataframe, where=temp_stream, compression="snappy")
+                    temp_stream.seek(0)  # Reset stream position to beginning
+                    storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+
+                # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as parquet_output_stream:
+                #     pq.write_table(table=pa_dataframe, where=parquet_output_stream, compression="snappy")
+
+
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("LOCAL"):
+
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as parquet_output_stream:
+                    pq.write_table(table=pa_dataframe, where=parquet_output_stream, compression="snappy")
+
+                # with io.BytesIO() as temp_stream:
+
+                #     pq.write_table(table=pa_dataframe, where=temp_stream, compression="snappy")
+                #     temp_stream.seek(0)  # Reset stream position to beginning
+                #     storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
 
             return True
 
@@ -198,6 +229,8 @@ class FileWriter:
 
         u_output_file_path: UPath | None = PathHelper.format_path(output_file_path)
 
+        settings = get_settings(self.destination_auth_parameters)
+
         #Convert to pandas dataframe
         pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe=dataframe)
 
@@ -205,6 +238,7 @@ class FileWriter:
 
             encrypt = bool(encrypt)
             compress = bool(compress)
+
 
             #Write the dataframe to a temporary stream in parquet
             with io.BytesIO() as temp_stream:
@@ -214,20 +248,40 @@ class FileWriter:
 
                 with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as csv_output_stream:
                     csv_output_stream.write(processed_stream.read())
+
             return True
-        
+
+
+
         else:
 
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("S3"):
 
-            with io.BytesIO() as temp_stream:
+                # with io.BytesIO() as temp_stream:
 
-                pd_dataframe.to_csv(path_or_buf=temp_stream, index=False)
-                temp_stream.seek(0)  # Reset stream position to beginning
-                storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+                    # pd_dataframe.to_csv(path_or_buf=temp_stream, index=False)
+                    # temp_stream.seek(0)  # Reset stream position to beginning
+                    # storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as csv_output_stream:
+                    pd_dataframe.to_csv(path_or_buf=csv_output_stream, index=False)
 
 
-            # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as csv_output_stream:
-            #     pd_dataframe.to_csv(path_or_buf=csv_output_stream, index=False)
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("R2"):
+
+                with io.BytesIO() as temp_stream:
+
+                    pd_dataframe.to_csv(path_or_buf=temp_stream, index=False)
+                    temp_stream.seek(0)  # Reset stream position to beginning
+                    storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+
+                # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as csv_output_stream:
+                #     pd_dataframe.to_csv(path_or_buf=csv_output_stream, index=False)
+
+
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("LOCAL"):
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as csv_output_stream:
+                    pd_dataframe.to_csv(path_or_buf=csv_output_stream, index=False)
 
             return True
 
@@ -246,15 +300,20 @@ class FileWriter:
 
         u_output_file_path: UPath | None = PathHelper.format_path(output_file_path)
 
+
         #Convert to pandas dataframe
         pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.materialise())
+
+        settings = get_settings(self.destination_auth_parameters)
+
+
 
         if encrypt or compress:
 
             encrypt = bool(encrypt)
             compress = bool(compress)
 
-            #Write the dataframe to a temporary stream in parquet
+            # Write the dataframe to a temporary stream in parquet
             with io.StringIO() as temp_stream:
 
                 pd_dataframe.to_json(path_or_buf=temp_stream, orient="records", lines=True)
@@ -264,17 +323,40 @@ class FileWriter:
                     json_output_stream.write(processed_stream.read())
             return True
         
+
+
         else:
             
-            with io.BytesIO() as temp_stream:
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("S3"):
 
-                pd_dataframe.to_json(path_or_buf=temp_stream, orient="records", lines=True)
-                temp_stream.seek(0)  # Reset stream position to beginning
-                storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+                # with io.BytesIO() as temp_stream:
+
+                #     pd_dataframe.to_json(path_or_buf=temp_stream, orient="records", lines=True)
+                #     temp_stream.seek(0)  # Reset stream position to beginning
+                #     storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
 
 
-            # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
-            #     pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
+                    pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)                    
+
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("R2"):
+
+                with io.BytesIO() as temp_stream:
+
+                    pd_dataframe.to_json(path_or_buf=temp_stream, orient="records", lines=True)
+                    temp_stream.seek(0)  # Reset stream position to beginning
+                    storage_interface.put_object_from_stream(destination_path=u_output_file_path, source_stream=temp_stream)
+
+
+                # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
+                #     pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)                    
+
+
+
+            if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("LOCAL"):
+
+                with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
+                    pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)
 
             return True
 
@@ -288,42 +370,18 @@ class FileWriter:
                     ):
         
         raise NotImplementedError
-        # output_file_path = UPath(output_file_path)
 
-        # df: pd.DataFrame = DataframeUtils.cast_dataframe_to_pandas(df_datafile)
-        # # TODO: Writing to delta format requires DeltaLake
-        # # You need to install delta package with `pip install delta`
-        # # and also, PySpark might be required.
-        # # import delta
+    def write_iceberg(self, 
+                    df_datafile: BaseDataFrame, 
+                    output_file_path: t.Union[str, UPath],
+                    overwrite:bool = True,
+                    encrypt: t.Optional[bool] = False,
+                    compress: t.Optional[bool] = False
+                    ):
         
-        # with output_file_path.open("wb") as f:
-        #     df.to_delta(f)
-
-    # def get_xml_serializer(self, models_package:str) -> XmlSerializer:
+        raise NotImplementedError
 
 
-    #     app_settings: AppSettings = get_app_settings(settings_parameters=self.settings_parameters)
-
-    #     #TODO: This cannot be here!
-    #     version_map: Dict[str, str] = DataclassUtils.get_enum_values_dict_reverse_lookup(enumclass=CONST_ACRDS_RESPONSE_XML_SCHEMA_FILE, keyenumclass=CONST_ACRDS_VERSION)
-    #     schema_location: t.Optional[str] = version_map.get(app_settings.BATCH_VERSION)
-
-
-    #     xmlcontext = XmlContext(models_package = models_package)
-    
-
-    #     xmlconfig = SerializerConfig(
-    #         xml_declaration=True, 
-    #         xml_version="1.0", 
-    #         encoding="UTF-8",
-    #         no_namespace_schema_location=schema_location,
-    #         indent="  "
-    #     )
-
-    #     serializer = XmlSerializer(config= xmlconfig, 
-    #                                context= xmlcontext)
-
-    #     return serializer
 
     def write_xml_object(self, 
                          xmlobj, 

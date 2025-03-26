@@ -13,6 +13,8 @@ from .base_file_helper import Base_FileHelper
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters
 
+from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+
 class Local_FileHelper(Base_FileHelper):
 
 
@@ -21,6 +23,8 @@ class Local_FileHelper(Base_FileHelper):
                  ) -> None:
 
         # super().__init__(auth_parameters)
+
+        self.storage_provider_type =  CONST_STORAGE_PROVIDER_TYPE.LOCAL
 
         self.requires_io_connection = False
         self.requires_ssh_connection = False

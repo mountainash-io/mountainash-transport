@@ -5,6 +5,7 @@ from .s3u_file_helper import S3U_FileHelper
 from .sftp_file_helper import SFTP_FileHelper
 from .file_helper_factory import FileHelperFactory, get_file_helper_factory
 from .r2_file_helper import R2_FileHelper  
+from .s3expresss_file_helper import S3Express_FileHelper
 
 
 __all__ = (
@@ -16,6 +17,7 @@ __all__ = (
     "S3_FileHelper",
     "S3U_FileHelper",
     "R2_FileHelper",
+    "S3Express_FileHelper",
     "get_file_helper_factory",
 
 )

@@ -17,8 +17,8 @@ from mountainash_settings.settings.auth.storage.providers import LocalStorageAut
 
 
 from mountainash_utils_files.path_helpers import PathHelper
-# from mountainash_utils_files.file_helpers import Base_FileHelper
-# from mountainash_utils_files.file_interface import get_file_helper_object
+from mountainash_utils_files.file_helpers import Base_FileHelper
+from mountainash_utils_files.file_interface import get_file_helper_object, FileInterface
 
 
 
@@ -30,10 +30,12 @@ class FileReader:
                  ):
 
 
-        if source_auth_parameters is None:
-            self.source_auth_parameters: SettingsParameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
-        else:
-            self.source_auth_parameters: t.Optional[SettingsParameters] = source_auth_parameters
+        self.source_auth_parameters: SettingsParameters = source_auth_parameters if source_auth_parameters else  SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
+
+        # if source_auth_parameters is None:
+        #     self.source_auth_parameters: SettingsParameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
+        # else:
+        #     self.source_auth_parameters: t.Optional[SettingsParameters] = source_auth_parameters
 
 
         #FileFormat
@@ -43,7 +45,9 @@ class FileReader:
         # #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
         # self.source_auth_parameters: SettingsParameters = source_auth_parameters
         # self.source_auth_settings: BaseSettings = get_settings(self.source_auth_parameters)
-        # self.source_storage_interface: Base_FileHelper = get_file_helper_object(source_auth_parameters)
+        self.source_storage_interface: Base_FileHelper = get_file_helper_object(source_auth_parameters)
+
+        # factory: FileHelperFactory = get_file_helper_factory()
 
         #File and dataframe formats
         # self.file_format: str = file_format  
@@ -60,6 +64,7 @@ class FileReader:
 
 
 
+
     def read_datafile(self, 
                       file_path: t.Union[UPath, str],
                     materialise:t.Optional[bool] = False,
@@ -70,7 +75,7 @@ class FileReader:
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
-        if not self.source_storage_interface.path_exists(path=u_file_path):
+        if not self.source_storage_interface.path_exists(path=u_file_path, auth_parameters = self.source_auth_parameters):
             print(f"File not found: {u_file_path}")
 
 
@@ -147,10 +152,6 @@ class FileReader:
         if not u_file_path:
             raise ValueError(f"Invalid file path: {file_path}")
 
-        #No point in returning a lazy frame if we are using pandas
-        # if self.dataframe_framework == CONST_DATAFRAME_FRAMEWORK.PANDAS.value:
-        #     materialise = True
-
         #Just retrieve the files with Polars
         polars_dataframe: t.Optional[t.Union[pl.DataFrame, pl.LazyFrame]] = None
 
@@ -164,29 +165,30 @@ class FileReader:
                                                             decompress=decompress)
                 polars_dataframe =  pl.read_parquet(source=processed_stream)
 
-        if materialise:
-
-            if self.source_storage_interface.supports_polars_native_read_parquet:
-                #materialise the parquet file with native polars interface
-                polars_dataframe =  pl.read_parquet(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
-            else:
-                #Stream the file and materialise it with polars
-                with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
-                    polars_dataframe =  pl.read_parquet(source=parquet_stream)
-     
         else:
-            if self.source_storage_interface.supports_polars_native_read_parquet:
-                #Native parquet reading on AWS, local S3, GCE can scan parquet files lazily
-                polars_dataframe =  pl.scan_parquet(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
-            else:
-                #Stream the file and materialise it with polars
-                with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
-                    polars_dataframe =  pl.read_parquet(source=parquet_stream)
+
+            with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+                polars_dataframe =  pl.read_parquet(source=parquet_stream)
+
+            # if materialise:
+            #     if self.source_storage_interface.supports_polars_native_read_parquet:
+            #         #materialise the parquet file with native polars interface
+            #         polars_dataframe =  pl.read_parquet(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
+            #     else:
+            #         #Stream the file and materialise it with polars
+            #         with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+            #             polars_dataframe =  pl.read_parquet(source=parquet_stream)
+        
+            # else:
+            #     # if self.source_storage_interface.supports_polars_native_read_parquet:
+            #     #     #Native parquet reading on AWS, local S3, GCE can scan parquet files lazily
+            #     #     polars_dataframe =  pl.scan_parquet(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
+            #     # else:
+            #         #Stream the file and materialise it with polars
+            #         with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+            #             polars_dataframe =  pl.read_parquet(source=parquet_stream)
 
         
-        # if isinstance(polars_dataframe, pl.LazyFrame):
-        #     polars_dataframe = polars_dataframe.collect()
-
 
         dataframe_object = IbisDataFrame(df=polars_dataframe)
 
@@ -194,3 +196,57 @@ class FileReader:
   
 
 
+
+    def read_json(self, 
+                     file_path: t.Union[UPath, str], 
+                     materialise:t.Optional[bool] = False,
+                     decrypt:t.Optional[bool] = False,
+                     decompress:t.Optional[bool] = False
+                     
+                     ) -> t.Optional[BaseDataFrame]:
+
+        u_file_path: UPath|None = PathHelper.format_path(path=file_path)
+
+        if not u_file_path:
+            raise ValueError(f"Invalid file path: {file_path}")
+
+        #Just retrieve the files with Polars
+        polars_dataframe: t.Optional[t.Union[pl.DataFrame, pl.LazyFrame]] = None
+
+        if decrypt or decompress:
+            decrypt = bool(decrypt)
+            decompress = bool(decompress)
+
+            with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+                processed_stream: io.BytesIO = self.source_storage_interface.process_source_stream(source_stream=parquet_stream, 
+                                                            decrypt=decrypt, 
+                                                            decompress=decompress)
+                polars_dataframe =  pl.read_json(source=processed_stream)
+
+        else:
+
+            with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+                polars_dataframe =  pl.read_json(source=parquet_stream)
+
+
+            # if materialise:
+            #     if self.source_storage_interface.supports_polars_native_read_parquet:
+            #         #materialise the parquet file with native polars interface
+            #         polars_dataframe =  pl.read_json(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
+            #     else:
+            #         #Stream the file and materialise it with polars
+            #         with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+            #             polars_dataframe =  pl.read_json(source=parquet_stream)
+        
+            # else:
+            #     if self.source_storage_interface.supports_polars_native_read_parquet:
+            #         #Native parquet reading on AWS, local S3, GCE can scan parquet files lazily
+            #         polars_dataframe =  pl.scan_ndjson(source=file_path, storage_options=self.source_storage_interface.get_connection_client_parameters())
+            #     else:
+            #         #Stream the file and materialise it with polars
+            #         with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
+            #             polars_dataframe =  pl.read_json(source=parquet_stream)
+
+        dataframe_object = IbisDataFrame(df=polars_dataframe)
+
+        return dataframe_object

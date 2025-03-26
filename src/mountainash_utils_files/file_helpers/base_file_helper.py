@@ -694,7 +694,7 @@ class Base_FileHelper(ABC):
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
 
-        return stream
+        return stream 
 
 
 
@@ -826,12 +826,12 @@ class Base_FileHelper(ABC):
             if compress or encrypt or decompress or decrypt:
                 raise Exception("An invalid combination of compression and encryption operations was requested. ")
 
-        destination_stream = io.BytesIO()
-        destination_stream.write(source_stream.read())
+        temp_stream = io.BytesIO()
+        temp_stream.write(source_stream.read())
 
-        destination_stream.seek(0)
+        temp_stream.seek(0)
 
-        return destination_stream         
+        return temp_stream         
 
 
     def copy_stream_to_stream(self,
@@ -970,18 +970,13 @@ class Base_FileHelper(ABC):
         u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
 
         if not length:
-
-            print("Determining stream length. This requires processing the full stream before writing to the destination. put_object_from_stream() may not be appropriate for large source streams.")
-
+            # print("Determining stream length. This requires processing the full stream before writing to the destination. put_object_from_stream() may not be appropriate for large source streams.")
             source_stream, length = self.get_stream_size(source_stream)          
-            print(f"stream length: {length}")
+            # print(f"stream length: {length}")
 
         if self.io_client and source_stream and u_destination_path:
 
             try:
-
-                                                                   
-
 
                 put_object = self._native_put_object_from_stream(destination_path=u_destination_path, 
                                                            source_stream=source_stream, 
