@@ -385,7 +385,12 @@ class FileInterface:
     def list_sources(cls, 
                      path: Union[str, UPath], 
                      auth_parameters: SettingsParameters, 
-                     **kwargs) -> List[str]:
+                     #for local files
+                     recursive: bool|None = True, 
+                     include_files: bool|None = True, 
+                     include_dirs: bool|None = False,
+
+                     **kwargs) -> List[UPath]:
 
 
         if not auth_parameters:
@@ -396,7 +401,12 @@ class FileInterface:
           
         obj_storage: Base_FileHelper = cls.factory.get_storage_interface(auth_parameters=auth_parameters)
 
-        return obj_storage.list_sources(path, **kwargs)
+        if obj_storage.supports_directories:
+            return obj_storage.list_sources(path, recursive=recursive, include_files=include_files, include_dirs=include_dirs, **kwargs)
+        else:
+            return obj_storage.list_sources(path, **kwargs)
+
+
 
     @classmethod
     def path_exists(cls, 

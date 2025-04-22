@@ -76,11 +76,11 @@ class S3_FileHelper(Base_FileHelper):
         self.supports_decompress_native_put_from_stream = True
 
 
-        self.supports_native_get_to_local_path = True
-        self.supports_encrypt_native_get_to_local_path = True
-        self.supports_decrypt_native_get_to_local_path = True
-        self.supports_compress_native_get_to_local_path = True
-        self.supports_decompress_native_get_to_local_path = True
+        self.supports_native_get_to_local_path = False
+        self.supports_encrypt_native_get_to_local_path = False
+        self.supports_decrypt_native_get_to_local_path = False
+        self.supports_compress_native_get_to_local_path = False
+        self.supports_decompress_native_get_to_local_path = False
 
         self.supports_native_put_from_local_path = True
         self.supports_encrypt_native_put_from_local_path = True
@@ -221,10 +221,10 @@ class S3_FileHelper(Base_FileHelper):
 
         # do it!
         try:
-            result = self.io_client.put_object(bucket_name=settings.BUCKET, 
-                                             object_name=object_name, 
-                                             data=processed_source_stream, 
-                                             length=length) if self.io_client else False
+            result = self.io_client.put_object(Bucket=settings.BUCKET, 
+                                             Key=object_name, 
+                                             Body=processed_source_stream, 
+                                             ContentLength=length) if self.io_client else False
             return result
         except S3Error as e:
             print(f"Error putting object: {e}")
@@ -249,9 +249,9 @@ class S3_FileHelper(Base_FileHelper):
 
         # do it!
         try:
-            self.io_client.fput_object(bucket_name=settings.BUCKET, 
-                                     object_name=object_name, 
-                                     file_path=source_path_str) if self.io_client else None
+            self.io_client.put_object(Bucket=settings.BUCKET, 
+                                     Key=object_name, 
+                                     Body=source_path_str) if self.io_client else None
             return True
         except S3Error as e:
             print(f"Error putting object from path: {e}")
@@ -273,8 +273,8 @@ class S3_FileHelper(Base_FileHelper):
 
 
         try:
-            response = self.io_client.get_object(bucket_name=settings.BUCKET, object_name=object_name)
-            source_stream = io.BytesIO(response.read())
+            response = self.io_client.get_object(Bucket=settings.BUCKET, Key=object_name)
+            source_stream = io.BytesIO(response['Body'])
             
             self.copy_stream_to_stream(source_stream=source_stream, 
                                      destination_stream=destination_stream,
@@ -293,24 +293,32 @@ class S3_FileHelper(Base_FileHelper):
                    destination_path: UPath,            
                     **kwargs
                    ) -> bool|Any:
-        
-        self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
-        settings = get_settings(self.auth_parameters)
 
-        str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
+        raise NotImplementedError()
         
-        #Format S3 Source
-        object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
+        # self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
+        # settings = get_settings(self.auth_parameters)
 
-        # do it!
-        try:
-            result = self.io_client.fget_object(bucket_name=settings.BUCKET, 
-                                              object_name=object_name, 
-                                              file_path=str_destination_path) if self.io_client else None
-            return result
-        except S3Error as e:
-            print(f"Error getting object to path: {e}") 
-            return False
+        # str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
+        
+        # #Format S3 Source
+        # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
+
+        # # do it!
+        # try:
+        #     result = self.io_client.get_object(Bucket=settings.BUCKET, 
+        #                                       Key=object_name, 
+        #                                       Body=str_destination_path) if self.io_client else None
+
+        #     #TODO: 
+        #     # Write result['Body'] to the destination path
+        #     FileWriter().
+
+
+        #     return result
+        # except S3Error as e:
+        #     print(f"Error getting object to path: {e}") 
+        #     return False
 
 
 
@@ -373,9 +381,9 @@ class S3_FileHelper(Base_FileHelper):
 
             try:
                 objects = self.io_client.list_objects_v2(Bucket=settings.BUCKET, 
-                                                                   Prefix=prefix_relative_path,
-                                                                   MaxKeys=maxkeys
-                                                                   )      
+                                                        Prefix=prefix_relative_path,
+                                                        MaxKeys=maxkeys
+                                                        )      
 
                 return objects if objects is not None and objects['KeyCount'] > 0 else None
 
@@ -384,7 +392,7 @@ class S3_FileHelper(Base_FileHelper):
                 return None
 
 
-    def list_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> Optional[List[str|None]]:
+    def list_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> Optional[List[UPath]]:
         """List available data sources in the specified path or directory."""
 
         u_path: UPath | None = PathHelper.format_path(path) 
@@ -399,7 +407,7 @@ class S3_FileHelper(Base_FileHelper):
 
                 # return objects if objects is not None and objects['KeyCount'] > 0 else None
 
-                return [obj['Key'] for obj in objects['Contents']] if objects is not None and objects['KeyCount'] > 0 else []
+                return [UPath(obj['Key']) for obj in objects['Contents']] if objects is not None and objects['KeyCount'] > 0 else []
 
             except S3Error as e:
                 print(f"Error listing sources: {e}")

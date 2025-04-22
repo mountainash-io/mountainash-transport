@@ -1279,7 +1279,7 @@ class Base_FileHelper(ABC):
 
 
     @abstractmethod
-    def list_sources(self, path: Union[str, UPath], **kwargs) -> List[str]:
+    def list_sources(self, path: Union[str, UPath], **kwargs) -> List[UPath]:
         """
         List available data sources in the specified path or directory.
 
