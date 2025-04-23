@@ -10,7 +10,6 @@ from mountainash_settings import SettingsParameters, get_settings
 from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAuthSettings
 
-from minio import Minio
 from minio.error import S3Error
 from urllib.parse import unquote
 import io

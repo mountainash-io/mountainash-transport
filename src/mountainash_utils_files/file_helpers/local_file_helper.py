@@ -5,7 +5,6 @@ import stat
 import datetime
 from typing import Any, List, Union, IO, Optional, Dict
 from upath import UPath
-import io
 import shutil
 import hashlib
 from pathlib import Path

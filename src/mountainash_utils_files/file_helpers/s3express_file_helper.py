@@ -11,7 +11,6 @@ from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAut
 import io
 import boto3
 from botocore.exceptions import ClientError
-from urllib.parse import unquote
 
 class S3Express_FileHelper(Base_FileHelper):
     """
@@ -122,7 +121,7 @@ class S3Express_FileHelper(Base_FileHelper):
                 if len(bucket_parts) < 3 or not settings.BUCKET.endswith('--x-s3'):
                     raise ValueError(f"Invalid S3 Express bucket name: {settings.BUCKET}. Format should be base-name--zonal-id--x-s3")
                 
-                zone_id = bucket_parts[1]
+                # zone_id = bucket_parts[1]
                 region = settings.REGION
                 
                 # For S3 Express, we need to specify the zone

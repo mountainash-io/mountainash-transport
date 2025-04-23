@@ -32,9 +32,12 @@ dependencies = [
   "boltons==24.0.0", 
   # "paramiko==3.4.0",  
   # "gnupg==2.3.1",  
-  # "minio==7.2.7", 
-  # "boto3==1.34.136", 
+  
+  # Move these to specific entrypoints once pattern developed.
+  "minio==7.2.7", 
+  "boto3==1.34.136", 
   "smart-open[all]==7.0.4",
+
   # "python-gnupg==0.5.2",  
   "lxml>=4.5.0",
   "xsdata[lxml]>=24.4",   
@@ -48,7 +51,7 @@ s3 = [
   "s3fs>=2023.1.0",
   "minio==7.2.7", 
 ] 
-gcs = [
+gcs = [ 
   "google-cloud-storage>=2.9.0",    
   "gcsfs>=2023.1.0", 
   # "smart-open[gcs,ssh]==7.0.4",   

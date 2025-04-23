@@ -1,4 +1,4 @@
-from typing import Any, List, Union, IO, Optional, Iterator, Dict, BinaryIO, TextIO, Tuple
+from typing import List, Union, IO, Optional, Dict, BinaryIO, TextIO
 from upath import UPath
 import io
 import os
@@ -435,9 +435,9 @@ class R2_FileHelper(Base_FileHelper):
                 buffer.seek(0)
                 
                 # Get path info
-                u_path = PathHelper.format_path(path=destination_path)
-                bucket_name = S3PathHelper.get_path_bucketname(u_path)
-                object_name = S3PathHelper.get_path_folders_and_filename(u_path)
+                # u_path = PathHelper.format_path(path=destination_path)
+                # bucket_name = S3PathHelper.get_path_bucketname(u_path)
+                # object_name = S3PathHelper.get_path_folders_and_filename(u_path)
                 
                 # Upload to R2
                 try:
@@ -690,7 +690,7 @@ class R2_FileHelper(Base_FileHelper):
                     return 0
                 
                 # If it's a specific object, get its size directly
-                if not object_name.endswith('/') and not '*' in object_name:
+                if not object_name.endswith('/') and '*' not in object_name:
                     try:
                         obj_stat = self.io_client.stat_object(bucket_name, object_name)
                         return obj_stat.size

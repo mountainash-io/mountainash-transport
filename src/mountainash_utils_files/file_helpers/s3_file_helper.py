@@ -14,9 +14,7 @@ from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAut
 
 from ..dataclasses import FileMetadata
 
-from minio import Minio
 from minio.error import S3Error
-from urllib.parse import unquote
 import io
 import boto3
 
