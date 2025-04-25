@@ -7,7 +7,9 @@ path = "src/mountainash_utils_files/__version__.py"
 [build.targets.wheel]
 packages = ["src/mountainash_utils_files"]
 
-
+#================
+# Env: build_github
+#================
 [envs.build_github]
 installer = "uv"
 dependencies = [
@@ -51,6 +53,7 @@ installer = "uv"
 
 dependencies = []
 
+
 #================
 # Env: test_github
 #================
@@ -59,10 +62,12 @@ python = [ "3.12"] #,  "3.11",, "3.10" ] # "3.8", "3.9","3.9",
 
 [envs.test_github]
 installer = "uv"
+
 dependencies = [
-  "coverage[toml]>=6.5",
-  "pytest==8.1.1",
-  "pytest-check==2.3.1",
+  # "coverage[toml]>=6.5",
+  "pytest==8.3.5",
+  "pytest-check==2.5.3",
+  "pytest-cov==6.1.1",
 
   "mountainash_constants @          {root:uri}/temp/mountainash-constants",
   "mountainash_data @               {root:uri}/temp/mountainash-data",
@@ -75,21 +80,7 @@ dependencies = [
 ]
 [envs.test_github.scripts]
 test = "pytest"
-test-cov = "coverage run -m pytest"
-test-xml = "coverage xml"
-cov-report = [
-  "- coverage combine",
-  "coverage report",
-]
-cov = [
-  "test-cov",
-  "cov-report",
-  "test-xml",
-]
-cov-html = [
-  "coverage html",
-]
-
+test-cov = "pytest --cov --junitxml=junit.xml -o junit_family=legacy  --cov-report=xml"
 
 #================
 # Env: test
@@ -101,8 +92,16 @@ python = ["3.12"]#, "3.11",  "3.10" ] # "3.8", "3.9","3.9",
 installer = "uv"
 dependencies = [
   "coverage[toml]>=6.5",
-  "pytest==8.1.1",
-  "pytest-check==2.3.1",
+  "pytest==8.3.5",
+  "pytest-check==2.5.3",
+  "pytest-mock==3.12.0",
+  "pytest-json-report>=1.5.0",    # Structured JSON output
+  "pytest-metadata>=2.0.0",       # Additional test metadata
+  "pytest-benchmark>=4.0.0",      # Performance benchmarking
+  "pytest-cov>=4.1.0",           # Better coverage integration
+  "pytest-clarity>=1.0.1",       # Better test output diff
+  "pytest-timeout>=2.1.0",       # Test timing control
+  "pytest-picked>=0.5.0",         # Changed files testing
 
   "mountainash_constants @          {root:uri}/../mountainash-constants",
   "mountainash_data @               {root:uri}/../mountainash-data",
@@ -148,6 +147,7 @@ test-cov-junit = [
  "pytest --cov --junitxml=junit.xml"
 ]
 
+
 #================
 # Env: ruff
 #================
@@ -188,3 +188,5 @@ dependencies = [
 ]
 [envs.mypy.scripts]
 check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
+
+
