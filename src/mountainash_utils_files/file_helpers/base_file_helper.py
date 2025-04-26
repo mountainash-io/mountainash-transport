@@ -1,50 +1,52 @@
+#file: src/mountainash_utils_files/file_helpers/base_file_helper.py
+
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO
+from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO, Tuple
 import io 
+import os
+import shutil
 
 from smart_open import open
 from upath import UPath
-from paramiko import SSHClient, AutoAddPolicy
-from gnupg import GPG 
 import gzip
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_constants import CONST_STORAGESYSTEM
+
+from mountainash_utils_gpg import GPG_Helper
+from mountainash_utils_ssh import SSH_Helper
 
 from mountainash_settings import SettingsParameters
-from mountainash_auth_settings import  AuthSettings, get_auth_settings
+from pydantic_settings import  BaseSettings 
 
 class Base_FileHelper(ABC):
 
     storage_system: str
     auth_parameters: SettingsParameters
-    auth_settings: AuthSettings
+    auth_settings: BaseSettings
 
-    io_hostname: str
-    io_port: int
-    io_username: str
-    io_password: str
-    io_keypath: str|UPath
+    # io_hostname: str
+    # io_port: int
+    # io_username: str
+    # io_password: str
+    # io_keypath: str|UPath
 
-    ssh_hostname: str
-    ssh_port: int
-    ssh_fwd_remoteport: int
-    ssh_fwd_localport: int
-    ssh_username: str
-    ssh_password: str
-    ssh_keypath: str|UPath
+    # ssh_hostname: str
+    # ssh_port: int
+    # ssh_fwd_remoteport: int
+    # ssh_fwd_localport: int
+    # ssh_username: str
+    # ssh_password: str
+    # ssh_keypath: str|UPath
 
     io_client: Optional[Any]
-    ssh_client: Optional[Any]
+
+    # ssh_client: Optional[Any]
+    ssh_helper: Optional[SSH_Helper]
 
     compression_type: str
     encryption_type: str
 
-    gpg_home: str
-    gpg_key_id: str
-    gpg_key_file: str|UPath
-    gpg_client: GPG
+    gpg_helper: Optional[GPG_Helper]
 
     #Controls initialsation of the storage system
     requires_io_connection: bool
@@ -55,86 +57,89 @@ class Base_FileHelper(ABC):
     enable_decrypt_on_read: bool
 
 
-    supports_native_get_to_stream: bool
-    supports_native_put_from_stream: bool
-    supports_native_get_to_local_path: bool
-    supports_native_put_from_local_path: bool
-    supports_native_get_to_native_path: bool
-    supports_native_put_from_native_path: bool
+    # supports_native_get_to_stream: bool
+    # supports_native_put_from_stream: bool
+    # supports_native_get_to_local_path: bool
+    # supports_native_put_from_local_path: bool
+    # supports_native_get_to_native_path: bool
+    # supports_native_put_from_native_path: bool
 
-    supports_encrypt_native_get_to_stream: bool
-    supports_encrypt_native_put_from_stream: bool
-    supports_encrypt_native_get_to_local_path: bool
-    supports_encrypt_native_put_from_local_path: bool
-    supports_encrypt_native_get_to_native_path: bool
-    supports_encrypt_native_put_from_native_path: bool
+    # supports_encrypt_native_get_to_stream: bool
+    # supports_encrypt_native_put_from_stream: bool
+    # supports_encrypt_native_get_to_local_path: bool
+    # supports_encrypt_native_put_from_local_path: bool
+    # supports_encrypt_native_get_to_native_path: bool
+    # supports_encrypt_native_put_from_native_path: bool
 
-    supports_decrypt_native_get_to_stream: bool
-    supports_decrypt_native_put_from_stream: bool
-    supports_decrypt_native_get_to_local_path: bool
-    supports_decrypt_native_put_from_local_path: bool
-    supports_decrypt_native_get_to_native_path: bool
-    supports_decrypt_native_put_from_native_path: bool
+    # supports_decrypt_native_get_to_stream: bool
+    # supports_decrypt_native_put_from_stream: bool
+    # supports_decrypt_native_get_to_local_path: bool
+    # supports_decrypt_native_put_from_local_path: bool
+    # supports_decrypt_native_get_to_native_path: bool
+    # supports_decrypt_native_put_from_native_path: bool
 
-    supports_compress_native_get_to_stream: bool
-    supports_compress_native_put_from_stream: bool
-    supports_compress_native_get_to_local_path: bool
-    supports_compress_native_put_from_local_path: bool
-    supports_compress_native_get_to_native_path: bool
-    supports_compress_native_put_from_native_path: bool
+    # supports_compress_native_get_to_stream: bool
+    # supports_compress_native_put_from_stream: bool
+    # supports_compress_native_get_to_local_path: bool
+    # supports_compress_native_put_from_local_path: bool
+    # supports_compress_native_get_to_native_path: bool
+    # supports_compress_native_put_from_native_path: bool
 
-    supports_decompress_native_get_to_stream: bool
-    supports_decompress_native_put_from_stream: bool
-    supports_decompress_native_get_to_local_path: bool
-    supports_decompress_native_put_from_local_path: bool
-    supports_decompress_native_get_to_native_path: bool
-    supports_decompress_native_put_from_native_path: bool
+    # supports_decompress_native_get_to_stream: bool
+    # supports_decompress_native_put_from_stream: bool
+    # supports_decompress_native_get_to_local_path: bool
+    # supports_decompress_native_put_from_local_path: bool
+    # supports_decompress_native_get_to_native_path: bool
+    # supports_decompress_native_put_from_native_path: bool
 
-    supports_smartopen_read_stream: bool
-    supports_encrypt_smartopen_read_stream: bool
-    supports_decrypt_smartopen_read_stream: bool
-    supports_compress_smartopen_read_stream: bool
-    supports_decompress_smartopen_read_stream: bool
+    # supports_smartopen_read_stream: bool
+    # supports_encrypt_smartopen_read_stream: bool
+    # supports_decrypt_smartopen_read_stream: bool
+    # supports_compress_smartopen_read_stream: bool
+    # supports_decompress_smartopen_read_stream: bool
 
-    supports_smartopen_write_stream: bool
-    supports_encrypt_smartopen_write_stream: bool
-    supports_decrypt_smartopen_write_stream: bool
-    supports_compress_smartopen_write_stream: bool
-    supports_decompress_smartopen_write_stream: bool
+    # supports_smartopen_write_stream: bool
+    # supports_encrypt_smartopen_write_stream: bool
+    # supports_decrypt_smartopen_write_stream: bool
+    # supports_compress_smartopen_write_stream: bool
+    # supports_decompress_smartopen_write_stream: bool
 
-    supports_get_to_stream: bool
-    supports_get_to_path: bool
-    supports_put_from_stream: bool
-    supports_put_from_path: bool
+    # supports_get_to_stream: bool
+    # supports_get_to_path: bool
+    # supports_put_from_stream: bool
+    # supports_put_from_path: bool
 
 
-    supports_polars_native_read_parquet: bool
-    supports_polars_stream_read_parquet: bool
-    supports_decrypt_polars_read_parquet: bool
-    supports_decompress_polars_read_parquet: bool
-    supports_pyarrow_write_parquet: bool
-    supports_encrypt_pyarrow_write_parquet: bool
-    supports_compress_pyarrow_write_parquet: bool
+    # supports_polars_native_read_parquet: bool
+    # supports_polars_stream_read_parquet: bool
+    # supports_decrypt_polars_read_parquet: bool
+    # supports_decompress_polars_read_parquet: bool
+    # supports_pyarrow_write_parquet: bool
+    # supports_encrypt_pyarrow_write_parquet: bool
+    # supports_compress_pyarrow_write_parquet: bool
 
-    prefer_native_on_get: bool
-    prefer_smartopen_on_get: bool
-    prefer_native_on_put: bool
-    prefer_smartopen_on_put: bool
+    # prefer_native_on_get: bool
+    # prefer_smartopen_on_get: bool
+    # prefer_native_on_put: bool
+    # prefer_smartopen_on_put: bool
+
+    # supports_directories: bool
+
 
     def __init__(self, 
-                 auth_parameters: SettingsParameters,
+                #  auth_parameters: SettingsParameters,
                  ) -> None:
 
-        self.io_auth_parameters = auth_parameters
-        self.io_auth_settings: AuthSettings = get_auth_settings(auth_settings_parameters=auth_parameters)
-        self.storage_system = self.io_auth_settings.STORAGE_SYSTEM
+        # self.io_auth_parameters = auth_parameters
+        # self.io_auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
+        # self.storage_system = self.io_auth_settings.PROVIDER_TYPE
 
-        self.compression_type = self.io_auth_settings.COMPRESSION_TYPE
-        self.encryption_type = self.io_auth_settings.ENCRYPTION_TYPE
+        # self.compression_type = self.io_auth_settings.COMPRESSION_TYPE
+        # self.encryption_type = self.io_auth_settings.ENCRYPTION_TYPE
 
 
-        if self.io_auth_settings.STORAGE_SYSTEM not in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM):
-            raise ValueError(f"Invalid storage system: {self.io_auth_settings.STORAGE_SYSTEM}. Check your auth settings value STORAGE_SYSTEM. Valid values are: {DataclassUtils.get_enum_values_set(CONST_STORAGESYSTEM)}")
+        # if self.io_auth_settings.STORAGE_SYSTEM not in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM):
+        #     raise ValueError(f"Invalid storage system: {self.io_auth_settings.STORAGE_SYSTEM}. Check your auth settings value STORAGE_SYSTEM. Valid values are: {DataclassUtils.get_enum_values_set(CONST_STORAGESYSTEM)}")
 
         # if self.io_auth_settings.ENCRYPTION_TYPE and self.io_auth_settings.ENCRYPTION_TYPE not in DataclassUtils.get_enum_values_set(enumclass=CONST_ENCRYPTION_TYPE):
         #     raise ValueError(f"Invalid storage system: {self.io_auth_settings.ENCRYPTION_TYPE}. Check your auth settings value ENCRYPTION_TYPE. Valid values are: {DataclassUtils.get_enum_values_set(CONST_ENCRYPTION_TYPE)}")
@@ -261,7 +266,7 @@ class Base_FileHelper(ABC):
 
         file_feature_attributes = [
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_get_to_stream",
 
                 f"{role}supports_native_get":       True,
@@ -279,7 +284,7 @@ class Base_FileHelper(ABC):
                 f"{role}supports_decompress":   self.supports_decompress_native_get_to_stream,
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_get_to_path",
 
 
@@ -300,7 +305,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_put_from_stream",
 
                 f"{role}supports_native_get":       False,
@@ -320,7 +325,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "native_put_from_path",
 
                 f"{role}supports_native_get":       False,
@@ -339,7 +344,7 @@ class Base_FileHelper(ABC):
 
             },
             {
-                f"{role}storage_system": self.storage_system,
+            #     f"{role}storage_system": self.storage_system,
                 f"{role}method": "smartopen_read_stream",
 
                 f"{role}supports_native_get":       False,
@@ -359,7 +364,7 @@ class Base_FileHelper(ABC):
  
             },
             {
-                f"{role}storage_system": self.storage_system,
+                # f"{role}storage_system": self.storage_system,
                 f"{role}method": "smartopen_write_stream",
 
                 f"{role}supports_native_get":       False,
@@ -389,61 +394,48 @@ class Base_FileHelper(ABC):
 
     def connect_ssh(self):
         """Connect to the SFTP server"""
-
-        connected: bool = self.check_if_ssh_connected()
+        ...
+        # connected: bool = self.check_if_ssh_connected()
         
-        if not connected:
+        # if not connected:
 
-            if self.ssh_client is not None:
-                self.ssh_client.close()
+        #     if self.ssh_client is not None:
+        #         self.ssh_client.close()
 
-            self.ssh_client = SSHClient()
-            self.ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-            #set crypto policy
-            #self.ssh_client.get_transport().set_ciphers('aes128-cbc')
+        #     self.ssh_client = SSHClient()
+        #     self.ssh_client.set_missing_host_key_policy(AutoAddPolicy())
+        #     #set crypto policy
+        #     #self.ssh_client.get_transport().set_ciphers('aes128-cbc')
 
-            #TODO: Validate that the keypath exists
+        #     #TODO: Validate that the keypath exists
 
-            if self.ssh_keypath is not None:
+        #     if self.ssh_keypath is not None:
 
-                u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
-                ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
+        #         u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
+        #         ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
 
-                self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
-                                        username=self.ssh_username, password=self.ssh_password, 
-                                        key_filename=ssh_keypath_str)
-            else:
-                self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
-                                        username=self.ssh_username, password=self.ssh_password)
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
+        #                                 username=self.ssh_username, password=self.ssh_password, 
+        #                                 key_filename=ssh_keypath_str)
+        #     else:
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
+        #                                 username=self.ssh_username, password=self.ssh_password)
 
-            # Forward the remote port to the local port
-            if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
+        #     # Forward the remote port to the local port
+        #     if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
 
-                transport = self.ssh_client.get_transport()
-                self.reverse_tunnel = transport.open_channel('direct-tcpip', 
-                                                        ('127.0.0.1', self.ssh_fwd_localport), 
-                                                        ('localhost', self.ssh_fwd_remoteport))
+        #         transport = self.ssh_client.get_transport()
+        #         self.reverse_tunnel = transport.open_channel('direct-tcpip', 
+        #                                                 ('127.0.0.1', self.ssh_fwd_localport), 
+        #                                                 ('localhost', self.ssh_fwd_remoteport))
         
         return self.check_if_ssh_connected()
 
 
     def check_if_ssh_connected(self):
         """Check if the SFTP server is connected"""
+        ...
 
-        connected = True
-
-        if self.ssh_client is None:
-            connected = False
-        else:
-            try:
-                transport = self.ssh_client.get_transport()
-                peername: Any | None = transport.getpeername()  if transport else None  
-                connected: bool =  peername is not None
-
-            except OSError:
-                connected =  False
-            
-        return connected
 
     #================================================================
     # GZip Compression operations
@@ -452,9 +444,9 @@ class Base_FileHelper(ABC):
     def check_kwargs_for_compression_encryption(self, calling_function_name: str, **kwargs) -> None:
 
         compress: bool = kwargs.get('compress', False)
-        encrypt: bool = kwargs.get('compress', False)
-        decompress: bool = kwargs.get('compress', False)
-        decrypt: bool = kwargs.get('compress', False)
+        encrypt: bool = kwargs.get('encrypt', False)
+        decompress: bool = kwargs.get('decompress', False)
+        decrypt: bool = kwargs.get('decrypt', False)
 
         if compress or encrypt or decompress or decrypt:
             raise Exception(f"{calling_function_name}(): Compression and encryption operations are not supported for this operation.")
@@ -488,7 +480,6 @@ class Base_FileHelper(ABC):
         print(f"Compressing stream: {source_stream}")
 
         #Note that smartopen suppports compression natively!
-
 
         # Compress the data from source_stream and write it to destination_stream
         with gzip.GzipFile(fileobj=destination_stream, mode='wb', **kwargs) as gzip_file:
@@ -534,7 +525,7 @@ class Base_FileHelper(ABC):
 
     def init_gpg(self):
 
-        self.gpg_client = GPG(gnupghome=self.gpg_home)
+        self.gpg_client = GPG_Helper(gnupghome=self.gpg_home)
         self.import_gpg_keys()
 
         if not self.gpg_client:
@@ -674,7 +665,7 @@ class Base_FileHelper(ABC):
         Read data from the specified source.
         """
 
-        print(f"{self.storage_system}: open_read_binarystream: {source_path}")
+        # print(f"{self.storage_system}: open_read_binarystream: {source_path}")
 
         self.connect()
 
@@ -694,7 +685,7 @@ class Base_FileHelper(ABC):
         """
         Write data to the specified destination.
         """
-        print(f"{self.storage_system}: open_write_binarystream: {destination_path}")
+        # print(f"{self.storage_system}: open_write_binarystream: {destination_path}")
 
         self.connect()
         mode = 'wb'
@@ -703,7 +694,7 @@ class Base_FileHelper(ABC):
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
 
-        return stream
+        return stream 
 
 
 
@@ -713,7 +704,7 @@ class Base_FileHelper(ABC):
         """
         Read data from the specified source.
         """
-        print(f"{self.storage_system}: open_read_textstream: {source_path}")
+        # print(f"{self.storage_system}: open_read_textstream: {source_path}")
         
         self.connect()
         mode = 'r'
@@ -728,7 +719,7 @@ class Base_FileHelper(ABC):
         """
         Write data to the specified destination.
         """
-        print(f"{self.storage_system}: open_write_textstream: {destination_path}")
+        # print(f"{self.storage_system}: open_write_textstream: {destination_path}")
 
         self.connect()
         mode = 'w'
@@ -749,10 +740,11 @@ class Base_FileHelper(ABC):
                    destination_path: UPath, 
                    source_stream: IO, 
                    length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False) -> bool:
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
+                    ) -> bool:
         pass
         
     @abstractmethod
@@ -769,10 +761,10 @@ class Base_FileHelper(ABC):
                    source_path: UPath, 
                    destination_stream: IO, 
                    length: int,           
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
         pass
         
@@ -789,10 +781,10 @@ class Base_FileHelper(ABC):
 
     def process_source_stream(self,
                     source_stream: IO, 
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                     ) -> io.BytesIO:
         
         if not source_stream:
@@ -834,20 +826,21 @@ class Base_FileHelper(ABC):
             if compress or encrypt or decompress or decrypt:
                 raise Exception("An invalid combination of compression and encryption operations was requested. ")
 
-        destination_stream = io.BytesIO()
-        destination_stream.write(source_stream.read())
-        destination_stream.seek(0)
+        temp_stream = io.BytesIO()
+        temp_stream.write(source_stream.read())
 
-        return destination_stream         
+        temp_stream.seek(0)
+
+        return temp_stream         
 
 
     def copy_stream_to_stream(self,
                    source_stream: IO|io.BytesIO, 
                    destination_stream: IO|io.BytesIO,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                     ) -> bool:
       
 
@@ -862,18 +855,113 @@ class Base_FileHelper(ABC):
 
         return True
 
+
+
+
+    def get_stream_size(self, stream: IO) -> Tuple[IO, int]:
+        """
+        Determine the length of a stream using the most appropriate method based on the stream's capabilities.
+        Returns both the stream (possibly modified) and its length.
+        
+        Args:
+            stream: An IO stream object
+            
+        Returns:
+            Tuple containing:
+                - The stream object (possibly modified if buffering was needed)
+                - The length of the stream in bytes
+        """
+        # Check if stream is None
+        if stream is None:
+            raise ValueError("Cannot determine length of None stream")
+        
+        # First try the most efficient method - seek and tell
+        try:
+            # Store current position
+            current_pos = stream.tell()
+            
+            # Try to seek to end
+            stream.seek(0, 2)  # 2 means seek from end
+            length = stream.tell()
+            
+            # Reset to original position
+            stream.seek(current_pos)
+            
+            return stream, length
+
+        except (AttributeError, io.UnsupportedOperation):
+            # Stream doesn't support seeking or tell
+            pass
+        
+        # Check if it's a file with a name attribute (regular files)
+        try:
+            if hasattr(stream, 'name') and isinstance(stream.name, str):
+
+                try:
+                    # Get file size from the filesystem
+                    file_size = os.path.getsize(stream.name)
+                    return stream, file_size
+                except (OSError, FileNotFoundError):
+                    # File might be temporary or not accessible
+                    pass
+        except Exception:
+            # Any other issues with file handling, continue to next method
+            pass
+        
+        # Last resort: buffer the entire stream
+        try:
+            # Create a BytesIO buffer
+            buffer = io.BytesIO()
+            
+            # Store current position if possible
+            try:
+                current_pos = stream.tell()
+            except (AttributeError, io.UnsupportedOperation):
+                current_pos = None
+            
+            # Try to reset to beginning if possible
+            try:
+                stream.seek(0)
+            except (AttributeError, io.UnsupportedOperation):
+                # If we can't seek, we'll just read from current position
+                pass
+            
+            # Copy all content to buffer
+            shutil.copyfileobj(stream, buffer)
+            
+            # Get the length
+            length = buffer.tell()
+            
+            # Reset buffer to beginning
+            buffer.seek(0)
+            
+            # Try to reset original stream if we moved it
+            if current_pos is not None:
+                try:
+                    stream.seek(current_pos)
+                    return stream, length  # Return original stream if we could reset it
+                except (AttributeError, io.UnsupportedOperation):
+                    pass
+            
+            # Return the buffer as the new stream
+            return buffer, length
+            
+        except Exception as e:
+            raise ValueError(f"Could not determine stream length: {str(e)}")        
+
+
     #================================================================
     # Generic File operations
 
 
     def put_object_from_stream(self,
-                   destination_path: Optional[Union[str, UPath]], 
+                   destination_path: Union[str, UPath], 
                    source_stream: IO, 
-                   length: int,
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                   length: Optional[int] = None,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         self.connect()
@@ -881,12 +969,14 @@ class Base_FileHelper(ABC):
         #Format S3 Destination
         u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
 
+        if not length:
+            # print("Determining stream length. This requires processing the full stream before writing to the destination. put_object_from_stream() may not be appropriate for large source streams.")
+            source_stream, length = self.get_stream_size(source_stream)          
+            # print(f"stream length: {length}")
+
         if self.io_client and source_stream and u_destination_path:
 
             try:
-
-                                                                   
-
 
                 put_object = self._native_put_object_from_stream(destination_path=u_destination_path, 
                                                            source_stream=source_stream, 
@@ -918,12 +1008,12 @@ class Base_FileHelper(ABC):
             return False
 
     def put_object_from_path(self, 
-                   destination_path: Optional[Union[str, UPath]], 
-                   source_path: Optional[Union[str, UPath]],
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   destination_path: Union[str, UPath], 
+                   source_path: Union[str, UPath],
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool:
 
         if compress or encrypt or decompress or decrypt:
@@ -982,13 +1072,13 @@ class Base_FileHelper(ABC):
 
 
     def get_object_to_stream(self,
-                   source_path: Optional[Union[str, UPath]], 
+                   source_path: Union[str, UPath], 
                    destination_stream: IO,
-                   length: int,
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   length: Optional[int] = None,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool:
 
         self.connect()
@@ -1001,6 +1091,10 @@ class Base_FileHelper(ABC):
             return False
 
         source_exists = self.path_exists(path=u_source_path)
+
+        if not length:
+            length = self.get_size(source_path=u_source_path)   
+
 
         if not source_exists:
             print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
@@ -1046,12 +1140,12 @@ class Base_FileHelper(ABC):
             return False
 
     def get_object_to_path(self, 
-                   source_path: Optional[Union[str, UPath]], 
-                   destination_path: Optional[Union[str, UPath]],
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False,                   
+                   source_path: Union[str, UPath], 
+                   destination_path: Union[str, UPath],
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False                 
                    ) -> bool|Any:
 
         #This can only be used if the destination interface is local or the same as the source
@@ -1118,10 +1212,15 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
+
+        if not self.supports_directories:
+            return True
+
         u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
+
         
         parent: UPath = u_path.parent
 
@@ -1134,10 +1233,17 @@ class Base_FileHelper(ABC):
         """
         Get the parent directory of the specified path.
         """
+
+        if not self.supports_directories:
+            return True
+
+
         u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
+
+
 
         return self.path_exists(path=u_path.parent)        
 
@@ -1173,7 +1279,7 @@ class Base_FileHelper(ABC):
 
 
     @abstractmethod
-    def list_sources(self, path: Optional[Union[str, UPath]] = "", **kwargs) -> List[str]:
+    def list_sources(self, path: Union[str, UPath], **kwargs) -> List[UPath]:
         """
         List available data sources in the specified path or directory.
 
@@ -1195,16 +1301,16 @@ class Base_FileHelper(ABC):
         """
         pass
 
-    @abstractmethod
-    def calculate_checksum(self, path: Optional[Union[str, UPath]], algorithm: str = 'sha256') -> str:
-        """
-        Calculate the checksum of the data at the specified path.
+    # @abstractmethod
+    # def calculate_checksum(self, path: Optional[Union[str, UPath]], algorithm: str = 'sha256') -> str:
+    #     """
+    #     Calculate the checksum of the data at the specified path.
 
-        :param path: The path to the data.
-        :param algorithm: The hashing algorithm to use (e.g., 'md5', 'sha1', 'sha256').
-        :return: The calculated checksum as a hexadecimal string.
-        """
-        pass
+    #     :param path: The path to the data.
+    #     :param algorithm: The hashing algorithm to use (e.g., 'md5', 'sha1', 'sha256').
+    #     :return: The calculated checksum as a hexadecimal string.
+    #     """
+    #     pass
 
     @abstractmethod
     def get_size(self, path: Optional[Union[str, UPath]]) -> int:
@@ -1225,13 +1331,11 @@ class Base_FileHelper(ABC):
         pass
 
     @abstractmethod
-    def create_directory(cls, path: Optional[Union[str, UPath]]) -> bool :
+    def create_directory(self, path: Optional[Union[str, UPath]]) -> bool :
         pass
 
 
-
-    @classmethod
-    def count_sources(cls, path: Optional[Union[str, UPath]], **kwargs) -> int:
+    def count_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> int:
         """
         List available data sources in the specified path or directory.
 
@@ -1239,7 +1343,7 @@ class Base_FileHelper(ABC):
         :param kwargs: Additional arguments specific to the storage system.
         :return: A list of identifiers for the available data sources.
         """
-        return len(cls.list_sources(path=path, **kwargs))
+        return len(self.list_sources(path=path, **kwargs))
     
 
     @classmethod

@@ -2,17 +2,18 @@ import pytest
 from mountainash_utils_files import FileInterface#, get_file_interface
 # from mountainash_utils_files.file_helpers import FileHelperFactory, Base_FileHelper
 
-from mountainash_constants import CONST_STORAGESYSTEM
-from mountainash_settings import SettingsUtils, SettingsParameters
-from mountainash_auth_settings import AuthSettings
+# from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_settings import  SettingsParameters
+from mountainash_settings.settings.auth.storage.providers import  LocalStorageAuthSettings
 
 import random
 from upath import UPath
 
 
-auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", 
-                                                                                settings_class=AuthSettings, 
-                                                                                STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value)
+auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", 
+                                                                                settings_class=LocalStorageAuthSettings, 
+                                                                                # STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value
+                                                                                )
 
 @pytest.mark.parametrize(
     "path, expected",
@@ -114,7 +115,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 #     storage_facade: FileInterface = get_file_interface()  
 
 #     #Auth
-#     local_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", settings_class=AuthSettings)
+#     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
 #     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
     
 #     copied: bool = storage_facade.copy_binarystream(destination_path=destination_path, source_path=source_path, obj_destination_storage=local_storage, obj_source_storage=local_storage)
@@ -138,7 +139,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 #     storage_facade: FileInterface = get_file_interface()  
 
 #     #Auth
-#     s3_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="s3_warehouse", 
+#     s3_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="s3_warehouse", 
 #                                                                                           settings_class=AuthSettings, 
 #                                                                                           settings_system=CONST_STORAGESYSTEM.S3.value,
 #                                                                                           USERNAME="minio",
@@ -148,7 +149,7 @@ def test_path_is_file(path: UPath | str, expected: str):
 
 #     s3_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=s3_auth_parameters, storage_system=CONST_STORAGESYSTEM.S3.value) 
     
-#     local_auth_parameters: SettingsParameters = SettingsUtils.prepare_settings_parameters(settings_namespace="local", settings_class=AuthSettings)
+#     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
 #     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
 
 

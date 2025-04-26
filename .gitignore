@@ -164,3 +164,7 @@ cython_debug/
 #Hatch dirs
 .hatch/
 htmlcov/
+
+#Sonarlint settings
+.vscode/
+.sonarlint/

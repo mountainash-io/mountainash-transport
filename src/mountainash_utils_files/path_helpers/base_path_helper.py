@@ -122,6 +122,7 @@ class BasePathHelper(ABC):
         if path_scheme in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM_PREFIX):
 
             storage_system = CONST_STORAGESYSTEM_PREFIX.find_member(value=path_scheme)
+
             if storage_system is None:
                 raise ValueError(f"Failed to identify storage system for path: {path_str}.")
             elif isinstance(storage_system, list) and len(storage_system) > 1:
