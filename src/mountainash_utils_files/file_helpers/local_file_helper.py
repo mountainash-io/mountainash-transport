@@ -73,6 +73,18 @@ class Local_FileHelper(Base_FileHelper):
         self.supports_compress_native_put_from_local_path = True
         self.supports_decompress_native_put_from_local_path = True
 
+        self.supports_native_get_to_native_path = True
+        self.supports_encrypt_native_get_to_native_path = True
+        self.supports_decrypt_native_get_to_native_path = True
+        self.supports_compress_native_get_to_native_path = True
+        self.supports_decompress_native_get_to_native_path = True
+
+        self.supports_native_put_from_native_path = True
+        self.supports_encrypt_native_put_from_native_path = True
+        self.supports_decrypt_native_put_from_native_path = True
+        self.supports_compress_native_put_from_native_path = True
+        self.supports_decompress_native_put_from_native_path = True
+
         self.supports_smartopen_read_stream = True
         self.supports_encrypt_smartopen_read_stream = True
         self.supports_decrypt_smartopen_read_stream = True

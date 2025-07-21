@@ -18,6 +18,30 @@ from mountainash_settings.settings.auth.storage.providers import  LocalStorageAu
 class FileInterface:
     
     factory: FileHelperFactory = get_file_helper_factory()
+    
+    # TODO: CRITICAL - Remove this mapping once mountainash-constants provides single source of truth
+    # The PathHelper system uses CONST_STORAGESYSTEM values ("LOCAL_DISK", "S3") 
+    # but Settings system uses CONST_STORAGE_PROVIDER_TYPE values ("local", "s3")
+    # This mapping translates PathHelper names to Settings names for validation
+    # Fix: Unify naming in mountainash-constants or create canonical mapping there
+    _STORAGE_SYSTEM_TO_PROVIDER_TYPE = {
+        "LOCAL_DISK": "local",
+        "S3": "s3", 
+        "GCS": "gcs",
+        "AZ": "azure_blob",  # Based on CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB
+        "SFTP": "sftp",
+        "SSH": "ssh",
+        "B2": "b2",
+        "R2": "r2"
+    }
+    
+    @classmethod
+    def _map_storage_system_to_provider_type(cls, storage_system: str) -> str:
+        """
+        TEMPORARY: Map PathHelper storage system names to Settings provider type names.
+        TODO: Remove this once constants are unified in mountainash-constants.
+        """
+        return cls._STORAGE_SYSTEM_TO_PROVIDER_TYPE.get(storage_system, storage_system.lower())
 
     @classmethod
     def resolve_storage_object(cls, 
@@ -73,11 +97,16 @@ class FileInterface:
         path_source_storage_system: str|None = PathHelper.identify_storage_system(path=source_path)
         path_destination_storage_system: str|None = PathHelper.identify_storage_system(path=destination_path)
 
-        if path_source_storage_system != settings_source_storage_system:
-            raise ValueError(f"Storage system in path '{path_source_storage_system}' does not match storage system in settings '{settings_source_storage_system}'")
+        # Map PathHelper storage system names to Settings provider type names for validation
+        # TODO: Remove mapping once constants are unified in mountainash-constants
+        mapped_source_system = cls._map_storage_system_to_provider_type(path_source_storage_system) if path_source_storage_system else None
+        mapped_dest_system = cls._map_storage_system_to_provider_type(path_destination_storage_system) if path_destination_storage_system else None
 
-        if path_destination_storage_system != settings_destination_storage_system:
-            raise ValueError(f"Storage system in path '{path_source_storage_system}' does not match storage system in settings '{settings_destination_storage_system}'")
+        if mapped_source_system != settings_source_storage_system:
+            raise ValueError(f"Storage system in path '{path_source_storage_system}' (mapped to '{mapped_source_system}') does not match storage system in settings '{settings_source_storage_system}'")
+
+        if mapped_dest_system != settings_destination_storage_system:
+            raise ValueError(f"Storage system in path '{path_destination_storage_system}' (mapped to '{mapped_dest_system}') does not match storage system in settings '{settings_destination_storage_system}'")
 
         #Get the storage interfaces
         source_storage_interface: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=source_auth_settings_parameters) 
