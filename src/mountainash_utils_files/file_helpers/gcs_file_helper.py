@@ -1,151 +1,318 @@
 import os
-from typing import Any, List, Union, IO
+import io
+from typing import Any, List, Union, IO, Optional
+
 from upath import UPath
-from smart_open import open
 from .base_file_helper import Base_FileHelper
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters
+from mountainash_settings import SettingsParameters, get_settings
+from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
 
-class GCS_FileHelpere(Base_FileHelper):
+class GCS_FileHelper(Base_FileHelper):
+    """
+    Google Cloud Storage implementation of the Base_FileHelper interface.
+    Handles file operations on Google Cloud Storage.
+    """
 
     def __init__(self, 
                  auth_parameters: SettingsParameters
                  ) -> None:
-        pass
-
-    @classmethod
-    def read_data(cls, source_path: Union[str, UPath], **kwargs) -> Any:
         """
-        Read data from the specified source.
+        Initialize the GCS_FileHelper.
+        
+        Args:
+            auth_parameters: Settings parameters for authentication
         """
-        mode = kwargs.get('mode', 'r')  # Default mode is text; use 'rb' for binary
-        with open(source_path, mode) as file:
-            return file.read()
+        # Initialize base class
+        super().__init__()
 
-    @classmethod
-    def write_data(cls, destination_path: Union[str, UPath], data: Any, **kwargs):
-        """
-        Write data to the specified destination.
-        """
-        mode = kwargs.get('mode', 'w')  # Default mode is text; use 'wb' for binary
-        with open(destination_path, mode) as file:
-            file.write(data)
+        self.auth_parameters = auth_parameters
+        self.storage_provider_type = CONST_STORAGE_PROVIDER_TYPE.GCS
+        self.storage_system = "GCS"
+        
+        # Get auth settings
+        self.io_auth_settings = get_settings(auth_parameters)
+        
+        # Connection requirements
+        self.requires_io_connection = True
+        self.requires_ssh_connection = False
 
-    @classmethod
-    def copy_to(cls, destination_path: Union[str, UPath], source_file: IO):
-        pass
+        # Initialize client
+        self.io_client = None
+        
+        # Set interface attributes and connect
+        self.set_interface_attributes()
+        self.connect()
 
-    @classmethod
-    def copy_from(cls, source_path: Union[str, UPath]) -> None:
-        pass
+    def set_interface_attributes(self):
+        """Set the interface attributes for GCS storage."""
+        # Native method support
+        self.supports_native_get_to_stream = True
+        self.supports_encrypt_native_get_to_stream = True
+        self.supports_decrypt_native_get_to_stream = True
+        self.supports_compress_native_get_to_stream = True
+        self.supports_decompress_native_get_to_stream = True
 
+        self.supports_native_put_from_stream = True
+        self.supports_encrypt_native_put_from_stream = True
+        self.supports_decrypt_native_put_from_stream = True
+        self.supports_compress_native_put_from_stream = True
+        self.supports_decompress_native_put_from_stream = True
 
-    @classmethod
-    def list_sources(cls, path: Union[str, UPath] = "", **kwargs) -> List[str]:
+        self.supports_native_get_to_local_path = False
+        self.supports_encrypt_native_get_to_local_path = False
+        self.supports_decrypt_native_get_to_local_path = False
+        self.supports_compress_native_get_to_local_path = False
+        self.supports_decompress_native_get_to_local_path = False
+
+        self.supports_native_put_from_local_path = True
+        self.supports_encrypt_native_put_from_local_path = True
+        self.supports_decrypt_native_put_from_local_path = True
+        self.supports_compress_native_put_from_local_path = True
+        self.supports_decompress_native_put_from_local_path = True
+
+        self.supports_native_get_to_native_path = False
+        self.supports_encrypt_native_get_to_native_path = False
+        self.supports_decrypt_native_get_to_native_path = False
+        self.supports_compress_native_get_to_native_path = False
+        self.supports_decompress_native_get_to_native_path = False
+
+        self.supports_native_put_from_native_path = False
+        self.supports_encrypt_native_put_from_native_path = False
+        self.supports_decrypt_native_put_from_native_path = False
+        self.supports_compress_native_put_from_native_path = False
+        self.supports_decompress_native_put_from_native_path = False
+
+        # Smart open support
+        self.supports_smartopen_read_stream = True
+        self.supports_encrypt_smartopen_read_stream = True
+        self.supports_decrypt_smartopen_read_stream = True
+        self.supports_compress_smartopen_read_stream = True
+        self.supports_decompress_smartopen_read_stream = True
+
+        self.supports_smartopen_write_stream = True
+        self.supports_encrypt_smartopen_write_stream = True
+        self.supports_decrypt_smartopen_write_stream = True
+        self.supports_compress_smartopen_write_stream = True
+        self.supports_decompress_smartopen_write_stream = True
+
+        # General support
+        self.supports_get_to_stream = False
+        self.supports_get_to_path = True
+        self.supports_put_from_stream = True
+        self.supports_put_from_path = True
+
+        # Preferences
+        self.prefer_native_on_get = True
+        self.prefer_smartopen_on_get = False
+        self.prefer_native_on_put = True
+        self.prefer_smartopen_on_put = False
+
+        # Polars support
+        self.supports_polars_native_read_parquet = True
+        self.supports_polars_stream_read_parquet = True
+        self.supports_decrypt_polars_read_parquet = True
+        self.supports_decompress_polars_read_parquet = True
+        self.supports_pyarrow_write_parquet = True
+        self.supports_encrypt_pyarrow_write_parquet = True
+        self.supports_compress_pyarrow_write_parquet = True
+
+        self.supports_directories = False
+
+    #================================================================
+    # Connection operations
+
+    def connect(self) -> bool:
+        """Connect to GCS."""
+        # For now, return True as smart-open handles GCS connections
+        # In a full implementation, you would initialize the GCS client here
+        return True
+
+    def check_if_io_connected(self) -> bool:
+        """Check if connected to GCS."""
+        # For now, return True as smart-open handles GCS connections
+        return True
+
+    def get_connection_client_parameters(self) -> dict:
+        """Get connection client parameters."""
+        transport_params: dict[str, Any] = {}
+        return transport_params
+
+    #================================================================
+    # File operations
+
+    def _native_put_object_from_stream(self,
+                   destination_path: UPath, 
+                   source_stream: IO, 
+                   length: int,            
+                   encrypt: Optional[bool] = False,
+                   decrypt: Optional[bool] = False,
+                   compress: Optional[bool] = False,
+                   decompress: Optional[bool] = False
+                   ) -> bool:
+        """Put an object to GCS from a stream."""
+        try:
+            with self.open_write_binarystream(destination_path=destination_path) as destination_stream:
+                self.copy_stream_to_stream(
+                    source_stream=source_stream, 
+                    destination_stream=destination_stream,
+                    encrypt=encrypt, 
+                    decrypt=decrypt, 
+                    compress=compress, 
+                    decompress=decompress
+                )
+            return True
+        except Exception as e:
+            print(f"Error putting object from stream to {destination_path}: {e}")
+            return False
+
+    def _native_put_object_from_path(self, 
+                   destination_path: UPath, 
+                   source_path: UPath,      
+                   **kwargs        
+                   ) -> bool:
+        """Put an object to GCS from a local path."""
+        self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
+        
+        try:
+            with open(source_path, 'rb') as source_file:
+                with self.open_write_binarystream(destination_path=destination_path) as destination_stream:
+                    destination_stream.write(source_file.read())
+            return True
+        except Exception as e:
+            print(f"Error copying file from {source_path} to {destination_path}: {e}")
+            return False
+
+    def _native_get_object_to_stream(self,
+                   source_path: UPath, 
+                   destination_stream: IO,  
+                   length: int,            
+                   encrypt: Optional[bool] = False,
+                   decrypt: Optional[bool] = False,
+                   compress: Optional[bool] = False,
+                   decompress: Optional[bool] = False
+                   ) -> bool:
+        """Get an object from GCS to a stream."""
+        try:
+            with self.open_read_binarystream(source_path=source_path) as source_stream:
+                self.copy_stream_to_stream(
+                    source_stream=source_stream, 
+                    destination_stream=destination_stream,
+                    encrypt=encrypt, 
+                    decrypt=decrypt, 
+                    compress=compress, 
+                    decompress=decompress
+                )
+            return True
+        except Exception as e:
+            print(f"Error getting object from {source_path} to stream: {e}")
+            return False
+
+    def _native_get_object_to_path(self, 
+                   source_path: UPath, 
+                   destination_path: UPath,
+                   **kwargs            
+                   ) -> bool:
+        """Get an object from GCS to a local path."""
+        self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
+        
+        try:
+            with self.open_read_binarystream(source_path=source_path) as source_stream:
+                with open(destination_path, 'wb') as destination_file:
+                    destination_file.write(source_stream.read())
+            return True
+        except Exception as e:
+            print(f"Error copying file from {source_path} to {destination_path}: {e}")
+            return False
+
+    #================================================================
+    # Filesystem operations
+
+    def list_sources(self, path: Union[str, UPath], **kwargs) -> List[UPath]:
         """
         List available data sources in the specified path or directory.
         """
+        u_path: UPath|None = PathHelper.format_path(path) 
 
-        # formatted_path = PathHelper.format_path(path) 
-        # return list(formatted_path.fs.glob(path))
-            
-        return [str(p) for p in UPath(path).glob(kwargs.get('pattern', '*'))]
+        if not u_path:
+            return []
 
-    @classmethod
-    def calculate_checksum(cls, path: Union[str, UPath], algorithm: str = 'sha256') -> None:
+        try:
+            # Use glob to list objects with optional pattern
+            pattern = kwargs.get('pattern', '*')
+            paths = list(u_path.glob(pattern))
+            return [UPath(p) for p in paths]
+        except Exception as e:
+            print(f"Error listing sources: {e}")
+            return []
+
+    def path_exists(self, path: Optional[Union[str, UPath]], **kwargs) -> bool:
         """
-        Calculate the checksum of the data at the specified path.
+        Check if the specified path exists.
         """
-        pass
-        # hash_alg = hashlib.new(algorithm)
-        # with open(path, 'rb') as file:
-        #     for chunk in iter(lambda: file.read(4096), b""):
-        #         hash_alg.update(chunk)
-        # return hash_alg.hexdigest()
+        u_path: UPath|None = PathHelper.format_path(path)        
 
-    @classmethod
-    def get_size(cls, path: Union[str, UPath]) -> int:
+        if not u_path:
+            return False
+
+        try:
+            return u_path.exists()
+        except Exception as e:
+            print(f"Error checking if path exists: {e}")
+            return False
+
+    def get_size(self, path: Optional[Union[str, UPath]]) -> int:
         """
         Get the size of the data at the specified path.
         """
-        return os.path.getsize(path)
-
-    @classmethod
-    def path_exists(cls,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path) 
 
         if not u_path:
-            return False
-        
-        return u_path.exists()
+            return 0
 
-    @classmethod
-    def path_is_dir(cls,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-        u_path: UPath|None = PathHelper.format_path(path)        
-
-        if not u_path:
-            return False
-
-        return u_path.is_dir()
-    
-    @classmethod
-    def path_is_file(cls,  path: Union[str, UPath]) -> bool:
-        """
-        Checks if the specified path exists.
-
-        :param path: The path to check.
-        :return: True if the path exists, False otherwise.
-        """
-        u_path: UPath|None = PathHelper.format_path(path)        
-
-        if not u_path:
-            return False
-        return u_path.is_file()    
-
-
-    @classmethod
-    def create_directory(
-        cls, 
-        path: Union[str, UPath]
-        ) -> bool:
-        """Creates a directory if it does not exist.
-
-        Args:
-            directory: The path of the directory to create.
-
-        Returns:
-            True if the directory was created or already exists, False otherwise.
-
-        Example:
-            fs = FilesystemInterface('local')
-            created = fs.create_directory('data')
-        """
-        u_path: UPath|None = PathHelper.format_path(path)
-
-
-        if not u_path:
-            return False
-        
         try:
-            if not u_path.exists():
-                #can I use smart open to create a folder?
-                os.makedirs(name=u_path.path, exist_ok=True)
+            stat = u_path.stat()
+            return stat.st_size if hasattr(stat, 'st_size') else 0
+        except Exception as e:
+            print(f"Error getting size: {e}")
+            return 0
 
-        except OSError:
-            print(f"Error creating local directory: {u_path.path}")
+    def path_is_dir(self, path: Optional[Union[str, UPath]]) -> bool:
+        """
+        Checks if the specified path is a directory.
+        """
+        u_path: UPath|None = PathHelper.format_path(path)        
+
+        if not u_path:
             return False
-        
+
+        try:
+            return u_path.is_dir()
+        except Exception as e:
+            print(f"Error checking if path is directory: {e}")
+            return False
+
+    def path_is_file(self, path: Optional[Union[str, UPath]]) -> bool:
+        """
+        Checks if the specified path is a file.
+        """
+        u_path: UPath|None = PathHelper.format_path(path)        
+
+        if not u_path:
+            return False
+
+        try:
+            return u_path.is_file()
+        except Exception as e:
+            print(f"Error checking if path is file: {e}")
+            return False
+
+    def create_directory(self, path: Optional[Union[str, UPath]]) -> bool:
+        """
+        Creates a directory if it does not exist.
+        Note: GCS doesn't have true directories, but this can create a placeholder object.
+        """
+        # GCS doesn't have true directories, so this is a no-op
+        # In practice, directories are implied by object names with slashes
         return True

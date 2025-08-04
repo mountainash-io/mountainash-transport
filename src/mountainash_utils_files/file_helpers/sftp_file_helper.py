@@ -6,7 +6,7 @@ from upath import UPath
 from paramiko import SFTPClient, SSHClient,  SFTPAttributes
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_settings import SettingsParameters
+from mountainash_settings import SettingsParameters, get_settings
 
 from .base_file_helper import Base_FileHelper
 
@@ -23,26 +23,35 @@ class SFTP_FileHelper(Base_FileHelper):
                  auth_parameters: SettingsParameters
                  ) -> None:
 
-        super().__init__(auth_parameters)
+        # Initialize base class
+        super().__init__()
 
+        self.auth_parameters = auth_parameters
+        self.storage_system = "SFTP"
+        
+        # Get auth settings
+        self.io_auth_settings = get_settings(auth_parameters)
+        
+        # Connection requirements
         self.requires_io_connection = True
         self.requires_ssh_connection = True
 
-        """Initialize the SFTPManager object"""
-        self.ssh_hostname =         self.io_auth_settings.HOST
-        self.ssh_port =             self.io_auth_settings.PORT
-        self.ssh_username =         self.io_auth_settings.USERNAME
-        self.ssh_password =         self.io_auth_settings.PASSWORD
-        self.ssh_keypath =          self.io_auth_settings.SSH_KEY_PATH
-        self.ssh_fwd_remoteport =   self.io_auth_settings.SSH_FWD_REMOTEPORT
-        self.ssh_fwd_localport =    self.io_auth_settings.SSH_FWD_LOCALPORT
+        # Initialize SFTP connection parameters
+        self.ssh_hostname = self.io_auth_settings.HOST
+        self.ssh_port = self.io_auth_settings.PORT
+        self.ssh_username = self.io_auth_settings.USERNAME
+        self.ssh_password = self.io_auth_settings.PASSWORD
+        self.ssh_keypath = self.io_auth_settings.SSH_KEY_PATH
+        self.ssh_fwd_remoteport = self.io_auth_settings.SSH_FWD_REMOTEPORT
+        self.ssh_fwd_localport = self.io_auth_settings.SSH_FWD_LOCALPORT
 
+        # Initialize clients
         self.io_client = None
         self.ssh_client = None 
 
-        self.connect()
-
+        # Set interface attributes and connect
         self.set_interface_attributes()
+        self.connect()
 
 
     def set_interface_attributes(self) -> None:
@@ -188,10 +197,10 @@ class SFTP_FileHelper(Base_FileHelper):
                    destination_path: UPath, 
                    source_stream: IO, 
                    length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
@@ -218,10 +227,10 @@ class SFTP_FileHelper(Base_FileHelper):
     def _native_put_object_from_path(self, 
                    destination_path: UPath, 
                    source_path: UPath,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
         if compress or encrypt or decompress or decrypt:
@@ -250,10 +259,10 @@ class SFTP_FileHelper(Base_FileHelper):
                    source_path: UPath, 
                    destination_stream: IO,
                    length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
 
@@ -284,10 +293,10 @@ class SFTP_FileHelper(Base_FileHelper):
     def _native_get_object_to_path(self, 
                    source_path: UPath, 
                    destination_path: UPath,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         if compress or encrypt or decompress or decrypt:

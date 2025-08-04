@@ -140,10 +140,10 @@ class Local_FileHelper(Base_FileHelper):
                    destination_path: UPath, 
                    source_stream: IO, 
                    length: int,            
-                   encrypt: bool = False,
-                   decrypt: bool = False,
-                   compress: bool = False,
-                   decompress: bool = False
+                   encrypt: Optional[bool] = False,
+                   decrypt: Optional[bool] = False,
+                   compress: Optional[bool] = False,
+                   decompress: Optional[bool] = False
                    ) -> bool|Any:
         """Put an object to local filesystem from a stream."""
         
@@ -185,10 +185,10 @@ class Local_FileHelper(Base_FileHelper):
                    source_path: UPath, 
                    destination_stream: IO,  
                    length: int,            
-                   encrypt: bool = False,
-                   decrypt: bool = False,
-                   compress: bool = False,
-                   decompress: bool = False
+                   encrypt: Optional[bool] = False,
+                   decrypt: Optional[bool] = False,
+                   compress: Optional[bool] = False,
+                   decompress: Optional[bool] = False
                    ) -> bool:
         """Get an object from local filesystem to a stream."""
         
