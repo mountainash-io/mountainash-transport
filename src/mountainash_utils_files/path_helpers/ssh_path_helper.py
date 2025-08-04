@@ -59,4 +59,4 @@ class SSHPathHelper(BasePathHelper):
         :return: A normalized SSH path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key=CONST_STORAGESYSTEM.SSH.value)
+        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key=CONST_STORAGESYSTEM.SSH)

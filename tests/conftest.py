@@ -18,7 +18,7 @@ from mountainash_constants import CONST_STORAGESYSTEM
 def local_auth_params() -> SettingsParameters:
     """Provide local storage authentication parameters."""
     return SettingsParameters.create(
-        namespace="local", 
+        namespace="local",
         settings_class=LocalStorageAuthSettings
     )
 
@@ -79,12 +79,12 @@ def mock_sftp_client():
 def storage_systems():
     """Provide list of storage systems for parametrized tests."""
     return [
-        CONST_STORAGESYSTEM.LOCAL_DISK.value,
-        CONST_STORAGESYSTEM.S3.value,
-        CONST_STORAGESYSTEM.SFTP.value,
-        CONST_STORAGESYSTEM.SSH.value,
-        CONST_STORAGESYSTEM.GCS.value,
-        CONST_STORAGESYSTEM.AZ.value,
+        CONST_STORAGESYSTEM.LOCAL_DISK,
+        CONST_STORAGESYSTEM.S3,
+        CONST_STORAGESYSTEM.SFTP,
+        CONST_STORAGESYSTEM.SSH,
+        CONST_STORAGESYSTEM.GCS,
+        CONST_STORAGESYSTEM.AZ,
     ]
 
 
@@ -92,7 +92,7 @@ def storage_systems():
 def s3_auth_params() -> SettingsParameters:
     """Provide S3 storage authentication parameters."""
     from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAuthSettings
-    
+
     return SettingsParameters.create(
         namespace="s3_test",
         settings_class=S3StorageAuthSettings,
@@ -114,7 +114,7 @@ def ssh_auth_params() -> SettingsParameters:
         kwargs={
             "HOST": "localhost",
             "PORT": 22,
-            "USERNAME": "testuser", 
+            "USERNAME": "testuser",
             "PASSWORD": "testpassword123",
             "AUTH_METHOD": "password",
             "STRICT_HOST_KEY_CHECKING": False
@@ -128,7 +128,7 @@ def ssh_auth_params_with_key(temp_directory: Path) -> SettingsParameters:
     # Create a mock SSH key file
     key_file = temp_directory / "test_ssh_key"
     key_file.write_text("-----BEGIN RSA PRIVATE KEY-----\nMOCK_KEY_CONTENT\n-----END RSA PRIVATE KEY-----")
-    
+
     return SettingsParameters.create(
         namespace="ssh_test_key",
         settings_class=SSHStorageAuthSettings,
@@ -137,7 +137,7 @@ def ssh_auth_params_with_key(temp_directory: Path) -> SettingsParameters:
             "PORT": 22,
             "USERNAME": "testuser",
             "PRIVATE_KEY_PATH": str(key_file),
-            "AUTH_METHOD": "key", 
+            "AUTH_METHOD": "key",
             "STRICT_HOST_KEY_CHECKING": False
         }
     )
@@ -164,7 +164,7 @@ pytest_plugins = ["pytest_asyncio"]
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line("markers", "unit: Unit tests")
-    config.addinivalue_line("markers", "integration: Integration tests")  
+    config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "performance: Performance tests")
     config.addinivalue_line("markers", "slow: Slow running tests")
     config.addinivalue_line("markers", "ssh: SSH-related tests")

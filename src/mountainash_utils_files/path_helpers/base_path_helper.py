@@ -12,10 +12,10 @@ from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFI
 class BasePathHelper(ABC):
 
     @classmethod
-    def format_path(cls, 
+    def format_path(cls,
                     path: Optional[Union[str, UPath]]
                     ) -> Optional[UPath]:
-        
+
         raise NotImplementedError("format_path must be implemented in subclasses")
 
 
@@ -31,7 +31,7 @@ class BasePathHelper(ABC):
         # Convert the wildcard pattern to a regular expression pattern
         # Escape special characters except for the wildcard '*', then replace '*' with '.*' to match any character zero or more times
         regex_pattern = re.escape(pattern).replace(r'\*', '.*')
-        
+
         # Add start and end anchors to ensure the entire string must match
         regex_pattern = f'^{regex_pattern}$'
 
@@ -51,10 +51,10 @@ class BasePathHelper(ABC):
 
         if not path:
             return None
-        
+
         return str(path)
         # return str(object=UPath(path))
-    
+
     @classmethod
     def get_local_platform_slash(cls) -> str:
         return get_platform_slash()
@@ -95,7 +95,7 @@ class BasePathHelper(ABC):
         clean_filename: str|None = cls.strip_all_slashes(filename)
 
         if not u_path:
-            return None      
+            return None
 
         if not clean_filename:
             return None
@@ -114,8 +114,8 @@ class BasePathHelper(ABC):
         path_str: str | None = cls.path_to_str(path)
 
         if not path_str:
-            return CONST_STORAGESYSTEM.LOCAL_DISK.value
-      
+            return CONST_STORAGESYSTEM.LOCAL_DISK
+
         parsed = urlparse(path_str)
         path_scheme = parsed.scheme.lower()
 
@@ -167,8 +167,8 @@ class BasePathHelper(ABC):
             #All good
             if path_str.startswith(f"{scheme_prefix}://"):
                 return path_str
-            
-            #All good but scheme was capitalised 
+
+            #All good but scheme was capitalised
             if path_str.lower().startswith(f"{scheme_prefix}://"):
                 #Only replace the start
                 path_str.replace(f"{provided_scheme_str}:", f"{scheme_prefix}:", __count=1)
@@ -203,13 +203,13 @@ class BasePathHelper(ABC):
     #         scheme = path_upath.parts[0].lower().split(":")[0]
 
     #     # Map the scheme to the storage system
-    #     if scheme == CONST_STORAGESYSTEM.LOCAL_DISK.value:  # Local paths might not have a scheme but have a drive
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #     if scheme == CONST_STORAGESYSTEM.LOCAL_DISK:  # Local paths might not have a scheme but have a drive
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
     #     elif scheme == "/":  # Local paths on Linux / MacOS
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
 
     #     elif re.match(pattern='^[a-z]$', string=scheme):  #Local paths on windows start with a single letter
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
     #         if not is_platform_os_windows():
     #             print("Warning: Local Windows path identified in non-Windows system. Assuming local disk.")
 
@@ -218,9 +218,9 @@ class BasePathHelper(ABC):
 
     #     if not identified_scheme:
     #         raise ValueError(f"Unsupported scheme: {scheme}")
-    
+
     #     return identified_scheme
-        
+
 
     #             # Check if the path starts with a known storage system prefix
     #     for storage_system, prefix in CONST_STORAGESYSTEM_PREFIX.items():

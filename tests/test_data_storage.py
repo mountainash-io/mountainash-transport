@@ -10,16 +10,16 @@ import random
 from upath import UPath
 
 
-auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", 
-                                                                                settings_class=LocalStorageAuthSettings, 
-                                                                                # STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK.value
+auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local",
+                                                                                settings_class=LocalStorageAuthSettings,
+                                                                                # STORAGE_SYSTEM=CONST_STORAGESYSTEM.LOCAL_DISK
                                                                                 )
 
 @pytest.mark.parametrize(
     "path, expected",
     [
         ("/", True),
-        ("~", True),        
+        ("~", True),
         ("~/", True),
 
         ("~/data/directory/", False),
@@ -28,7 +28,7 @@ auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local
         ("../randomfile.txt", False),
 
         (UPath("/"), True),
-        (UPath("~"), True),        
+        (UPath("~"), True),
         (UPath("~/"), True),
 
         (UPath("~/data/directory/"), False),
@@ -45,7 +45,7 @@ def test_path_exists(path: UPath | str, expected: str):
     "path, expected",
     [
         ("/", True),
-        ("~", True),        
+        ("~", True),
         ("~/", True),
         # ("/etc/sudoers", False),
         # ("/etc/sudoers.d", True),
@@ -56,7 +56,7 @@ def test_path_exists(path: UPath | str, expected: str):
         ("../randomfile.txt", False),
 
         (UPath("/"), True),
-        (UPath("~"), True),        
+        (UPath("~"), True),
         (UPath("~/"), True),
 
         (UPath("~/data/directory/"), False),
@@ -73,7 +73,7 @@ def test_path_is_dir(path: UPath | str, expected: str):
     "path, expected",
     [
         ("/", False),
-        ("~", False),        
+        ("~", False),
         ("~/", False),
         # ("/etc/sudoers", True),
         # ("/etc/sudoers.d", False),
@@ -84,7 +84,7 @@ def test_path_is_dir(path: UPath | str, expected: str):
         ("../randomfile.txt", False),
 
         (UPath("/"), False),
-        (UPath("~"), False),        
+        (UPath("~"), False),
         (UPath("~/"), False),
         # (UPath("/etc/sudoers"), True),
 
@@ -112,15 +112,15 @@ def test_path_is_file(path: UPath | str, expected: str):
 
 #     destination_path = destination_path.format(rand=rand)
 
-#     storage_facade: FileInterface = get_file_interface()  
+#     storage_facade: FileInterface = get_file_interface()
 
 #     #Auth
 #     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
-#     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
-    
+#     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK)
+
 #     copied: bool = storage_facade.copy_binarystream(destination_path=destination_path, source_path=source_path, obj_destination_storage=local_storage, obj_source_storage=local_storage)
 
-#     assert copied == True    
+#     assert copied == True
 #     assert local_storage.path_is_file(path=destination_path)
 
 
@@ -136,24 +136,24 @@ def test_path_is_file(path: UPath | str, expected: str):
 
 #     destination_path = destination_path.format(rand=rand)
 
-#     storage_facade: FileInterface = get_file_interface()  
+#     storage_facade: FileInterface = get_file_interface()
 
 #     #Auth
-#     s3_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="s3_warehouse", 
-#                                                                                           settings_class=AuthSettings, 
-#                                                                                           settings_system=CONST_STORAGESYSTEM.S3.value,
+#     s3_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="s3_warehouse",
+#                                                                                           settings_class=AuthSettings,
+#                                                                                           settings_system=CONST_STORAGESYSTEM.S3,
 #                                                                                           USERNAME="minio",
 #                                                                                           PASSWORD="minio123",
 #                                                                                           HOST="192.168.1.52",
 #                                                                                           PORT=9000)
 
-#     s3_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=s3_auth_parameters, storage_system=CONST_STORAGESYSTEM.S3.value) 
-    
+#     s3_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=s3_auth_parameters, storage_system=CONST_STORAGESYSTEM.S3)
+
 #     local_auth_parameters: SettingsParameters = SettingsParameters.create(namespace="local", settings_class=AuthSettings)
-#     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK.value) 
+#     local_storage: Base_FileHelper = FileHelperFactory.get_storage_interface(auth_parameters=local_auth_parameters, storage_system=CONST_STORAGESYSTEM.LOCAL_DISK)
 
 
 #     copied: bool = storage_facade.copy_binarystream(destination_path=destination_path, source_path=source_path, obj_destination_storage=local_storage, obj_source_storage=s3_storage)
 
-#     assert copied == True    
+#     assert copied == True
 #     assert local_storage.path_is_file(path=destination_path)

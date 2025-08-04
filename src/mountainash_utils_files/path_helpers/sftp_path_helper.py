@@ -71,4 +71,4 @@ class SFTPPathHelper(BasePathHelper):
         if not path_str:
             return None
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.SFTP.value)
+        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.SFTP)

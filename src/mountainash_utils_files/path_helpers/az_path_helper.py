@@ -54,4 +54,4 @@ class AZPathHelper(BasePathHelper):
         :return: A normalized AZ path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key=CONST_STORAGESYSTEM.AZ.value)
+        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key=CONST_STORAGESYSTEM.AZ)
