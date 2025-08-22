@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from mountainash_utils_os import get_platform_slash
 from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
+from ..constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
 
 class BasePathHelper(ABC):
 
@@ -119,7 +119,7 @@ class BasePathHelper(ABC):
         parsed = urlparse(path_str)
         path_scheme = parsed.scheme.lower()
 
-        if path_scheme in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM_PREFIX):
+        if path_scheme in CONST_STORAGESYSTEM_PREFIX.get_values():
 
             storage_system = CONST_STORAGESYSTEM_PREFIX.find_member(value=path_scheme)
 
@@ -136,7 +136,7 @@ class BasePathHelper(ABC):
 
         else:
             print(f"Could not identify storage prefix in {path} - Assuming LOCAL_DISK")
-            return CONST_STORAGESYSTEM.LOCAL_DISK.value
+            return CONST_STORAGESYSTEM.LOCAL_DISK
 
     @classmethod
     def _normalize_path_schema(cls, path_str: Optional[str], scheme_key: str) -> Optional[str]:

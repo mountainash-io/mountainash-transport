@@ -6,21 +6,21 @@ from mountainash_settings import SettingsParameters, get_settings
 
 from . import FileSyncer
 
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
 
 # Assuming UPath is a class from a library you're using
 # If not, you may need to adjust imports
- 
+
 class FileSyncOrchestrator:
 
     @classmethod
     def sync_course_results_by_country(cls,
-                            country_id: str, 
+                            country_id: str,
                             source_settings_parameters: SettingsParameters,
                             destination_settings_parameters: SettingsParameters,
                             source_base_path: str|UPath,
                             destination_base_path: str|UPath,
-                            num_threads:    t.Optional[int]  =1, 
+                            num_threads:    t.Optional[int]  =1,
                             dry_run:        t.Optional[bool] =True,
                             copy_all:       t.Optional[bool] =False,
                             copy_unique:    t.Optional[bool] =False,
@@ -39,7 +39,7 @@ class FileSyncOrchestrator:
 
                                                             source_path=source_base_path,
                                                             destination_path=destination_base_path,
-                                                            
+
                                                             copy_all=copy_all,
                                                             copy_unique=copy_unique,
                                                             copy_larger=copy_larger,
@@ -54,10 +54,10 @@ class FileSyncOrchestrator:
 
                                                             source_settings_parameters=source_settings_parameters,
                                                             destination_settings_parameters=destination_settings_parameters,
-            
+
                                                             source_path=source_base_path,
                                                             destination_path=destination_base_path,
-            
+
                                                             copy_all=copy_all,
                                                             copy_unique=copy_unique,
                                                             copy_larger=copy_larger,
@@ -68,12 +68,12 @@ class FileSyncOrchestrator:
 
     @classmethod
     def _sync_course_results_by_country_local_source(cls,
-                            country_id: str, 
+                            country_id: str,
                             source_settings_parameters: SettingsParameters,
                             destination_settings_parameters: SettingsParameters,
                             source_base_path: str|UPath,
                             destination_base_path: str|UPath,
-                            num_threads: t.Optional[int]=1, 
+                            num_threads: t.Optional[int]=1,
                             dry_run:        t.Optional[bool]=True,
                             copy_all:       t.Optional[bool] =False,
                             copy_unique:    t.Optional[bool] =False,
@@ -86,7 +86,7 @@ class FileSyncOrchestrator:
             print("--------- DRY RUN !! ----------")
 
 
-        source_country_path =            UPath(source_base_path) / "results" / f"country_id={country_id}/" 
+        source_country_path =            UPath(source_base_path) / "results" / f"country_id={country_id}/"
 
         course_paths = FileInterface().list_sources(auth_parameters=source_settings_parameters, path=source_country_path, include_files=False, include_dirs=True)
         source_result_dirpaths_course = [dirpath.parts[-1]for dirpath in course_paths]
@@ -116,8 +116,8 @@ class FileSyncOrchestrator:
 
                 FileSyncer.sync_files(source_settings_parameters=source_settings_parameters,
                                                     destination_settings_parameters=destination_settings_parameters,
-                                                    source_relative_paths=source_relative_filepaths, 
-                                                    source_base_path=source_base_path, 
+                                                    source_relative_paths=source_relative_filepaths,
+                                                    source_base_path=source_base_path,
                                                     destination_path=destination_path,
                                                     num_threads=num_threads,
                                                     dry_run=dry_run
@@ -130,12 +130,12 @@ class FileSyncOrchestrator:
 
     @classmethod
     def _sync_course_results_by_country_cloud_source(cls,
-                            country_id: str, 
+                            country_id: str,
                             source_settings_parameters: SettingsParameters,
                             destination_settings_parameters: SettingsParameters,
                             source_base_path: str|UPath,
                             destination_base_path: str|UPath,
-                            num_threads: t.Optional[int]=1, 
+                            num_threads: t.Optional[int]=1,
                             dry_run:        t.Optional[bool]=True,
                             copy_all:       t.Optional[bool] =False,
                             copy_unique:    t.Optional[bool] =False,
@@ -148,8 +148,8 @@ class FileSyncOrchestrator:
         if dry_run:
             print("--------- DRY RUN !! ----------")
 
-        source_path =            UPath(source_base_path) / "results" / f"country_id={country_id}" 
-        destination_path = UPath(destination_base_path) / "results" / f"country_id={country_id}" 
+        source_path =            UPath(source_base_path) / "results" / f"country_id={country_id}"
+        destination_path = UPath(destination_base_path) / "results" / f"country_id={country_id}"
 
 
         source_relative_filepaths = FileSyncer.resolve_source_files_list(source_settings_parameters=source_settings_parameters,
@@ -170,8 +170,8 @@ class FileSyncOrchestrator:
 
             FileSyncer.sync_files(  source_settings_parameters=source_settings_parameters,
                                     destination_settings_parameters=destination_settings_parameters,
-                                    source_relative_paths=source_relative_filepaths, 
-                                    source_base_path=source_base_path, 
+                                    source_relative_paths=source_relative_filepaths,
+                                    source_base_path=source_base_path,
                                     destination_path=destination_path,
                                     num_threads=num_threads,
                                     dry_run=dry_run,
@@ -203,8 +203,8 @@ class FileSyncOrchestrator:
         if dry_run:
             print("--------- DRY RUN !! ----------")
 
-        source_path =      UPath(source_base_path) / "events" / f"country_id={country_id}" 
-        destination_path = UPath(destination_base_path) / "events" / f"country_id={country_id}" 
+        source_path =      UPath(source_base_path) / "events" / f"country_id={country_id}"
+        destination_path = UPath(destination_base_path) / "events" / f"country_id={country_id}"
 
 
         source_relative_filepaths = FileSyncer.resolve_source_files_list(source_settings_parameters=source_settings_parameters,
@@ -224,8 +224,8 @@ class FileSyncOrchestrator:
 
             FileSyncer.sync_files(  source_settings_parameters=source_settings_parameters,
                                     destination_settings_parameters=destination_settings_parameters,
-                                    source_relative_paths=source_relative_filepaths, 
-                                    source_base_path=source_base_path, 
+                                    source_relative_paths=source_relative_filepaths,
+                                    source_base_path=source_base_path,
                                     destination_path=destination_path,
                                     num_threads=num_threads,
                                     dry_run=dry_run,
@@ -243,22 +243,22 @@ class FileSyncOrchestrator:
                             destination_settings_parameters: SettingsParameters,
                             source_base_path: str|UPath,
                             destination_base_path: str|UPath,
-                            num_threads: t.Optional[int]=1, 
+                            num_threads: t.Optional[int]=1,
                             dry_run:        t.Optional[bool]=True,
                             copy_all:       t.Optional[bool] =False,
                             copy_unique:    t.Optional[bool] =False,
                             copy_larger:    t.Optional[bool] =False,
                             copy_newer:     t.Optional[bool] =False,
                             newer_interval: t.Optional[timedelta] = timedelta(minutes=720),
-                            
-                            
+
+
                             ) -> None:
 
         if dry_run:
             print("--------- DRY RUN !! ----------")
 
-        source_path =            UPath(source_base_path) / "courses" / "courses.parquet" 
-        destination_path = UPath(destination_base_path) / "courses"  
+        source_path =            UPath(source_base_path) / "courses" / "courses.parquet"
+        destination_path = UPath(destination_base_path) / "courses"
 
         source_relative_filepaths = FileSyncer.resolve_source_files_list(source_settings_parameters=source_settings_parameters,
                                                 destination_settings_parameters=destination_settings_parameters,
@@ -270,17 +270,17 @@ class FileSyncOrchestrator:
                                                 copy_unique=copy_unique,
                                                 copy_larger=copy_larger,
                                                 copy_newer=copy_newer,
-                                                newer_interval=newer_interval)     
-                                                
-                                                
+                                                newer_interval=newer_interval)
+
+
 
         if len(source_relative_filepaths) > 0:
             print(f"Copying unique files: {source_relative_filepaths}")
 
             FileSyncer.sync_files(  source_settings_parameters=source_settings_parameters,
                                     destination_settings_parameters=destination_settings_parameters,
-                                    source_relative_paths=source_relative_filepaths, 
-                                    source_base_path=source_base_path, 
+                                    source_relative_paths=source_relative_filepaths,
+                                    source_base_path=source_base_path,
                                     destination_path=destination_path,
                                     num_threads=num_threads,
                                     dry_run=dry_run,
@@ -297,21 +297,21 @@ class FileSyncOrchestrator:
                             destination_settings_parameters: SettingsParameters,
                             source_base_path: str|UPath,
                             destination_base_path: str|UPath,
-                            num_threads:    t.Optional[int]  =1, 
-                            dry_run:        t.Optional[bool] =True, 
+                            num_threads:    t.Optional[int]  =1,
+                            dry_run:        t.Optional[bool] =True,
                             copy_all:       t.Optional[bool] =False,
                             copy_unique:    t.Optional[bool] =False,
                             copy_larger:    t.Optional[bool] =False,
                             copy_newer:     t.Optional[bool] =False,
                             newer_interval: t.Optional[timedelta] = timedelta(minutes=720),
-                            
+
                             ) -> None:
 
         if dry_run:
             print("--------- DRY RUN !! ----------")
 
-        source_path =            UPath(source_base_path) / "countries"  / "countries.parquet" 
-        destination_path = UPath(destination_base_path) / "countries" 
+        source_path =            UPath(source_base_path) / "countries"  / "countries.parquet"
+        destination_path = UPath(destination_base_path) / "countries"
 
         # ---------------------------------
         # Unique Source files - Just get the file on source.
@@ -335,8 +335,8 @@ class FileSyncOrchestrator:
 
             FileSyncer.sync_files(  source_settings_parameters=source_settings_parameters,
                                     destination_settings_parameters=destination_settings_parameters,
-                                    source_relative_paths=source_relative_filepaths, 
-                                    source_base_path=source_base_path, 
+                                    source_relative_paths=source_relative_filepaths,
+                                    source_base_path=source_base_path,
                                     destination_path=destination_path,
                                     num_threads=num_threads,
                                     dry_run=dry_run,

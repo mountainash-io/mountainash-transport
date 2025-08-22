@@ -8,8 +8,8 @@ from .base_file_helper import Base_FileHelper
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAuthSettings
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
+from ..settings.providers.s3 import S3StorageAuthSettings
 
 from ..dataclasses import FileMetadata
 
@@ -115,7 +115,7 @@ class S3_FileHelper(Base_FileHelper):
 
         connected = self.check_if_io_connected()
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not connected:
 
@@ -154,7 +154,7 @@ class S3_FileHelper(Base_FileHelper):
         """Check if connected to S3 by trying to list buckets."""
 
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not self.io_client:
             return False
@@ -192,7 +192,7 @@ class S3_FileHelper(Base_FileHelper):
                     decompress: Optional[bool] = False
                    ) -> bool|Any:
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
 
         #Validate Destination
@@ -230,7 +230,7 @@ class S3_FileHelper(Base_FileHelper):
 
         self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         # Format Source
         source_path_str: str | None = PathHelper.path_to_str(path=source_path)
@@ -260,7 +260,7 @@ class S3_FileHelper(Base_FileHelper):
                    ) -> bool:
 
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
 
         try:
@@ -350,7 +350,7 @@ class S3_FileHelper(Base_FileHelper):
         if not u_path:
             return None
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         self.connect()
 
@@ -543,7 +543,7 @@ class S3_FileHelper(Base_FileHelper):
         # S3 doesn't have true directories, but we can check if there are objects with this prefix
         u_path = PathHelper.format_path(path=path)
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not u_path:
             return False
@@ -568,7 +568,7 @@ class S3_FileHelper(Base_FileHelper):
         """Checks if the specified path is a file."""
         u_path: UPath | None = PathHelper.format_path(path)
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not u_path:
             return False

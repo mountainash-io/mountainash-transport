@@ -7,7 +7,9 @@ from .base_file_helper import Base_FileHelper
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
+
+from ..settings.providers import GCSStorageAuthSettings
 
 class GCS_FileHelper(Base_FileHelper):
     """
@@ -15,12 +17,12 @@ class GCS_FileHelper(Base_FileHelper):
     Handles file operations on Google Cloud Storage.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
         """
         Initialize the GCS_FileHelper.
-        
+
         Args:
             auth_parameters: Settings parameters for authentication
         """
@@ -30,17 +32,17 @@ class GCS_FileHelper(Base_FileHelper):
         self.auth_parameters = auth_parameters
         self.storage_provider_type = CONST_STORAGE_PROVIDER_TYPE.GCS
         self.storage_system = "GCS"
-        
+
         # Get auth settings
-        self.io_auth_settings = get_settings(auth_parameters)
-        
+        self.io_auth_settings = GCSStorageAuthSettings.get_settings(auth_parameters)
+
         # Connection requirements
         self.requires_io_connection = True
         self.requires_ssh_connection = False
 
         # Initialize client
         self.io_client = None
-        
+
         # Set interface attributes and connect
         self.set_interface_attributes()
         self.connect()
@@ -143,9 +145,9 @@ class GCS_FileHelper(Base_FileHelper):
     # File operations
 
     def _native_put_object_from_stream(self,
-                   destination_path: UPath, 
-                   source_stream: IO, 
-                   length: int,            
+                   destination_path: UPath,
+                   source_stream: IO,
+                   length: int,
                    encrypt: Optional[bool] = False,
                    decrypt: Optional[bool] = False,
                    compress: Optional[bool] = False,
@@ -155,11 +157,11 @@ class GCS_FileHelper(Base_FileHelper):
         try:
             with self.open_write_binarystream(destination_path=destination_path) as destination_stream:
                 self.copy_stream_to_stream(
-                    source_stream=source_stream, 
+                    source_stream=source_stream,
                     destination_stream=destination_stream,
-                    encrypt=encrypt, 
-                    decrypt=decrypt, 
-                    compress=compress, 
+                    encrypt=encrypt,
+                    decrypt=decrypt,
+                    compress=compress,
                     decompress=decompress
                 )
             return True
@@ -167,14 +169,14 @@ class GCS_FileHelper(Base_FileHelper):
             print(f"Error putting object from stream to {destination_path}: {e}")
             return False
 
-    def _native_put_object_from_path(self, 
-                   destination_path: UPath, 
-                   source_path: UPath,      
-                   **kwargs        
+    def _native_put_object_from_path(self,
+                   destination_path: UPath,
+                   source_path: UPath,
+                   **kwargs
                    ) -> bool:
         """Put an object to GCS from a local path."""
         self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
-        
+
         try:
             with open(source_path, 'rb') as source_file:
                 with self.open_write_binarystream(destination_path=destination_path) as destination_stream:
@@ -185,9 +187,9 @@ class GCS_FileHelper(Base_FileHelper):
             return False
 
     def _native_get_object_to_stream(self,
-                   source_path: UPath, 
-                   destination_stream: IO,  
-                   length: int,            
+                   source_path: UPath,
+                   destination_stream: IO,
+                   length: int,
                    encrypt: Optional[bool] = False,
                    decrypt: Optional[bool] = False,
                    compress: Optional[bool] = False,
@@ -197,11 +199,11 @@ class GCS_FileHelper(Base_FileHelper):
         try:
             with self.open_read_binarystream(source_path=source_path) as source_stream:
                 self.copy_stream_to_stream(
-                    source_stream=source_stream, 
+                    source_stream=source_stream,
                     destination_stream=destination_stream,
-                    encrypt=encrypt, 
-                    decrypt=decrypt, 
-                    compress=compress, 
+                    encrypt=encrypt,
+                    decrypt=decrypt,
+                    compress=compress,
                     decompress=decompress
                 )
             return True
@@ -209,14 +211,14 @@ class GCS_FileHelper(Base_FileHelper):
             print(f"Error getting object from {source_path} to stream: {e}")
             return False
 
-    def _native_get_object_to_path(self, 
-                   source_path: UPath, 
+    def _native_get_object_to_path(self,
+                   source_path: UPath,
                    destination_path: UPath,
-                   **kwargs            
+                   **kwargs
                    ) -> bool:
         """Get an object from GCS to a local path."""
         self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
-        
+
         try:
             with self.open_read_binarystream(source_path=source_path) as source_stream:
                 with open(destination_path, 'wb') as destination_file:
@@ -233,7 +235,7 @@ class GCS_FileHelper(Base_FileHelper):
         """
         List available data sources in the specified path or directory.
         """
-        u_path: UPath|None = PathHelper.format_path(path) 
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return []
@@ -251,7 +253,7 @@ class GCS_FileHelper(Base_FileHelper):
         """
         Check if the specified path exists.
         """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False
@@ -266,7 +268,7 @@ class GCS_FileHelper(Base_FileHelper):
         """
         Get the size of the data at the specified path.
         """
-        u_path: UPath|None = PathHelper.format_path(path) 
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return 0
@@ -282,7 +284,7 @@ class GCS_FileHelper(Base_FileHelper):
         """
         Checks if the specified path is a directory.
         """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False
@@ -297,7 +299,7 @@ class GCS_FileHelper(Base_FileHelper):
         """
         Checks if the specified path is a file.
         """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False

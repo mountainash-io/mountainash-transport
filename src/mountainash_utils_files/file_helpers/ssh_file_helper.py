@@ -7,25 +7,25 @@ from smart_open import open
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage.providers.ssh import SSHStorageAuthSettings
+from ..settings.providers.ssh import SSHStorageAuthSettings
 
 from .base_file_helper import Base_FileHelper
 
 class SSH_FileHelper(Base_FileHelper):
 
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
 
         # Initialize base class
         super().__init__()
 
-        auth_settings: SSHStorageAuthSettings = get_settings(settings_parameters=auth_parameters)
+        auth_settings: SSHStorageAuthSettings = SSHStorageAuthSettings.get_settings(settings_parameters=auth_parameters)
 
         #If using this class, you will need to configure ssh multiplexing (connection reuse)
         # Set a short time limit so that multiple files can be transferred in quick succession
-        # without leaving the connection open for too long. 
+        # without leaving the connection open for too long.
         # Add the following in your ~/.ssh/config file:
         # Host remote.example.com
         # ControlMaster auto
@@ -51,7 +51,7 @@ class SSH_FileHelper(Base_FileHelper):
         self.supports_put_from_local_path = True
 
         self.supports_directories = True
-        
+
         # Set interface attributes
         self.set_interface_attributes()
 
@@ -62,11 +62,11 @@ class SSH_FileHelper(Base_FileHelper):
         self.supports_native_put_from_stream = False
         self.supports_native_get_to_local_path = True  # via rsync
         self.supports_native_put_from_local_path = True  # via rsync
-        
+
         # Smart-open support
         self.supports_smartopen_read_stream = True
         self.supports_smartopen_write_stream = True
-        
+
         # General capabilities
         self.supports_get_to_stream = True
         self.supports_get_to_path = True
@@ -78,7 +78,7 @@ class SSH_FileHelper(Base_FileHelper):
 
     def check_if_io_connected(self) -> bool:
         return self.check_if_ssh_connected()
-        
+
     def get_connection_client_parameters(self) -> dict:
         """Get SSH connection client parameters."""
         return {
@@ -101,7 +101,7 @@ class SSH_FileHelper(Base_FileHelper):
             local_path,
             f"{username}@{remote_host}:{remote_path}"
         ]
-        
+
         try:
             result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print("Successfully pushed to remote path:")
@@ -120,7 +120,7 @@ class SSH_FileHelper(Base_FileHelper):
             f"{username}@{remote_host}:{remote_path}",
             local_path
         ]
-        
+
         try:
             result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print("Successfully pulled from remote path:")
@@ -163,9 +163,9 @@ class SSH_FileHelper(Base_FileHelper):
         List available data sources in the specified path or directory.
         """
 
-        # formatted_path = PathHelper.format_path(path) 
+        # formatted_path = PathHelper.format_path(path)
         # return list(formatted_path.fs.glob(path))
-            
+
         return list(UPath(path).glob(kwargs.get('pattern', '*')))
 
     @classmethod
@@ -193,11 +193,11 @@ class SSH_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathHelper.format_path(path)    
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False
-        
+
         return u_path.exists()
 
     def path_is_dir(self, path: Union[str, UPath]) -> bool:
@@ -207,13 +207,13 @@ class SSH_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False
-        
+
         return u_path.is_dir()
-    
+
     def path_is_file(self, path: Union[str, UPath]) -> bool:
         """
         Checks if the specified path exists.
@@ -221,16 +221,16 @@ class SSH_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathHelper.format_path(path)        
+        u_path: UPath|None = PathHelper.format_path(path)
 
         if not u_path:
             return False
 
-        return u_path.is_file()    
+        return u_path.is_file()
 
 
     def create_directory(
-        self, 
+        self,
         path: Union[str, UPath]
         ) -> bool:
         """Creates a directory if it does not exist.
@@ -258,16 +258,16 @@ class SSH_FileHelper(Base_FileHelper):
         except OSError:
             print(f"Error creating local directory: {u_path.path}")
             return False
-        
+
         return True
 
     # Required abstract method implementations
-    
+
     def _native_put_object_from_stream(self, destination_path: UPath, source_stream: Any, **kwargs) -> bool:
         """SSH doesn't support native stream operations - use smart-open fallback."""
         # This would be handled by the base class fallback mechanisms
         raise NotImplementedError("SSH uses smart-open for stream operations")
-    
+
     def _native_put_object_from_path(self, destination_path: UPath, source_path: UPath, **kwargs) -> bool:
         """Put object from local path to SSH destination using rsync."""
         try:
@@ -275,12 +275,12 @@ class SSH_FileHelper(Base_FileHelper):
             return True
         except Exception:
             return False
-    
+
     def _native_get_object_to_stream(self, source_path: UPath, destination_stream: Any, **kwargs) -> bool:
         """SSH doesn't support native stream operations - use smart-open fallback."""
         # This would be handled by the base class fallback mechanisms
         raise NotImplementedError("SSH uses smart-open for stream operations")
-    
+
     def _native_get_object_to_path(self, source_path: UPath, destination_path: UPath, **kwargs) -> bool:
         """Get object from SSH source to local path using rsync."""
         try:

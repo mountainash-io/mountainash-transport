@@ -8,9 +8,9 @@ from .path_helpers import PathHelper
 
 __all__ = (
     "__version__",
-    "FileReader",        
-    "FileWriter", 
-    "FileInterface", 
-    "PathHelper", 
+    "FileReader",
+    "FileWriter",
+    "FileInterface",
+    "PathHelper",
     "get_file_interface"
     )

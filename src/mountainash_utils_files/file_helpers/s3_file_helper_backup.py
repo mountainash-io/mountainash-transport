@@ -7,8 +7,8 @@ from .base_file_helper import Base_FileHelper
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAuthSettings
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
+from ..settings.providers.s3 import S3StorageAuthSettings
 
 from minio.error import S3Error
 from urllib.parse import unquote
@@ -17,10 +17,10 @@ import boto3
 
 class S3_FileHelper(Base_FileHelper):
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
-        
+
         # super().__init__(auth_parameters)
 
 
@@ -40,7 +40,7 @@ class S3_FileHelper(Base_FileHelper):
         # self.secret_key = self.io_auth_settings.SECRET_ACCESS_KEY if self.io_auth_settings.SECRET_ACCESS_KEY else None
         # self.use_ssl = self.io_auth_settings.USE_SSL
 
-        #S3 specific 
+        #S3 specific
         # self.bucket = self.io_auth_settings.BUCKET
         # self.service_name = self.io_auth_settings.BUCKET
 
@@ -113,12 +113,12 @@ class S3_FileHelper(Base_FileHelper):
     #================================================================
     # Connection operations
 
-    
+
     def connect(self) -> bool:
         """Connect to the S3 server using MinIO client."""
 
         connected = self.check_if_io_connected()
-        
+
         settings = get_settings(self.auth_parameters)
 
         if not connected:
@@ -129,7 +129,7 @@ class S3_FileHelper(Base_FileHelper):
             try:
                 # Extract hostname and port from endpoint_url
                 # endpoint = settings.ENDPOINT_URL#.replace('http://', '').replace('https://', '')
-                
+
                 self.io_client = boto3.client(
                     # endpoint_url=settings.ENDPOINT_URL,
                     service_name="s3",
@@ -155,14 +155,14 @@ class S3_FileHelper(Base_FileHelper):
 
     def check_if_io_connected(self) -> bool:
         """Check if connected to S3 by trying to list buckets."""
-        
+
 
         settings = get_settings(self.auth_parameters)
 
         if not self.io_client:
             return False
 
-        try:            
+        try:
             # List objects in bucket with a limit of 1 to minimize data transfer
             objects = self.io_client.list_objects_v2(Bucket=settings.BUCKET, MaxKeys=1)
             return any(objects)
@@ -200,7 +200,7 @@ class S3_FileHelper(Base_FileHelper):
 
     #     mode = 'rb'
     #     return self._get_smartopen_stream_generator(path=source_path, mode=mode, transport_params=self.get_connection_client_parameters())
-    
+
 
     # def open_write_binarystream(self, destination_path: Optional[Union[str, UPath]], **kwargs) -> IO[Any]:
     #     """
@@ -217,11 +217,11 @@ class S3_FileHelper(Base_FileHelper):
     #     Read data from the specified source.
     #     """
     #     print(f"{self.storage_system}: open_read_textstream: {source_path}")
-        
+
     #     self.connect()
     #     mode = 'rb'
     #     return self._get_smartopen_stream_generator(path=source_path, mode=mode)#, transport_params=self.transport_params)
-    
+
 
     # def open_write_textstream(self, destination_path: Optional[Union[str, UPath]], **kwargs) -> IO[Any]:
     #     """
@@ -239,17 +239,17 @@ class S3_FileHelper(Base_FileHelper):
 
 
     def _native_put_object_from_stream(self,
-                   destination_path: UPath, 
-                   source_stream: io.BytesIO, 
-                   length: int,            
+                   destination_path: UPath,
+                   source_stream: io.BytesIO,
+                   length: int,
                     encrypt: bool = False,
                     decrypt: bool = False,
                     compress: bool = False,
                     decompress: bool = False
                    ) -> bool|Any:
-        
+
         settings = get_settings(self.auth_parameters)
-        
+
 
         #Validate Destination
         bucket_name: str| None = S3PathHelper.get_path_bucketname(path=destination_path)
@@ -261,29 +261,29 @@ class S3_FileHelper(Base_FileHelper):
 
         #Process source stream
         processed_source_stream: io.BytesIO = self.process_source_stream(source_stream=source_stream,
-                                                                        encrypt=encrypt, 
+                                                                        encrypt=encrypt,
                                                                         decrypt=decrypt,
                                                                         compress=compress,
                                                                         decompress=decompress)
 
         # do it!
         try:
-            result = self.io_client.put_object(bucket_name=settings.BUCKET, 
-                                             object_name=object_name, 
-                                             data=processed_source_stream, 
+            result = self.io_client.put_object(bucket_name=settings.BUCKET,
+                                             object_name=object_name,
+                                             data=processed_source_stream,
                                              length=length) if self.io_client else False
             return result
         except S3Error as e:
             print(f"Error putting object: {e}")
             return False
 
-        
-    def _native_put_object_from_path(self, 
-                   destination_path: UPath, 
+
+    def _native_put_object_from_path(self,
+                   destination_path: UPath,
                    source_path: UPath,
-                   **kwargs            
+                   **kwargs
                    ) -> bool:
-        
+
         self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
 
         settings = get_settings(self.auth_parameters)
@@ -296,19 +296,19 @@ class S3_FileHelper(Base_FileHelper):
 
         # do it!
         try:
-            self.io_client.fput_object(bucket_name=settings.BUCKET, 
-                                     object_name=object_name, 
+            self.io_client.fput_object(bucket_name=settings.BUCKET,
+                                     object_name=object_name,
                                      file_path=source_path_str) if self.io_client else None
             return True
         except S3Error as e:
             print(f"Error putting object from path: {e}")
             return False
-        
+
 
     def _native_get_object_to_stream(self,
-                   source_path: UPath, 
+                   source_path: UPath,
                    destination_stream: IO,
-                   length:int,            
+                   length:int,
                     encrypt: bool = False,
                     decrypt: bool = False,
                     compress: bool = False,
@@ -322,37 +322,37 @@ class S3_FileHelper(Base_FileHelper):
         try:
             response = self.io_client.get_object(bucket_name=settings.BUCKET, object_name=object_name)
             source_stream = io.BytesIO(response.read())
-            
-            self.copy_stream_to_stream(source_stream=source_stream, 
+
+            self.copy_stream_to_stream(source_stream=source_stream,
                                      destination_stream=destination_stream,
-                                     encrypt=encrypt, 
-                                     decrypt=decrypt, 
-                                     compress=compress, 
+                                     encrypt=encrypt,
+                                     decrypt=decrypt,
+                                     compress=compress,
                                      decompress=decompress)
             return True
         except S3Error as e:
             print(f"Error getting object to stream: {e}")
             return False
-        
 
-    def _native_get_object_to_path(self, 
-                   source_path: UPath, 
-                   destination_path: UPath,            
+
+    def _native_get_object_to_path(self,
+                   source_path: UPath,
+                   destination_path: UPath,
                     **kwargs
                    ) -> bool|Any:
-        
+
         self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
         settings = get_settings(self.auth_parameters)
 
         str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
-        
+
         #Format S3 Source
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
 
         # do it!
         try:
-            result = self.io_client.fget_object(bucket_name=settings.BUCKET, 
-                                              object_name=object_name, 
+            result = self.io_client.fget_object(bucket_name=settings.BUCKET,
+                                              object_name=object_name,
                                               file_path=str_destination_path) if self.io_client else None
             return result
         except S3Error as e:
@@ -365,8 +365,8 @@ class S3_FileHelper(Base_FileHelper):
     #================================================================
     # Filesystem operations
 
-    def _bucket_exists(self, 
-                      bucket_name: Optional[str]=None, 
+    def _bucket_exists(self,
+                      bucket_name: Optional[str]=None,
                       path: Optional[Union[str, UPath]]=None) -> bool:
 
         if not self.io_client:
@@ -386,10 +386,10 @@ class S3_FileHelper(Base_FileHelper):
 
 
     def _find_objects(self, path: Union[str, UPath]) -> Optional[Iterator[Any]]:
-        u_path = PathHelper.format_path(path) 
+        u_path = PathHelper.format_path(path)
         if not u_path:
             return None
-        
+
         self.connect()
 
         if self.io_client:
@@ -397,7 +397,7 @@ class S3_FileHelper(Base_FileHelper):
             if not bucket_name:
                 print(f'Failed to get bucket name from path: {u_path}')
                 return None
-            
+
             relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
             if not relative_path:
                 print(f'Failed to get relative path from path: {u_path}')
@@ -414,7 +414,7 @@ class S3_FileHelper(Base_FileHelper):
                 prefix_relative_path = relative_path
 
             try:
-                objects: Iterator[Any] = self.io_client.list_objects_v2(Bucket=bucket_name, 
+                objects: Iterator[Any] = self.io_client.list_objects_v2(Bucket=bucket_name,
                                                                    Prefix=prefix_relative_path
                                                                    )
                 return objects
@@ -426,7 +426,7 @@ class S3_FileHelper(Base_FileHelper):
     def list_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> Optional[List[str|None]]:
         """List available data sources in the specified path or directory."""
 
-        u_path: UPath | None = PathHelper.format_path(path) 
+        u_path: UPath | None = PathHelper.format_path(path)
         if not u_path:
             return []
 
@@ -439,18 +439,18 @@ class S3_FileHelper(Base_FileHelper):
 
         if self.io_client:
             try:
-                objects = self.io_client.list_objects(bucket_name=bucket_name, 
-                                                    prefix=relative_path, 
+                objects = self.io_client.list_objects(bucket_name=bucket_name,
+                                                    prefix=relative_path,
                                                     recursive=True)
 
                 return [obj.object_name for obj in objects]
             except S3Error as e:
                 print(f"Error listing sources: {e}")
                 return []
-            
+
     def get_size(self, path: Union[str, UPath]) -> int:
         """Get the size of the data at the specified path."""
-        u_path: UPath | None = PathHelper.format_path(path=path) 
+        u_path: UPath | None = PathHelper.format_path(path=path)
         if not u_path:
             return 0
 
@@ -467,7 +467,7 @@ class S3_FileHelper(Base_FileHelper):
 
     def path_exists(self, path: Union[str, UPath]) -> bool:
         """Checks if the specified path exists."""
-        u_path = PathHelper.format_path(path=path) 
+        u_path = PathHelper.format_path(path=path)
         if not u_path:
             return False
 
@@ -519,17 +519,17 @@ class S3_FileHelper(Base_FileHelper):
         except S3Error as e:
             print(f"Error checking if path is directory: {e}")
             return False
-    
+
     def path_is_file(self, path: Union[str, UPath]) -> bool:
         """Checks if the specified path is a file."""
-        u_path: UPath | None = PathHelper.format_path(path) 
+        u_path: UPath | None = PathHelper.format_path(path)
         if not u_path:
             return False
 
         try:
             bucket_name = S3PathHelper.get_path_bucketname(u_path)
             object_name = S3PathHelper.get_path_folders_and_filename(u_path)
-            
+
             if not bucket_name or not object_name:
                 return False
 
@@ -541,7 +541,7 @@ class S3_FileHelper(Base_FileHelper):
 
     @classmethod
     def create_directory(
-        cls, 
+        cls,
         path: Union[str, UPath]
         ) -> bool:
         """Creates a directory if it does not exist.

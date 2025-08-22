@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, List, Union, Optional, IO, BinaryIO, TextIO, Tuple
-import io 
+import io
 import os
 import shutil
 
@@ -16,45 +16,45 @@ from mountainash_utils_gpg import GPG_Helper
 from mountainash_utils_ssh import SSH_Helper
 
 from mountainash_settings import SettingsParameters
-from pydantic_settings import  BaseSettings 
+from pydantic_settings import  BaseSettings
 
 class Base_FileHelper(ABC):
 
-    storage_system: str
-    auth_parameters: SettingsParameters
-    auth_settings: BaseSettings
+    # storage_system: str
+    # auth_parameters: SettingsParameters
+    # auth_settings: BaseSettings
 
-    # io_hostname: str
-    # io_port: int
-    # io_username: str
-    # io_password: str
-    # io_keypath: str|UPath
+    # # io_hostname: str
+    # # io_port: int
+    # # io_username: str
+    # # io_password: str
+    # # io_keypath: str|UPath
 
-    # ssh_hostname: str
-    # ssh_port: int
-    # ssh_fwd_remoteport: int
-    # ssh_fwd_localport: int
-    # ssh_username: str
-    # ssh_password: str
-    # ssh_keypath: str|UPath
+    # # ssh_hostname: str
+    # # ssh_port: int
+    # # ssh_fwd_remoteport: int
+    # # ssh_fwd_localport: int
+    # # ssh_username: str
+    # # ssh_password: str
+    # # ssh_keypath: str|UPath
 
-    io_client: Optional[Any]
+    # io_client: Optional[Any]
 
-    # ssh_client: Optional[Any]
-    ssh_helper: Optional[SSH_Helper]
+    # # ssh_client: Optional[Any]
+    # ssh_helper: Optional[SSH_Helper]
 
-    compression_type: str
-    encryption_type: str
+    # compression_type: str
+    # encryption_type: str
 
-    gpg_helper: Optional[GPG_Helper]
+    # gpg_helper: Optional[GPG_Helper]
 
-    #Controls initialsation of the storage system
-    requires_io_connection: bool
-    requires_ssh_connection: bool
+    # #Controls initialsation of the storage system
+    # requires_io_connection: bool
+    # requires_ssh_connection: bool
 
-    #Features control rule-based dispatch when analysing ourec and destination paths across storage types
-    enable_encrypt_on_write: bool
-    enable_decrypt_on_read: bool
+    # #Features control rule-based dispatch when analysing ourec and destination paths across storage types
+    # enable_encrypt_on_write: bool
+    # enable_decrypt_on_read: bool
 
 
     # supports_native_get_to_stream: bool
@@ -126,7 +126,7 @@ class Base_FileHelper(ABC):
     # supports_directories: bool
 
 
-    def __init__(self, 
+    def __init__(self,
                 #  auth_parameters: SettingsParameters,
                  ) -> None:
 
@@ -162,11 +162,11 @@ class Base_FileHelper(ABC):
     @abstractmethod
     def connect(self) -> bool:
         return True
-    
+
     @abstractmethod
     def check_if_io_connected(self) -> bool:
         return True
-    
+
     @abstractmethod
     def get_connection_client_parameters(self) -> dict:
         return {}
@@ -188,7 +188,7 @@ class Base_FileHelper(ABC):
 
         if not role:
             role = ""
-        
+
 
         file_feature_attributes = {
 
@@ -242,7 +242,7 @@ class Base_FileHelper(ABC):
             f"{role}supports_decompress_smartopen_write_stream":   self.supports_decompress_smartopen_write_stream,
 
             #Polars support
-            f"{role}supports_polars_read_parquet":               self.supports_polars_native_read_parquet,             
+            f"{role}supports_polars_read_parquet":               self.supports_polars_native_read_parquet,
 
 
             #Preferences for tie-breaks
@@ -262,7 +262,7 @@ class Base_FileHelper(ABC):
 
         if not role:
             role = ""
-        
+
 
         file_feature_attributes = [
             {
@@ -337,9 +337,9 @@ class Base_FileHelper(ABC):
                 f"{role}supports_from_local_path":    self.supports_native_put_from_local_path,
                 f"{role}supports_from_native_path":   self.supports_native_put_from_native_path,
 
-                f"{role}supports_encrypt":      self.supports_encrypt_native_put_from_local_path    or self.supports_encrypt_native_put_from_native_path,   
-                f"{role}supports_decrypt":      self.supports_decrypt_native_put_from_local_path    or self.supports_decrypt_native_put_from_native_path ,  
-                f"{role}supports_compress":     self.supports_compress_native_put_from_local_path   or self.supports_compress_native_put_from_native_path , 
+                f"{role}supports_encrypt":      self.supports_encrypt_native_put_from_local_path    or self.supports_encrypt_native_put_from_native_path,
+                f"{role}supports_decrypt":      self.supports_decrypt_native_put_from_local_path    or self.supports_decrypt_native_put_from_native_path ,
+                f"{role}supports_compress":     self.supports_compress_native_put_from_local_path   or self.supports_compress_native_put_from_native_path ,
                 f"{role}supports_decompress":   self.supports_decompress_native_put_from_local_path or self.supports_decompress_native_put_from_native_path,
 
             },
@@ -361,7 +361,7 @@ class Base_FileHelper(ABC):
                 f"{role}supports_compress":     self.supports_compress_native_get_to_stream,
                 f"{role}supports_decompress":   self.supports_decompress_native_get_to_stream,
 
- 
+
             },
             {
                 # f"{role}storage_system": self.storage_system,
@@ -396,7 +396,7 @@ class Base_FileHelper(ABC):
         """Connect to the SFTP server"""
         ...
         # connected: bool = self.check_if_ssh_connected()
-        
+
         # if not connected:
 
         #     if self.ssh_client is not None:
@@ -414,21 +414,21 @@ class Base_FileHelper(ABC):
         #         u_ssh_keypath: UPath | None = PathHelper.format_path(self.ssh_keypath)
         #         ssh_keypath_str: str | None = PathHelper.path_to_str(u_ssh_keypath)
 
-        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
-        #                                 username=self.ssh_username, password=self.ssh_password, 
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port,
+        #                                 username=self.ssh_username, password=self.ssh_password,
         #                                 key_filename=ssh_keypath_str)
         #     else:
-        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port, 
+        #         self.ssh_client.connect(hostname=self.ssh_hostname, port=self.ssh_port,
         #                                 username=self.ssh_username, password=self.ssh_password)
 
         #     # Forward the remote port to the local port
         #     if self.ssh_fwd_remoteport is not None and self.ssh_fwd_localport is not None:
 
         #         transport = self.ssh_client.get_transport()
-        #         self.reverse_tunnel = transport.open_channel('direct-tcpip', 
-        #                                                 ('127.0.0.1', self.ssh_fwd_localport), 
+        #         self.reverse_tunnel = transport.open_channel('direct-tcpip',
+        #                                                 ('127.0.0.1', self.ssh_fwd_localport),
         #                                                 ('localhost', self.ssh_fwd_remoteport))
-        
+
         return self.check_if_ssh_connected()
 
 
@@ -473,7 +473,7 @@ class Base_FileHelper(ABC):
 
         if not source_stream:
             raise ValueError("Source stream is None")
-        
+
         destination_stream = io.BytesIO()
         source_stream.seek(0)
 
@@ -491,7 +491,7 @@ class Base_FileHelper(ABC):
 
         source_stream.seek(0)
         destination_stream.seek(0)
-        
+
         return destination_stream
 
     def decompress_stream(self, source_stream: IO, **kwargs) -> io.BytesIO:
@@ -499,7 +499,7 @@ class Base_FileHelper(ABC):
         if not source_stream:
             raise ValueError("Source stream is None")
 
-       
+
         destination_stream = io.BytesIO()
         source_stream.seek(0)
 
@@ -551,38 +551,38 @@ class Base_FileHelper(ABC):
 
         if not self.gpg_client:
             self.init_gpg()
-        
+
         if not self.gpg_client:
-            return None       
-        
+            return None
+
         if not source_data:
             return None
-        
+
         return self.gpg_client.encrypt(data=source_data, recipients=[self.gpg_key_id])
 
     def decrypt_data(self, source_data: Any|io.BytesIO) -> Optional[Any]:
 
         if not self.gpg_client:
-            self.init_gpg()        
+            self.init_gpg()
         if not self.gpg_client:
-            return None              
+            return None
         if not source_data:
             return None
-        
+
         return self.gpg_client.decrypt(message=source_data)
 
 
     def encrypt_stream(self, source_stream: IO, **kwargs) -> io.BytesIO:
-        
+
         if not source_stream:
             raise ValueError("Source stream is None")
-        
+
         if not self.gpg_client:
             self.init_gpg()
-        
+
         destination_stream = io.BytesIO()
         source_stream.seek(0)
-        
+
         try:
 
             print(f"Encrypting stream: {source_stream}")
@@ -590,24 +590,24 @@ class Base_FileHelper(ABC):
             self.gpg_client.encrypt(data=source_stream, recipients=[self.gpg_key_id], output=destination_stream)
 
             source_stream.seek(0)
-            destination_stream.seek(0)  
+            destination_stream.seek(0)
 
         except Exception as e:
             print(f"Error during encryption: {e}")
-        
+
         return destination_stream
 
 
 
     def decrypt_stream(self, source_stream: IO, **kwargs) -> io.BytesIO:
-       
+
 
         if not source_stream:
             raise ValueError("Source stream is None")
-           
+
         if not self.gpg_client:
             self.init_gpg()
-        
+
         destination_stream = io.BytesIO()
         source_stream.seek(0)
 
@@ -617,7 +617,7 @@ class Base_FileHelper(ABC):
 
             source_stream.seek(0)
             destination_stream.seek(0)
-            
+
         except Exception as e:
             print(f"Error during decryption: {e}")
 
@@ -627,11 +627,11 @@ class Base_FileHelper(ABC):
 
     #================================================================
     # Stream operations
-    def _get_smartopen_stream_generator(self, 
-                                        path: Optional[Union[str, UPath]], 
-                                        mode: str, 
+    def _get_smartopen_stream_generator(self,
+                                        path: Optional[Union[str, UPath]],
+                                        mode: str,
                                         # encrypt_stream: bool = False,
-                                        # decrypt_stream: bool = False,                                               
+                                        # decrypt_stream: bool = False,
                                         **kwargs) -> IO|TextIO|BinaryIO:
         """
         Open stream for reading or writing data.
@@ -639,27 +639,27 @@ class Base_FileHelper(ABC):
         valid_modes = set(['w', 'r', 'wb', 'rb'])
 
         # mode: str|None = str(kwargs.get('mode'))
-        
+
         if not mode:
             raise ValueError("Mode not specified")
-        
+
         if mode not in valid_modes:
             raise ValueError(f"Invalid mode: {mode}")
 
         u_path: UPath|None = PathHelper.format_path(path=path)
-        
+
         if not u_path:
             raise ValueError("Invalid path")
 
 
-        #Open the raw stream       
+        #Open the raw stream
         stream: TextIO|BinaryIO = open(uri=u_path, mode=mode, **kwargs)
 
         return stream
 
 
-    def open_read_binarystream(self, 
-                               source_path: Optional[Union[str, UPath]], 
+    def open_read_binarystream(self,
+                               source_path: Optional[Union[str, UPath]],
                                 **kwargs) -> IO|BinaryIO:
         """
         Read data from the specified source.
@@ -670,14 +670,14 @@ class Base_FileHelper(ABC):
         self.connect()
 
         mode = 'rb'
-        stream: IO =  self._get_smartopen_stream_generator(path=source_path, 
+        stream: IO =  self._get_smartopen_stream_generator(path=source_path,
                                                     mode=mode,
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
-    
+
         return stream
 
-    def open_write_binarystream(self, 
+    def open_write_binarystream(self,
                                 destination_path: Optional[Union[str, UPath]],
                                 encrypt_stream: bool = False,
                                 decrypt_stream: bool = False,
@@ -689,32 +689,32 @@ class Base_FileHelper(ABC):
 
         self.connect()
         mode = 'wb'
-        stream: IO =  self._get_smartopen_stream_generator(path=destination_path, 
+        stream: IO =  self._get_smartopen_stream_generator(path=destination_path,
                                                     mode=mode,
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
 
-        return stream 
+        return stream
 
 
 
-    def open_read_textstream(self, 
-                             source_path: Optional[Union[str, UPath]],                              
+    def open_read_textstream(self,
+                             source_path: Optional[Union[str, UPath]],
                              **kwargs) -> IO|TextIO:
         """
         Read data from the specified source.
         """
         # print(f"{self.storage_system}: open_read_textstream: {source_path}")
-        
+
         self.connect()
         mode = 'r'
-        return self._get_smartopen_stream_generator(path=source_path, 
+        return self._get_smartopen_stream_generator(path=source_path,
                                                     mode=mode,
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
 
-    def open_write_textstream(self, 
-                              destination_path: Optional[Union[str, UPath]], 
+    def open_write_textstream(self,
+                              destination_path: Optional[Union[str, UPath]],
                               **kwargs) -> IO|TextIO:
         """
         Write data to the specified destination.
@@ -724,7 +724,7 @@ class Base_FileHelper(ABC):
         self.connect()
         mode = 'w'
 
-        return self._get_smartopen_stream_generator(path=destination_path, 
+        return self._get_smartopen_stream_generator(path=destination_path,
                                                     mode=mode,
                                                     transport_params=self.get_connection_client_parameters(),
                                                     **kwargs)
@@ -737,61 +737,61 @@ class Base_FileHelper(ABC):
 
     @abstractmethod
     def _native_put_object_from_stream(self,
-                   destination_path: UPath, 
-                   source_stream: IO, 
-                   length: int,            
+                   destination_path: UPath,
+                   source_stream: IO,
+                   length: int,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
                     decompress: Optional[bool] = False
                     ) -> bool:
         pass
-        
+
     @abstractmethod
-    def _native_put_object_from_path(self, 
-                   destination_path: UPath, 
-                   source_path: UPath, 
-                   **kwargs             
+    def _native_put_object_from_path(self,
+                   destination_path: UPath,
+                   source_path: UPath,
+                   **kwargs
                    ) -> bool:
         pass
-        
+
 
     @abstractmethod
     def _native_get_object_to_stream(self,
-                   source_path: UPath, 
-                   destination_stream: IO, 
-                   length: int,           
+                   source_path: UPath,
+                   destination_stream: IO,
+                   length: int,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
                     decompress: Optional[bool] = False
                    ) -> bool:
         pass
-        
+
 
     @abstractmethod
-    def _native_get_object_to_path(self, 
-                   source_path: UPath, 
-                   destination_path: UPath,            
-                    **kwargs  
+    def _native_get_object_to_path(self,
+                   source_path: UPath,
+                   destination_path: UPath,
+                    **kwargs
                    ) -> bool:
         pass
 
 
 
     def process_source_stream(self,
-                    source_stream: IO, 
+                    source_stream: IO,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
                     decompress: Optional[bool] = False
                     ) -> io.BytesIO:
-        
+
         if not source_stream:
             raise ValueError("Source stream is None")
-        
+
         # We can only go forwards (compress and/or encrypt) or backwards (decrypt then decompress)
-        if compress or encrypt:   
+        if compress or encrypt:
 
             # Forward Path
             if compress and encrypt:
@@ -807,7 +807,7 @@ class Base_FileHelper(ABC):
                 encrypted_stream = self.encrypt_stream(source_stream=source_stream)
                 return encrypted_stream
 
-        elif decompress or decrypt:                        
+        elif decompress or decrypt:
             # Backwards Path
             if decompress and decrypt:
                 decrypted_stream = self.decrypt_stream(source_stream=source_stream)
@@ -831,18 +831,18 @@ class Base_FileHelper(ABC):
 
         temp_stream.seek(0)
 
-        return temp_stream         
+        return temp_stream
 
 
     def copy_stream_to_stream(self,
-                   source_stream: IO|io.BytesIO, 
-                   destination_stream: IO|io.BytesIO,            
+                   source_stream: IO|io.BytesIO,
+                   destination_stream: IO|io.BytesIO,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
                     decompress: Optional[bool] = False
                     ) -> bool:
-      
+
 
         processed_stream = self.process_source_stream(source_stream=source_stream,
                                                         encrypt=encrypt,
@@ -851,7 +851,7 @@ class Base_FileHelper(ABC):
                                                         decompress=decompress,
                                                         )
 
-        destination_stream.write(processed_stream.read())        
+        destination_stream.write(processed_stream.read())
 
         return True
 
@@ -862,10 +862,10 @@ class Base_FileHelper(ABC):
         """
         Determine the length of a stream using the most appropriate method based on the stream's capabilities.
         Returns both the stream (possibly modified) and its length.
-        
+
         Args:
             stream: An IO stream object
-            
+
         Returns:
             Tuple containing:
                 - The stream object (possibly modified if buffering was needed)
@@ -874,25 +874,25 @@ class Base_FileHelper(ABC):
         # Check if stream is None
         if stream is None:
             raise ValueError("Cannot determine length of None stream")
-        
+
         # First try the most efficient method - seek and tell
         try:
             # Store current position
             current_pos = stream.tell()
-            
+
             # Try to seek to end
             stream.seek(0, 2)  # 2 means seek from end
             length = stream.tell()
-            
+
             # Reset to original position
             stream.seek(current_pos)
-            
+
             return stream, length
 
         except (AttributeError, io.UnsupportedOperation):
             # Stream doesn't support seeking or tell
             pass
-        
+
         # Check if it's a file with a name attribute (regular files)
         try:
             if hasattr(stream, 'name') and isinstance(stream.name, str):
@@ -907,34 +907,34 @@ class Base_FileHelper(ABC):
         except Exception:
             # Any other issues with file handling, continue to next method
             pass
-        
+
         # Last resort: buffer the entire stream
         try:
             # Create a BytesIO buffer
             buffer = io.BytesIO()
-            
+
             # Store current position if possible
             try:
                 current_pos = stream.tell()
             except (AttributeError, io.UnsupportedOperation):
                 current_pos = None
-            
+
             # Try to reset to beginning if possible
             try:
                 stream.seek(0)
             except (AttributeError, io.UnsupportedOperation):
                 # If we can't seek, we'll just read from current position
                 pass
-            
+
             # Copy all content to buffer
             shutil.copyfileobj(stream, buffer)
-            
+
             # Get the length
             length = buffer.tell()
-            
+
             # Reset buffer to beginning
             buffer.seek(0)
-            
+
             # Try to reset original stream if we moved it
             if current_pos is not None:
                 try:
@@ -942,12 +942,12 @@ class Base_FileHelper(ABC):
                     return stream, length  # Return original stream if we could reset it
                 except (AttributeError, io.UnsupportedOperation):
                     pass
-            
+
             # Return the buffer as the new stream
             return buffer, length
-            
+
         except Exception as e:
-            raise ValueError(f"Could not determine stream length: {str(e)}")        
+            raise ValueError(f"Could not determine stream length: {str(e)}")
 
 
     #================================================================
@@ -955,8 +955,8 @@ class Base_FileHelper(ABC):
 
 
     def put_object_from_stream(self,
-                   destination_path: Union[str, UPath], 
-                   source_stream: IO, 
+                   destination_path: Union[str, UPath],
+                   source_stream: IO,
                    length: Optional[int] = None,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
@@ -971,21 +971,21 @@ class Base_FileHelper(ABC):
 
         if not length:
             # print("Determining stream length. This requires processing the full stream before writing to the destination. put_object_from_stream() may not be appropriate for large source streams.")
-            source_stream, length = self.get_stream_size(source_stream)          
+            source_stream, length = self.get_stream_size(source_stream)
             # print(f"stream length: {length}")
 
         if self.io_client and source_stream and u_destination_path:
 
             try:
 
-                put_object = self._native_put_object_from_stream(destination_path=u_destination_path, 
-                                                           source_stream=source_stream, 
-                                                           length=length,  
-                                                           encrypt=encrypt, 
+                put_object = self._native_put_object_from_stream(destination_path=u_destination_path,
+                                                           source_stream=source_stream,
+                                                           length=length,
+                                                           encrypt=encrypt,
                                                            decrypt=decrypt,
                                                            compress=compress,
                                                            decompress=decompress)
-                                                           
+
 
                 # #Validate Destination
                 # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_destination_path)
@@ -1007,13 +1007,13 @@ class Base_FileHelper(ABC):
         else:
             return False
 
-    def put_object_from_path(self, 
-                   destination_path: Union[str, UPath], 
+    def put_object_from_path(self,
+                   destination_path: Union[str, UPath],
                    source_path: Union[str, UPath],
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
-                    decompress: Optional[bool] = False                 
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
         if compress or encrypt or decompress or decrypt:
@@ -1042,9 +1042,9 @@ class Base_FileHelper(ABC):
 
             try:
 
-                return self._native_put_object_from_path(destination_path=u_destination_path, 
-                                                         source_path=u_source_path,  
-                                                           encrypt=encrypt, 
+                return self._native_put_object_from_path(destination_path=u_destination_path,
+                                                         source_path=u_source_path,
+                                                           encrypt=encrypt,
                                                            decrypt=decrypt,
                                                            compress=compress,
                                                            decompress=decompress)
@@ -1062,7 +1062,7 @@ class Base_FileHelper(ABC):
 
                 # #MiniIO Client
                 # self.io_client.fput_object(bucket_name=bucket_name, object_name=object_name, file_path=source_path_str)
-                
+
                 # return True
 
             except Exception as e:
@@ -1072,13 +1072,13 @@ class Base_FileHelper(ABC):
 
 
     def get_object_to_stream(self,
-                   source_path: Union[str, UPath], 
+                   source_path: Union[str, UPath],
                    destination_stream: IO,
                    length: Optional[int] = None,
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
-                    decompress: Optional[bool] = False                 
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
         self.connect()
@@ -1093,22 +1093,22 @@ class Base_FileHelper(ABC):
         source_exists = self.path_exists(path=u_source_path)
 
         if not length:
-            length = self.get_size(source_path=u_source_path)   
+            length = self.get_size(source_path=u_source_path)
 
 
         if not source_exists:
             print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
             return False
 
-        #Do it!        
+        #Do it!
         if self.io_client and u_source_path and source_exists and destination_stream:
 
             try:
 
-                return self._native_get_object_to_stream(source_path=u_source_path, 
-                                                         destination_stream=destination_stream, 
-                                                         length=length,  
-                                                           encrypt=encrypt, 
+                return self._native_get_object_to_stream(source_path=u_source_path,
+                                                         destination_stream=destination_stream,
+                                                         length=length,
+                                                           encrypt=encrypt,
                                                            decrypt=decrypt,
                                                            compress=compress,
                                                            decompress=decompress)
@@ -1131,7 +1131,7 @@ class Base_FileHelper(ABC):
                 # #     bytes_io_stream = io.BytesIO(stream_data)
 
                 # destination_stream.write(bytes_io_stream)
-                
+
                 # return True
 
             except Exception as e:
@@ -1139,13 +1139,13 @@ class Base_FileHelper(ABC):
         else:
             return False
 
-    def get_object_to_path(self, 
-                   source_path: Union[str, UPath], 
+    def get_object_to_path(self,
+                   source_path: Union[str, UPath],
                    destination_path: Union[str, UPath],
                     encrypt: Optional[bool] = False,
                     decrypt: Optional[bool] = False,
                     compress: Optional[bool] = False,
-                    decompress: Optional[bool] = False                 
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         #This can only be used if the destination interface is local or the same as the source
@@ -1158,8 +1158,8 @@ class Base_FileHelper(ABC):
         #Format Paths
         u_destination_path: UPath | None = PathHelper.format_path(path=destination_path)
         u_source_path: UPath | None = PathHelper.format_path(path=source_path)
- 
-        #Validate source        
+
+        #Validate source
         if not u_source_path:
             return False
 
@@ -1172,15 +1172,15 @@ class Base_FileHelper(ABC):
 
             try:
 
-                return self._native_get_object_to_path(source_path=u_source_path, 
-                                                       destination_path=u_destination_path,  
-                                                           encrypt=encrypt, 
+                return self._native_get_object_to_path(source_path=u_source_path,
+                                                       destination_path=u_destination_path,
+                                                           encrypt=encrypt,
                                                            decrypt=decrypt,
                                                            compress=compress,
                                                            decompress=decompress)
 
                 # str_destination_path: str | None = PathHelper.path_to_str(path=u_destination_path)
-                
+
                 # #Format S3 Source
                 # bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
                 # object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
@@ -1221,7 +1221,7 @@ class Base_FileHelper(ABC):
         if not u_path:
             return False
 
-        
+
         parent: UPath = u_path.parent
 
         if not parent.exists():
@@ -1245,7 +1245,7 @@ class Base_FileHelper(ABC):
 
 
 
-        return self.path_exists(path=u_path.parent)        
+        return self.path_exists(path=u_path.parent)
 
 
         # destination_exists: bool =  self.destination_storage_interface.path_exists(path=u_xml_output_filepath)
@@ -1344,7 +1344,7 @@ class Base_FileHelper(ABC):
         :return: A list of identifiers for the available data sources.
         """
         return len(self.list_sources(path=path, **kwargs))
-    
+
 
     @classmethod
     def format_path_as_string(cls, path: Optional[Union[str, UPath]]) -> Optional[str]:

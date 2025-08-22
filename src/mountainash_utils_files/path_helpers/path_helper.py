@@ -2,7 +2,7 @@ from typing import Union, Type, Optional
 
 from upath import UPath
 
-from mountainash_constants import CONST_STORAGESYSTEM
+from ..constants import CONST_STORAGESYSTEM
 from mountainash_utils_files.path_helpers import BasePathHelper, LocalPathHelper, S3PathHelper, GCSPathHelper, AZPathHelper, SFTPPathHelper, SSHPathHelper
 
 
