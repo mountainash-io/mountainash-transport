@@ -8,17 +8,18 @@ import pyarrow.parquet as pq
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from upath import UPath
 
-# from mountainash_constants import CONST_DATAFILEFORMAT
+# from ..constants CONST_DATAFILEFORMAT
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage import StorageAuthBase
-from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
+from ..settings import StorageAuthBase
+
+from ..settings.providers import LocalStorageAuthSettings
 # from pydantic_settings import BaseSettings
 
 # from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_data import BaseDataFrame
-from mountainash_data.dataframes.utils import   DataFrameUtils
+from mountainash_dataframes import BaseDataFrame
+from mountainash_dataframes.utils import   DataFrameUtils
 
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory
@@ -157,6 +158,9 @@ class FileWriter:
         pa_dataframe: pa.DataFrame = DataFrameUtils.cast_dataframe_to_pyarrow(df=dataframe)
 
         settings = get_settings(self.destination_auth_parameters)
+        if not issubclass(settings.__class__, StorageAuthBase):
+            raise ValueError(f"Settings must be of type StorageAuthBase. Received: {settings.__class__}")
+
 
         if encrypt or compress:
 

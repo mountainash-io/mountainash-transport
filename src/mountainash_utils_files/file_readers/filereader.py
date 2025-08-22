@@ -1,24 +1,19 @@
 import typing as t
-
 import traceback
 import io
 
 import polars as pl
 from upath import UPath
 
-from mountainash_constants import CONST_DATAFILEFORMAT
-# from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_data import BaseDataFrame, IbisDataFrame
-from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage import StorageAuthBase
-from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
-
-# from pydantic_settings import BaseSettings
-
+from mountainash_dataframes import BaseDataFrame, IbisDataFrame
+from mountainash_settings import SettingsParameters
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper
 from mountainash_utils_files.file_interface import get_file_helper_object
+from mountainash_utils_files.settings import StorageAuthBase
+from mountainash_utils_files.settings.providers import LocalStorageAuthSettings
+from mountainash_utils_files.constants import  CONST_DATAFILEFORMAT
 
 
 
@@ -57,14 +52,17 @@ class FileReader:
 
     def get_auth_settings(self) -> StorageAuthBase:
 
-        settings = get_settings(self.destination_auth_parameters)
-        if not isinstance(settings, StorageAuthBase):
-            raise ValueError("Settings must be of type StorageAuthBase")
+        settings = get_settings(self.source_auth_parameters)
+        if not issubclass(settings.__class__, StorageAuthBase):
+            raise ValueError(f"Settings must be of type StorageAuthBase. Received: {settings.__class__}")
+
         return settings
 
 
 
-
+    #TODO: This should return a file context Manager that can be used to read the file!
+    # # eg: def read_file_to_stream(self,
+    #
     def read_datafile(self,
                       file_path: t.Union[UPath, str],
                     materialise:t.Optional[bool] = False,
