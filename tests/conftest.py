@@ -9,9 +9,8 @@ from typing import Generator
 from unittest.mock import Mock, patch
 
 from mountainash_settings import SettingsParameters
-from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
-from mountainash_settings.settings.auth.storage.providers.ssh import SSHStorageAuthSettings
-from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_utils_files.settings.providers import LocalStorageAuthSettings, SSHStorageAuthSettings
+from mountainash_utils_files.constants import CONST_STORAGESYSTEM
 
 
 @pytest.fixture

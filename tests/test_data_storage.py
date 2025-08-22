@@ -4,7 +4,7 @@ from mountainash_utils_files import FileInterface#, get_file_interface
 
 # from mountainash_constants import CONST_STORAGESYSTEM
 from mountainash_settings import  SettingsParameters
-from mountainash_settings.settings.auth.storage.providers import  LocalStorageAuthSettings
+from mountainash_utils_files.settings.providers  import  LocalStorageAuthSettings
 
 import random
 from upath import UPath

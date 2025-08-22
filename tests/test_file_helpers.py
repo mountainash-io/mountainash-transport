@@ -14,9 +14,8 @@ from mountainash_utils_files.file_helpers import (
     Local_FileHelper
 )
 from mountainash_settings import SettingsParameters
-from mountainash_settings.settings.auth.storage import StorageAuthBase
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_constants import CONST_STORAGESYSTEM
+from mountainash_utils_files.settings import StorageAuthBase
+from mountainash_utils_files.constants  import CONST_STORAGESYSTEM, CONST_STORAGE_PROVIDER_TYPE
 
 
 class TestFileHelperFactory:
@@ -26,7 +25,7 @@ class TestFileHelperFactory:
         """Test that get_file_helper_factory returns singleton instance."""
         factory1 = get_file_helper_factory()
         factory2 = get_file_helper_factory()
-        
+
         assert factory1 is factory2
         assert isinstance(factory1, FileHelperFactory)
 
@@ -34,13 +33,13 @@ class TestFileHelperFactory:
         """Test factory creates Local_FileHelper for local storage."""
         factory = get_file_helper_factory()
         result = factory.get_storage_interface(auth_parameters=local_auth_params)
-        
+
         assert isinstance(result, Local_FileHelper)
 
     def test_get_storage_interface_s3(self, s3_auth_params):
         """Test factory creates S3_FileHelper for S3 storage."""
         factory = get_file_helper_factory()
-        
+
         # Import S3_FileHelper to check if it exists
         try:
             from mountainash_utils_files.file_helpers.s3_file_helper import S3_FileHelper
@@ -56,14 +55,14 @@ class TestFileHelperFactory:
         """Test factory raises error for unsupported storage type."""
         from mountainash_settings import SettingsParameters
         from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
-        
+
         # Create auth params with unsupported provider type
         unsupported_auth_settings = LocalStorageAuthSettings()
         unsupported_auth_settings.PROVIDER_TYPE = "UNSUPPORTED_TYPE"
         unsupported_auth_params = SettingsParameters.create("unsupported", unsupported_auth_settings)
-        
+
         factory = get_file_helper_factory()
-        
+
         with pytest.raises(Exception):  # Should raise some kind of error
             factory.get_storage_interface(auth_parameters=unsupported_auth_params)
 
@@ -80,14 +79,14 @@ class TestBaseFileHelper:
         """Test that Base_FileHelper defines required abstract methods."""
         # Check that key methods are defined as abstract
         abstract_methods = Base_FileHelper.__abstractmethods__
-        
+
         # Key methods that should be abstract
         expected_methods = {
             'path_exists', 'get_size', 'list_sources',
             'read_file', 'write_file', 'delete_file',
             'create_directory', 'delete_directory'
         }
-        
+
         # Some of these methods should be in abstract methods
         assert len(abstract_methods) > 0
 
@@ -105,7 +104,7 @@ class TestLocal_FileHelper:
     def test_path_exists_true(self, local_auth_params, temp_file):
         """Test path_exists returns True for existing file."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
-        
+
         result = helper.path_exists(path=str(temp_file))
         assert result is True
 
@@ -113,14 +112,14 @@ class TestLocal_FileHelper:
         """Test path_exists returns False for non-existing file."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
         non_existent = temp_directory / "does_not_exist.txt"
-        
+
         result = helper.path_exists(path=str(non_existent))
         assert result is False
 
     def test_get_size_existing_file(self, local_auth_params, temp_file, sample_text_content):
         """Test get_size returns correct size for existing file."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
-        
+
         result = helper.get_size(path=str(temp_file))
         assert result == len(sample_text_content)
 
@@ -128,7 +127,7 @@ class TestLocal_FileHelper:
         """Test get_size handles non-existing file appropriately."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
         non_existent = temp_directory / "does_not_exist.txt"
-        
+
         # Should either return 0, None, or raise exception
         try:
             result = helper.get_size(path=str(non_existent))
@@ -142,10 +141,10 @@ class TestLocal_FileHelper:
         # Create test files
         (temp_directory / "file1.txt").write_text("content1")
         (temp_directory / "file2.txt").write_text("content2")
-        
+
         helper = Local_FileHelper(auth_parameters=local_auth_params)
         result = helper.list_sources(path=str(temp_directory))
-        
+
         # Should return some kind of iterable
         assert result is not None
         result_list = list(result) if result else []
@@ -154,18 +153,18 @@ class TestLocal_FileHelper:
     def test_read_file_text(self, local_auth_params, temp_file, sample_text_content):
         """Test reading file content using binary stream."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
-        
+
         # Use BytesIO to capture content from read_from_binarystream
         from io import BytesIO
         destination_stream = BytesIO()
-        
+
         result = helper.read_from_binarystream(
-            source_path=str(temp_file), 
+            source_path=str(temp_file),
             destination_stream=destination_stream
         )
-        
+
         assert result is True
-        
+
         # Get content from stream
         destination_stream.seek(0)
         content = destination_stream.read().decode('utf-8')
@@ -176,18 +175,18 @@ class TestLocal_FileHelper:
         helper = Local_FileHelper(auth_parameters=local_auth_params)
         new_file = temp_directory / "new_file.txt"
         test_content = "new file content"
-        
+
         # Use BytesIO to provide content for write_to_binarystream
         from io import BytesIO
         source_stream = BytesIO(test_content.encode('utf-8'))
-        
+
         result = helper.write_to_binarystream(
             destination_path=str(new_file),
             source_stream=source_stream
         )
-        
+
         assert result is True
-        
+
         # Check file was created with correct content
         assert new_file.exists()
         assert test_content == new_file.read_text()
@@ -195,15 +194,15 @@ class TestLocal_FileHelper:
     def test_get_interface_attributes(self, local_auth_params):
         """Test get_interface_attributes returns expected attributes."""
         helper = Local_FileHelper(auth_parameters=local_auth_params)
-        
+
         # Test method exists and can be called
         if hasattr(helper, 'get_interface_attributes'):
             source_attrs = helper.get_interface_attributes(role="source")
             dest_attrs = helper.get_interface_attributes(role="destination")
-            
+
             assert isinstance(source_attrs, dict)
             assert isinstance(dest_attrs, dict)
-            
+
             # Should have some common attributes
             for attrs in [source_attrs, dest_attrs]:
                 assert len(attrs) > 0
@@ -219,13 +218,13 @@ class TestFileHelpersIntegration:
     def test_factory_creates_working_local_helper(self, local_auth_params, temp_file):
         """Test that factory-created Local_FileHelper works correctly."""
         factory = get_file_helper_factory()
-        
+
         helper = factory.get_storage_interface(auth_parameters=local_auth_params)
-        
+
         # Test basic operations work
         exists = helper.path_exists(path=str(temp_file))
         assert exists is True
-        
+
         size = helper.get_size(path=str(temp_file))
         assert isinstance(size, int)
         assert size > 0
@@ -233,14 +232,14 @@ class TestFileHelpersIntegration:
     def test_multiple_helpers_independence(self, local_auth_params):
         """Test that multiple helper instances work independently."""
         factory = get_file_helper_factory()
-        
+
         helper1 = factory.get_storage_interface(auth_parameters=local_auth_params)
         helper2 = factory.get_storage_interface(auth_parameters=local_auth_params)
-        
+
         # Should be separate instances (or at least work independently)
         assert helper1 is not None
         assert helper2 is not None
-        
+
         # Test that they can work independently
         assert hasattr(helper1, 'path_exists')
         assert hasattr(helper2, 'path_exists')
@@ -278,20 +277,20 @@ class TestCloudFileHelpers:
         """Test S3FileHelper initialization with mocked dependencies."""
         try:
             from mountainash_utils_files.file_helpers.s3_file_helper import S3FileHelper
-            
+
             mock_auth_params = Mock()
             mock_client = Mock()
             mock_boto_client.return_value = mock_client
-            
+
             # Should be able to initialize without errors
             helper = S3FileHelper(auth_parameters=mock_auth_params)
             assert helper is not None
-            
+
         except (ImportError, Exception) as e:
             pytest.skip(f"S3FileHelper not testable: {e}")
 
 
-@pytest.mark.performance  
+@pytest.mark.performance
 class TestFileHelpersPerformance:
     """Performance tests for file helpers."""
 
@@ -299,23 +298,23 @@ class TestFileHelpersPerformance:
     def test_factory_creation_performance(self, local_auth_params):
         """Test factory helper creation performance."""
         import time
-        
+
         factory = get_file_helper_factory()
-        
+
         start_time = time.time()
-        
+
         # Create multiple helpers
         helpers = []
         for _ in range(10):
             helper = factory.get_storage_interface(auth_parameters=local_auth_params)
             helpers.append(helper)
-        
+
         end_time = time.time()
-        
+
         # Should complete quickly
         assert end_time - start_time < 1.0
         assert len(helpers) == 10
-        
+
         # Verify all helpers are functional
         for helper in helpers:
             assert isinstance(helper, Local_FileHelper)
