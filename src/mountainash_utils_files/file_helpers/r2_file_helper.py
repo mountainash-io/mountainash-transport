@@ -6,7 +6,7 @@ import os
 from .base_file_helper import Base_FileHelper
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper  # We can reuse S3PathHelper since R2 uses the same format
-from mountainash_settings import SettingsParameters, get_settings
+from mountainash_settings import SettingsParameters
 from ..settings.providers.r2 import R2StorageAuthSettings
 from ..constants import CONST_STORAGE_PROVIDER_TYPE
 from ..dataclasses import FileMetadata

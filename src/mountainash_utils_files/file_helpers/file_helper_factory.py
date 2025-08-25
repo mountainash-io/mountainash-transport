@@ -2,7 +2,6 @@ from typing import  Any, Type, Dict, Optional
 
 from functools import lru_cache
 
-from pydantic_settings import  BaseSettings
 
 
 

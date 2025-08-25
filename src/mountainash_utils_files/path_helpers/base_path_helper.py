@@ -6,7 +6,6 @@ from upath import UPath
 from urllib.parse import urlparse
 
 from mountainash_utils_os import get_platform_slash
-from mountainash_utils_dataclasses import DataclassUtils
 from ..constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
 
 class BasePathHelper(ABC):

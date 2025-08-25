@@ -1,6 +1,6 @@
 #constants.py
 
-from mountainash_constants import BaseIdentityConstant, BaseValueConstant
+from mountainash_constants import BaseValueConstant
 
 class CONST_STORAGE_PROVIDER_TYPE(BaseValueConstant):
     """Storage provider types"""
