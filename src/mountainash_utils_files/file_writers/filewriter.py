@@ -16,8 +16,8 @@ from ..settings.providers import LocalStorageAuthSettings
 # from pydantic_settings import BaseSettings
 
 # from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_dataframes import BaseDataFrame
-from mountainash_dataframes.utils import   DataFrameUtils
+# from mountainash_dataframes import BaseDataFrame
+from mountainash_dataframes import   DataFrameUtils, SUPPORTED_DATAFRAMES
 
 from ..constants import CONST_STORAGE_PROVIDER_TYPE
 
@@ -142,7 +142,7 @@ class FileWriter:
 
 
     def write_parquet(self,
-                      dataframe: t.Any,
+                      dataframe: SUPPORTED_DATAFRAMES,
                       output_file_path: t.Union[UPath, str],
                       overwrite: t.Optional[bool] = True,
                       encrypt: t.Optional[bool] = False,
@@ -155,7 +155,7 @@ class FileWriter:
 
         u_output_file_path: UPath | None = PathHelper.format_path(path=output_file_path)
 
-        pa_dataframe: pa.DataFrame = DataFrameUtils.cast_dataframe_to_pyarrow(df=dataframe)
+        pa_dataframe: pa.DataFrame = DataFrameUtils.to_pyarrow(df=dataframe)
 
         settings = get_settings(self.destination_auth_parameters)
         if not issubclass(settings.__class__, StorageAuthBase):
@@ -220,7 +220,7 @@ class FileWriter:
 
 
     def write_csv(self,
-                    dataframe: t.Any,
+                    dataframe: SUPPORTED_DATAFRAMES,
                     output_file_path: t.Union[str, UPath],
                     overwrite: t.Optional[bool] = True,
                     encrypt: t.Optional[bool] = False,
@@ -236,7 +236,7 @@ class FileWriter:
         settings = get_settings(self.destination_auth_parameters)
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe=dataframe)
+        pd_dataframe: pd.DataFrame = DataFrameUtils.to_pandas(dataframe=dataframe)
 
         if encrypt or compress:
 
@@ -291,7 +291,7 @@ class FileWriter:
 
 
     def write_json(self,
-                   dataframe: BaseDataFrame,
+                   dataframe: SUPPORTED_DATAFRAMES,
                    output_file_path: t.Union[str, UPath],
                    overwrite: t.Optional[bool] = True,
                    encrypt: t.Optional[bool] = False,
@@ -306,7 +306,7 @@ class FileWriter:
 
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.materialise())
+        pd_dataframe: pd.DataFrame = DataFrameUtils.to_pandas(dataframe.materialise())
 
         settings = get_settings(self.destination_auth_parameters)
 
@@ -366,7 +366,7 @@ class FileWriter:
 
 
     def write_delta(self,
-                    df_datafile: BaseDataFrame,
+                    df_datafile: SUPPORTED_DATAFRAMES,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,
@@ -376,7 +376,7 @@ class FileWriter:
         raise NotImplementedError
 
     def write_iceberg(self,
-                    df_datafile: BaseDataFrame,
+                    df_datafile: SUPPORTED_DATAFRAMES,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,

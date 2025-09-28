@@ -5,7 +5,7 @@ import io
 import polars as pl
 from upath import UPath
 
-from mountainash_dataframes import BaseDataFrame, IbisDataFrame
+# from mountainash_dataframes import BaseDataFrame, IbisDataFrame
 from mountainash_settings import SettingsParameters
 
 from mountainash_utils_files.path_helpers import PathHelper
@@ -68,7 +68,7 @@ class FileReader:
                     materialise:t.Optional[bool] = False,
                     decrypt:t.Optional[bool] = False,
                     decompress:t.Optional[bool] = False
-                      ) -> t.Optional[BaseDataFrame]:
+                      ) -> t.Optional[SUPPORTED_DATAFRAMES]:
 
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
@@ -143,7 +143,7 @@ class FileReader:
                      decrypt:t.Optional[bool] = False,
                      decompress:t.Optional[bool] = False
 
-                     ) -> t.Optional[BaseDataFrame]:
+                     ) -> t.Optional[pl.DataFrame]:
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
@@ -188,7 +188,7 @@ class FileReader:
 
 
 
-        dataframe_object = IbisDataFrame(df=polars_dataframe)
+        dataframe_object = polars_dataframe
 
         return dataframe_object
 
@@ -201,7 +201,7 @@ class FileReader:
                      decrypt:t.Optional[bool] = False,
                      decompress:t.Optional[bool] = False
 
-                     ) -> t.Optional[BaseDataFrame]:
+                     ) -> t.Optional[pl.DataFrame]:
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)
 
@@ -245,6 +245,6 @@ class FileReader:
             #         with self.source_storage_interface.open_read_binarystream(source_path=file_path) as parquet_stream:
             #             polars_dataframe =  pl.read_json(source=parquet_stream)
 
-        dataframe_object = IbisDataFrame(df=polars_dataframe)
+        dataframe_object = polars_dataframe
 
         return dataframe_object

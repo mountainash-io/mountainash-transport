@@ -1,8 +1,8 @@
 #constants.py
 
-from mountainash_constants import BaseValueConstant
+from enum import Enum, StrEnum, IntEnum
 
-class CONST_STORAGE_PROVIDER_TYPE(BaseValueConstant):
+class CONST_STORAGE_PROVIDER_TYPE(StrEnum):
     """Storage provider types"""
     LOCAL = "local"
     S3 = "s3"
@@ -20,7 +20,7 @@ class CONST_STORAGE_PROVIDER_TYPE(BaseValueConstant):
     GITHUB = "github"
     R2 = "r2"
 
-class CONST_STORAGE_AUTH_METHOD(BaseValueConstant):
+class CONST_STORAGE_AUTH_METHOD(StrEnum):
     """Authentication methods"""
     NONE = "none"
     KEY = "key"
@@ -32,14 +32,14 @@ class CONST_STORAGE_AUTH_METHOD(BaseValueConstant):
     KERBEROS = "kerberos"
     SERVICE_ACCOUNT = "service_account"
 
-class CONST_STORAGE_ACCESS_TYPE(BaseValueConstant):
+class CONST_STORAGE_ACCESS_TYPE(StrEnum):
     """Storage access types"""
     READ_ONLY = "read_only"
     WRITE_ONLY = "write_only"
     READ_WRITE = "read_write"
     ADMIN = "admin"
 
-class CONST_STORAGE_ENCRYPTION_TYPE(BaseValueConstant):
+class CONST_STORAGE_ENCRYPTION_TYPE(StrEnum):
     """Storage encryption types"""
     NONE = "none"
     AES256 = "aes256"
@@ -47,7 +47,7 @@ class CONST_STORAGE_ENCRYPTION_TYPE(BaseValueConstant):
     CLIENT_SIDE = "client_side"
     SERVER_SIDE = "server_side"
 
-class CONST_STORAGE_CONNECTION_STATUS(BaseValueConstant):
+class CONST_STORAGE_CONNECTION_STATUS(StrEnum):
     """Storage connection status"""
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -55,13 +55,13 @@ class CONST_STORAGE_CONNECTION_STATUS(BaseValueConstant):
     ERROR = "error"
     CLOSED = "closed"
 
-class CONST_STORAGE_TRANSFER_MODE(BaseValueConstant):
+class CONST_STORAGE_TRANSFER_MODE(StrEnum):
     """Storage transfer modes"""
     BINARY = "binary"
     TEXT = "text"
     AUTO = "auto"
 
-class CONST_STORAGE_COMPRESSION_TYPE(BaseValueConstant):
+class CONST_STORAGE_COMPRESSION_TYPE(StrEnum):
     """Storage compression types"""
     NONE = "none"
     GZIP = "gzip"
@@ -70,7 +70,7 @@ class CONST_STORAGE_COMPRESSION_TYPE(BaseValueConstant):
     LZ4 = "lz4"
 
 
-class CONST_DATAFILEFORMAT(BaseValueConstant):
+class CONST_DATAFILEFORMAT(StrEnum):
     """
     Enumeration for different file formats.
 
@@ -88,7 +88,7 @@ class CONST_DATAFILEFORMAT(BaseValueConstant):
 
 
 # TODO: Move to mountainash-files
-class CONST_STORAGESYSTEM(BaseValueConstant):
+class CONST_STORAGESYSTEM(StrEnum):
     """
     Enumeration for different types of filesystems.
 
@@ -123,7 +123,7 @@ class CONST_STORAGESYSTEM(BaseValueConstant):
 
 
 # TODO: Move to mountainash-files
-class CONST_STORAGESYSTEM_PREFIX(BaseValueConstant):
+class CONST_STORAGESYSTEM_PREFIX(StrEnum):
     """
     Enumeration for different types of filesystems.
 
