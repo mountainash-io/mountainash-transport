@@ -11,7 +11,7 @@ class Azure_FileHelper(Base_FileHelper):
     def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
-        pass
+        super().__init__(auth_parameters=auth_parameters)
 
     def connect(self) -> bool:
         """Connect to the Azure Blob Storage account."""

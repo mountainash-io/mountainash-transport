@@ -25,9 +25,7 @@ class GCS_FileHelper(Base_FileHelper):
             auth_parameters: Settings parameters for authentication
         """
         # Initialize base class
-        super().__init__()
-
-        self.auth_parameters = auth_parameters
+        super().__init__(auth_parameters=auth_parameters)
         self.storage_provider_type = CONST_STORAGE_PROVIDER_TYPE.GCS
         self.storage_system = "GCS"
 

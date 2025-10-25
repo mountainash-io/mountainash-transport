@@ -25,7 +25,7 @@ class FileHelperFactory:
 
     path_util_classes: Dict[str, Type[Base_FileHelper]] = {
 
-        CONST_STORAGE_PROVIDER_TYPE.LOCAL: Local_FileHelper,
+        CONST_STORAGE_PROVIDER_TYPE.LOCAL:      Local_FileHelper,
         CONST_STORAGE_PROVIDER_TYPE.SFTP:       SFTP_FileHelper,
         CONST_STORAGE_PROVIDER_TYPE.S3:         S3_FileHelper,
         CONST_STORAGE_PROVIDER_TYPE.R2:         R2_FileHelper,
@@ -88,7 +88,7 @@ class FileHelperFactory:
             auth_parameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
 
 
-        auth_settings: StorageAuthBase = get_settings(settings_parameters=auth_parameters)
+        auth_settings: StorageAuthBase = auth_parameters.get_settings()
 
         if not isinstance(auth_settings, StorageAuthBase):
             raise ValueError(f"Settings object for namespace '{auth_parameters}' found, but is not an StorageAuthBase object.")

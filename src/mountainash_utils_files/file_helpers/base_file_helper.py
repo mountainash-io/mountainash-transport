@@ -11,7 +11,7 @@ from upath import UPath
 import gzip
 
 from mountainash_utils_files.path_helpers import PathHelper
-
+from mountainash_settings import SettingsParameters
 from mountainash_utils_gpg import GPG_Helper
 
 
@@ -124,8 +124,9 @@ class Base_FileHelper(ABC):
 
 
     def __init__(self,
-                #  auth_parameters: SettingsParameters,
+                auth_parameters: Optional[SettingsParameters] = None,
                  ) -> None:
+
 
         # self.io_auth_parameters = auth_parameters
         # self.io_auth_settings: BaseSettings = get_settings(settings_parameters=auth_parameters)
@@ -144,6 +145,7 @@ class Base_FileHelper(ABC):
         # if self.io_auth_settings.COMPRESSION_TYPE and self.io_auth_settings.COMPRESSION_TYPE not in DataclassUtils.get_enum_values_set(enumclass=CONST_COMPRESSION_TYPE):
         #     raise ValueError(f"Invalid storage system: {self.io_auth_settings.COMPRESSION_TYPE}. Check your auth settings value COMPRESSION_TYPE. Valid values are: {DataclassUtils.get_enum_values_set(CONST_COMPRESSION_TYPE)}")
 
+        self.auth_parameters = auth_parameters
 
         self.requires_io_connection = False
         self.requires_ssh_connection = False

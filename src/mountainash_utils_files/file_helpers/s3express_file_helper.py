@@ -23,11 +23,12 @@ class S3Express_FileHelper(Base_FileHelper):
                  auth_parameters: SettingsParameters
                  ) -> None:
 
+        super().__init__(auth_parameters=auth_parameters)
+
         # Check if auth parameters are of the correct type
         if not isinstance(get_settings(auth_parameters), S3StorageAuthSettings):
             raise ValueError(f"Invalid auth parameters type: {type(get_settings(auth_parameters))}. Must be S3StorageAuthSettings")
 
-        self.auth_parameters = auth_parameters
 
         # S3 Express uses a different storage provider type
         # Assuming CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS exists or will be added

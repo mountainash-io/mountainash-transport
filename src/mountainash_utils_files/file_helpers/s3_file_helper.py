@@ -24,13 +24,13 @@ class S3_FileHelper(Base_FileHelper):
                  ) -> None:
 
         # Initialize base class
-        super().__init__()
+        super().__init__(auth_parameters=auth_parameters)
 
         # Validate auth parameters
         if not isinstance(get_settings(auth_parameters), S3StorageAuthSettings):
             raise ValueError(f"Invalid auth parameters type: {type(get_settings(auth_parameters))}. Must be S3StorageAuthSettings")
 
-        self.auth_parameters = auth_parameters
+        # self.auth_parameters = auth_parameters
         self.storage_provider_type = CONST_STORAGE_PROVIDER_TYPE.S3
         self.storage_system = "S3"
 

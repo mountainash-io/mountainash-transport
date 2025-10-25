@@ -25,9 +25,8 @@ class SFTP_FileHelper(Base_FileHelper):
                  ) -> None:
 
         # Initialize base class
-        super().__init__()
+        super().__init__(auth_parameters=auth_parameters)
 
-        self.auth_parameters = auth_parameters
         self.storage_system = "SFTP"
 
         # Get auth settings

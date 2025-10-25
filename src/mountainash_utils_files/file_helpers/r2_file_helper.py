@@ -26,9 +26,7 @@ class R2_FileHelper(Base_FileHelper):
                  auth_parameters: SettingsParameters
                  ) -> None:
 
-        super().__init__()
-
-        self.auth_parameters = auth_parameters
+        super().__init__(auth_parameters=auth_parameters)
         self.auth_settings: R2StorageAuthSettings = R2StorageAuthSettings.get_settings(auth_parameters)
         self.storage_provider_type = CONST_STORAGE_PROVIDER_TYPE.R2
         self.storage_system = "R2"
