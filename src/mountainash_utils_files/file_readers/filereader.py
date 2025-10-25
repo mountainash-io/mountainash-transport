@@ -6,7 +6,8 @@ import polars as pl
 from upath import UPath
 
 # from mountainash_dataframes import BaseDataFrame, IbisDataFrame
-from mountainash_settings import SettingsParameters
+from mountainash_settings import SettingsParameters, get_settings
+from mountainash_dataframes import SupportedDataFrames
 
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.file_helpers import Base_FileHelper
@@ -14,7 +15,6 @@ from mountainash_utils_files.file_interface import get_file_helper_object
 from mountainash_utils_files.settings import StorageAuthBase
 from mountainash_utils_files.settings.providers import LocalStorageAuthSettings
 from mountainash_utils_files.constants import  CONST_DATAFILEFORMAT
-
 
 
 
@@ -68,7 +68,7 @@ class FileReader:
                     materialise:t.Optional[bool] = False,
                     decrypt:t.Optional[bool] = False,
                     decompress:t.Optional[bool] = False
-                      ) -> t.Optional[SUPPORTED_DATAFRAMES]:
+                      ) -> t.Optional[SupportedDataFrames]:
 
 
         u_file_path: UPath|None = PathHelper.format_path(path=file_path)

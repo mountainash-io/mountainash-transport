@@ -17,12 +17,13 @@ from ..settings.providers import LocalStorageAuthSettings
 
 # from mountainash_utils_dataclasses import  DataclassUtils
 # from mountainash_dataframes import BaseDataFrame
-from mountainash_dataframes import   DataFrameUtils, SUPPORTED_DATAFRAMES
+from mountainash_dataframes import   DataFrameUtils, SupportedDataFrames
 
 from ..constants import CONST_STORAGE_PROVIDER_TYPE
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory
+from mountainash_utils_files.file_helpers import Base_FileHelper
+from mountainash_utils_files.factories import FileHelperFactory
 # from mountainash_utils_files.storage_interface import get_file_helper_object
 # from mountainash_utils_files.storage_interface.storage_interface import FileInterface
 
@@ -142,7 +143,7 @@ class FileWriter:
 
 
     def write_parquet(self,
-                      dataframe: SUPPORTED_DATAFRAMES,
+                      dataframe: SupportedDataFrames,
                       output_file_path: t.Union[UPath, str],
                       overwrite: t.Optional[bool] = True,
                       encrypt: t.Optional[bool] = False,
@@ -155,7 +156,7 @@ class FileWriter:
 
         u_output_file_path: UPath | None = PathHelper.format_path(path=output_file_path)
 
-        pa_dataframe: pa.DataFrame = DataFrameUtils.to_pyarrow(df=dataframe)
+        pa_dataframe: pa.DataFrame = DataFrameUtils.to_pyarrow(dataframe)
 
         settings = get_settings(self.destination_auth_parameters)
         if not issubclass(settings.__class__, StorageAuthBase):
@@ -220,7 +221,7 @@ class FileWriter:
 
 
     def write_csv(self,
-                    dataframe: SUPPORTED_DATAFRAMES,
+                    dataframe: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite: t.Optional[bool] = True,
                     encrypt: t.Optional[bool] = False,
@@ -291,7 +292,7 @@ class FileWriter:
 
 
     def write_json(self,
-                   dataframe: SUPPORTED_DATAFRAMES,
+                   dataframe: SupportedDataFrames,
                    output_file_path: t.Union[str, UPath],
                    overwrite: t.Optional[bool] = True,
                    encrypt: t.Optional[bool] = False,
@@ -366,7 +367,7 @@ class FileWriter:
 
 
     def write_delta(self,
-                    df_datafile: SUPPORTED_DATAFRAMES,
+                    df_datafile: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,
@@ -376,7 +377,7 @@ class FileWriter:
         raise NotImplementedError
 
     def write_iceberg(self,
-                    df_datafile: SUPPORTED_DATAFRAMES,
+                    df_datafile: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,

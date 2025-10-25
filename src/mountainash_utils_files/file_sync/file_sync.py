@@ -6,7 +6,7 @@ from ibis import _
 
 from mountainash_utils_files import FileInterface
 from mountainash_settings import SettingsParameters
-from mountainash_dataframes import IbisDataFrame, DataFrameUtils
+from mountainash_dataframes import SupportedDataFrames, DataFrameUtils
 from mountainash_dataframes.utils.dataframe_filters import FilterCondition as fc
 
 
@@ -137,8 +137,8 @@ class FileSyncer:
         source = FileInterface().resolve_storage_object(auth_parameters=source_settings_parameters)
         dest = FileInterface().resolve_storage_object(auth_parameters=destination_settings_parameters)
 
-        source_metadata = IbisDataFrame(DataFrameUtils.create_ibis_dataframe(source.get_file_metadata(source_path))).mutate(size_source = _.size).select(["full_path","size_source"])
-        dest_metadata = IbisDataFrame(DataFrameUtils.create_ibis_dataframe(dest.get_file_metadata(destination_path))).mutate(size_dest = _.size).select(["full_path","size_dest"])
+        source_metadata = DataFrameUtils.to_ibis(source.get_file_metadata(source_path))).mutate(size_source = _.size).select(["full_path","size_source"])
+        dest_metadata = DataFrameUtils.to_ibis(dest.get_file_metadata(destination_path))).mutate(size_dest = _.size).select(["full_path","size_dest"])
 
         filter_source_bigger = fc.col_gt("size_source", "size_dest")
         df_size_comparison = source_metadata.inner_join(dest_metadata, ["full_path"] ).mutate(source_bigger = _.size_source > _.size_dest).filter(filter_condition=filter_source_bigger)
@@ -161,10 +161,10 @@ class FileSyncer:
         source = FileInterface().resolve_storage_object(auth_parameters=source_settings_parameters)
         dest = FileInterface().resolve_storage_object(auth_parameters=destination_settings_parameters)
 
-        source_metadata = (IbisDataFrame(DataFrameUtils.create_ibis_dataframe(source.get_file_metadata(source_path)))
+        source_metadata = (DataFrameUtils.create_ibis(source.get_file_metadata(source_path))
                             .mutate(last_modified_source_str = _.last_modified.cast("str").substr(0,26)).select(["full_path","last_modified_source_str"])
         )
-        dest_metadata = ( IbisDataFrame(DataFrameUtils.create_ibis_dataframe(dest.get_file_metadata(destination_path)))
+        dest_metadata =   (DataFrameUtils.create_ibis(dest.get_file_metadata(destination_path))
                             .mutate(last_modified_dest_str = _.last_modified.cast("str").substr(0,26)).select(["full_path","last_modified_dest_str"])
         )
 
@@ -172,11 +172,12 @@ class FileSyncer:
         newer_interval_seconds = newer_interval.total_seconds()
         filter_source_newer = fc.gt("last_modified_difference_seconds", newer_interval_seconds)
 
-        df_last_modified_comparison = ( source_metadata.inner_join(dest_metadata, ["full_path"] )
-                                    .mutate(last_modified_difference_seconds = (_.last_modified_source_str.as_timestamp("%Y-%m-%d %H:%M:%S.%f") -
-                                                                                _.last_modified_dest_str.as_timestamp("%Y-%m-%d %H:%M:%S.%f")).cast(int)/1000000
-                                            )
-                                    .filter(filter_condition=filter_source_newer)
+        df_last_modified_comparison = (
+            source_metadata.inner_join(dest_metadata, ["full_path"] )
+                .mutate(last_modified_difference_seconds = (_.last_modified_source_str.as_timestamp("%Y-%m-%d %H:%M:%S.%f") -
+                                                            _.last_modified_dest_str.as_timestamp("%Y-%m-%d %H:%M:%S.%f")).cast(int)/1000000
+                        )
+                .filter(filter_condition=filter_source_newer)
         )
 
         newer_source_files = df_last_modified_comparison.get_column_as_list("full_path")

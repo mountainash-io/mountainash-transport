@@ -1,12 +1,14 @@
 #file: src/mountainash_utils_files/file_interface/file_interface.py
 
-
+from __future__ import annotations
 from upath import UPath
 from functools import lru_cache
 from typing import Union, Any, Optional, List, IO
 
 
-from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory, get_file_helper_factory
+
+from mountainash_utils_files.factories import FileHelperFactory, get_file_helper_factory
+from mountainash_utils_files.file_helpers import Base_FileHelper # , FileHelperFactory, get_file_helper_factory
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters, get_settings
 from ..settings.providers  import  LocalStorageAuthSettings
@@ -17,7 +19,7 @@ from ..settings import StorageAuthBase
 
 class FileInterface:
 
-    factory: FileHelperFactory = get_file_helper_factory()
+    # factory: FileHelperFactory = get_file_helper_factory()
 
     # TODO: CRITICAL - Remove this mapping once mountainash-constants provides single source of truth
     # The PathHelper system uses CONST_STORAGESYSTEM values ("LOCAL_DISK", "S3")

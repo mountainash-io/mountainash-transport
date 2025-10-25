@@ -4,8 +4,8 @@ from abc import ABC
 
 from upath import UPath
 from urllib.parse import urlparse
+from mountainash_utils_dataclasses import EnumUtils
 
-from mountainash_utils_os import get_platform_slash
 from ..constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
 
 class BasePathHelper(ABC):
@@ -54,9 +54,6 @@ class BasePathHelper(ABC):
         return str(path)
         # return str(object=UPath(path))
 
-    @classmethod
-    def get_local_platform_slash(cls) -> str:
-        return get_platform_slash()
 
 
     @classmethod
@@ -118,9 +115,9 @@ class BasePathHelper(ABC):
         parsed = urlparse(path_str)
         path_scheme = parsed.scheme.lower()
 
-        if path_scheme in CONST_STORAGESYSTEM_PREFIX.get_values():
+        if path_scheme in EnumUtils.get_enum_values(CONST_STORAGESYSTEM_PREFIX):
 
-            storage_system = CONST_STORAGESYSTEM_PREFIX.find_member(value=path_scheme)
+            storage_system = EnumUtils.find_member_name(CONST_STORAGESYSTEM_PREFIX, path_scheme)
 
             if storage_system is None:
                 raise ValueError(f"Failed to identify storage system for path: {path_str}.")
