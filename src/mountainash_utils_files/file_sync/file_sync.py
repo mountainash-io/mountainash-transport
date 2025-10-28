@@ -6,7 +6,7 @@ from ibis import _
 
 from mountainash_utils_files import FileInterface
 from mountainash_settings import SettingsParameters
-from mountainash_dataframes import SupportedDataFrames, DataFrameUtils
+from mountainash_dataframes import DataFrameUtils
 from mountainash_dataframes.utils.dataframe_filters import FilterCondition as fc
 
 
@@ -137,8 +137,8 @@ class FileSyncer:
         source = FileInterface().resolve_storage_object(auth_parameters=source_settings_parameters)
         dest = FileInterface().resolve_storage_object(auth_parameters=destination_settings_parameters)
 
-        source_metadata = DataFrameUtils.to_ibis(source.get_file_metadata(source_path))).mutate(size_source = _.size).select(["full_path","size_source"])
-        dest_metadata = DataFrameUtils.to_ibis(dest.get_file_metadata(destination_path))).mutate(size_dest = _.size).select(["full_path","size_dest"])
+        source_metadata = DataFrameUtils.to_ibis(source.get_file_metadata(source_path)).mutate(size_source = _.size).select(["full_path","size_source"])
+        dest_metadata = DataFrameUtils.to_ibis(dest.get_file_metadata(destination_path)).mutate(size_dest = _.size).select(["full_path","size_dest"])
 
         filter_source_bigger = fc.col_gt("size_source", "size_dest")
         df_size_comparison = source_metadata.inner_join(dest_metadata, ["full_path"] ).mutate(source_bigger = _.size_source > _.size_dest).filter(filter_condition=filter_source_bigger)

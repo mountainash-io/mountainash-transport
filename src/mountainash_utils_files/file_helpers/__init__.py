@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+# from typing import TYPE_CHECKING
 import lazy_loader
 
 # Core file helpers (always available - eager loading)
