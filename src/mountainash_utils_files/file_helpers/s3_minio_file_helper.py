@@ -7,12 +7,12 @@ from mountainash_settings import SettingsParameters
 from .s3_file_helper import S3_FileHelper
 
 
-class S3U_FileHelper(S3_FileHelper):
+class S3_MinIO_FileHelper(S3_FileHelper):
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
-        
+
         super().__init__(auth_parameters)
 
         self.requires_io_connection = True
@@ -30,7 +30,7 @@ class S3U_FileHelper(S3_FileHelper):
         self.secret_key = self.io_auth_settings.PASSWORD
         self.access_token = self.io_auth_settings.TOKEN
 
-        #S3 specific 
+        #S3 specific
         self.bucket =     self.io_auth_settings.STORAGE_NAMESPACE
         self.service_name =     's3'
 
@@ -103,19 +103,19 @@ class S3U_FileHelper(S3_FileHelper):
     #================================================================
     # Connection operations
 
-    
+
     def connect(self) -> bool:
         """Connect to the S3 server using MinIO client."""
 
         connected = self.check_if_io_connected()
-        
+
         if not connected:
 
             if self.io_client is not None:
                 self.io_client = None
 
             try:
-            
+
                 # Create a MinIO client with the S3 endpoint, access key, and secret key.
                 self.io_client = Minio(
                     endpoint=self.endpoint,
@@ -139,12 +139,12 @@ class S3U_FileHelper(S3_FileHelper):
 
     def check_if_io_connected(self) -> bool:
         """Check if connected to S3 by trying to list buckets."""
-        
+
         if not self.io_client:
             return False
 
         try:
-            
+
             buckets = self.io_client.list_buckets()
             # If we can list any bucket successfully, the connection is successful
             return any(buckets)
@@ -184,7 +184,7 @@ class S3U_FileHelper(S3_FileHelper):
 
     #     mode = 'rb'
     #     return self._get_smartopen_stream_generator(path=source_path, mode=mode, transport_params=self.get_connection_client_parameters())
-    
+
 
     # def open_write_binarystream(self, destination_path: Optional[Union[str, UPath]], **kwargs) -> IO[Any]:
     #     """
@@ -201,11 +201,11 @@ class S3U_FileHelper(S3_FileHelper):
     #     Read data from the specified source.
     #     """
     #     print(f"{self.storage_system}: open_read_textstream: {source_path}")
-        
+
     #     self.connect()
     #     mode = 'rb'
     #     return self._get_smartopen_stream_generator(path=source_path, mode=mode)#, transport_params=self.transport_params)
-    
+
 
     # def open_write_textstream(self, destination_path: Optional[Union[str, UPath]], **kwargs) -> IO[Any]:
     #     """
@@ -223,8 +223,8 @@ class S3U_FileHelper(S3_FileHelper):
 
 
     # def put_object_from_stream(self,
-    #                destination_path: Optional[Union[str, UPath]], 
-    #                source_stream: io.BytesIO, 
+    #                destination_path: Optional[Union[str, UPath]],
+    #                source_stream: io.BytesIO,
     #                length: int) -> bool|Any:
 
     #     self.connect()
@@ -251,8 +251,8 @@ class S3U_FileHelper(S3_FileHelper):
     #     else:
     #         return False
 
-    # def put_object_from_path(self, 
-    #                destination_path: Optional[Union[str, UPath]], 
+    # def put_object_from_path(self,
+    #                destination_path: Optional[Union[str, UPath]],
     #                source_path: Optional[Union[str, UPath]]
     #                ) -> bool:
 
@@ -284,7 +284,7 @@ class S3U_FileHelper(S3_FileHelper):
     #         try:
     #             #MiniIO Client
     #             self.io_client.fput_object(bucket_name=bucket_name, object_name=object_name, file_path=source_path_str)
-                
+
     #             return True
 
     #         except Exception as e:
@@ -294,7 +294,7 @@ class S3U_FileHelper(S3_FileHelper):
 
 
     # def get_object_to_stream(self,
-    #                source_path: Optional[Union[str, UPath]], 
+    #                source_path: Optional[Union[str, UPath]],
     #                destination_stream: io.BytesIO) -> bool:
 
     #     self.connect()
@@ -314,7 +314,7 @@ class S3U_FileHelper(S3_FileHelper):
     #         print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
     #         return False
 
-    #     #Do it!        
+    #     #Do it!
     #     if self.io_client and bucket_name and object_name:
 
     #         try:
@@ -334,7 +334,7 @@ class S3U_FileHelper(S3_FileHelper):
     #             #     bytes_io_stream = io.BytesIO(stream_data)
 
     #             destination_stream.write(bytes_io_stream)
-                
+
     #             return True
 
     #         except Exception as e:
@@ -342,8 +342,8 @@ class S3U_FileHelper(S3_FileHelper):
     #     else:
     #         return False
 
-    # def get_object_to_path(self, 
-    #                source_path: Optional[Union[str, UPath]], 
+    # def get_object_to_path(self,
+    #                source_path: Optional[Union[str, UPath]],
     #                destination_path: Optional[Union[str, UPath]]
     #                ) -> bool|Any:
 
@@ -358,7 +358,7 @@ class S3U_FileHelper(S3_FileHelper):
     #     bucket_name: str| None = S3PathHelper.get_path_bucketname(path=u_source_path)
     #     object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_source_path)
 
-    #     #Validate source        
+    #     #Validate source
     #     if not u_source_path:
     #         return False
 
@@ -399,18 +399,18 @@ class S3U_FileHelper(S3_FileHelper):
     # #     source_bucket: str | None = S3PathHelper.get_path_bucketname(source_path)
     # #     source_folders_and_filename: str | None = S3PathHelper.get_path_folders_and_filename(source_path)
 
-    # #     if not source_bucket or not source_folders_and_filename:            
+    # #     if not source_bucket or not source_folders_and_filename:
     # #         raise ValueError(f"Invalid source path: {source_path}")
-        
+
     # #     self.connect()
 
-    # #     if self.io_client:            
+    # #     if self.io_client:
     # #         try:
     # #             self.io_client.fget_object(bucket_name=source_bucket, object_name=source_folders_and_filename, file_path=destination_stream)
 
     # #         except Exception as e:
     # #             raise ValueError(f"Error writing to stream: {e}")
-        
+
     # #     return True
 
 
@@ -426,13 +426,13 @@ class S3U_FileHelper(S3_FileHelper):
 
     # #     if not destination_bucket or not destination_folders_and_filename:
     # #         raise ValueError(f"Invalid destination path: {destination_path_str}")
-            
+
     # #     if self.io_client:
     # #         try:
     # #             self.io_client.put_object(destination_bucket, destination_folders_and_filename, data=source_stream, length=-1)
     # #         except Exception as e:
     # #             raise ValueError(f"Error writing to stream: {e}")
-        
+
     # #     return True
 
 
@@ -465,8 +465,8 @@ class S3U_FileHelper(S3_FileHelper):
     # #================================================================
     # # Filesystem operations
 
-    # def _bucket_exists(self, 
-    #                   bucket_name: Optional[str]=None, 
+    # def _bucket_exists(self,
+    #                   bucket_name: Optional[str]=None,
     #                   path: Optional[Union[str, UPath]]=None) -> bool:
 
     #     if not self.io_client:
@@ -495,10 +495,10 @@ class S3U_FileHelper(S3_FileHelper):
     # def _find_objects(self, path: Union[str, UPath]) -> Optional[Iterator[Any]]:
 
 
-    #     u_path = PathHelper.format_path(path) 
+    #     u_path = PathHelper.format_path(path)
     #     if not u_path:
     #         return None
-        
+
     #     self.connect()
 
     #     if self.io_client:
@@ -506,7 +506,7 @@ class S3U_FileHelper(S3_FileHelper):
     #         bucket_name: str | None = S3PathHelper.get_path_bucketname(u_path)
     #         if not bucket_name:
     #             return None
-            
+
     #         relative_path: str | None = S3PathHelper.get_path_folders_and_filename(u_path)
 
     #         if not relative_path:
@@ -529,14 +529,14 @@ class S3U_FileHelper(S3_FileHelper):
     #     """
     #     List available data sources in the specified path or directory.
     #     """
-    #     u_path: UPath | None = PathHelper.format_path(path) 
+    #     u_path: UPath | None = PathHelper.format_path(path)
     #     if not u_path:
     #         return []
-                
+
     #     self.connect()
     #     if self.io_client:
     #         return [obj.object_name for obj in self.io_client.list_objects(bucket_name=u_path.root, prefix=u_path.path, recursive=True)]
-            
+
     # @classmethod
     # def calculate_checksum(cls, path: Union[str, UPath], algorithm: str = 'sha256') -> None:
     #     """
@@ -557,7 +557,7 @@ class S3U_FileHelper(S3_FileHelper):
     #     Get the size of the data at the specified path.
     #     """
 
-    #     u_path: UPath | None = PathHelper.format_path(path=path) 
+    #     u_path: UPath | None = PathHelper.format_path(path=path)
 
     #     if not u_path:
     #         return 0
@@ -566,15 +566,15 @@ class S3U_FileHelper(S3_FileHelper):
     #     if self.io_client:
 
     #         objects: Iterator[Any] | None = self._find_objects(path=u_path)
-            
+
     #         object_sizes: list[int] = [ obj.size if obj else 0 for obj in objects ] if objects else []
 
     #         return sum( object_sizes )
-        
+
     #     return 0
 
 
-        
+
 
     # def path_exists(self,  path: Union[str, UPath]) -> bool:
     #     """
@@ -585,10 +585,10 @@ class S3U_FileHelper(S3_FileHelper):
     #     """
 
 
-    #     u_path = PathHelper.format_path(path=path) 
+    #     u_path = PathHelper.format_path(path=path)
     #     if not u_path:
     #         return False
-        
+
 
     #     self.connect()
 
@@ -623,7 +623,7 @@ class S3U_FileHelper(S3_FileHelper):
     #     :return: True if the path exists, False otherwise.
     #     """
     #     return False
-    
+
     # def path_is_file(self,  path: Union[str, UPath]) -> bool:
     #     """
     #     Checks if the specified path exists.
@@ -632,15 +632,15 @@ class S3U_FileHelper(S3_FileHelper):
     #     :return: True if the path exists, False otherwise.
     #     """
 
-    #     u_path: UPath | None = PathHelper.format_path(path) 
+    #     u_path: UPath | None = PathHelper.format_path(path)
     #     if not u_path:
     #         return False
 
-    #     return self.path_exists(path)        
+    #     return self.path_exists(path)
 
     # @classmethod
     # def create_directory(
-    #     cls, 
+    #     cls,
     #     path: Union[str, UPath]
     #     ) -> bool:
     #     """Creates a directory if it does not exist.

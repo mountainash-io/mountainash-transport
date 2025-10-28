@@ -6,12 +6,12 @@ from .base_file_helper import Base_FileHelper
 
 from mountainash_settings import SettingsParameters
 
-class AZ_FileHelper(Base_FileHelper):
+class Azure_FileHelper(Base_FileHelper):
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
-        pass
+        super().__init__(auth_parameters=auth_parameters)
 
     def connect(self) -> bool:
         """Connect to the Azure Blob Storage account."""
@@ -34,8 +34,8 @@ class AZ_FileHelper(Base_FileHelper):
         except AzureError as e:
             print(f'Failed to list Azure Blob Storage containers: {e}')
             return False
-        
-        
+
+
 #     @classmethod
 #     def read_data(cls, source_path: Union[str, UPath], **kwargs) -> Any:
 #         """
@@ -69,9 +69,9 @@ class AZ_FileHelper(Base_FileHelper):
 #         List available data sources in the specified path or directory.
 #         """
 
-#         # formatted_path = PathHelper.format_path(path) 
+#         # formatted_path = PathHelper.format_path(path)
 #         # return list(formatted_path.fs.glob(path))
-            
+
 #         return [str(p) for p in UPath(path).glob(kwargs.get('pattern', '*'))]
 
 #     @classmethod
@@ -101,7 +101,7 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathHelper.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)
 
 #         return u_path.exists()
 
@@ -113,10 +113,10 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathHelper.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)
 
 #         return u_path.is_dir()
-    
+
 #     @classmethod
 #     def path_is_file(cls,  path: Union[str, UPath]) -> bool:
 #         """
@@ -125,14 +125,14 @@ class AZ_FileHelper(Base_FileHelper):
 #         :param path: The path to check.
 #         :return: True if the path exists, False otherwise.
 #         """
-#         u_path: UPath = PathHelper.format_path(path)        
+#         u_path: UPath = PathHelper.format_path(path)
 
-#         return u_path.is_file()    
+#         return u_path.is_file()
 
 
 #     @classmethod
 #     def create_directory(
-#         cls, 
+#         cls,
 #         path: Union[str, UPath]
 #         ) -> bool:
 #         """Creates a directory if it does not exist.
@@ -157,5 +157,5 @@ class AZ_FileHelper(Base_FileHelper):
 #         except OSError:
 #             print(f"Error creating local directory: {u_path.path}")
 #             return False
-        
+
 #         return True

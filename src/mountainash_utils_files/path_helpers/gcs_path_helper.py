@@ -2,7 +2,7 @@ from typing import Union, Optional
 
 from upath import UPath
 
-from mountainash_constants import CONST_STORAGESYSTEM
+from ..constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class GCSPathHelper(BasePathHelper):
@@ -45,7 +45,7 @@ class GCSPathHelper(BasePathHelper):
 
         if not clean_filename:
             return None
-        
+
         return u_path / clean_filename
 
 
@@ -60,4 +60,4 @@ class GCSPathHelper(BasePathHelper):
         :return: A normalized GCS path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.GCS.value)
+        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.GCS)

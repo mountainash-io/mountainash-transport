@@ -8,20 +8,22 @@ import pyarrow.parquet as pq
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from upath import UPath
 
-# from mountainash_constants import CONST_DATAFILEFORMAT
+# from ..constants CONST_DATAFILEFORMAT
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage import StorageAuthBase
-from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
+from ..settings import StorageAuthBase
+
+from ..settings.providers import LocalStorageAuthSettings
 # from pydantic_settings import BaseSettings
 
 # from mountainash_utils_dataclasses import  DataclassUtils
-from mountainash_data import BaseDataFrame
-from mountainash_data.dataframes.utils import   DataFrameUtils
+# from mountainash_dataframes import BaseDataFrame
+from mountainash_dataframes import   DataFrameUtils, SupportedDataFrames
 
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
 
 from mountainash_utils_files.path_helpers import PathHelper
-from mountainash_utils_files.file_helpers import Base_FileHelper, FileHelperFactory
+from mountainash_utils_files.file_helpers import Base_FileHelper
+from mountainash_utils_files.factories import FileHelperFactory
 # from mountainash_utils_files.storage_interface import get_file_helper_object
 # from mountainash_utils_files.storage_interface.storage_interface import FileInterface
 
@@ -42,16 +44,16 @@ class FileWriter:
         filesystem_interface (FilesystemInterface): An instance of the FilesystemInterface class for the specified filesystem.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  destination_auth_parameters: t.Optional[SettingsParameters] = None
                  ):
 
 
         # if file_format and file_format not in DataclassUtils.get_enum_values_set(CONST_DATAFILEFORMAT):
         #     raise ValueError(f"Invalid file format: {file_format}")
-        
+
         #There will need to be a FileReaeder created for every source, so that the source_auth_parameters can be used to get the correct settings
-        
+
         if destination_auth_parameters is None:
             self.destination_auth_parameters: SettingsParameters = SettingsParameters.create("DEFAULT_LOCAL", settings_class=LocalStorageAuthSettings)
         else:
@@ -90,18 +92,18 @@ class FileWriter:
 
 
 
-    # def write_datafile(self, 
-    #                    df_datafile: BaseDataFrame, 
+    # def write_datafile(self,
+    #                    df_datafile: BaseDataFrame,
     #                    output_file_path: t.Union[UPath, str],
     #                    overwrite: t.Optional[bool] = False,
     #                    encrypt: t.Optional[bool] = False,
     #                    compress: t.Optional[bool] = False,
-                       
+
     #                    ) -> bool:
 
     #     # determine:
     #     # persistence as a file or database - in orchestrator
-    #     # file system and url prexix - 
+    #     # file system and url prexix -
     #     # file format - function call, default in config
     #     # source dataframe format - runtime
     #     # test on s3, local, memory, azure, gcs
@@ -114,49 +116,52 @@ class FileWriter:
 
     #     try:
     #         #Write the dataframe to the parquet file
-    #         if self.file_format == CONST_DATAFILEFORMAT.PARQUET.value:
-    #             self.write_parquet(dataframe=df_datafile, output_file_path=u_output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)     
+    #         if self.file_format == CONST_DATAFILEFORMAT.PARQUET:
+    #             self.write_parquet(dataframe=df_datafile, output_file_path=u_output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)
 
-    #         elif self.file_format == CONST_DATAFILEFORMAT.CSV.value:
+    #         elif self.file_format == CONST_DATAFILEFORMAT.CSV:
     #             # raise NotImplementedError
-    #             self.write_csv(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)                
-    #         elif self.file_format == CONST_DATAFILEFORMAT.JSON.value:
+    #             self.write_csv(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)
+    #         elif self.file_format == CONST_DATAFILEFORMAT.JSON:
     #             # raise NotImplementedError
-    #             self.write_json(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)      
-    #         elif self.file_format == CONST_DATAFILEFORMAT.DELTA.value:
+    #             self.write_json(dataframe=df_datafile, output_file_path=output_file_path, overwrite=overwrite, encrypt=encrypt, compress=compress)
+    #         elif self.file_format == CONST_DATAFILEFORMAT.DELTA:
     #             raise NotImplementedError
-    #             # self.write_delta(df_datafile, output_file_path)      
+    #             # self.write_delta(df_datafile, output_file_path)
 
     #         else:
     #             print(f"Unsupported file format: {self.file_format}")
-    #             return False  
-            
-    #         return True  
-                
+    #             return False
+
+    #         return True
+
     #     except Exception:
     #         print(f"Error writing data to file: {output_file_path}")
     #         print(traceback.format_exc())a
     #         return False
-        
 
 
-    def write_parquet(self, 
-                      dataframe: t.Any,
-                      output_file_path: t.Union[UPath, str], 
+
+    def write_parquet(self,
+                      dataframe: SupportedDataFrames,
+                      output_file_path: t.Union[UPath, str],
                       overwrite: t.Optional[bool] = True,
                       encrypt: t.Optional[bool] = False,
                       compress: t.Optional[bool] = False,
                       **kwargs) -> bool:
-            
+
 
         storage_interface: Base_FileHelper = self.get_storage_interface()
         self.prepare_write_location(output_file_path=output_file_path, overwrite=overwrite)
 
         u_output_file_path: UPath | None = PathHelper.format_path(path=output_file_path)
 
-        pa_dataframe: pa.DataFrame = DataFrameUtils.cast_dataframe_to_pyarrow(df=dataframe)
+        pa_dataframe: pa.DataFrame = DataFrameUtils.to_pyarrow(dataframe)
 
         settings = get_settings(self.destination_auth_parameters)
+        if not issubclass(settings.__class__, StorageAuthBase):
+            raise ValueError(f"Settings must be of type StorageAuthBase. Received: {settings.__class__}")
+
 
         if encrypt or compress:
 
@@ -172,7 +177,7 @@ class FileWriter:
                 with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as parquet_output_stream:
                     parquet_output_stream.write(processed_stream.read())
             return True
-        
+
         else:
 
 
@@ -215,8 +220,8 @@ class FileWriter:
 
 
 
-    def write_csv(self, 
-                    dataframe: t.Any, 
+    def write_csv(self,
+                    dataframe: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite: t.Optional[bool] = True,
                     encrypt: t.Optional[bool] = False,
@@ -232,7 +237,7 @@ class FileWriter:
         settings = get_settings(self.destination_auth_parameters)
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe=dataframe)
+        pd_dataframe: pd.DataFrame = DataFrameUtils.to_pandas(dataframe=dataframe)
 
         if encrypt or compress:
 
@@ -286,8 +291,8 @@ class FileWriter:
             return True
 
 
-    def write_json(self, 
-                   dataframe: BaseDataFrame, 
+    def write_json(self,
+                   dataframe: SupportedDataFrames,
                    output_file_path: t.Union[str, UPath],
                    overwrite: t.Optional[bool] = True,
                    encrypt: t.Optional[bool] = False,
@@ -302,7 +307,7 @@ class FileWriter:
 
 
         #Convert to pandas dataframe
-        pd_dataframe: pd.DataFrame = DataFrameUtils.cast_dataframe_to_pandas(dataframe.materialise())
+        pd_dataframe: pd.DataFrame = DataFrameUtils.to_pandas(dataframe.materialise())
 
         settings = get_settings(self.destination_auth_parameters)
 
@@ -322,11 +327,11 @@ class FileWriter:
                 with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
                     json_output_stream.write(processed_stream.read())
             return True
-        
+
 
 
         else:
-            
+
             if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("S3"):
 
                 # with io.BytesIO() as temp_stream:
@@ -337,7 +342,7 @@ class FileWriter:
 
 
                 with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
-                    pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)                    
+                    pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)
 
             if settings.PROVIDER_TYPE == CONST_STORAGE_PROVIDER_TYPE.get("R2"):
 
@@ -349,7 +354,7 @@ class FileWriter:
 
 
                 # with storage_interface.open_write_binarystream(destination_path=u_output_file_path) as json_output_stream:
-                #     pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)                    
+                #     pd_dataframe.to_json(path_or_buf=json_output_stream, orient="records", lines=True)
 
 
 
@@ -361,31 +366,31 @@ class FileWriter:
             return True
 
 
-    def write_delta(self, 
-                    df_datafile: BaseDataFrame, 
+    def write_delta(self,
+                    df_datafile: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,
                     compress: t.Optional[bool] = False
                     ):
-        
+
         raise NotImplementedError
 
-    def write_iceberg(self, 
-                    df_datafile: BaseDataFrame, 
+    def write_iceberg(self,
+                    df_datafile: SupportedDataFrames,
                     output_file_path: t.Union[str, UPath],
                     overwrite:bool = True,
                     encrypt: t.Optional[bool] = False,
                     compress: t.Optional[bool] = False
                     ):
-        
+
         raise NotImplementedError
 
 
 
-    def write_xml_object(self, 
-                         xmlobj, 
-                         xml_serializer: XmlSerializer, 
+    def write_xml_object(self,
+                         xmlobj,
+                         xml_serializer: XmlSerializer,
                          xml_output_filepath: t.Union[UPath, str],
                          overwrite: t.Optional[bool] = True,
                          encrypt: t.Optional[bool] = False,
@@ -393,7 +398,7 @@ class FileWriter:
 
         storage_interface = self.get_storage_interface()
         self.prepare_write_location(xml_output_filepath=xml_output_filepath, overwrite=overwrite)
-        
+
         u_xml_output_filepath: UPath | None = PathHelper.format_path(path=xml_output_filepath)
 
         encrypt = bool(encrypt)
@@ -405,7 +410,7 @@ class FileWriter:
 
                 #Write the dataframe to a temporary stream in parquet
                 with io.StringIO() as temp_stream:
-                    
+
                     #write to a temp stream
                     #xml_serializer.write(out=temp_stream, obj=xmlobj)
                     temp_stream.write(xml_serializer.render(obj=xmlobj))
@@ -415,7 +420,7 @@ class FileWriter:
                     output_binary_file.write(processed_stream.read())
 
                 return True
-        
+
         else:
             with storage_interface.open_write_textstream(destination_path=u_xml_output_filepath) as output_text_file:
 
@@ -428,6 +433,6 @@ class FileWriter:
 
 
         xml_output_filestr = PathHelper.path_to_str(u_xml_output_filepath)
-        
+
         print(f"Writing XML file to {xml_output_filestr}")
         return True

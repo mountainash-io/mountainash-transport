@@ -9,6 +9,7 @@ from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_settings import SettingsParameters
 
 from .base_file_helper import Base_FileHelper
+from ..settings.providers import SFTPStorageAuthSettings
 
 # from mountainash_acdrs.utils.data_storage.data_storage_functions import get_data_storage_factory, get_data_storage_object
 
@@ -16,33 +17,41 @@ from .base_file_helper import Base_FileHelper
 
 class SFTP_FileHelper(Base_FileHelper):
 
-    io_client:   Optional[SFTPClient] 
+    io_client:   Optional[SFTPClient]
     ssh_client:  Optional[SSHClient]
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
 
-        super().__init__(auth_parameters)
+        # Initialize base class
+        super().__init__(auth_parameters=auth_parameters)
 
+        self.storage_system = "SFTP"
+
+        # Get auth settings
+        self.io_auth_settings: SFTPStorageAuthSettings = SFTPStorageAuthSettings.get_settings(auth_parameters)
+
+        # Connection requirements
         self.requires_io_connection = True
         self.requires_ssh_connection = True
 
-        """Initialize the SFTPManager object"""
-        self.ssh_hostname =         self.io_auth_settings.HOST
-        self.ssh_port =             self.io_auth_settings.PORT
-        self.ssh_username =         self.io_auth_settings.USERNAME
-        self.ssh_password =         self.io_auth_settings.PASSWORD
-        self.ssh_keypath =          self.io_auth_settings.SSH_KEY_PATH
-        self.ssh_fwd_remoteport =   self.io_auth_settings.SSH_FWD_REMOTEPORT
-        self.ssh_fwd_localport =    self.io_auth_settings.SSH_FWD_LOCALPORT
+        # Initialize SFTP connection parameters
+        self.ssh_hostname = self.io_auth_settings.HOST
+        self.ssh_port = self.io_auth_settings.PORT
+        self.ssh_username = self.io_auth_settings.USERNAME
+        self.ssh_password = self.io_auth_settings.PASSWORD
+        self.ssh_keypath = self.io_auth_settings.SSH_KEY_PATH
+        self.ssh_fwd_remoteport = self.io_auth_settings.SSH_FWD_REMOTEPORT
+        self.ssh_fwd_localport = self.io_auth_settings.SSH_FWD_LOCALPORT
 
+        # Initialize clients
         self.io_client = None
-        self.ssh_client = None 
+        self.ssh_client = None
 
-        self.connect()
-
+        # Set interface attributes and connect
         self.set_interface_attributes()
+        self.connect()
 
 
     def set_interface_attributes(self) -> None:
@@ -101,7 +110,7 @@ class SFTP_FileHelper(Base_FileHelper):
         """Connect to the SFTP server"""
 
         connected: bool = self.check_if_io_connected()
-        
+
         if not connected:
 
             if self.ssh_client is not None:
@@ -121,7 +130,7 @@ class SFTP_FileHelper(Base_FileHelper):
             #     self.ssh_client.connect(hostname=self.hostname, port=self.port, username=self.username, password=self.password, key_filename=ssh_keypath_str)
             # else:
             #     self.ssh_client.connect(hostname=self.hostname, port=self.port, username=self.username, password=self.password)
-                
+
             self.io_client = self.ssh_client.open_sftp() if self.ssh_client else None
 
             print(f'Connecting to SFTP: {self.ssh_hostname}')
@@ -147,7 +156,7 @@ class SFTP_FileHelper(Base_FileHelper):
                 self.io_client.listdir(path="/")
             except OSError:
                 connected =  False
-            
+
         return connected
 
 
@@ -164,7 +173,7 @@ class SFTP_FileHelper(Base_FileHelper):
     #         self.io_client.getfo(source_path_str, destination_stream, prefetch=True)
     #     except Exception as e:
     #         raise ValueError(f"Error writing to stream: {e}")
-        
+
     #     return True
 
 
@@ -177,7 +186,7 @@ class SFTP_FileHelper(Base_FileHelper):
     #         self.io_client.putfo(source_stream, destination_path_str, confirm=True)
     #     except Exception as e:
     #         raise ValueError(f"Error writing to stream: {e}")
-        
+
     #     return True
 
 
@@ -185,43 +194,43 @@ class SFTP_FileHelper(Base_FileHelper):
     # File operations
 
     def _native_put_object_from_stream(self,
-                   destination_path: UPath, 
-                   source_stream: IO, 
-                   length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                   destination_path: UPath,
+                   source_stream: IO,
+                   length: int,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
         if not str_destination_path:
             return False
-        
+
         if not self.io_client:
             return False
 
         processed_source_stream: io.BytesIO = self.process_source_stream(source_stream=source_stream,
-                                                                        encrypt=encrypt, 
+                                                                        encrypt=encrypt,
                                                                         decrypt=decrypt,
                                                                         compress=compress,
                                                                         decompress=decompress)
 
 
         # do it!
-        put_object: Any = self.io_client.putfo( fl=processed_source_stream, 
-                                               remotepath=str_destination_path, 
-                                               file_size=length ) 
+        put_object: Any = self.io_client.putfo( fl=processed_source_stream,
+                                               remotepath=str_destination_path,
+                                               file_size=length )
 
         return put_object
 
-    def _native_put_object_from_path(self, 
-                   destination_path: UPath, 
-                   source_path: UPath,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+    def _native_put_object_from_path(self,
+                   destination_path: UPath,
+                   source_path: UPath,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
         if compress or encrypt or decompress or decrypt:
@@ -243,17 +252,17 @@ class SFTP_FileHelper(Base_FileHelper):
         #TODO: log some of the stats of the put method
         self.io_client.put(localpath=str_source_path, remotepath=str_destination_path)
 
-        return True        
-        
+        return True
+
 
     def _native_get_object_to_stream(self,
-                   source_path: UPath, 
+                   source_path: UPath,
                    destination_stream: IO,
-                   length: int,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+                   length: int,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool:
 
 
@@ -270,24 +279,24 @@ class SFTP_FileHelper(Base_FileHelper):
 
             self.io_client.getfo(remotepath=str_source_path, fl=temp_stream)
 
-            self.copy_stream_to_stream(source_stream=temp_stream, 
+            self.copy_stream_to_stream(source_stream=temp_stream,
                                        destination_stream=destination_stream,
-                                       encrypt=encrypt, 
+                                       encrypt=encrypt,
                                         decrypt=decrypt,
                                         compress=compress,
                                         decompress=decompress)
 
-        return True        
+        return True
 
 
 
-    def _native_get_object_to_path(self, 
-                   source_path: UPath, 
-                   destination_path: UPath,            
-                    encrypt: bool = False,
-                    decrypt: bool = False,
-                    compress: bool = False,
-                    decompress: bool = False
+    def _native_get_object_to_path(self,
+                   source_path: UPath,
+                   destination_path: UPath,
+                    encrypt: Optional[bool] = False,
+                    decrypt: Optional[bool] = False,
+                    compress: Optional[bool] = False,
+                    decompress: Optional[bool] = False
                    ) -> bool|Any:
 
         if compress or encrypt or decompress or decrypt:
@@ -310,12 +319,12 @@ class SFTP_FileHelper(Base_FileHelper):
         fget:  Any = self.io_client.get(remotepath=str_destination_path, localpath=str_source_path)
 
         return fget
-        
+
 
 
     # def put_object_from_stream(self,
-    #                destination_path: Optional[Union[str, UPath]], 
-    #                source_stream: IO[Any], 
+    #                destination_path: Optional[Union[str, UPath]],
+    #                source_stream: IO[Any],
     #                length: int) -> bool|Any:
 
     #     self.connect()
@@ -340,8 +349,8 @@ class SFTP_FileHelper(Base_FileHelper):
     #     else:
     #         return False
 
-    # def put_object_from_path(self, 
-    #                destination_path: Optional[Union[str, UPath]], 
+    # def put_object_from_path(self,
+    #                destination_path: Optional[Union[str, UPath]],
     #                source_path: Optional[Union[str, UPath]]
     #                ) -> bool:
 
@@ -368,7 +377,7 @@ class SFTP_FileHelper(Base_FileHelper):
     #         try:
     #             #MiniIO Client
     #             self.io_client.put(localpath=str_source_path, remotepath=str_destination_path)
-                
+
     #             return True
 
     #         except Exception as e:
@@ -378,7 +387,7 @@ class SFTP_FileHelper(Base_FileHelper):
 
 
     # def get_object_to_stream(self,
-    #                source_path: Optional[Union[str, UPath]], 
+    #                source_path: Optional[Union[str, UPath]],
     #                destination_stream: IO[Any]) -> bool:
 
     #     self.connect()
@@ -398,7 +407,7 @@ class SFTP_FileHelper(Base_FileHelper):
     #         print(f"get_object_to_stream(): Source does not exist: {u_source_path}")
     #         return False
 
-    #     #Do it!        
+    #     #Do it!
     #     if self.io_client and source_exists and str_source_path and destination_stream:
 
     #         try:
@@ -421,7 +430,7 @@ class SFTP_FileHelper(Base_FileHelper):
 
 
     #             # destination_stream.write(bytes_io_stream)
-                
+
     #             return True
 
     #         except Exception as e:
@@ -429,8 +438,8 @@ class SFTP_FileHelper(Base_FileHelper):
     #     else:
     #         return False
 
-    # def get_object_to_path(self, 
-    #                source_path: Optional[Union[str, UPath]], 
+    # def get_object_to_path(self,
+    #                source_path: Optional[Union[str, UPath]],
     #                destination_path: Optional[Union[str, UPath]]
     #                ) -> bool|Any:
 
@@ -443,7 +452,7 @@ class SFTP_FileHelper(Base_FileHelper):
     #     #Format S3 Source
     #     u_source_path: str | None = PathHelper.path_to_str(path=source_path)
 
-    #     #Validate source        
+    #     #Validate source
     #     if not u_source_path:
     #         return False
 
@@ -479,7 +488,7 @@ class SFTP_FileHelper(Base_FileHelper):
         List available data sources in the specified path or directory.
         """
 
-        # formatted_path = PathHelper.format_path(path) 
+        # formatted_path = PathHelper.format_path(path)
         # return list(formatted_path.fs.glob(path))
         path_str: str | None = self.format_path_as_string(path=path)
         if not path_str:
@@ -503,14 +512,14 @@ class SFTP_FileHelper(Base_FileHelper):
         #     for chunk in iter(lambda: file.read(4096), b""):
         #         hash_alg.update(chunk)
         # return hash_alg.hexdigest()
-    
+
     def get_size(self, path: Union[str, UPath]) -> int:
         """
         Get the size of the data at the specified path.
         """
 
         path_str = self.format_path_as_string(path=path)
-        
+
         if not path_str or not self.connect():
             return 0
 
@@ -533,7 +542,7 @@ class SFTP_FileHelper(Base_FileHelper):
         """
 
         path_str = self.format_path_as_string(path=path)
-        
+
         if not path_str or not self.connect():
             return False
 
@@ -553,13 +562,13 @@ class SFTP_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathHelper.format_path(path=path)        
+        u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
 
         return u_path.is_dir()
-    
+
     def path_is_file(self,  path: Union[str, UPath]) -> bool:
         """
         Checks if the specified path exists.
@@ -567,15 +576,15 @@ class SFTP_FileHelper(Base_FileHelper):
         :param path: The path to check.
         :return: True if the path exists, False otherwise.
         """
-        u_path: UPath|None = PathHelper.format_path(path=path)        
+        u_path: UPath|None = PathHelper.format_path(path=path)
 
         if not u_path:
             return False
 
-        return u_path.is_file()    
+        return u_path.is_file()
 
     def create_directory(
-        self, 
+        self,
         path: Union[str, UPath]
         ) -> bool:
         """Creates a directory if it does not exist.
@@ -605,5 +614,5 @@ class SFTP_FileHelper(Base_FileHelper):
         except OSError:
             print(f"Error creating local directory: {u_path.path}")
             return False
-        
+
         return True

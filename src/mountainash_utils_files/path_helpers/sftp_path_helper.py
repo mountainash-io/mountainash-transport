@@ -2,7 +2,7 @@ from typing import Union, Optional
 
 from upath import UPath
 
-from mountainash_constants import CONST_STORAGESYSTEM
+from ..constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class SFTPPathHelper(BasePathHelper):
@@ -71,4 +71,4 @@ class SFTPPathHelper(BasePathHelper):
         if not path_str:
             return None
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.SFTP.value)
+        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.SFTP)

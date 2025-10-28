@@ -3,7 +3,7 @@ from .base_path_helper import BasePathHelper
 
 from upath import UPath
 
-# from mountainash_constants import CONST_STORAGESYSTEM
+# from ..constants import CONST_STORAGESYSTEM
 
 class LocalPathHelper(BasePathHelper):
 
@@ -38,9 +38,9 @@ class LocalPathHelper(BasePathHelper):
 
         #Let "/" alone!
         if len(path_str) > 1:
-            clean_path_str: str | None = cls.strip_trailing_slashes(path_str) 
+            clean_path_str: str | None = cls.strip_trailing_slashes(path_str)
         else:
-            clean_path_str = path_str       
+            clean_path_str = path_str
 
         if not clean_path_str:
             return None
@@ -63,7 +63,7 @@ class LocalPathHelper(BasePathHelper):
     #     :param path: The path to check.
     #     :return: True if the path exists, False otherwise.
     #     """
-    #     u_path: UPath = cls.format_path(path)        
+    #     u_path: UPath = cls.format_path(path)
 
     #     if u_path.is_file() or u_path.is_dir():
     #         return True

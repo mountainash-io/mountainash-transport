@@ -5,8 +5,8 @@ from .base_file_helper import Base_FileHelper
 from mountainash_utils_files.path_helpers import PathHelper
 from mountainash_utils_files.path_helpers import S3PathHelper
 from mountainash_settings import SettingsParameters, get_settings
-from mountainash_settings.settings.auth.storage.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_settings.settings.auth.storage.providers.s3 import S3StorageAuthSettings
+from ..constants import CONST_STORAGE_PROVIDER_TYPE
+from ..settings.providers.s3 import S3StorageAuthSettings
 
 import io
 import boto3
@@ -19,15 +19,16 @@ class S3Express_FileHelper(Base_FileHelper):
     in a hierarchical structure.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  auth_parameters: SettingsParameters
                  ) -> None:
-        
+
+        super().__init__(auth_parameters=auth_parameters)
+
         # Check if auth parameters are of the correct type
         if not isinstance(get_settings(auth_parameters), S3StorageAuthSettings):
             raise ValueError(f"Invalid auth parameters type: {type(get_settings(auth_parameters))}. Must be S3StorageAuthSettings")
 
-        self.auth_parameters = auth_parameters
 
         # S3 Express uses a different storage provider type
         # Assuming CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS exists or will be added
@@ -104,8 +105,8 @@ class S3Express_FileHelper(Base_FileHelper):
     def connect(self) -> bool:
         """Connect to the S3 Express using boto3 client."""
         connected = self.check_if_io_connected()
-        
-        settings = get_settings(self.auth_parameters)
+
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not connected:
             if self.io_client is not None:
@@ -115,15 +116,15 @@ class S3Express_FileHelper(Base_FileHelper):
                 # S3 Express uses a different endpoint format
                 # Control endpoint: s3express-control.{region}.amazonaws.com
                 # Data endpoint: {bucket-name}--x-s3.{region}.amazonaws.com
-                
+
                 # Extract zone ID from bucket name (assuming format: base-name--zonal-id--x-s3)
                 bucket_parts = settings.BUCKET.split('--')
                 if len(bucket_parts) < 3 or not settings.BUCKET.endswith('--x-s3'):
                     raise ValueError(f"Invalid S3 Express bucket name: {settings.BUCKET}. Format should be base-name--zonal-id--x-s3")
-                
+
                 # zone_id = bucket_parts[1]
                 region = settings.REGION
-                
+
                 # For S3 Express, we need to specify the zone
                 self.io_client = boto3.client(
                     service_name="s3",
@@ -152,15 +153,15 @@ class S3Express_FileHelper(Base_FileHelper):
 
     def check_if_io_connected(self) -> bool:
         """Check if connected to S3 Express by trying to list objects."""
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not self.io_client:
             return False
 
-        try:            
+        try:
             # List objects in bucket with a limit of 1
             objects = self.io_client.list_objects_v2(
-                Bucket=settings.BUCKET, 
+                Bucket=settings.BUCKET,
                 MaxKeys=1
             )
             return 'Contents' in objects or objects.get('KeyCount', 0) >= 0
@@ -179,17 +180,17 @@ class S3Express_FileHelper(Base_FileHelper):
     # File operations
 
     def _native_put_object_from_stream(self,
-                   destination_path: UPath, 
-                   source_stream: io.BytesIO, 
-                   length: int,            
+                   destination_path: UPath,
+                   source_stream: io.BytesIO,
+                   length: int,
                     encrypt: bool = False,
                     decrypt: bool = False,
                     compress: bool = False,
                     decompress: bool = False
                    ) -> bool|Any:
         """Put an object to S3 Express from a stream."""
-        
-        settings = get_settings(self.auth_parameters)
+
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         # Get bucket name and object path
         bucket_name: str| None = settings.BUCKET  # Use the bucket from settings
@@ -203,7 +204,7 @@ class S3Express_FileHelper(Base_FileHelper):
         # Process source stream (encryption, compression)
         processed_source_stream: io.BytesIO = self.process_source_stream(
             source_stream=source_stream,
-            encrypt=encrypt, 
+            encrypt=encrypt,
             decrypt=decrypt,
             compress=compress,
             decompress=decompress
@@ -212,8 +213,8 @@ class S3Express_FileHelper(Base_FileHelper):
         # Upload to S3 Express
         try:
             result = self.io_client.put_object(
-                Bucket=bucket_name, 
-                Key=object_name, 
+                Bucket=bucket_name,
+                Key=object_name,
                 Body=processed_source_stream
             ) if self.io_client else False
             return result
@@ -221,16 +222,16 @@ class S3Express_FileHelper(Base_FileHelper):
             print(f"Error putting object to S3 Express: {e}")
             return False
 
-    def _native_put_object_from_path(self, 
-                   destination_path: UPath, 
+    def _native_put_object_from_path(self,
+                   destination_path: UPath,
                    source_path: UPath,
-                   **kwargs            
+                   **kwargs
                    ) -> bool:
         """Put an object to S3 Express from a local file path."""
-        
+
         self.check_kwargs_for_compression_encryption("_native_put_object_from_path", **kwargs)
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         # Format Source
         source_path_str: str | None = PathHelper.path_to_str(path=source_path)
@@ -252,8 +253,8 @@ class S3Express_FileHelper(Base_FileHelper):
             return False
 
     def _native_get_object_to_stream(self,
-                   source_path: UPath, 
-                   destination_stream: IO,          
+                   source_path: UPath,
+                   destination_stream: IO,
                    length: int = 0,
                    encrypt: bool = False,
                    decrypt: bool = False,
@@ -263,22 +264,22 @@ class S3Express_FileHelper(Base_FileHelper):
         """Get an object from S3 Express to a stream."""
 
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         try:
             response = self.io_client.get_object(
-                Bucket=settings.BUCKET, 
+                Bucket=settings.BUCKET,
                 Key=object_name
             )
             source_stream = io.BytesIO(response['Body'].read())
-            
+
             # Process and copy to destination stream
             self.copy_stream_to_stream(
-                source_stream=source_stream, 
+                source_stream=source_stream,
                 destination_stream=destination_stream,
-                encrypt=encrypt, 
-                decrypt=decrypt, 
-                compress=compress, 
+                encrypt=encrypt,
+                decrypt=decrypt,
+                compress=compress,
                 decompress=decompress
             )
             return True
@@ -286,18 +287,18 @@ class S3Express_FileHelper(Base_FileHelper):
             print(f"Error getting object from S3 Express to stream: {e}")
             return False
 
-    def _native_get_object_to_path(self, 
-                   source_path: UPath, 
-                   destination_path: UPath,            
+    def _native_get_object_to_path(self,
+                   source_path: UPath,
+                   destination_path: UPath,
                    **kwargs
                    ) -> bool|Any:
         """Get an object from S3 Express to a local file path."""
-        
+
         self.check_kwargs_for_compression_encryption("_native_get_object_to_path", **kwargs)
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         str_destination_path: str | None = PathHelper.path_to_str(path=destination_path)
-        
+
         # Get object name
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=source_path)
 
@@ -311,7 +312,7 @@ class S3Express_FileHelper(Base_FileHelper):
                 )
             return True
         except ClientError as e:
-            print(f"Error getting object from S3 Express to path: {e}") 
+            print(f"Error getting object from S3 Express to path: {e}")
             return False
 
     #================================================================
@@ -326,19 +327,19 @@ class S3Express_FileHelper(Base_FileHelper):
         try:
             # S3 Express requires a different API call for listing directory buckets
             response = self.io_client.list_directory_buckets()
-            
+
             buckets = [bucket['Name'] for bucket in response.get('Buckets', [])] if response else None
             return buckets
         except ClientError as e:
             print(f'Failed to list S3 Express directory buckets: {e}')
             return None
 
-    def _bucket_exists(self, 
+    def _bucket_exists(self,
                       bucket_name: str) -> bool:
         """Check if an S3 Express directory bucket exists."""
 
         if not self.io_client:
-            return False 
+            return False
 
         try:
             # For S3 Express, we need to check if a specific directory bucket exists
@@ -350,11 +351,11 @@ class S3Express_FileHelper(Base_FileHelper):
     def _find_objects(self, path: Union[str, UPath], maxkeys: Optional[int] = 999999) -> Optional[Iterator[Any]]:
         """Find objects in S3 Express that match the given path."""
 
-        u_path = PathHelper.format_path(path) 
+        u_path = PathHelper.format_path(path)
         if not u_path:
             return None
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         self.connect()
 
@@ -375,10 +376,10 @@ class S3Express_FileHelper(Base_FileHelper):
 
             try:
                 objects = self.io_client.list_objects_v2(
-                    Bucket=settings.BUCKET, 
+                    Bucket=settings.BUCKET,
                     Prefix=prefix_relative_path,
                     MaxKeys=maxkeys
-                )      
+                )
 
                 return objects if objects and objects.get('KeyCount', 0) > 0 else None
             except ClientError as e:
@@ -388,7 +389,7 @@ class S3Express_FileHelper(Base_FileHelper):
     def list_sources(self, path: Optional[Union[str, UPath]], **kwargs) -> Optional[List[str|None]]:
         """List available data sources in S3 Express at the specified path."""
 
-        u_path: UPath | None = PathHelper.format_path(path) 
+        u_path: UPath | None = PathHelper.format_path(path)
         if not u_path:
             return []
 
@@ -402,16 +403,16 @@ class S3Express_FileHelper(Base_FileHelper):
             except ClientError as e:
                 print(f"Error listing sources from S3 Express: {e}")
                 return []
-            
+
     def get_size(self, path: Union[str, UPath]) -> int:
         """Get the size of data at the specified path in S3 Express."""
-        
-        u_path: UPath | None = PathHelper.format_path(path=path) 
+
+        u_path: UPath | None = PathHelper.format_path(path=path)
         if not u_path:
             return 0
 
         self.connect()
-        
+
         if self.io_client:
             try:
                 objects: Iterator[Any] | None = self._find_objects(path=u_path)
@@ -426,16 +427,16 @@ class S3Express_FileHelper(Base_FileHelper):
 
     def path_exists(self, path: Union[str, UPath]) -> bool:
         """Check if the specified path exists in S3 Express."""
-        
-        u_path = PathHelper.format_path(path=path) 
+
+        u_path = PathHelper.format_path(path=path)
         if not u_path:
             return False
 
         self.connect()
 
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
         object_name: str | None = S3PathHelper.get_path_folders_and_filename(path=u_path)
-        
+
         if not object_name:
             return False
 
@@ -461,10 +462,10 @@ class S3Express_FileHelper(Base_FileHelper):
 
     def path_is_dir(self, path: Union[str, UPath]) -> bool:
         """Check if the specified path is a directory in S3 Express."""
-        
+
         # S3 Express has true directory support
         u_path = PathHelper.format_path(path=path)
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not u_path:
             return False
@@ -485,32 +486,32 @@ class S3Express_FileHelper(Base_FileHelper):
                 Delimiter='/',
                 MaxKeys=1
             )
-            
+
             # If this path exists as a common prefix, it's a directory
             return len(response.get('CommonPrefixes', [])) > 0 or response.get('KeyCount', 0) > 0
         except ClientError as e:
             print(f"Error checking if path is directory in S3 Express: {e}")
             return False
-    
+
     def path_is_file(self, path: Union[str, UPath]) -> bool:
         """Check if the specified path is a file in S3 Express."""
-        
-        u_path: UPath | None = PathHelper.format_path(path) 
-        settings = get_settings(self.auth_parameters)
+
+        u_path: UPath | None = PathHelper.format_path(path)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not u_path:
             return False
 
         try:
             object_name = S3PathHelper.get_path_folders_and_filename(u_path)
-            
+
             if not object_name:
                 return False
-                
+
             # Ensure not a directory (doesn't end with '/')
             if object_name.endswith('/'):
                 return False
-                
+
             # Check if object exists
             self.io_client.head_object(
                 Bucket=settings.BUCKET,
@@ -522,10 +523,10 @@ class S3Express_FileHelper(Base_FileHelper):
 
     def create_directory(self, path: Union[str, UPath]) -> bool:
         """Create a directory in S3 Express if it doesn't exist."""
-        
+
         # S3 Express has true directory support
         u_path = PathHelper.format_path(path=path)
-        settings = get_settings(self.auth_parameters)
+        settings: S3StorageAuthSettings = S3StorageAuthSettings.get_settings(self.auth_parameters)
 
         if not u_path:
             return False
