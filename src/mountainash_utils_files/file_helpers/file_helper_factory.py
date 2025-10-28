@@ -13,7 +13,7 @@ from .s3_file_helper import S3_FileHelper
 from .r2_file_helper import R2_FileHelper
 
 
-from mountainash_settings import SettingsParameters, get_settings
+from mountainash_settings import SettingsParameters
 from ..settings import StorageAuthBase
 from ..settings.providers import LocalStorageAuthSettings
 
