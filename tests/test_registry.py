@@ -80,7 +80,16 @@ class TestRegisterAndGetBackend:
     """Tests for the decorator registry."""
 
     def setup_method(self):
-        clear_registry()
+        """Save registry state before each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        self._saved_registry = dict(_backend_registry)
+        _backend_registry.clear()
+
+    def teardown_method(self):
+        """Restore registry state after each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        _backend_registry.clear()
+        _backend_registry.update(self._saved_registry)
 
     def test_decorator_registers_class(self):
         @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
@@ -151,7 +160,16 @@ class TestGetRegisteredBackends:
     """Tests for get_registered_backends."""
 
     def setup_method(self):
-        clear_registry()
+        """Save registry state before each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        self._saved_registry = dict(_backend_registry)
+        _backend_registry.clear()
+
+    def teardown_method(self):
+        """Restore registry state after each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        _backend_registry.clear()
+        _backend_registry.update(self._saved_registry)
 
     def test_returns_empty_dict_after_clear(self):
         assert get_registered_backends() == {}
@@ -176,7 +194,16 @@ class TestClearRegistry:
     """Tests for clear_registry."""
 
     def setup_method(self):
-        clear_registry()
+        """Save registry state before each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        self._saved_registry = dict(_backend_registry)
+        _backend_registry.clear()
+
+    def teardown_method(self):
+        """Restore registry state after each test."""
+        from mountainash_utils_files.storage_registry.registry import _backend_registry
+        _backend_registry.clear()
+        _backend_registry.update(self._saved_registry)
 
     def test_clear_removes_all_backends(self):
         @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)

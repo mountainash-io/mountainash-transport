@@ -32,7 +32,7 @@ def copy_between(
         destination_facade: Facade wrapping the destination backend.
     """
     if (
-        type(source_facade._backend) is type(destination_facade._backend)
+        isinstance(source_facade._backend, type(destination_facade._backend))
         and source_facade.supports(StorageCopyProtocol)
     ):
         source_facade.copy(source_path, destination_path)

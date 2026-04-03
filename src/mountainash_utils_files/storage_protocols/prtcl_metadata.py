@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from typing import Protocol, runtime_checkable
 
 from mountainash_utils_files.dataclasses.file_metadata import FileMetadata
