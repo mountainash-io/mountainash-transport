@@ -2,7 +2,6 @@ from typing import Union
 
 from upath import UPath
 
-from ..constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class AZPathHelper(BasePathHelper):
@@ -54,4 +53,4 @@ class AZPathHelper(BasePathHelper):
         :return: A normalized AZ path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key=CONST_STORAGESYSTEM.AZ)
+        return BasePathHelper._normalize_path_schema(path_str=path_str, scheme_key="AZ")

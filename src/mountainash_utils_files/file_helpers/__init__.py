@@ -24,7 +24,7 @@ __getattr__, __dir__, __all__ = lazy_loader.attach(
     submod_attrs={
         'base_file_helper': ['Base_FileHelper'],
         'local_file_helper': ['Local_FileHelper'],
-        # 'file_helper_factory': ['FileHelperFactory', 'get_file_helper_factory'],
+        'file_helper_factory': ['FileHelperFactory', 'get_file_helper_factory'],
 
         's3_file_helper': ['S3_FileHelper'],
         's3_minio_file_helper': ['S3_MinIO_FileHelper'],

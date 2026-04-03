@@ -1,7 +1,6 @@
 from typing import Union, Optional
 from upath import UPath
 
-from ..constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class S3PathHelper(BasePathHelper):
@@ -159,4 +158,4 @@ class S3PathHelper(BasePathHelper):
         :return: A normalized S3 path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.S3)
+        return BasePathHelper._normalize_path_schema(path_str, "S3")

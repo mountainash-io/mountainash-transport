@@ -4,9 +4,30 @@ from abc import ABC
 
 from upath import UPath
 from urllib.parse import urlparse
-from mountainash_utils_dataclasses import EnumUtils
 
-from ..constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
+# Inline scheme prefix mapping, replacing removed CONST_STORAGESYSTEM_PREFIX and CONST_STORAGESYSTEM
+_SCHEME_PREFIX_MAP: dict[str, str] = {
+    "LOCAL_DISK": "",
+    "B2": "b2",
+    "S3": "s3",
+    "S3U": "s3u",
+    "GCS": "gs",
+    "AZ": "azure",
+    "DBFS": "dbfs",
+    "HDFS": "hdfs",
+    "SFTP": "sftp",
+    "FTP": "ftp",
+    "WEBHDFS": "webhdfs",
+    "SSH": "ssh",
+    "SPARK": "spark",
+    "TRINO": "trino",
+    "GDRIVE": "gdrive",
+    "DROPBOX": "dropbox",
+    "ONEDRIVE": "onedrive",
+    "SHAREPOINT": "sharepoint",
+    "GITHUB": "github",
+}
+_PREFIX_TO_SYSTEM_MAP: dict[str, str] = {v: k for k, v in _SCHEME_PREFIX_MAP.items() if v}
 
 class BasePathHelper(ABC):
 
@@ -110,29 +131,16 @@ class BasePathHelper(ABC):
         path_str: str | None = cls.path_to_str(path)
 
         if not path_str:
-            return CONST_STORAGESYSTEM.LOCAL_DISK
+            return "LOCAL_DISK"
 
         parsed = urlparse(path_str)
         path_scheme = parsed.scheme.lower()
 
-        if path_scheme in EnumUtils.get_enum_values(CONST_STORAGESYSTEM_PREFIX):
-
-            storage_system = EnumUtils.find_member_name(CONST_STORAGESYSTEM_PREFIX, path_scheme)
-
-            if storage_system is None:
-                raise ValueError(f"Failed to identify storage system for path: {path_str}.")
-            elif isinstance(storage_system, list) and len(storage_system) > 1:
-                raise ValueError(f"Multiple storage systems found for path: {path_str}.")
-            elif isinstance(storage_system, list) and len(storage_system) == 1:
-                return storage_system[0]
-            elif isinstance(storage_system, str):
-                return storage_system
-            else:
-                raise ValueError(f"Failed to identify storage system for path: {path_str}")
-
+        if path_scheme in _PREFIX_TO_SYSTEM_MAP:
+            return _PREFIX_TO_SYSTEM_MAP[path_scheme]
         else:
             print(f"Could not identify storage prefix in {path} - Assuming LOCAL_DISK")
-            return CONST_STORAGESYSTEM.LOCAL_DISK
+            return "LOCAL_DISK"
 
     @classmethod
     def _normalize_path_schema(cls, path_str: Optional[str], scheme_key: str) -> Optional[str]:
@@ -147,7 +155,7 @@ class BasePathHelper(ABC):
         if not path_str or len(path_str) == 0:
             return None
 
-        scheme_prefix = CONST_STORAGESYSTEM_PREFIX.get(member=scheme_key).lower()
+        scheme_prefix = _SCHEME_PREFIX_MAP.get(scheme_key, scheme_key).lower()
         scheme_length = len(scheme_prefix)
         candidate_path: Optional[str] = None
 

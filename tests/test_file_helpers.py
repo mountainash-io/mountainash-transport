@@ -15,7 +15,7 @@ from mountainash_utils_files.file_helpers import (
 )
 from mountainash_settings import SettingsParameters
 from mountainash_utils_files.settings import StorageAuthBase
-from mountainash_utils_files.constants  import CONST_STORAGESYSTEM, CONST_STORAGE_PROVIDER_TYPE
+from mountainash_utils_files.constants  import CONST_STORAGE_PROVIDER_TYPE
 
 
 class TestFileHelperFactory:

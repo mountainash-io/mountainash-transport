@@ -1,42 +1,41 @@
 import pytest
 from mountainash_utils_files import PathHelper
-from mountainash_utils_files.constants  import CONST_STORAGESYSTEM
 
 from upath import UPath
 
 @pytest.mark.parametrize(
     "path, expected",
     [
-        ("/path/to/file", CONST_STORAGESYSTEM.LOCAL_DISK),
+        ("/path/to/file", "LOCAL_DISK"),
 
-        ("s3://bucket/object", CONST_STORAGESYSTEM.S3),
-        # ("gcs://bucket/object", CONST_STORAGESYSTEM.GCS),
-        # ("az://container/blob", CONST_STORAGESYSTEM.AZ),
-        ("sftp://user@host/path", CONST_STORAGESYSTEM.SFTP),
-        ("ssh://user@host/path", CONST_STORAGESYSTEM.SSH),
-        ("github://user@host/path", CONST_STORAGESYSTEM.GITHUB),
-        ("SSH://user@host/path", CONST_STORAGESYSTEM.SSH),
+        ("s3://bucket/object", "S3"),
+        # ("gcs://bucket/object", "GCS"),
+        # ("az://container/blob", "AZ"),
+        ("sftp://user@host/path", "SFTP"),
+        ("ssh://user@host/path", "SSH"),
+        ("github://user@host/path", "GITHUB"),
+        ("SSH://user@host/path", "SSH"),
 
-        # ("C:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK),
-        # ("D:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("/", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("~", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("~/", CONST_STORAGESYSTEM.LOCAL_DISK),
+        # ("C:\\path\\to\\file", "LOCAL_DISK"),
+        # ("D:\\path\\to\\file", "LOCAL_DISK"),
+        ("/", "LOCAL_DISK"),
+        ("~", "LOCAL_DISK"),
+        ("~/", "LOCAL_DISK"),
 
-        ("~/data/directory/", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("./randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("../randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK),
-        ("file:/", CONST_STORAGESYSTEM.LOCAL_DISK),
+        ("~/data/directory/", "LOCAL_DISK"),
+        ("randomfile.txt", "LOCAL_DISK"),
+        ("./randomfile.txt", "LOCAL_DISK"),
+        ("../randomfile.txt", "LOCAL_DISK"),
+        ("file:/", "LOCAL_DISK"),
 
-        (UPath("/"), CONST_STORAGESYSTEM.LOCAL_DISK),
-        (UPath("~"), CONST_STORAGESYSTEM.LOCAL_DISK),
-        (UPath("~/"), CONST_STORAGESYSTEM.LOCAL_DISK),
+        (UPath("/"), "LOCAL_DISK"),
+        (UPath("~"), "LOCAL_DISK"),
+        (UPath("~/"), "LOCAL_DISK"),
 
-        (UPath("~/data/directory/"), CONST_STORAGESYSTEM.LOCAL_DISK),
-        (UPath("randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
-        (UPath("./randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
-        (UPath("../randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
+        (UPath("~/data/directory/"), "LOCAL_DISK"),
+        (UPath("randomfile.txt"), "LOCAL_DISK"),
+        (UPath("./randomfile.txt"), "LOCAL_DISK"),
+        (UPath("../randomfile.txt"), "LOCAL_DISK"),
     ]
 )
 def test_identify_storage_system(path: UPath | str, expected: str):

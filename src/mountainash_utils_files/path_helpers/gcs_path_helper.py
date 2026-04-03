@@ -2,7 +2,6 @@ from typing import Union, Optional
 
 from upath import UPath
 
-from ..constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class GCSPathHelper(BasePathHelper):
@@ -60,4 +59,4 @@ class GCSPathHelper(BasePathHelper):
         :return: A normalized GCS path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.GCS)
+        return BasePathHelper._normalize_path_schema(path_str, "GCS")

@@ -2,20 +2,19 @@ from typing import Union, Type, Optional
 
 from upath import UPath
 
-from ..constants import CONST_STORAGESYSTEM
 from mountainash_utils_files.path_helpers import BasePathHelper, LocalPathHelper, S3PathHelper, GCSPathHelper, AZPathHelper, SFTPPathHelper, SSHPathHelper
 
 
 class PathHelper:
 
     path_util_classes = {
-        CONST_STORAGESYSTEM.LOCAL_DISK: LocalPathHelper,
-        CONST_STORAGESYSTEM.S3:   S3PathHelper,
-        CONST_STORAGESYSTEM.S3U:  S3PathHelper,
-        CONST_STORAGESYSTEM.GCS:  GCSPathHelper,
-        CONST_STORAGESYSTEM.AZ:   AZPathHelper,
-        CONST_STORAGESYSTEM.SFTP: SFTPPathHelper,
-        CONST_STORAGESYSTEM.SSH:  SSHPathHelper,
+        "LOCAL_DISK": LocalPathHelper,
+        "S3":   S3PathHelper,
+        "S3U":  S3PathHelper,
+        "GCS":  GCSPathHelper,
+        "AZ":   AZPathHelper,
+        "SFTP": SFTPPathHelper,
+        "SSH":  SSHPathHelper,
         # Add other filesystem formatters as needed
     }
 

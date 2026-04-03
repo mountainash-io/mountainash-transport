@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 from mountainash_settings import SettingsParameters
 from mountainash_utils_files.settings.providers import LocalStorageAuthSettings, SSHStorageAuthSettings
-from mountainash_utils_files.constants import CONST_STORAGESYSTEM
+from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 
 
 @pytest.fixture
@@ -78,12 +78,12 @@ def mock_sftp_client():
 def storage_systems():
     """Provide list of storage systems for parametrized tests."""
     return [
-        CONST_STORAGESYSTEM.LOCAL_DISK,
-        CONST_STORAGESYSTEM.S3,
-        CONST_STORAGESYSTEM.SFTP,
-        CONST_STORAGESYSTEM.SSH,
-        CONST_STORAGESYSTEM.GCS,
-        CONST_STORAGESYSTEM.AZ,
+        CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+        CONST_STORAGE_PROVIDER_TYPE.S3,
+        CONST_STORAGE_PROVIDER_TYPE.SFTP,
+        CONST_STORAGE_PROVIDER_TYPE.SSH,
+        CONST_STORAGE_PROVIDER_TYPE.GCS,
+        CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB,
     ]
 
 

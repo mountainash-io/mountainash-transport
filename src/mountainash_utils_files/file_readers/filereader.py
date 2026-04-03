@@ -14,7 +14,6 @@ from mountainash_utils_files.file_helpers import Base_FileHelper
 from mountainash_utils_files.file_interface import get_file_helper_object
 from mountainash_utils_files.settings import StorageAuthBase
 from mountainash_utils_files.settings.providers import LocalStorageAuthSettings
-from mountainash_utils_files.constants import  CONST_DATAFILEFORMAT
 
 
 
@@ -79,18 +78,18 @@ class FileReader:
 
         try:
             #Write the dataframe to the parquet file
-            if self.file_format == CONST_DATAFILEFORMAT.PARQUET:
+            if self.file_format == "parquet":
                 df_datafile = self.read_parquet(file_path=file_path,
                                                 materialise = materialise,
                                                 decrypt = decrypt,
                                                 decompress = decompress
                                                 )
 
-            elif self.file_format == CONST_DATAFILEFORMAT.CSV:
+            elif self.file_format == "csv":
                 raise NotImplementedError
                 # df_datafile = self.read_csv(file_path)
 
-            elif self.file_format == CONST_DATAFILEFORMAT.JSON:
+            elif self.file_format == "json":
                 raise NotImplementedError
                 # df_datafile = self.read_json(file_path)
 
