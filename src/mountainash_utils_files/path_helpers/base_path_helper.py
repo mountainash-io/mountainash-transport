@@ -5,17 +5,37 @@ from abc import ABC
 from upath import UPath
 from urllib.parse import urlparse
 
-from mountainash_utils_os import get_platform_slash
-from mountainash_utils_dataclasses import DataclassUtils
-from mountainash_constants import CONST_STORAGESYSTEM, CONST_STORAGESYSTEM_PREFIX
+# Inline scheme prefix mapping, replacing removed CONST_STORAGESYSTEM_PREFIX and CONST_STORAGESYSTEM
+_SCHEME_PREFIX_MAP: dict[str, str] = {
+    "LOCAL_DISK": "",
+    "B2": "b2",
+    "S3": "s3",
+    "S3U": "s3u",
+    "GCS": "gs",
+    "AZ": "azure",
+    "DBFS": "dbfs",
+    "HDFS": "hdfs",
+    "SFTP": "sftp",
+    "FTP": "ftp",
+    "WEBHDFS": "webhdfs",
+    "SSH": "ssh",
+    "SPARK": "spark",
+    "TRINO": "trino",
+    "GDRIVE": "gdrive",
+    "DROPBOX": "dropbox",
+    "ONEDRIVE": "onedrive",
+    "SHAREPOINT": "sharepoint",
+    "GITHUB": "github",
+}
+_PREFIX_TO_SYSTEM_MAP: dict[str, str] = {v: k for k, v in _SCHEME_PREFIX_MAP.items() if v}
 
 class BasePathHelper(ABC):
 
     @classmethod
-    def format_path(cls, 
+    def format_path(cls,
                     path: Optional[Union[str, UPath]]
                     ) -> Optional[UPath]:
-        
+
         raise NotImplementedError("format_path must be implemented in subclasses")
 
 
@@ -31,7 +51,7 @@ class BasePathHelper(ABC):
         # Convert the wildcard pattern to a regular expression pattern
         # Escape special characters except for the wildcard '*', then replace '*' with '.*' to match any character zero or more times
         regex_pattern = re.escape(pattern).replace(r'\*', '.*')
-        
+
         # Add start and end anchors to ensure the entire string must match
         regex_pattern = f'^{regex_pattern}$'
 
@@ -51,13 +71,10 @@ class BasePathHelper(ABC):
 
         if not path:
             return None
-        
+
         return str(path)
         # return str(object=UPath(path))
-    
-    @classmethod
-    def get_local_platform_slash(cls) -> str:
-        return get_platform_slash()
+
 
 
     @classmethod
@@ -95,7 +112,7 @@ class BasePathHelper(ABC):
         clean_filename: str|None = cls.strip_all_slashes(filename)
 
         if not u_path:
-            return None      
+            return None
 
         if not clean_filename:
             return None
@@ -114,29 +131,16 @@ class BasePathHelper(ABC):
         path_str: str | None = cls.path_to_str(path)
 
         if not path_str:
-            return CONST_STORAGESYSTEM.LOCAL_DISK.value
-      
+            return "LOCAL_DISK"
+
         parsed = urlparse(path_str)
         path_scheme = parsed.scheme.lower()
 
-        if path_scheme in DataclassUtils.get_enum_values_set(enumclass=CONST_STORAGESYSTEM_PREFIX):
-
-            storage_system = CONST_STORAGESYSTEM_PREFIX.find_member(value=path_scheme)
-
-            if storage_system is None:
-                raise ValueError(f"Failed to identify storage system for path: {path_str}.")
-            elif isinstance(storage_system, list) and len(storage_system) > 1:
-                raise ValueError(f"Multiple storage systems found for path: {path_str}.")
-            elif isinstance(storage_system, list) and len(storage_system) == 1:
-                return storage_system[0]
-            elif isinstance(storage_system, str):
-                return storage_system
-            else:
-                raise ValueError(f"Failed to identify storage system for path: {path_str}")
-
+        if path_scheme in _PREFIX_TO_SYSTEM_MAP:
+            return _PREFIX_TO_SYSTEM_MAP[path_scheme]
         else:
             print(f"Could not identify storage prefix in {path} - Assuming LOCAL_DISK")
-            return CONST_STORAGESYSTEM.LOCAL_DISK.value
+            return "LOCAL_DISK"
 
     @classmethod
     def _normalize_path_schema(cls, path_str: Optional[str], scheme_key: str) -> Optional[str]:
@@ -151,7 +155,7 @@ class BasePathHelper(ABC):
         if not path_str or len(path_str) == 0:
             return None
 
-        scheme_prefix = CONST_STORAGESYSTEM_PREFIX.get(member=scheme_key).lower()
+        scheme_prefix = _SCHEME_PREFIX_MAP.get(scheme_key, scheme_key).lower()
         scheme_length = len(scheme_prefix)
         candidate_path: Optional[str] = None
 
@@ -167,8 +171,8 @@ class BasePathHelper(ABC):
             #All good
             if path_str.startswith(f"{scheme_prefix}://"):
                 return path_str
-            
-            #All good but scheme was capitalised 
+
+            #All good but scheme was capitalised
             if path_str.lower().startswith(f"{scheme_prefix}://"):
                 #Only replace the start
                 path_str.replace(f"{provided_scheme_str}:", f"{scheme_prefix}:", __count=1)
@@ -203,13 +207,13 @@ class BasePathHelper(ABC):
     #         scheme = path_upath.parts[0].lower().split(":")[0]
 
     #     # Map the scheme to the storage system
-    #     if scheme == CONST_STORAGESYSTEM.LOCAL_DISK.value:  # Local paths might not have a scheme but have a drive
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #     if scheme == CONST_STORAGESYSTEM.LOCAL_DISK:  # Local paths might not have a scheme but have a drive
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
     #     elif scheme == "/":  # Local paths on Linux / MacOS
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
 
     #     elif re.match(pattern='^[a-z]$', string=scheme):  #Local paths on windows start with a single letter
-    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK.value
+    #         identified_scheme = CONST_STORAGESYSTEM.LOCAL_DISK
     #         if not is_platform_os_windows():
     #             print("Warning: Local Windows path identified in non-Windows system. Assuming local disk.")
 
@@ -218,9 +222,9 @@ class BasePathHelper(ABC):
 
     #     if not identified_scheme:
     #         raise ValueError(f"Unsupported scheme: {scheme}")
-    
+
     #     return identified_scheme
-        
+
 
     #             # Check if the path starts with a known storage system prefix
     #     for storage_system, prefix in CONST_STORAGESYSTEM_PREFIX.items():

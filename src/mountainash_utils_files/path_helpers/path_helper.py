@@ -2,20 +2,19 @@ from typing import Union, Type, Optional
 
 from upath import UPath
 
-from mountainash_constants import CONST_STORAGESYSTEM
 from mountainash_utils_files.path_helpers import BasePathHelper, LocalPathHelper, S3PathHelper, GCSPathHelper, AZPathHelper, SFTPPathHelper, SSHPathHelper
 
 
 class PathHelper:
 
     path_util_classes = {
-        CONST_STORAGESYSTEM.LOCAL_DISK.value: LocalPathHelper,
-        CONST_STORAGESYSTEM.S3.value:   S3PathHelper,
-        CONST_STORAGESYSTEM.S3U.value:  S3PathHelper,
-        CONST_STORAGESYSTEM.GCS.value:  GCSPathHelper,
-        CONST_STORAGESYSTEM.AZ.value:   AZPathHelper,
-        CONST_STORAGESYSTEM.SFTP.value: SFTPPathHelper,
-        CONST_STORAGESYSTEM.SSH.value:  SSHPathHelper,
+        "LOCAL_DISK": LocalPathHelper,
+        "S3":   S3PathHelper,
+        "S3U":  S3PathHelper,
+        "GCS":  GCSPathHelper,
+        "AZ":   AZPathHelper,
+        "SFTP": SFTPPathHelper,
+        "SSH":  SSHPathHelper,
         # Add other filesystem formatters as needed
     }
 
@@ -32,7 +31,7 @@ class PathHelper:
 
         if not util_class:
             raise ValueError(f"Unsupported storage_system: {storage_system}")
-        
+
         return util_class
 
 

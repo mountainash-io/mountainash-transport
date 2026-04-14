@@ -1,16 +1,62 @@
+"""mountainash-utils-files — unified storage operations across backends."""
+
 from .__version__ import __version__
 
+# Facade — main user API
+from .storage_facade import StorageFacade, copy_between
 
-from .file_readers.filereader import FileReader
-from .file_writers.filewriter import FileWriter
-from .file_interface import FileInterface, get_file_interface
+# Registry
+from .storage_registry import get_storage_backend, detect_provider_from_path
+
+# Protocols — for isinstance checks and type hints
+from .storage_protocols import (
+    StorageConnectionProtocol,
+    StorageReadProtocol,
+    StorageWriteProtocol,
+    StorageListProtocol,
+    StorageDeleteProtocol,
+    StorageMetadataProtocol,
+    StorageCopyProtocol,
+    StorageDirectoryProtocol,
+)
+
+# Constants
+from .constants import CONST_STORAGE_PROVIDER_TYPE
+
+# Dataclasses
+from .dataclasses.file_metadata import FileMetadata
+
+# Exceptions
+from .exceptions import (
+    StorageError,
+    UnsupportedOperationError,
+    StorageConnectionError,
+    PathNotFoundError,
+    AuthenticationError,
+)
+
+# Path utilities
 from .path_helpers import PathHelper
 
-__all__ = (
+# Trigger backend registrations
+from . import storage_backends  # noqa: F401
+
+
+def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            auth_params=None) -> StorageFacade:
+    """Convenience factory for creating a StorageFacade."""
+    return StorageFacade(provider_type, auth_params)
+
+
+__all__ = [
     "__version__",
-    "FileReader",        
-    "FileWriter", 
-    "FileInterface", 
-    "PathHelper", 
-    "get_file_interface"
-    )
+    "StorageFacade", "copy_between", "storage",
+    "get_storage_backend", "detect_provider_from_path",
+    "StorageConnectionProtocol", "StorageReadProtocol", "StorageWriteProtocol",
+    "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol",
+    "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
+    "StorageError", "UnsupportedOperationError", "StorageConnectionError",
+    "PathNotFoundError", "AuthenticationError",
+    "PathHelper",
+]

@@ -1,42 +1,41 @@
 import pytest
 from mountainash_utils_files import PathHelper
-from mountainash_constants import CONST_STORAGESYSTEM
 
 from upath import UPath
 
 @pytest.mark.parametrize(
     "path, expected",
     [
-        ("/path/to/file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        ("/path/to/file", "LOCAL_DISK"),
 
-        ("s3://bucket/object", CONST_STORAGESYSTEM.S3.value),
-        # ("gcs://bucket/object", CONST_STORAGESYSTEM.GCS.value),
-        # ("az://container/blob", CONST_STORAGESYSTEM.AZ.value),
-        ("sftp://user@host/path", CONST_STORAGESYSTEM.SFTP.value),
-        ("ssh://user@host/path", CONST_STORAGESYSTEM.SSH.value),
-        ("github://user@host/path", CONST_STORAGESYSTEM.GITHUB.value),
-        ("SSH://user@host/path", CONST_STORAGESYSTEM.SSH.value),
+        ("s3://bucket/object", "S3"),
+        # ("gcs://bucket/object", "GCS"),
+        # ("az://container/blob", "AZ"),
+        ("sftp://user@host/path", "SFTP"),
+        ("ssh://user@host/path", "SSH"),
+        ("github://user@host/path", "GITHUB"),
+        ("SSH://user@host/path", "SSH"),
 
-        # ("C:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        # ("D:\\path\\to\\file", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("~", CONST_STORAGESYSTEM.LOCAL_DISK.value),        
-        ("~/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        # ("C:\\path\\to\\file", "LOCAL_DISK"),
+        # ("D:\\path\\to\\file", "LOCAL_DISK"),
+        ("/", "LOCAL_DISK"),
+        ("~", "LOCAL_DISK"),
+        ("~/", "LOCAL_DISK"),
 
-        ("~/data/directory/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("./randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("../randomfile.txt", CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        ("file:/", CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        ("~/data/directory/", "LOCAL_DISK"),
+        ("randomfile.txt", "LOCAL_DISK"),
+        ("./randomfile.txt", "LOCAL_DISK"),
+        ("../randomfile.txt", "LOCAL_DISK"),
+        ("file:/", "LOCAL_DISK"),
 
-        (UPath("/"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        (UPath("~"), CONST_STORAGESYSTEM.LOCAL_DISK.value),        
-        (UPath("~/"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        (UPath("/"), "LOCAL_DISK"),
+        (UPath("~"), "LOCAL_DISK"),
+        (UPath("~/"), "LOCAL_DISK"),
 
-        (UPath("~/data/directory/"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        (UPath("randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        (UPath("./randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        (UPath("../randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        (UPath("~/data/directory/"), "LOCAL_DISK"),
+        (UPath("randomfile.txt"), "LOCAL_DISK"),
+        (UPath("./randomfile.txt"), "LOCAL_DISK"),
+        (UPath("../randomfile.txt"), "LOCAL_DISK"),
     ]
 )
 def test_identify_storage_system(path: UPath | str, expected: str):
@@ -53,15 +52,15 @@ def test_identify_storage_system(path: UPath | str, expected: str):
         # ("github://bucket/object", "github://bucket/object"),
         # ("nots3butshouldbe://bucket/object", "s3://bucket/object"),
 
-        ("/path/to/file", "/path/to/file"), 
-        ("/path/to/file/", "/path/to/file"), 
+        ("/path/to/file", "/path/to/file"),
+        ("/path/to/file/", "/path/to/file"),
 
 
         # ("C:\\path\\to\\file", "C:\\path\\to\\file"),
         # ("D:\\path\\to\\file\\", "D:\\path\\to\\file"),
 
         ("/", "/"),
-        # ("~", "/Users/nathanielramm"),        
+        # ("~", "/Users/nathanielramm"),
         # ("~/", "/Users/nathanielramm"),
 
         ("randomfile.txt", "randomfile.txt"),
@@ -70,16 +69,16 @@ def test_identify_storage_system(path: UPath | str, expected: str):
         ("../randomfile.txt", "../randomfile.txt"),
 
         (UPath("/"), "/"),
-        # (UPath("~"), "/Users/nathanielramm"),        
+        # (UPath("~"), "/Users/nathanielramm"),
         # (UPath("~/"), "/Users/nathanielramm"),
         # (UPath("/Users/nathanielramm/"), "/Users/nathanielramm"),
         (UPath("s3://bucket/object"), "s3://bucket/object"),
         (UPath("s3://bucket/object/"), "s3://bucket/object"),
 
-        # (UPath("~/data/directory/"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        # (UPath("randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        # (UPath("./randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
-        # (UPath("../randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK.value),
+        # (UPath("~/data/directory/"), CONST_STORAGESYSTEM.LOCAL_DISK),
+        # (UPath("randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
+        # (UPath("./randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
+        # (UPath("../randomfile.txt"), CONST_STORAGESYSTEM.LOCAL_DISK),
         # ("s3:bucket/object", "s3://bucket/object"),
         # ("s3:bucket/object/", "s3://bucket/object"),
         # ("s3:///bucket/object", "s3://bucket/object"),

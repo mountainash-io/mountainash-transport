@@ -1,7 +1,6 @@
 from typing import Union, Optional
 from upath import UPath
 
-from mountainash_constants import CONST_STORAGESYSTEM
 from .base_path_helper import BasePathHelper
 
 class S3PathHelper(BasePathHelper):
@@ -46,7 +45,7 @@ class S3PathHelper(BasePathHelper):
         # Construct UPath, catching any errors related to path construction
         try:
             return UPath(clean_path_str)
-        
+
         except Exception as e:
             raise ValueError(f"Invalid S3 path: {clean_path_str} - {e}")
 
@@ -56,7 +55,7 @@ class S3PathHelper(BasePathHelper):
     def get_path_protocol(cls, path: Optional[str|UPath]) -> Optional[str]:
 
         u_path: UPath | None = cls.format_path(path)
-        
+
         return u_path.protocol if u_path else None
 
     @classmethod
@@ -96,7 +95,7 @@ class S3PathHelper(BasePathHelper):
     @classmethod
     def get_path_filetype(cls, path: Optional[str|UPath]) -> Optional[str]:
 
-        u_path: UPath | None = cls.format_path(path)        
+        u_path: UPath | None = cls.format_path(path)
         return u_path.suffix if u_path else None
 
     @classmethod
@@ -159,4 +158,4 @@ class S3PathHelper(BasePathHelper):
         :return: A normalized S3 path string.
         """
 
-        return BasePathHelper._normalize_path_schema(path_str, CONST_STORAGESYSTEM.S3.value)
+        return BasePathHelper._normalize_path_schema(path_str, "S3")

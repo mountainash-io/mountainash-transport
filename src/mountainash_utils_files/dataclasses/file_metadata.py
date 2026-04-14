@@ -16,4 +16,4 @@ class FileMetadata(BaseModel):
 
 
     class Config:
-        frozen = True  # Makes instances immutable        
+        frozen = True  # Makes instances immutable

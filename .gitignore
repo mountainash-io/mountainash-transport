@@ -168,3 +168,9 @@ htmlcov/
 #Sonarlint settings
 .vscode/
 .sonarlint/
+
+#testing artifacts
+junit.*
+coverage.*
+.benchmarks/
+.ruff_cache/
