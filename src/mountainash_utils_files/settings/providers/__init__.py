@@ -8,8 +8,13 @@ remain available as pure aliases so existing downstream imports and
 
 from .azure_blob import AzureBlobStorageAuthSettings
 from .azure_files import AzureFilesStorageAuthSettings
-from .gcs import GCSStorageAuthSettings
+from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
+
+# --- Backwards-compatible alias for the migrated GCS provider -------------
+# Pure alias (not a subclass) so existing downstream imports and
+# ``isinstance`` checks against the old name continue to work.
+GCSStorageAuthSettings = GCSSettings
 
 from .ftp import FTPStorageAuthSettings
 from .nfs import NFSStorageAuthSettings
@@ -34,6 +39,9 @@ BackblazeB2StorageAuthSettings = S3Settings
 __all__ = [
     "AzureBlobStorageAuthSettings",
     "AzureFilesStorageAuthSettings",
+    # Migrated GCS provider (alias preserves legacy name).
+    "GCSSettings",
+    "GCS_DESCRIPTOR",
     "GCSStorageAuthSettings",
     # Consolidated S3-family.
     "S3Settings",
