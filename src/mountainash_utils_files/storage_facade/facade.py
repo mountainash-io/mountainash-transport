@@ -149,15 +149,33 @@ class StorageFacade:
     # Write operations (StorageWriteProtocol)
     # ------------------------------------------------------------------
 
-    def write(self, path: str, data: bytes) -> None:
-        """Write bytes data to a file at *path*."""
+    def write(
+        self,
+        path: str,
+        data: bytes,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> None:
+        """Write bytes data to a file at *path*, optionally through *pipeline*."""
         self._require(StorageWriteProtocol, "write")
-        self._backend.write_from_bytes(path, data)
+        if pipeline is None:
+            self._backend.write_from_bytes(path, data)
+            return
+        source = io.BytesIO(data)
+        encoded = self._coerce_pipeline(pipeline).apply_write(source)
+        self._backend.write_from_stream(path, encoded)
 
-    def write_stream(self, path: str, stream: BinaryIO) -> None:
-        """Write data from a binary stream to a file at *path*."""
+    def write_stream(
+        self,
+        path: str,
+        stream: BinaryIO,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> None:
+        """Write data from a binary stream, optionally through *pipeline*."""
         self._require(StorageWriteProtocol, "write_stream")
-        self._backend.write_from_stream(path, stream)
+        encoded = self._coerce_pipeline(pipeline).apply_write(stream)
+        self._backend.write_from_stream(path, encoded)
 
     # ------------------------------------------------------------------
     # List operations (StorageListProtocol)

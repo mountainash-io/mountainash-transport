@@ -89,3 +89,27 @@ def test_facade_read_stream_closes_source_on_exit(local_facade, tmp_path):
 
     assert len(opened_streams) == 1
     assert opened_streams[0].closed, "source stream was not closed after with-block exit"
+
+
+def test_facade_write_with_pipeline_compresses(local_facade, tmp_path):
+    path = tmp_path / "out.gz"
+    local_facade.write(str(path), b"payload", pipeline=Gzip())
+    assert gzip.decompress(path.read_bytes()) == b"payload"
+
+
+def test_facade_write_stream_with_pipeline_compresses(local_facade, tmp_path):
+    path = tmp_path / "out.gz"
+    local_facade.write_stream(str(path), io.BytesIO(b"streamed"), pipeline=Gzip())
+    assert gzip.decompress(path.read_bytes()) == b"streamed"
+
+
+def test_facade_write_read_roundtrip_through_pipeline(local_facade, tmp_path):
+    path = tmp_path / "data.gz"
+    local_facade.write(str(path), b"roundtrip", pipeline=Gzip())
+    assert local_facade.read(str(path), pipeline=Gzip()) == b"roundtrip"
+
+
+def test_facade_write_with_none_pipeline_is_unchanged(local_facade, tmp_path):
+    path = tmp_path / "plain.bin"
+    local_facade.write(str(path), b"raw", pipeline=None)
+    assert path.read_bytes() == b"raw"
