@@ -58,3 +58,18 @@ def test_gzip_wrap_is_lazy():
     # Now pull one byte — source should advance
     wrapped.read(1)
     assert source.tell() > 0
+
+
+def test_gzip_mtime_none_uses_current_time():
+    """Passing mtime=None must embed the current time in the gzip header, not 0."""
+    import struct
+    import time
+
+    before = int(time.time())
+    encoded = Gzip(mtime=None).wrap(io.BytesIO(b"data")).read()
+    after = int(time.time())
+
+    # gzip mtime is bytes 4..8 (little-endian uint32) of the header.
+    header_mtime = struct.unpack("<I", encoded[4:8])[0]
+    assert before <= header_mtime <= after
+    assert header_mtime != 0

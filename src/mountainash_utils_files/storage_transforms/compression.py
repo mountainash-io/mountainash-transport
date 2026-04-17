@@ -28,6 +28,6 @@ class Gzip:
         return GzipCompressingReader(stream, level=self.level, mtime=self.mtime)
 
     def unwrap(self, stream: BinaryIO) -> BinaryIO:
-        """Wrap *stream* so reads yield gzip-decoded (plaintext) bytes."""
+        """Unwrap *stream* so reads yield gzip-decoded (plaintext) bytes."""
         # gzip.GzipFile in rb mode consumes the source lazily on .read().
         return gzip.GzipFile(fileobj=stream, mode="rb")  # type: ignore[return-value]

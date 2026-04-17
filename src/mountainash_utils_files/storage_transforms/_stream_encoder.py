@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import struct
+import time
 import zlib
 from typing import BinaryIO
 
@@ -33,7 +34,7 @@ class GzipCompressingReader(io.RawIOBase):
         self._header_emitted = False
         self._crc = 0
         self._size = 0
-        self._mtime = mtime if mtime is not None else 0
+        self._mtime = int(time.time()) if mtime is None else mtime
         # zlib.compressobj with wbits=-zlib.MAX_WBITS produces raw deflate
         # (no zlib header / trailer), which is what gzip wraps.
         self._compressor = zlib.compressobj(
@@ -55,8 +56,10 @@ class GzipCompressingReader(io.RawIOBase):
         if not self._header_emitted:
             self._buffer.extend(_gzip_header(self._mtime))
             self._header_emitted = True
-            # Fall through to also read the first source chunk in the same call,
-            # so that the very first read always touches the source (laziness contract).
+            # Fall through to read the first source chunk immediately — without this,
+            # a small readinto(N) (N <= header size) would return entirely from the
+            # buffered header without ever touching the source, breaking the laziness
+            # contract asserted by test_gzip_wrap_is_lazy.
         if not self._source_exhausted:
             chunk = self._source.read(self._chunk_size)
             if chunk:
