@@ -74,14 +74,6 @@ class TestGitHubAuthPaths:
         kw = s.to_handler_kwargs()
         assert kw["token"] == "jwt.body.sig"
 
-    @pytest.mark.xfail(
-        reason=(
-            "Production bug: adapters/github.py reads auth.access_token but "
-            "OAuth2Auth's canonical field is auth.token. Adapter needs "
-            "updating to match upstream AuthSpec. Not fixing in test phase."
-        ),
-        strict=True,
-    )
     def test_oauth2_auth_surfaces_token(self):
         s = _make(
             auth=OAuth2Auth(

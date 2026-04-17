@@ -73,11 +73,11 @@ def _resolve_credentials(auth: t.Any) -> t.Any:
         return Credentials(token=token)
 
     if auth_type == "OAuth2Auth":
-        access_token = _unwrap_secret(getattr(auth, "access_token", None))
+        access_token = _unwrap_secret(getattr(auth, "token", None))
         refresh_token = _unwrap_secret(getattr(auth, "refresh_token", None))
         client_id = getattr(auth, "client_id", None)
         client_secret = _unwrap_secret(getattr(auth, "client_secret", None))
-        token_uri = getattr(auth, "token_uri", None) or "https://oauth2.googleapis.com/token"
+        token_uri = getattr(auth, "server_uri", None) or "https://oauth2.googleapis.com/token"
         if not access_token and not refresh_token:
             return None
         from google.oauth2.credentials import (  # type: ignore[import-untyped]

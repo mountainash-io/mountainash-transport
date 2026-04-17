@@ -32,16 +32,14 @@ def _token_from_auth(auth: t.Any) -> t.Optional[str]:
     """Extract a string bearer token from the discriminated auth union.
 
     - :class:`TokenAuth` / :class:`JWTAuth` → ``auth.token``
-    - :class:`OAuth2Auth`                   → ``auth.access_token``
+    - :class:`OAuth2Auth`                   → ``auth.token``
     - Anything else (incl. :class:`NoAuth`) → ``None``
     """
     if auth is None:
         return None
     auth_type = type(auth).__name__
-    if auth_type in {"TokenAuth", "JWTAuth"}:
+    if auth_type in {"TokenAuth", "JWTAuth", "OAuth2Auth"}:
         return _unwrap_secret(getattr(auth, "token", None))
-    if auth_type == "OAuth2Auth":
-        return _unwrap_secret(getattr(auth, "access_token", None))
     return None
 
 
