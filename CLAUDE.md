@@ -50,6 +50,19 @@ Legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSS
 **Pattern B (declarative templates):**
 - `ParameterSpec.template` auto-resolves composite fields (e.g. Azure `ACCOUNT_URL` from `ACCOUNT_NAME` + `ENDPOINT_SUFFIX`; S3 R2 endpoint URL from `ACCOUNT_ID`)
 
+### Stream Transforms
+
+Facade-level stream decorators for compression and encryption (restored 2026-04-17, spec at `docs/superpowers/specs/2026-04-17-stream-transforms-design.md`).
+
+- `storage_transforms/Pipeline(outer, ..., inner)` — ordered stack matching file-extension order (last-applied = outermost).
+- `Gzip(level=6, mtime=0)` — stdlib-based, reproducible by default, zero new dependency.
+- `GPG(recipients=[...], gnupghome=..., ...)` — requires the `[encryption]` optional extra (python-gnupg).
+- `StorageFacade.read/read_stream/write/write_stream` accept a keyword-only `pipeline=` argument.
+- `copy_between` accepts separate `source_pipeline=` and `destination_pipeline=` arguments.
+- `storage_transforms.util.materialize(stream, to=...)` — opt-in buffering to recover a known length.
+
+The same `Pipeline` instance is used on both read and write paths; the facade applies transforms in the correct direction automatically.
+
 ### Package Structure
 
 ```
