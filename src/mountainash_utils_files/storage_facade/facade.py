@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import io
 import typing
 from typing import BinaryIO
 
@@ -21,6 +22,38 @@ from mountainash_utils_files.storage_protocols import (
 )
 from mountainash_utils_files.storage_registry import get_storage_backend
 from mountainash_utils_files.storage_transforms import Pipeline, StreamTransform
+
+
+class _PairedStream(io.RawIOBase):
+    """BinaryIO wrapper that closes both a wrapped stream and its source on close().
+
+    Used when a pipeline wraps a backend stream — closing must propagate to
+    both so file descriptors are not leaked.
+    """
+
+    def __init__(self, wrapped: BinaryIO, source: BinaryIO) -> None:
+        self._wrapped = wrapped
+        self._source = source
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, b) -> int:  # type: ignore[override]
+        chunk = self._wrapped.read(len(b))
+        n = len(chunk)
+        b[:n] = chunk
+        return n
+
+    def read(self, size: int = -1) -> bytes:  # type: ignore[override]
+        return self._wrapped.read(size)
+
+    def close(self) -> None:  # type: ignore[override]
+        try:
+            if self._wrapped is not self._source:
+                self._wrapped.close()
+        finally:
+            self._source.close()
+            super().close()
 
 
 class StorageFacade:
@@ -84,12 +117,16 @@ class StorageFacade:
     ) -> bytes:
         """Read file contents and return as bytes, optionally through *pipeline*."""
         self._require(StorageReadProtocol, "read")
-        stream = self._backend.read_to_stream(path)
-        stream = self._coerce_pipeline(pipeline).apply_read(stream)
+        source_stream = self._backend.read_to_stream(path)
         try:
-            return stream.read()
+            wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+            try:
+                return wrapped_stream.read()
+            finally:
+                if wrapped_stream is not source_stream:
+                    wrapped_stream.close()
         finally:
-            stream.close()
+            source_stream.close()
 
     def read_stream(
         self,
@@ -97,10 +134,16 @@ class StorageFacade:
         *,
         pipeline: Pipeline | StreamTransform | None = None,
     ) -> BinaryIO:
-        """Read file contents and return as a binary stream, optionally through *pipeline*."""
+        """Read file contents and return as a binary stream, optionally through *pipeline*.
+
+        The returned stream should be closed by the caller (context manager
+        recommended). Closing propagates to both the pipeline wrapper and the
+        underlying backend stream so file descriptors are not leaked.
+        """
         self._require(StorageReadProtocol, "read_stream")
-        stream = self._backend.read_to_stream(path)
-        return self._coerce_pipeline(pipeline).apply_read(stream)
+        source_stream = self._backend.read_to_stream(path)
+        wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+        return _PairedStream(wrapped_stream, source_stream)  # type: ignore[return-value]
 
     # ------------------------------------------------------------------
     # Write operations (StorageWriteProtocol)

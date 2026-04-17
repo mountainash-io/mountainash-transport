@@ -41,3 +41,51 @@ def test_facade_read_accepts_bare_transform_or_pipeline(local_facade, tmp_path):
     path.write_bytes(gzip.compress(b"ok"))
     assert local_facade.read(str(path), pipeline=Gzip()) == b"ok"
     assert local_facade.read(str(path), pipeline=Pipeline(Gzip())) == b"ok"
+
+
+def test_facade_read_closes_source_stream(local_facade, tmp_path):
+    """Regression: read() must close the underlying backend source stream."""
+    path = tmp_path / "data.gz"
+    path.write_bytes(gzip.compress(b"payload"))
+
+    # Patch read_to_stream to capture the source for inspection
+    opened_streams = []
+    original = local_facade._backend.read_to_stream
+
+    def tracking_read(p):
+        s = original(p)
+        opened_streams.append(s)
+        return s
+
+    local_facade._backend.read_to_stream = tracking_read
+    try:
+        local_facade.read(str(path), pipeline=Gzip())
+    finally:
+        local_facade._backend.read_to_stream = original
+
+    assert len(opened_streams) == 1
+    assert opened_streams[0].closed, "source stream was not closed"
+
+
+def test_facade_read_stream_closes_source_on_exit(local_facade, tmp_path):
+    """Regression: read_stream() returned object closes source when its close() is called."""
+    path = tmp_path / "data.gz"
+    path.write_bytes(gzip.compress(b"payload"))
+
+    opened_streams = []
+    original = local_facade._backend.read_to_stream
+
+    def tracking_read(p):
+        s = original(p)
+        opened_streams.append(s)
+        return s
+
+    local_facade._backend.read_to_stream = tracking_read
+    try:
+        with local_facade.read_stream(str(path), pipeline=Gzip()) as s:
+            s.read()
+    finally:
+        local_facade._backend.read_to_stream = original
+
+    assert len(opened_streams) == 1
+    assert opened_streams[0].closed, "source stream was not closed after with-block exit"
