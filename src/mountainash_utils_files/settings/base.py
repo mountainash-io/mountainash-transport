@@ -1,6 +1,5 @@
 #path: mountainash_settings/settings/auth/storage/base.py
 
-from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, List, Set, Tuple
 from pydantic import Field, SecretStr, field_validator
 from upath import UPath
@@ -16,7 +15,7 @@ from .exceptions import (
     StorageValidationError
 )
 
-class StorageAuthBase(MountainAshBaseSettings, ABC):
+class StorageAuthBase(MountainAshBaseSettings):
     """Base class for storage authentication settings"""
 
     # Provider Configuration
@@ -121,10 +120,22 @@ class StorageAuthBase(MountainAshBaseSettings, ABC):
             )
         return v
 
-    def post_init(self, reinitialise: bool = False) -> None:
-        """Post-initialization validation and setup"""
-        super().post_init(reinitialise)
-        # self._validate_security_config()
+    def post_init(
+        self,
+        template_settings_parameters: Optional[SettingsParameters] = None,
+        reinitialise: bool = False,
+    ) -> None:
+        """Post-initialization validation and setup.
+
+        Signature matches ``MountainAshBaseSettings.post_init`` and
+        ``DescriptorProfile.post_init`` so subclasses adopting the
+        descriptor-driven pattern (``StorageProfile``) inherit cleanly
+        without a signature-bridging override.
+        """
+        super().post_init(
+            template_settings_parameters=template_settings_parameters,
+            reinitialise=reinitialise,
+        )
         self._init_provider_specific(reinitialise)
 
     # def _validate_security_config(self) -> None:
@@ -148,15 +159,23 @@ class StorageAuthBase(MountainAshBaseSettings, ABC):
     #             security_check="ssl_config"
     #         )
 
-    @abstractmethod
     def _init_provider_specific(self, reinitialise: bool) -> None:
-        """Initialize provider-specific settings"""
-        pass
+        """Hook for legacy (pre-descriptor) provider classes to run setup.
 
-    @abstractmethod
+        No-op by default. Legacy provider classes (the 10 not yet migrated to
+        ``StorageProfile``) override this. Descriptor-driven providers do all
+        setup in their ``__adapter__``.
+        """
+        return None
+
     def get_connection_url(self) -> str:
-        """Generate connection URL from settings"""
-        pass
+        """Generate a connection URL for inspection/logging.
+
+        Legacy provider classes override this. Descriptor-driven providers
+        typically return a template-resolved URL; callers should prefer the
+        adapter output for actual SDK kwargs.
+        """
+        return ""
 
     def get_connection_args(self) -> Dict[str, Any]:
         """Get connection arguments as dictionary"""
