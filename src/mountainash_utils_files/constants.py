@@ -1,8 +1,37 @@
 #constants.py
 
 from enum import StrEnum
+import typing as t
 
-class CONST_STORAGE_PROVIDER_TYPE(StrEnum):
+
+class _FindMemberMixin(StrEnum):
+    """Shared ``find_member`` classmethod for storage enums.
+
+    Returns the enum member whose *value* matches ``v`` (case-insensitive),
+    or ``None`` if no match is found. Used by :class:`StorageAuthBase`
+    validators.
+    """
+
+    @classmethod
+    def find_member(cls, v: t.Any) -> t.Optional["_FindMemberMixin"]:
+        if v is None:
+            return None
+        try:
+            return cls(v)
+        except (ValueError, KeyError):
+            pass
+        # Case-insensitive fallback against values.
+        try:
+            text = str(v).lower()
+        except Exception:
+            return None
+        for member in cls:
+            if member.value.lower() == text:
+                return member
+        return None
+
+
+class CONST_STORAGE_PROVIDER_TYPE(_FindMemberMixin):
     """Storage provider types"""
     LOCAL = "local"
     S3 = "s3"
@@ -20,7 +49,7 @@ class CONST_STORAGE_PROVIDER_TYPE(StrEnum):
     GITHUB = "github"
     R2 = "r2"
 
-class CONST_STORAGE_AUTH_METHOD(StrEnum):
+class CONST_STORAGE_AUTH_METHOD(_FindMemberMixin):
     """Authentication methods"""
     NONE = "none"
     KEY = "key"
@@ -32,7 +61,7 @@ class CONST_STORAGE_AUTH_METHOD(StrEnum):
     KERBEROS = "kerberos"
     SERVICE_ACCOUNT = "service_account"
 
-class CONST_STORAGE_ACCESS_TYPE(StrEnum):
+class CONST_STORAGE_ACCESS_TYPE(_FindMemberMixin):
     """Storage access types"""
     READ_ONLY = "read_only"
     WRITE_ONLY = "write_only"
