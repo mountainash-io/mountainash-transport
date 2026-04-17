@@ -19,6 +19,7 @@ from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
 from .ftp_settings import FTP_DESCRIPTOR, FTPSettings
 from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
+from .smb_settings import SMB_DESCRIPTOR, SMBSettings
 from .ssh_settings import SSH_DESCRIPTOR, SSHSettings
 
 # --- Backwards-compatible aliases for the migrated GCS + Azure providers.
@@ -47,10 +48,12 @@ SFTPStorageAuthSettings = SSHSettings
 # --- Backwards-compatible alias for the migrated FTP provider -------------
 FTPStorageAuthSettings = FTPSettings
 
+# --- Backwards-compatible alias for the migrated SMB provider -------------
+SMBStorageAuthSettings = SMBSettings
+
 # Remaining legacy (pre-migration) provider classes — migrated
 # incrementally in Phase 4.
 from .nfs import NFSStorageAuthSettings
-from .smb import SMBStorageAuthSettings
 from .github import GitHubStorageAuthSettings
 from .local import LocalStorageAuthSettings
 
@@ -82,9 +85,12 @@ __all__ = [
     "FTPSettings",
     "FTP_DESCRIPTOR",
     "FTPStorageAuthSettings",
+    # Migrated SMB provider (alias preserves legacy name).
+    "SMBSettings",
+    "SMB_DESCRIPTOR",
+    "SMBStorageAuthSettings",
     # Other providers (migration pending).
     "NFSStorageAuthSettings",
-    "SMBStorageAuthSettings",
     "GitHubStorageAuthSettings",
     "LocalStorageAuthSettings",
 ]
