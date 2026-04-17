@@ -16,6 +16,7 @@ explicitly — the aliases do not preset the discriminator.
 """
 
 from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
+from .ftp_settings import FTP_DESCRIPTOR, FTPSettings
 from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
 from .ssh_settings import SSH_DESCRIPTOR, SSHSettings
@@ -43,9 +44,11 @@ BackblazeB2StorageAuthSettings = S3Settings
 SSHStorageAuthSettings = SSHSettings
 SFTPStorageAuthSettings = SSHSettings
 
+# --- Backwards-compatible alias for the migrated FTP provider -------------
+FTPStorageAuthSettings = FTPSettings
+
 # Remaining legacy (pre-migration) provider classes — migrated
 # incrementally in Phase 4.
-from .ftp import FTPStorageAuthSettings
 from .nfs import NFSStorageAuthSettings
 from .smb import SMBStorageAuthSettings
 from .github import GitHubStorageAuthSettings
@@ -70,12 +73,18 @@ __all__ = [
     "S3ExpressStorageAuthSettings",
     "MinIOStorageAuthSettings",
     "BackblazeB2StorageAuthSettings",
-    # Other providers (migration pending).
+    # Unified SSH / SFTP provider (aliases preserve legacy names).
+    "SSHSettings",
+    "SSH_DESCRIPTOR",
+    "SSHStorageAuthSettings",
     "SFTPStorageAuthSettings",
+    # Migrated FTP provider (alias preserves legacy name).
+    "FTPSettings",
+    "FTP_DESCRIPTOR",
     "FTPStorageAuthSettings",
+    # Other providers (migration pending).
     "NFSStorageAuthSettings",
     "SMBStorageAuthSettings",
-    "SSHStorageAuthSettings",
     "GitHubStorageAuthSettings",
     "LocalStorageAuthSettings",
 ]
