@@ -33,6 +33,15 @@ from .exceptions import (
     StorageConnectionError,
     PathNotFoundError,
     AuthenticationError,
+    TransformError,
+)
+
+# Stream transforms
+from .storage_transforms import (
+    Pipeline,
+    StreamTransform,
+    Gzip,
+    GPG,
 )
 
 # Path utilities
@@ -57,6 +66,7 @@ __all__ = [
     "StorageCopyProtocol", "StorageDirectoryProtocol",
     "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
-    "PathNotFoundError", "AuthenticationError",
+    "PathNotFoundError", "AuthenticationError", "TransformError",
     "PathHelper",
+    "Pipeline", "StreamTransform", "Gzip", "GPG",
 ]
