@@ -1,20 +1,30 @@
 """Storage provider settings classes.
 
-The five S3-compatible flavors (S3, S3Express, R2, MinIO, Backblaze B2)
-were consolidated into the single :class:`S3Settings` class. The old names
-remain available as pure aliases so existing downstream imports and
-``isinstance`` checks continue to work without subclass relationships.
+Three legacy class-hierarchies have been consolidated into unified,
+descriptor-driven settings:
+
+* S3 / S3Express / R2 / MinIO / Backblaze B2 → :class:`S3Settings`
+  (discriminated by ``FLAVOR``)
+* Azure Blob + Azure Files → :class:`AzureStorageSettings`
+  (discriminated by ``SERVICE_TYPE``)
+* GCS → :class:`GCSSettings`
+
+The old names remain available as pure aliases so existing downstream
+imports and ``isinstance`` checks continue to work. Callers targeting
+the Azure aliases MUST set ``SERVICE_TYPE="blob"`` or ``"files"``
+explicitly — the aliases do not preset the discriminator.
 """
 
-from .azure_blob import AzureBlobStorageAuthSettings
-from .azure_files import AzureFilesStorageAuthSettings
+from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
 from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
 
-# --- Backwards-compatible alias for the migrated GCS provider -------------
-# Pure alias (not a subclass) so existing downstream imports and
-# ``isinstance`` checks against the old name continue to work.
+# --- Backwards-compatible aliases for the migrated GCS + Azure providers.
+# Pure aliases (not subclasses) so existing downstream imports and
+# ``isinstance`` checks against the old names continue to work.
 GCSStorageAuthSettings = GCSSettings
+AzureBlobStorageAuthSettings = AzureStorageSettings
+AzureFilesStorageAuthSettings = AzureStorageSettings
 
 from .ftp import FTPStorageAuthSettings
 from .nfs import NFSStorageAuthSettings
@@ -37,6 +47,9 @@ BackblazeB2StorageAuthSettings = S3Settings
 
 
 __all__ = [
+    # Unified Azure provider (aliases preserve legacy Blob/Files names).
+    "AzureStorageSettings",
+    "AZURE_STORAGE_DESCRIPTOR",
     "AzureBlobStorageAuthSettings",
     "AzureFilesStorageAuthSettings",
     # Migrated GCS provider (alias preserves legacy name).
