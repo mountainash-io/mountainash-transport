@@ -70,3 +70,39 @@ def test_gpg_pipeline_with_gzip_round_trip(gpg_home):
     assert encoded[:2] == b"\x1f\x8b"
     decoded = pipeline.apply_read(io.BytesIO(encoded)).read()
     assert decoded == original
+
+
+def test_gpg_unwrap_wrong_passphrase_raises_transform_error(tmp_path):
+    """GPG decryption with a wrong passphrase must raise TransformError."""
+    if shutil.which("gpg") is None:
+        pytest.skip("gpg binary not available on PATH")
+
+    from mountainash_utils_files.exceptions import TransformError
+    from mountainash_utils_files.storage_transforms import GPG
+
+    # Generate a test key WITH a passphrase
+    gpg_home = tmp_path / "gnupg"
+    gpg_home.mkdir(mode=0o700)
+    subprocess.run(
+        [
+            "gpg", "--homedir", str(gpg_home),
+            "--batch", "--pinentry-mode", "loopback",
+            "--passphrase", "correct-passphrase",
+            "--quick-gen-key", "test-pw@mountainash.example",
+            "default", "default", "never",
+        ],
+        check=True,
+    )
+
+    # Encrypt with the right key
+    encrypt = GPG(
+        recipients=["test-pw@mountainash.example"],
+        gnupghome=str(gpg_home),
+        always_trust=True,
+    )
+    ciphertext = encrypt.wrap(io.BytesIO(b"secret payload")).read()
+
+    # Decrypt with a WRONG passphrase must raise TransformError
+    decrypt = GPG(gnupghome=str(gpg_home), passphrase="wrong-passphrase")
+    with pytest.raises(TransformError, match="decryption failed"):
+        decrypt.unwrap(io.BytesIO(ciphertext)).read()

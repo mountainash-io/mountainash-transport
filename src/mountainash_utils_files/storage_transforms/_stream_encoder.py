@@ -52,6 +52,12 @@ class GzipCompressingReader(io.RawIOBase):
         del self._buffer[:n]
         return n
 
+    def close(self) -> None:
+        try:
+            self._source.close()
+        finally:
+            super().close()
+
     def _fill(self) -> None:
         if not self._header_emitted:
             self._buffer.extend(_gzip_header(self._mtime))

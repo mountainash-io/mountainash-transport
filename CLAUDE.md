@@ -80,6 +80,7 @@ src/mountainash_utils_files/
 ├── storage_facade/                # StorageFacade + cross_backend utilities
 ├── storage_protocols/             # 8 granular protocols
 ├── storage_registry/              # get_storage_backend + provider detection
+├── storage_transforms/            # Stream transforms (Pipeline, Gzip, GPG, materialize)
 └── settings/
     ├── __init__.py                # StorageAuthBase, exceptions, templates
     ├── descriptor.py              # StorageDescriptor(ProfileDescriptor)
