@@ -2,6 +2,7 @@
 
 from .base import StreamTransform
 from .compression import Gzip
+from .encryption import GPG
 from .pipeline import Pipeline
 
-__all__ = ["StreamTransform", "Pipeline", "Gzip"]
+__all__ = ["StreamTransform", "Pipeline", "Gzip", "GPG"]
