@@ -39,7 +39,7 @@ Settings follow the Mountain Ash Phase 4 descriptor pattern:
 | `LocalSettings` | Local + NFS/CIFS (pre-mount) | `MOUNT_SPEC: Optional[dict]` |
 | `GitHubRepoSettings` | GitHub (scope-cut: read-only, fsspec-backed) | — |
 
-All 15 legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSStorageAuthSettings`, `GitHubStorageAuthSettings`) remain available as pure aliases — `isinstance` checks against legacy names still pass.
+Legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSStorageAuthSettings`, `GitHubStorageAuthSettings`) were aliased during Phase 4 and removed in Phase 4b. Downstream callers must use the new consolidated class names + discriminator fields.
 
 **Registry + factory:**
 - `STORAGE_REGISTRY = Registry("storage")` — descriptor registry for lookup by name
@@ -246,10 +246,8 @@ nfs = LocalSettings(ROOT_PATH="/mnt/nfs", auth=NoAuth(),
                     MOUNT_SPEC={"mount_type": "nfs", "server": "nfs.example.com",
                                 "export_path": "/exports/data"})
 
-# Legacy alias — isinstance still works
-from mountainash_utils_files.settings.providers import S3StorageAuthSettings
-assert isinstance(s3, S3StorageAuthSettings)  # True
-assert S3StorageAuthSettings is S3Settings     # True (pure alias)
+# Legacy class names (S3StorageAuthSettings, R2StorageAuthSettings, etc.)
+# were removed in Phase 4b. Migrate to the consolidated class + FLAVOR field.
 ```
 
 ### Storage facade (unchanged public API)

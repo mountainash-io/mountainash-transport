@@ -11,7 +11,6 @@ from mountainash_utils_files.settings.providers.local_settings import (
     LOCAL_DESCRIPTOR,
     LocalSettings,
 )
-from mountainash_utils_files.settings.providers import NFSStorageAuthSettings
 
 
 def _make(**extra):
@@ -85,28 +84,6 @@ class TestLocalMountSpecCIFS:
             "options": {"vers": "3.0"},
         }
         s = _make(ROOT_PATH="/mnt/cifs", MOUNT_SPEC=spec)
-        kw = s.to_handler_kwargs()
-        assert kw["mount_spec"] == spec
-
-
-@pytest.mark.unit
-class TestNFSAliasBackcompat:
-    def test_nfs_alias_is_local_settings(self):
-        assert NFSStorageAuthSettings is LocalSettings
-
-    def test_nfs_alias_instance_works_with_mount_spec(self):
-        spec = {
-            "mount_type": "nfs",
-            "server": "nfs.example",
-            "export_path": "/srv/shared",
-        }
-        s = NFSStorageAuthSettings(
-            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-            ROOT_PATH="/mnt/share",
-            MOUNT_SPEC=spec,
-            auth=NoAuth(),
-        )
-        assert isinstance(s, LocalSettings)
         kw = s.to_handler_kwargs()
         assert kw["mount_spec"] == spec
 
