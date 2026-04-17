@@ -1,7 +1,6 @@
 """Tests for the StreamTransform protocol."""
 from __future__ import annotations
 
-import io
 from typing import BinaryIO
 
 
