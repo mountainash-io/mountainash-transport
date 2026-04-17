@@ -31,6 +31,7 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 #================
 [envs.default]
 installer = "uv"
+path = ".venv"
 dependencies = [
     # "mountainash_constants @          {root:uri}/../mountainash-constants",
     # "mountainash_data @               {root:uri}/../mountainash-data",
