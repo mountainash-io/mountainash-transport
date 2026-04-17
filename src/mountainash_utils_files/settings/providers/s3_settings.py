@@ -191,49 +191,6 @@ class S3Settings(StorageProfile, StorageAuthBase):
     __descriptor__ = S3_DESCRIPTOR
     __adapter__ = staticmethod(_adapter)
 
-    # StorageAuthBase declares abstract methods. They are no-ops for the
-    # descriptor-driven providers (all behaviour flows through __adapter__).
-    def _init_provider_specific(self, reinitialise: bool) -> None:  # noqa: D401
-        """No-op; provider-specific setup lives in the adapter."""
-        return None
-
-    def post_init(
-        self,
-        template_settings_parameters: t.Any = None,
-        reinitialise: bool = False,
-    ) -> None:
-        """Bridge StorageAuthBase.post_init and DescriptorProfile.post_init.
-
-        ``StorageAuthBase.post_init`` accepts ``(reinitialise: bool)`` while
-        ``DescriptorProfile.post_init`` accepts
-        ``(template_settings_parameters, reinitialise)``. Replicate the
-        DescriptorProfile template-wiring logic inline to avoid calling
-        ``super().post_init`` with kwargs that StorageAuthBase's legacy
-        signature rejects.
-        """
-        # Template wiring (copied from DescriptorProfile.post_init).
-        desc = type(self).__dict__.get("__descriptor__")
-        if desc is None:
-            for base in type(self).__mro__[1:]:
-                cand = base.__dict__.get("__descriptor__")
-                if cand is not None:
-                    desc = cand
-                    break
-        if desc is not None:
-            for spec in desc.parameters:
-                if spec.template is None:
-                    continue
-                current = getattr(self, spec.name, None)
-                spec_default = spec.default if spec.default is not MISSING else None
-                if current == spec_default or current is None:
-                    self.init_setting_from_template(
-                        spec.name,
-                        spec.template,
-                        template_settings_parameters,
-                    )
-        # Legacy StorageAuthBase hook.
-        self._init_provider_specific(reinitialise)
-
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
         flavor = getattr(self, "FLAVOR", "aws")

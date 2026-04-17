@@ -15,7 +15,7 @@ from __future__ import annotations
 import typing as t
 
 if t.TYPE_CHECKING:
-    from ..providers.s3_settings import S3Settings
+    from ..profile import StorageProfile
 
 
 __all__ = ["build_handler_kwargs"]
@@ -70,8 +70,12 @@ def _resolve_addressing_style(flavor: str, configured: str) -> str:
     return configured
 
 
-def build_handler_kwargs(profile: "S3Settings") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     """Build boto3 S3 client kwargs from an :class:`S3Settings` profile.
+
+    Signature widened to ``StorageProfile`` to satisfy the upstream
+    ``__adapter__: Callable[[DescriptorProfile], dict[str, Any]]`` contract;
+    callers always pass an :class:`S3Settings` instance in practice.
 
     Returns either a flat dict ready for ``boto3.client("s3", **kwargs)`` or
     a nested ``{"base_kwargs": ..., "role_arn": ..., "session_name": ...}``

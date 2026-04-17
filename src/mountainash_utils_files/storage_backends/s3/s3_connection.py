@@ -103,9 +103,13 @@ class S3ConnectionMixin:
             region = getattr(settings, "REGION", None)
 
         secret = getattr(settings, "SECRET_ACCESS_KEY", None)
-        secret_str: t.Optional[str] = (
-            secret.get_secret_value() if hasattr(secret, "get_secret_value") else secret
-        )
+        secret_str: t.Optional[str]
+        if secret is None:
+            secret_str = None
+        elif hasattr(secret, "get_secret_value"):
+            secret_str = secret.get_secret_value()
+        else:
+            secret_str = secret
 
         kwargs: dict[str, t.Any] = {
             "endpoint_url": endpoint_url,
