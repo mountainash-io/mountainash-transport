@@ -18,7 +18,7 @@ import typing as t
 
 from mountainash_settings.auth import IAMAuth, NoAuth, TokenAuth
 
-from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
+from ..descriptor import ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
 from ..base import StorageAuthBase
