@@ -57,6 +57,9 @@ cover/
 # Django stuff:
 *.log
 local_settings.py
+# …but keep the checked-in Local filesystem provider module (Phase 4
+# profiles migration) whose name collides with the Django convention.
+!src/mountainash_utils_files/settings/providers/local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
