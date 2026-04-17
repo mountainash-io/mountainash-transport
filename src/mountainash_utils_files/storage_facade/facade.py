@@ -20,6 +20,7 @@ from mountainash_utils_files.storage_protocols import (
     StorageWriteProtocol,
 )
 from mountainash_utils_files.storage_registry import get_storage_backend
+from mountainash_utils_files.storage_transforms import Pipeline, StreamTransform
 
 
 class StorageFacade:
@@ -61,19 +62,45 @@ class StorageFacade:
                 f"{type(self._backend).__name__} does not support '{operation}'"
             )
 
+    @staticmethod
+    def _coerce_pipeline(
+        pipeline: Pipeline | StreamTransform | None,
+    ) -> Pipeline:
+        if pipeline is None:
+            return Pipeline()
+        if isinstance(pipeline, Pipeline):
+            return pipeline
+        return Pipeline(pipeline)
+
     # ------------------------------------------------------------------
     # Read operations (StorageReadProtocol)
     # ------------------------------------------------------------------
 
-    def read(self, path: str) -> bytes:
-        """Read file contents and return as bytes."""
+    def read(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> bytes:
+        """Read file contents and return as bytes, optionally through *pipeline*."""
         self._require(StorageReadProtocol, "read")
-        return self._backend.read_to_bytes(path)
+        stream = self._backend.read_to_stream(path)
+        stream = self._coerce_pipeline(pipeline).apply_read(stream)
+        try:
+            return stream.read()
+        finally:
+            stream.close()
 
-    def read_stream(self, path: str) -> BinaryIO:
-        """Read file contents and return as a binary stream."""
+    def read_stream(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> BinaryIO:
+        """Read file contents and return as a binary stream, optionally through *pipeline*."""
         self._require(StorageReadProtocol, "read_stream")
-        return self._backend.read_to_stream(path)
+        stream = self._backend.read_to_stream(path)
+        return self._coerce_pipeline(pipeline).apply_read(stream)
 
     # ------------------------------------------------------------------
     # Write operations (StorageWriteProtocol)
