@@ -113,3 +113,79 @@ def test_facade_write_with_none_pipeline_is_unchanged(local_facade, tmp_path):
     path = tmp_path / "plain.bin"
     local_facade.write(str(path), b"raw", pipeline=None)
     assert path.read_bytes() == b"raw"
+
+
+def test_copy_between_source_pipeline_decodes(local_facade, tmp_path):
+    """Copy a gzipped source to a plaintext destination using source_pipeline."""
+    from mountainash_utils_files import copy_between
+
+    src_path = tmp_path / "source.gz"
+    dst_path = tmp_path / "dest.bin"
+    src_path.write_bytes(gzip.compress(b"hello world"))
+
+    copy_between(
+        str(src_path),
+        str(dst_path),
+        local_facade,
+        local_facade,
+        source_pipeline=Gzip(),
+    )
+    assert dst_path.read_bytes() == b"hello world"
+
+
+def test_copy_between_destination_pipeline_encodes(local_facade, tmp_path):
+    """Copy a plaintext source to a gzipped destination using destination_pipeline."""
+    from mountainash_utils_files import copy_between
+
+    src_path = tmp_path / "source.bin"
+    dst_path = tmp_path / "dest.gz"
+    src_path.write_bytes(b"hello world")
+
+    copy_between(
+        str(src_path),
+        str(dst_path),
+        local_facade,
+        local_facade,
+        destination_pipeline=Gzip(),
+    )
+    assert gzip.decompress(dst_path.read_bytes()) == b"hello world"
+
+
+def test_copy_between_no_pipeline_uses_native_copy(local_facade, tmp_path):
+    """With no pipelines, same-backend copy uses the native copy fast-path."""
+    from mountainash_utils_files import copy_between
+
+    src_path = tmp_path / "source.bin"
+    dst_path = tmp_path / "dest.bin"
+    src_path.write_bytes(b"payload")
+
+    copy_between(str(src_path), str(dst_path), local_facade, local_facade)
+    assert dst_path.read_bytes() == b"payload"
+
+
+def test_copy_between_forces_stream_when_pipeline_present(local_facade, tmp_path, monkeypatch):
+    """When any pipeline is given, native copy is skipped even for same-backend."""
+    from mountainash_utils_files import copy_between
+
+    src_path = tmp_path / "source.bin"
+    dst_path = tmp_path / "dest.gz"
+    src_path.write_bytes(b"x")
+
+    copy_called = {"value": False}
+    orig_copy = local_facade.copy
+
+    def tracking_copy(*args, **kwargs):
+        copy_called["value"] = True
+        return orig_copy(*args, **kwargs)
+
+    monkeypatch.setattr(local_facade, "copy", tracking_copy)
+
+    copy_between(
+        str(src_path),
+        str(dst_path),
+        local_facade,
+        local_facade,
+        destination_pipeline=Gzip(),
+    )
+    assert copy_called["value"] is False  # native copy was NOT used
+    assert gzip.decompress(dst_path.read_bytes()) == b"x"
