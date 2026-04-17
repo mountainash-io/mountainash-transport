@@ -25,3 +25,7 @@ class PathNotFoundError(StorageError):
 
 class AuthenticationError(StorageError):
     """Raised when authentication with a storage backend fails."""
+
+
+class TransformError(StorageError):
+    """Raised when a stream transform fails to encode or decode."""
