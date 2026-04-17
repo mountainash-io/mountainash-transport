@@ -18,6 +18,7 @@ explicitly — the aliases do not preset the discriminator.
 from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
 from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
+from .ssh_settings import SSH_DESCRIPTOR, SSHSettings
 
 # --- Backwards-compatible aliases for the migrated GCS + Azure providers.
 # Pure aliases (not subclasses) so existing downstream imports and
@@ -25,16 +26,6 @@ from .s3_settings import S3_DESCRIPTOR, S3Settings
 GCSStorageAuthSettings = GCSSettings
 AzureBlobStorageAuthSettings = AzureStorageSettings
 AzureFilesStorageAuthSettings = AzureStorageSettings
-
-from .ftp import FTPStorageAuthSettings
-from .nfs import NFSStorageAuthSettings
-from .sftp import SFTPStorageAuthSettings
-from .smb import SMBStorageAuthSettings
-from .ssh import SSHStorageAuthSettings
-
-from .github import GitHubStorageAuthSettings
-from .local import LocalStorageAuthSettings
-
 
 # --- Backwards-compatible aliases for the consolidated S3-family ----------
 # Pure aliases (not subclasses) so isinstance() checks still pass against
@@ -44,6 +35,21 @@ R2StorageAuthSettings = S3Settings
 S3ExpressStorageAuthSettings = S3Settings
 MinIOStorageAuthSettings = S3Settings
 BackblazeB2StorageAuthSettings = S3Settings
+
+# --- Backwards-compatible aliases for the unified SSH / SFTP provider -----
+# SFTP has no kwarg differences vs SSH (both wrap
+# ``paramiko.SSHClient.connect``); the SFTP distinction is opening the
+# SFTP subsystem after connecting. Alias both legacy names to SSHSettings.
+SSHStorageAuthSettings = SSHSettings
+SFTPStorageAuthSettings = SSHSettings
+
+# Remaining legacy (pre-migration) provider classes — migrated
+# incrementally in Phase 4.
+from .ftp import FTPStorageAuthSettings
+from .nfs import NFSStorageAuthSettings
+from .smb import SMBStorageAuthSettings
+from .github import GitHubStorageAuthSettings
+from .local import LocalStorageAuthSettings
 
 
 __all__ = [
