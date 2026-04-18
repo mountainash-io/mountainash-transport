@@ -2,7 +2,13 @@ from typing import Union, Type, Optional
 
 from upath import UPath
 
-from mountainash_utils_files.path_helpers import BasePathHelper, LocalPathHelper, S3PathHelper, GCSPathHelper, AZPathHelper, SFTPPathHelper, SSHPathHelper
+from .base_path_helper import BasePathHelper
+from .local_path_helper import LocalPathHelper
+from .s3_path_helper import S3PathHelper
+from .gcs_path_helper import GCSPathHelper
+from .az_path_helper import AZPathHelper
+from .sftp_path_helper import SFTPPathHelper
+from .ssh_path_helper import SSHPathHelper
 
 
 class PathHelper:
