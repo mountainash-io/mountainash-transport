@@ -12,5 +12,6 @@ every scheme in SCHEMES; caller is responsible for scheme→provider mapping.
 from . import s3
 from .scheme import SCHEMES, SchemeSpec
 from .storage_path import StoragePath
+from .suffixes import SUFFIX_TRANSFORMS, infer_pipeline
 
-__all__ = ("StoragePath", "SchemeSpec", "SCHEMES", "s3")
+__all__ = ("StoragePath", "SchemeSpec", "SCHEMES", "s3", "SUFFIX_TRANSFORMS", "infer_pipeline")
