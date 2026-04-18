@@ -56,7 +56,7 @@ def test_gpg_suffix_requires_instance(suffix: str):
 
 @pytest.mark.parametrize("suffix", [".gpg", ".asc", ".pgp"])
 def test_gpg_suffix_without_instance_raises(suffix: str):
-    with pytest.raises(ValueError, match=f"{suffix} suffix"):
+    with pytest.raises(ValueError, match=rf"\{suffix} suffix"):
         infer_pipeline(f"data{suffix}")
 
 
