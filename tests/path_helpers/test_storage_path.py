@@ -289,3 +289,10 @@ def test_bug_6_single_join_implementation():
     assert local_result.endswith("/a/b")
     assert s3_result.endswith("a/b")
     assert ssh_result.endswith("a/b")
+
+
+def test_join_with_generic_scheme_fallback():
+    """Join must work for schemes UPath can't construct (azure/b2/smb)."""
+    result = StoragePath.join("azure://container", "blob")
+    assert result is not None
+    assert str(result) == "azure://container/blob"

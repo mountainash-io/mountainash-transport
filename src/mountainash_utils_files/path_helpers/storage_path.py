@@ -34,6 +34,12 @@ class _GenericSchemePath(str):
     def __new__(cls, url: str) -> _GenericSchemePath:
         return str.__new__(cls, url)
 
+    def __truediv__(self, name: str) -> _GenericSchemePath:
+        """Support path joining via `/` so StoragePath.join works uniformly."""
+        base = str(self).rstrip("/")
+        clean = name.strip("/\\")
+        return _GenericSchemePath(f"{base}/{clean}") if clean else _GenericSchemePath(base)
+
 
 class StoragePath:
     """Stateless helper for parsing and normalizing storage paths."""
