@@ -278,6 +278,21 @@ facade = StorageFacade(provider_type="s3", auth_params=s3)
 # ... use facade for cross-backend operations
 ```
 
+### Path-driven dispatch (Phase 5, 2026-04-18)
+
+```python
+from mountainash_utils_files import StorageFacade, read_bytes
+
+# Facade from a path — provider inferred from the URL scheme.
+facade = StorageFacade.from_path("s3://bucket/key")
+
+# One-liner that reads bytes from any recognised scheme (including http/https
+# via urllib bridge until the HTTP backend follow-up ships).
+payload = read_bytes("s3://bucket/data.parquet")
+html = read_bytes("https://example.com/page.html")
+local = read_bytes("/tmp/local-file")
+```
+
 ## Versioning Strategy
 
 Uses CalVer (Calendar Versioning) with semantic versioning:
