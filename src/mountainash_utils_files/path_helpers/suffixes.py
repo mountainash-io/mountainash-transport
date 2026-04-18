@@ -6,10 +6,8 @@ transforms. See docs/superpowers/specs/2026-04-18-suffix-aware-transform-inferen
 from __future__ import annotations
 
 from pathlib import PurePosixPath
-from typing import Optional, Tuple
 
-from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline
-from mountainash_utils_files.storage_transforms.base import StreamTransform
+from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline, StreamTransform
 
 SUFFIX_TRANSFORMS: dict[str, str] = {
     ".gz":   "gzip",
@@ -20,7 +18,7 @@ SUFFIX_TRANSFORMS: dict[str, str] = {
 }
 
 
-def _split_final_suffix(path: str) -> Tuple[str, str]:
+def _split_final_suffix(path: str) -> tuple[str, str]:
     """Return (stem, suffix) using posix-path rules.
 
     ``suffix`` is the lowercased final suffix including the dot, or the
@@ -42,7 +40,7 @@ def infer_pipeline(
     *,
     gpg: GPG | None = None,
     gzip: Gzip | None = None,
-) -> Tuple[Optional[Pipeline], str]:
+) -> tuple[Pipeline | None, str]:
     """Parse the suffix chain of *path* right-to-left into a Pipeline.
 
     Stops at the first suffix not in :data:`SUFFIX_TRANSFORMS`. Comparison
