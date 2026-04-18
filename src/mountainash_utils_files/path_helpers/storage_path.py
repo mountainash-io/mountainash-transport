@@ -73,13 +73,7 @@ class StoragePath:
 
     @classmethod
     def normalize(cls, path: Union[str, UPath, None]) -> Optional[_NormalizedPath]:
-        """Normalize a path.
-
-        - None or empty string → None.
-        - Bare/local paths: expanduser, strip trailing slash unless length 1.
-        - Schemed paths: validated + canonicalised via urlunparse (Task 5).
-        - Raises ValueError on invalid schemed input (Task 6).
-        """
+        """Normalize a path (see module docstring for contract)."""
         if path is None:
             return None
         text = str(path)
@@ -90,6 +84,8 @@ class StoragePath:
             return cls._normalize_bare(text)
         if scheme is None:
             raise ValueError(f"Unknown scheme in path: {text!r}")
+        cls._check_strict_casing(text, scheme)
+        cls._check_url_form(text)
         return cls._normalize_schemed(text, scheme)
 
     @staticmethod
@@ -116,3 +112,36 @@ class StoragePath:
         except ValueError:
             # Scheme not supported by UPath; use fallback string-based path
             return _GenericSchemePath(rebuilt)
+
+    @staticmethod
+    def _check_strict_casing(text: str, canonical_scheme: str) -> None:
+        """Reject mixed-case schemes when the SchemeSpec is strict.
+
+        Extracts the literal prefix up to the first ':' from `text` and
+        compares it to the canonical scheme. Aliases in the input must also
+        be lowercase to be accepted.
+        """
+        raw_prefix = text.split(":", 1)[0]
+        spec = SCHEMES[canonical_scheme]
+        if not spec.strict:
+            return
+        # Accept canonical form OR a lowercase alias; reject anything else.
+        if raw_prefix == canonical_scheme:
+            return
+        if raw_prefix in _ALIAS_TO_CANONICAL and raw_prefix == raw_prefix.lower():
+            return
+        raise ValueError(
+            f"mixed-case scheme not accepted: {raw_prefix!r} "
+            f"(expected lowercase canonical {canonical_scheme!r})"
+        )
+
+    @staticmethod
+    def _check_url_form(text: str) -> None:
+        """Reject `scheme:x` (missing `//`) — urlparse accepts it but it's ambiguous."""
+        colon = text.find(":")
+        if colon < 0:
+            return
+        if text[colon : colon + 3] != "://":
+            raise ValueError(
+                f"malformed URL — missing '//' after scheme: {text!r}"
+            )

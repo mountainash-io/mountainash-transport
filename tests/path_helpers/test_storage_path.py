@@ -190,3 +190,55 @@ def test_bug_2_normalize_always_returns_explicit_value():
     """
     result = StoragePath.normalize("s3://bucket/object")
     assert result is not None, "schemed path must not silently return None"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "S3://bucket/object",      # mixed-case canonical
+        "SSH://host/p",            # mixed-case canonical
+        "GCS://bucket/key",        # mixed-case alias
+        "AZ://container/blob",     # mixed-case alias
+    ],
+)
+def test_normalize_mixed_case_scheme_raises(path: str):
+    with pytest.raises(ValueError, match="mixed-case|case"):
+        StoragePath.normalize(path)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "nonsense://bucket/key",
+        "totallymadeup://x",
+    ],
+)
+def test_normalize_unknown_scheme_raises(path: str):
+    with pytest.raises(ValueError, match="[Uu]nknown scheme"):
+        StoragePath.normalize(path)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "s3:bucket/object",         # missing //
+        "s3:bucket/object/",
+    ],
+)
+def test_normalize_malformed_url_raises(path: str):
+    with pytest.raises(ValueError, match="[Mm]alformed|missing|//"):
+        StoragePath.normalize(path)
+
+
+def test_bug_1_no_str_replace_count_kwarg():
+    """Bug 1: old code called `str.replace(..., __count=1)` which is a TypeError.
+
+    The new path never calls str.replace with a kwarg, so the defect is
+    structurally impossible. This test exercises the valid-input branch
+    (which in the old code was unreachable past the dead replace call)
+    and asserts it produces a clean result.
+    """
+    # Exercise the path that would have hit the broken branch in old code.
+    result = StoragePath.normalize("s3://bucket/object")
+    assert result is not None
+    assert str(result) == "s3://bucket/object"
