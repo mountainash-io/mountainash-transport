@@ -1,16 +1,8 @@
 # storage_registry/backend_detection.py
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-
-_SCHEME_TO_PROVIDER: dict[str, CONST_STORAGE_PROVIDER_TYPE] = {
-    "s3": CONST_STORAGE_PROVIDER_TYPE.S3,
-    "gs": CONST_STORAGE_PROVIDER_TYPE.GCS,
-    "az": CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB,
-    "sftp": CONST_STORAGE_PROVIDER_TYPE.SFTP,
-    "ssh": CONST_STORAGE_PROVIDER_TYPE.SSH,
-    "r2": CONST_STORAGE_PROVIDER_TYPE.R2,
-    "b2": CONST_STORAGE_PROVIDER_TYPE.B2,
-}
+from mountainash_utils_files.path_helpers.scheme import SCHEMES
+from mountainash_utils_files.path_helpers.storage_path import StoragePath
 
 
 def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
@@ -23,12 +15,15 @@ def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
         The matching :class:`CONST_STORAGE_PROVIDER_TYPE` enum member.
 
     Raises:
-        ValueError: If the scheme is present but not recognised.
+        ValueError: If the scheme is present but not registered in SCHEMES,
+            or if the scheme is registered but has no backend provider.
     """
-    if "://" in path:
-        scheme = path.split("://", 1)[0].lower()
-        provider = _SCHEME_TO_PROVIDER.get(scheme)
-        if provider is None:
-            raise ValueError(f"Unknown scheme: {scheme!r} in path {path!r}")
-        return provider
-    return CONST_STORAGE_PROVIDER_TYPE.LOCAL
+    scheme = StoragePath.identify_scheme(path)
+    if scheme is None:
+        raise ValueError(f"Unrecognised scheme in path {path!r}")
+    spec = SCHEMES[scheme]
+    if spec.provider is None:
+        raise ValueError(
+            f"Scheme {scheme!r} is recognised but has no registered backend"
+        )
+    return spec.provider

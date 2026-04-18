@@ -31,6 +31,7 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 #================
 [envs.default]
 installer = "uv"
+path = ".venv"
 dependencies = [
     # "mountainash_constants @          {root:uri}/../mountainash-constants",
     # "mountainash_data @               {root:uri}/../mountainash-data",
@@ -100,6 +101,8 @@ dependencies = [
     "pytest-timeout>=2.1.0",     # Test timing control
     "pytest-picked>=0.5.0",      # Changed files testing
 
+
+    "python-gnupg>=0.5.2",
 
     "mountainash_data @        {root:uri}/../mountainash-data",
     "mountainash @             {root:uri}/../mountainash",

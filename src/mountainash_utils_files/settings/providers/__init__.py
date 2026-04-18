@@ -1,36 +1,47 @@
-from .azure_blob import AzureBlobStorageAuthSettings
-from .azure_files import AzureFilesStorageAuthSettings
-from .gcs import GCSStorageAuthSettings
-from .s3 import S3StorageAuthSettings
+"""Storage provider settings classes.
 
-from .ftp import FTPStorageAuthSettings
-from .nfs import NFSStorageAuthSettings
-from .sftp import SFTPStorageAuthSettings
-from .smb import SMBStorageAuthSettings
-from .ssh import SSHStorageAuthSettings
+All 15 legacy provider classes are consolidated into eight descriptor-driven
+settings classes:
 
-from .minio import MinIOStorageAuthSettings
-from .b2 import BackblazeB2StorageAuthSettings
+* S3 / S3Express / R2 / MinIO / Backblaze B2 → :class:`S3Settings`
+  (discriminated by ``FLAVOR``)
+* Azure Blob + Azure Files → :class:`AzureStorageSettings`
+  (discriminated by ``SERVICE_TYPE``)
+* GCS → :class:`GCSSettings`
+* SSH + SFTP → :class:`SSHSettings` (no kwarg difference — SFTP is just
+  the subsystem opened after connecting)
+* FTP / FTPS → :class:`FTPSettings` (discriminated by ``USE_TLS``)
+* SMB / CIFS → :class:`SMBSettings`
+* Local + NFS + CIFS mounts → :class:`LocalSettings` (NFS / CIFS drive
+  a pre-mount step via ``MOUNT_SPEC``)
+* GitHub repository read → :class:`GitHubRepoSettings` (scope-cut)
+"""
 
-from .github import GitHubStorageAuthSettings
-from .local import LocalStorageAuthSettings
-from .r2 import R2StorageAuthSettings
+from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
+from .ftp_settings import FTP_DESCRIPTOR, FTPSettings
+from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
+from .github_settings import GITHUB_REPO_DESCRIPTOR, GitHubRepoSettings
+from .local_settings import LOCAL_DESCRIPTOR, LocalSettings
+from .s3_settings import S3_DESCRIPTOR, S3Settings
+from .smb_settings import SMB_DESCRIPTOR, SMBSettings
+from .ssh_settings import SSH_DESCRIPTOR, SSHSettings
+
 
 __all__ = [
-    "AzureBlobStorageAuthSettings",
-    "AzureFilesStorageAuthSettings",
-    "GCSStorageAuthSettings",
-    "S3StorageAuthSettings",
-    "SFTPStorageAuthSettings",
-    "FTPStorageAuthSettings",
-    "NFSStorageAuthSettings",
-    "SMBStorageAuthSettings",
-
-    "SSHStorageAuthSettings",
-
-    "MinIOStorageAuthSettings",
-    "BackblazeB2StorageAuthSettings",
-    "GitHubStorageAuthSettings",
-    "LocalStorageAuthSettings",
-    "R2StorageAuthSettings"
-    ]
+    "AZURE_STORAGE_DESCRIPTOR",
+    "AzureStorageSettings",
+    "FTP_DESCRIPTOR",
+    "FTPSettings",
+    "GCS_DESCRIPTOR",
+    "GCSSettings",
+    "GITHUB_REPO_DESCRIPTOR",
+    "GitHubRepoSettings",
+    "LOCAL_DESCRIPTOR",
+    "LocalSettings",
+    "S3_DESCRIPTOR",
+    "S3Settings",
+    "SMB_DESCRIPTOR",
+    "SMBSettings",
+    "SSH_DESCRIPTOR",
+    "SSHSettings",
+]

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import io
 import typing
 from typing import BinaryIO
 
@@ -19,7 +20,43 @@ from mountainash_utils_files.storage_protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
 )
-from mountainash_utils_files.storage_registry import get_storage_backend
+from mountainash_utils_files.storage_registry import (
+    detect_provider_from_path,
+    get_storage_backend,
+)
+from mountainash_utils_files.storage_transforms import Pipeline, StreamTransform
+
+
+class _PairedStream(io.RawIOBase):
+    """BinaryIO wrapper that closes both a wrapped stream and its source on close().
+
+    Used when a pipeline wraps a backend stream — closing must propagate to
+    both so file descriptors are not leaked.
+    """
+
+    def __init__(self, wrapped: BinaryIO, source: BinaryIO) -> None:
+        self._wrapped = wrapped
+        self._source = source
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, b) -> int:  # type: ignore[override]
+        chunk = self._wrapped.read(len(b))
+        n = len(chunk)
+        b[:n] = chunk
+        return n
+
+    def read(self, size: int = -1) -> bytes:  # type: ignore[override]
+        return self._wrapped.read(size)
+
+    def close(self) -> None:  # type: ignore[override]
+        try:
+            if self._wrapped is not self._source:
+                self._wrapped.close()
+        finally:
+            self._source.close()
+            super().close()
 
 
 class StorageFacade:
@@ -46,6 +83,27 @@ class StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
         return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, auth_params=None)
 
+    @classmethod
+    def from_path(
+        cls,
+        path: str,
+        auth_params: typing.Any = None,
+    ) -> StorageFacade:
+        """Construct a facade whose provider is inferred from a path's URL scheme.
+
+        Args:
+            path: Path string, optionally with a URL scheme.
+            auth_params: Optional auth params forwarded to the backend.
+
+        Returns:
+            A StorageFacade wired to the provider that matches *path*.
+
+        Raises:
+            ValueError: If *path*'s scheme is unrecognised or has no backend.
+        """
+        provider = detect_provider_from_path(path)
+        return cls(provider_type=provider, auth_params=auth_params)
+
     # ------------------------------------------------------------------
     # Protocol introspection
     # ------------------------------------------------------------------
@@ -61,33 +119,87 @@ class StorageFacade:
                 f"{type(self._backend).__name__} does not support '{operation}'"
             )
 
+    @staticmethod
+    def _coerce_pipeline(
+        pipeline: Pipeline | StreamTransform | None,
+    ) -> Pipeline:
+        if pipeline is None:
+            return Pipeline()
+        if isinstance(pipeline, Pipeline):
+            return pipeline
+        return Pipeline(pipeline)
+
     # ------------------------------------------------------------------
     # Read operations (StorageReadProtocol)
     # ------------------------------------------------------------------
 
-    def read(self, path: str) -> bytes:
-        """Read file contents and return as bytes."""
+    def read(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> bytes:
+        """Read file contents and return as bytes, optionally through *pipeline*."""
         self._require(StorageReadProtocol, "read")
-        return self._backend.read_to_bytes(path)
+        source_stream = self._backend.read_to_stream(path)
+        try:
+            wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+            try:
+                return wrapped_stream.read()
+            finally:
+                if wrapped_stream is not source_stream:
+                    wrapped_stream.close()
+        finally:
+            source_stream.close()
 
-    def read_stream(self, path: str) -> BinaryIO:
-        """Read file contents and return as a binary stream."""
+    def read_stream(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> BinaryIO:
+        """Read file contents and return as a binary stream, optionally through *pipeline*.
+
+        The returned stream should be closed by the caller (context manager
+        recommended). Closing propagates to both the pipeline wrapper and the
+        underlying backend stream so file descriptors are not leaked.
+        """
         self._require(StorageReadProtocol, "read_stream")
-        return self._backend.read_to_stream(path)
+        source_stream = self._backend.read_to_stream(path)
+        wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+        return _PairedStream(wrapped_stream, source_stream)  # type: ignore[return-value]
 
     # ------------------------------------------------------------------
     # Write operations (StorageWriteProtocol)
     # ------------------------------------------------------------------
 
-    def write(self, path: str, data: bytes) -> None:
-        """Write bytes data to a file at *path*."""
+    def write(
+        self,
+        path: str,
+        data: bytes,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> None:
+        """Write bytes data to a file at *path*, optionally through *pipeline*."""
         self._require(StorageWriteProtocol, "write")
-        self._backend.write_from_bytes(path, data)
+        if pipeline is None:
+            self._backend.write_from_bytes(path, data)
+            return
+        source = io.BytesIO(data)
+        encoded = self._coerce_pipeline(pipeline).apply_write(source)
+        self._backend.write_from_stream(path, encoded)
 
-    def write_stream(self, path: str, stream: BinaryIO) -> None:
-        """Write data from a binary stream to a file at *path*."""
+    def write_stream(
+        self,
+        path: str,
+        stream: BinaryIO,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+    ) -> None:
+        """Write data from a binary stream, optionally through *pipeline*."""
         self._require(StorageWriteProtocol, "write_stream")
-        self._backend.write_from_stream(path, stream)
+        encoded = self._coerce_pipeline(pipeline).apply_write(stream)
+        self._backend.write_from_stream(path, encoded)
 
     # ------------------------------------------------------------------
     # List operations (StorageListProtocol)

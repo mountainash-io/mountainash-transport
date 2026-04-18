@@ -243,15 +243,16 @@ class TestWrite:
             Bucket="bucket", Key="path/file.txt", Body=b"write me"
         )
 
-    def test_write_from_stream(self):
+    def test_write_from_stream_uses_upload_fileobj(self):
+        """write_from_stream must stream via upload_fileobj, not buffer via put_object."""
         mock_client = MagicMock()
         backend = _make_backend(mock_client)
-
-        backend.write_from_stream("s3://bucket/path/stream.bin", io.BytesIO(b"from stream"))
-
-        mock_client.put_object.assert_called_once_with(
-            Bucket="bucket", Key="path/stream.bin", Body=b"from stream"
+        stream = io.BytesIO(b"from stream")
+        backend.write_from_stream("s3://bucket/path/stream.bin", stream)
+        mock_client.upload_fileobj.assert_called_once_with(
+            stream, "bucket", "path/stream.bin"
         )
+        mock_client.put_object.assert_not_called()
 
     def test_write_without_scheme(self):
         mock_client = MagicMock()

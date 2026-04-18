@@ -4,62 +4,139 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**mountainash-utils-files** is a Python package for unified file operations across multiple storage systems including local filesystem, S3, SFTP, R2, GCS, and Azure Blob Storage. It provides a consistent interface for file operations, path manipulation, and data synchronization across different storage backends.
+**mountainash-utils-files** is a Python package for unified file operations across multiple storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), Azure Blob/Files, GCS, SFTP/SSH, FTP, SMB, and GitHub (read-only). It provides a consistent interface for file operations, path manipulation, and data synchronization across different storage backends.
+
+Settings follow the **descriptor-driven profiles pattern** (Phase 4, 2026-04-17) — see the Settings Architecture section below. Configuration uses upstream `mountainash_settings.profiles.DescriptorProfile` + typed `AuthSpec` discriminated union from `mountainash_settings.auth`.
 
 ## Architecture
 
 ### Core Components
 
-- **FileInterface**: Main API class providing unified file operations across storage systems
-- **FileHelperFactory**: Factory pattern for creating storage-specific file helpers
-- **Base_FileHelper**: Abstract base class for all storage implementations
-- **PathHelper**: Utility class for path formatting and storage system identification
-- **File Readers/Writers**: Specialized classes for reading and writing different file formats
-- **File Sync**: Orchestration tools for synchronizing files between storage systems
+- **StorageFacade**: Unified API class providing consistent file operations across storage backends
+- **StorageBackend (registry)**: Per-provider backend implementations registered against `CONST_STORAGE_PROVIDER_TYPE` values
+- **Storage protocols**: Read/Write/List/Delete/Metadata/Copy/Directory/Connection protocols that backends implement à la carte
+- **Descriptor-driven settings**: Consolidated settings classes (see next section) that produce SDK-ready kwargs via per-provider adapters
+
+### Settings Architecture (descriptor-driven)
+
+Settings follow the Mountain Ash Phase 4 descriptor pattern:
+
+**Base classes:**
+- `StorageProfile(DescriptorProfile)` — generic mechanism inherited from `mountainash_settings.profiles`; adds `to_handler_kwargs()` that walks MRO for an `__adapter__`
+- `StorageAuthBase(MountainAshBaseSettings)` — shared-fields mixin (TIMEOUT, ROOT_PATH, CREATE_PATH, USERNAME, PASSWORD, etc.)
+- `StorageDescriptor(ProfileDescriptor)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`)
+
+**Consolidated provider classes (15 legacy → 8):**
+
+| Settings class | Replaces | Discriminator |
+|----------------|----------|---------------|
+| `S3Settings` | S3, S3Express, R2, MinIO, Backblaze B2 | `FLAVOR: Literal["aws","express","r2","minio","b2"]` |
+| `GCSSettings` | GCS | — |
+| `AzureStorageSettings` | Azure Blob + Azure Files | `SERVICE_TYPE: Literal["blob","files"]` |
+| `SSHSettings` | SSH + SFTP (same paramiko connect) | — (auth type via AuthSpec) |
+| `FTPSettings` | FTP + FTPS | `USE_TLS: bool` |
+| `SMBSettings` | SMB | — |
+| `LocalSettings` | Local + NFS/CIFS (pre-mount) | `MOUNT_SPEC: Optional[dict]` |
+| `GitHubRepoSettings` | GitHub (scope-cut: read-only, fsspec-backed) | — |
+
+Legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSStorageAuthSettings`, `GitHubStorageAuthSettings`) were aliased during Phase 4 and removed in Phase 4b. Downstream callers must use the new consolidated class names + discriminator fields.
+
+**Registry + factory:**
+- `STORAGE_REGISTRY = Registry("storage")` — descriptor registry for lookup by name
+- `@register(DESCRIPTOR)` decorator populates the registry
+- `get_descriptor(name)` / `get_settings_class(name)` lookups
+- Typed `AuthSpec` discriminated union — `auth: Union[IAMAuth, TokenAuth, ServiceAccountAuth, AzureADAuth, PasswordAuth, CertificateAuth, KerberosAuth, OAuth2Auth, JWTAuth, NoAuth]` (per-provider subset via `auth_modes` in descriptor)
+
+**Pattern B (declarative templates):**
+- `ParameterSpec.template` auto-resolves composite fields (e.g. Azure `ACCOUNT_URL` from `ACCOUNT_NAME` + `ENDPOINT_SUFFIX`; S3 R2 endpoint URL from `ACCOUNT_ID`)
+
+### Stream Transforms
+
+Facade-level stream decorators for compression and encryption (restored 2026-04-17, spec at `docs/superpowers/specs/2026-04-17-stream-transforms-design.md`).
+
+- `storage_transforms/Pipeline(outer, ..., inner)` — ordered stack matching file-extension order (last-applied = outermost).
+- `Gzip(level=6, mtime=0)` — stdlib-based, reproducible by default, zero new dependency.
+- `GPG(recipients=[...], gnupghome=..., ...)` — requires the `[encryption]` optional extra (python-gnupg).
+- `StorageFacade.read/read_stream/write/write_stream` accept a keyword-only `pipeline=` argument.
+- `copy_between` accepts separate `source_pipeline=` and `destination_pipeline=` arguments.
+- `storage_transforms.util.materialize(stream, to=...)` — opt-in buffering to recover a known length.
+
+The same `Pipeline` instance is used on both read and write paths; the facade applies transforms in the correct direction automatically.
+
+### Suffix-Aware Transform Inference (Phase 6, 2026-04-18)
+
+`infer_pipeline(path, gpg=..., gzip=...)` parses a path's suffix chain
+right-to-left into a `Pipeline`. `read_bytes` accepts an opt-in `infer=True`
+flag that routes through this inference.
+
+```python
+from mountainash_utils_files import read_bytes, GPG
+
+# Auto-decompress a gzip-encoded file.
+plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
+
+# Auto-decrypt-then-decompress. gpg= supplies key material — a .gpg-family
+# suffix without an instance raises ValueError.
+plaintext = read_bytes(
+    "s3://bucket/data.parquet.gz.gpg",
+    infer=True,
+    gpg=GPG(gnupghome="/path/to/keyring"),
+)
+```
+
+Baseline suffix map: `.gz`/`.gzip` → `Gzip`, `.gpg`/`.asc`/`.pgp` → `GPG`.
+Parsing stops at the first unknown suffix, so `data.parquet.gz.gpg` yields
+`Pipeline(GPG, Gzip)` and a stripped path of `data.parquet`. Write-side
+inference is intentionally not provided — writes take an explicit
+`pipeline=` argument.
 
 ### Package Structure
 
 ```
 src/mountainash_utils_files/
-├── __init__.py                 # Main package exports
-├── __version__.py              # Version information
-├── dataclasses/                # Data structures
-│   ├── __init__.py
-│   └── file_metadata.py        # File metadata structures
-├── file_helpers/               # Storage system implementations
-│   ├── __init__.py
-│   ├── base_file_helper.py     # Abstract base class
-│   ├── file_helper_factory.py  # Factory for creating helpers
-│   ├── local_file_helper.py    # Local filesystem operations
-│   ├── s3_file_helper.py       # AWS S3 operations
-│   ├── r2_file_helper.py       # Cloudflare R2 operations
-│   ├── sftp_file_helper.py     # SFTP operations
-│   ├── ssh_file_helper.py      # SSH operations
-│   ├── gcs_file_helper.py      # Google Cloud Storage
-│   ├── az_file_helper.py       # Azure Blob Storage
-│   └── s3express_file_helper.py # S3 Express operations
-├── file_interface/             # Main API interface
-│   ├── __init__.py
-│   └── file_interface.py       # Unified file operations API
-├── file_readers/               # File reading utilities
-│   └── filereader.py           # Generic file reader
-├── file_writers/               # File writing utilities
-│   └── filewriter.py           # Generic file writer
-├── file_sync/                  # File synchronization
-│   ├── __init__.py
-│   ├── file_sync.py            # Core sync functionality
-│   ├── file_sync_orchestrator.py # Orchestration logic
-│   └── file_syncer_tools.py    # Sync utilities
-└── path_helpers/               # Path manipulation utilities
-    ├── __init__.py
-    ├── path_helper.py          # Main path utilities
-    ├── base_path_helper.py     # Base path operations
-    ├── local_path_helper.py    # Local path operations
-    ├── s3_path_helper.py       # S3 path operations
-    ├── sftp_path_helper.py     # SFTP path operations
-    ├── ssh_path_helper.py      # SSH path operations
-    ├── gcs_path_helper.py      # GCS path operations
-    └── az_path_helper.py       # Azure path operations
+├── __init__.py                    # Public API (StorageFacade, registry, protocols, constants)
+├── __version__.py
+├── constants.py                   # CONST_STORAGE_PROVIDER_TYPE, CONST_STORAGE_AUTH_METHOD
+├── dataclasses/                   # FileMetadata
+├── exceptions.py                  # StorageError hierarchy
+├── path_helpers/                  # Parse + normalize storage paths (scheme-aware)
+│   ├── __init__.py                # StoragePath, SchemeSpec, SCHEMES, s3
+│   ├── scheme.py                  # SchemeSpec + SCHEMES registry
+│   ├── storage_path.py            # StoragePath helper class
+│   └── s3.py                      # s3_bucket, s3_key free functions
+├── storage_backends/              # Backend implementations
+│   ├── __init__.py                # Imports trigger @register_storage_backend
+│   ├── local/                     # LocalStorageBackend
+│   └── s3/                        # S3StorageBackend (flavor-dispatched — serves AWS/Express/R2/MinIO/B2)
+├── storage_facade/                # StorageFacade + cross_backend utilities
+├── storage_protocols/             # 8 granular protocols
+├── storage_registry/              # get_storage_backend + provider detection
+├── storage_transforms/            # Stream transforms (Pipeline, Gzip, GPG, materialize)
+└── settings/
+    ├── __init__.py                # StorageAuthBase, exceptions, templates
+    ├── descriptor.py              # StorageDescriptor(ProfileDescriptor)
+    ├── profile.py                 # StorageProfile(DescriptorProfile)
+    ├── registry.py                # STORAGE_REGISTRY = Registry("storage")
+    ├── base.py                    # StorageAuthBase mixin (shared fields)
+    ├── templates.py               # Legacy URL templates (most inlined as ParameterSpec.template)
+    ├── adapters/                  # Per-SDK kwargs builders (lazy SDK imports)
+    │   ├── s3.py                  # boto3 kwargs — flavor dispatch
+    │   ├── gcs.py                 # google-cloud-storage kwargs
+    │   ├── azure.py               # azure.storage.{blob,fileshare} kwargs
+    │   ├── ssh.py                 # paramiko.SSHClient.connect kwargs
+    │   ├── ftp.py                 # ftplib.FTP / FTP_TLS kwargs
+    │   ├── smb.py                 # smbprotocol Session kwargs
+    │   ├── local.py               # pass-through + optional mount_spec
+    │   └── github.py              # fsspec.GithubFileSystem kwargs
+    └── providers/                 # Shell classes + descriptor literals + 15 legacy aliases
+        ├── s3_settings.py
+        ├── gcs_settings.py
+        ├── azure_settings.py
+        ├── ssh_settings.py
+        ├── ftp_settings.py
+        ├── smb_settings.py
+        ├── local_settings.py
+        └── github_settings.py
 ```
 
 ### Test Structure
@@ -182,34 +259,65 @@ tests/
 
 ## Usage Examples
 
-### Basic File Operations
+### Descriptor-driven settings (Phase 4)
+
 ```python
-from mountainash_utils_files import FileInterface, get_file_interface
-from mountainash_settings import SettingsParameters
-from mountainash_settings.settings.auth.storage.providers import LocalStorageAuthSettings
+from mountainash_utils_files.settings.providers import (
+    S3Settings, AzureStorageSettings, SSHSettings, LocalSettings,
+)
+from mountainash_settings.auth import IAMAuth, AzureADAuth, PasswordAuth, NoAuth
 
-# Create auth parameters
-auth_params = SettingsParameters.create("local", LocalStorageAuthSettings)
+# S3-family: single class discriminated by FLAVOR
+s3 = S3Settings(FLAVOR="aws", REGION="us-east-1", BUCKET="mybucket",
+                auth=IAMAuth(access_key_id="AKIA...", secret_access_key="..."))
+r2 = S3Settings(FLAVOR="r2", ACCOUNT_ID="abc123",  # endpoint auto-derived
+                auth=IAMAuth(access_key_id="...", secret_access_key="..."))
+kwargs = s3.to_handler_kwargs()  # → dict ready for boto3.client("s3", **kwargs)
 
-# Check if file exists
-exists = FileInterface.path_exists("/path/to/file.txt", auth_params)
+# Azure: single class discriminated by SERVICE_TYPE
+blob = AzureStorageSettings(SERVICE_TYPE="blob", ACCOUNT_NAME="myaccount",
+                            auth=AzureADAuth(tenant_id="...", client_id="...",
+                                             client_secret="..."))
+files = AzureStorageSettings(SERVICE_TYPE="files", ACCOUNT_NAME="myaccount",
+                             auth=AzureADAuth(...))
 
-# Get file size
-size = FileInterface.get_size("/path/to/file.txt", auth_params)
+# SSH / SFTP: same class — caller picks subsystem
+ssh = SSHSettings(HOST="example.com", USERNAME="user",
+                  auth=PasswordAuth(username="user", password="..."))
 
-# List directory contents
-files = FileInterface.list_sources("/path/to/directory/", auth_params)
+# Local (+ NFS/CIFS pre-mount)
+local = LocalSettings(ROOT_PATH="/data", auth=NoAuth())
+nfs = LocalSettings(ROOT_PATH="/mnt/nfs", auth=NoAuth(),
+                    MOUNT_SPEC={"mount_type": "nfs", "server": "nfs.example.com",
+                                "export_path": "/exports/data"})
+
+# Legacy class names (S3StorageAuthSettings, R2StorageAuthSettings, etc.)
+# were removed in Phase 4b. Migrate to the consolidated class + FLAVOR field.
 ```
 
-### Cross-Storage File Copy
+### Storage facade (unchanged public API)
 ```python
-# Copy from S3 to local
-FileInterface.copy_path_to_path(
-    source_path="s3://bucket/file.txt",
-    destination_path="/local/path/file.txt",
-    source_auth_settings_parameters=s3_auth_params,
-    destination_auth_settings_parameters=local_auth_params
-)
+from mountainash_utils_files import StorageFacade
+from mountainash_utils_files.storage_registry import get_storage_backend
+
+backend = get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.S3, auth_params=s3)
+facade = StorageFacade(provider_type="s3", auth_params=s3)
+# ... use facade for cross-backend operations
+```
+
+### Path-driven dispatch (Phase 5, 2026-04-18)
+
+```python
+from mountainash_utils_files import StorageFacade, read_bytes
+
+# Facade from a path — provider inferred from the URL scheme.
+facade = StorageFacade.from_path("s3://bucket/key")
+
+# One-liner that reads bytes from any recognised scheme (including http/https
+# via urllib bridge until the HTTP backend follow-up ships).
+payload = read_bytes("s3://bucket/data.parquet")
+html = read_bytes("https://example.com/page.html")
+local = read_bytes("/tmp/local-file")
 ```
 
 ## Versioning Strategy

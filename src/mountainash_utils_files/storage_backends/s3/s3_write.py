@@ -21,13 +21,14 @@ class S3WriteMixin:
         self._client.put_object(Bucket=bucket, Key=key, Body=data)  # type: ignore[attr-defined]
 
     def write_from_stream(self, path: str, stream: BinaryIO) -> None:
-        """Upload data from a binary stream as an S3 object.
+        """Upload from a binary stream using boto3's multipart-aware upload_fileobj.
 
-        The entire stream is read into memory before uploading.
+        Does NOT buffer the stream into memory. boto3 auto-multiparts large
+        uploads and uses a single PUT for small ones.
 
         Args:
             path: S3 path in the form ``s3://bucket/key`` or ``bucket/key``.
             stream: Binary stream to read from.
         """
-        data = stream.read()
-        self.write_from_bytes(path, data)
+        bucket, key = parse_s3_path(path)
+        self._client.upload_fileobj(stream, bucket, key)  # type: ignore[attr-defined]

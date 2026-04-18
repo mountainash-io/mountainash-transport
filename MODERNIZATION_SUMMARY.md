@@ -66,7 +66,7 @@ Exported:
 ```python
 # Settings drive file helper creation
 settings_params = SettingsParameters.create(
-    settings_class=S3StorageAuthSettings,
+    settings_class=S3Settings,
     config_files=["s3.env"]
 )
 
@@ -138,12 +138,12 @@ exists = helper.path_exists("s3://my-bucket/file.txt")
 ### Settings-Driven (Recommended)
 ```python
 from mountainash_utils_files import StorageUtils
-from mountainash_utils_files.settings.providers import S3StorageAuthSettings
+from mountainash_utils_files.settings.providers import S3Settings
 from mountainash_settings import SettingsParameters
 
 # Create settings
 settings_params = SettingsParameters.create(
-    settings_class=S3StorageAuthSettings,
+    settings_class=S3Settings,
     config_files=["s3.env"]
 )
 

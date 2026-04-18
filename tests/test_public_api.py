@@ -29,10 +29,25 @@ class TestPublicAPI:
             PathNotFoundError, AuthenticationError,
         )
 
-    def test_path_helper_importable(self):
-        from mountainash_utils_files import PathHelper
+    def test_storage_path_importable(self):
+        from mountainash_utils_files import StoragePath
+        assert callable(StoragePath.identify_scheme)
 
     def test_storage_convenience_factory(self):
         from mountainash_utils_files import storage, StorageReadProtocol
         facade = storage()
         assert facade.supports(StorageReadProtocol)
+
+    def test_transform_exports_are_top_level(self):
+        """Pipeline, Gzip, GPG, StreamTransform, TransformError import from package root."""
+        from mountainash_utils_files import (
+            GPG,
+            Gzip,
+            Pipeline,
+            StreamTransform,
+            TransformError,
+        )
+        # Construction smoke checks
+        assert isinstance(Pipeline(Gzip()).apply_read, type(Pipeline().apply_read))
+        assert issubclass(TransformError, Exception)
+        assert isinstance(Gzip(), StreamTransform)

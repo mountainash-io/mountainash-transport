@@ -63,13 +63,16 @@ class TestDetectProviderFromPath:
     def test_scheme_is_case_insensitive(self):
         assert detect_provider_from_path("S3://bucket/key") == CONST_STORAGE_PROVIDER_TYPE.S3
 
-    def test_unknown_scheme_raises_value_error(self):
-        with pytest.raises(ValueError, match="Unknown scheme"):
-            detect_provider_from_path("ftp://host/file")
+    def test_ftp_scheme(self):
+        assert detect_provider_from_path("ftp://host/file") == CONST_STORAGE_PROVIDER_TYPE.FTP
 
-    def test_unknown_scheme_error_contains_scheme(self):
-        with pytest.raises(ValueError, match="'xyz'"):
+    def test_unknown_scheme_raises_value_error(self):
+        with pytest.raises(ValueError, match="Unrecognised scheme"):
             detect_provider_from_path("xyz://some/path")
+
+    def test_unknown_scheme_error_contains_path(self):
+        with pytest.raises(ValueError, match="unknown://path"):
+            detect_provider_from_path("unknown://path")
 
 
 # ---------------------------------------------------------------------------

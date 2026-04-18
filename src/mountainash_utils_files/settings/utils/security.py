@@ -2,14 +2,14 @@
 
 from typing import Optional, Dict, Any
 
-from mountainash_settings.auth.storage.exceptions import StorageSecurityError
+from ..exceptions import StorageSecurityError
 
 # class CredentialProtection:
 #     """
 #     Simple credential protection utilities for client-side storage configurations.
 #     Focuses on protecting credentials in memory and configuration files.
 #     """
-    
+
 #     def __init__(
 #         self,
 #         protection_key: Optional[Union[str, bytes]] = None,
@@ -53,14 +53,14 @@ from mountainash_settings.auth.storage.exceptions import StorageSecurityError
 #                     f"Key file not found: {key_file}",
 #                     security_check="key_file"
 #                 )
-            
+
 #             # Validate path is within user space
 #             if not str(path).startswith(str(UPath.home())):
 #                 raise StorageSecurityError(
 #                     "Key file must be in user directory",
 #                     security_check="key_file"
 #                 )
-                
+
 #             with open(path, 'rb') as f:
 #                 key_data = f.read().strip()
 #                 return base64.urlsafe_b64encode(key_data[:32])
@@ -97,10 +97,10 @@ from mountainash_settings.auth.storage.exceptions import StorageSecurityError
 
 class ConnectionValidator:
     """
-    Simple connection security validator. 
+    Simple connection security validator.
     Focuses on basic security checks for storage connections.
     """
-    
+
     @staticmethod
     def validate_connection_params(
         params: Dict[str, Any],
@@ -115,7 +115,7 @@ class ConnectionValidator:
                 f"Missing required parameters: {missing}",
                 security_check="params"
             )
-            
+
         # Check for unexpected parameters if allowed list provided
         if allowed_params:
             unexpected = params.keys() - allowed_params
@@ -124,33 +124,33 @@ class ConnectionValidator:
                     f"Unexpected parameters: {unexpected}",
                     security_check="params"
                 )
-                
+
         return True
 
     @staticmethod
     def validate_endpoint(endpoint: str, allowed_schemes: set) -> bool:
         """Validate storage endpoint"""
         from urllib.parse import urlparse
-        
+
         try:
             parsed = urlparse(endpoint)
-            
+
             # Validate scheme
             if parsed.scheme not in allowed_schemes:
                 raise StorageSecurityError(
                     f"Invalid endpoint scheme. Allowed: {allowed_schemes}",
                     security_check="endpoint"
                 )
-                
+
             # Basic endpoint security checks
             if parsed.username or parsed.password:
                 raise StorageSecurityError(
                     "Credentials in endpoint URL not allowed",
                     security_check="endpoint"
                 )
-                
+
             return True
-            
+
         except Exception as e:
             if isinstance(e, StorageSecurityError):
                 raise
@@ -164,7 +164,7 @@ class ConnectionValidator:
 #     Simple credential store for temporary storage of connection credentials.
 #     Focuses on secure handling of credentials in memory.
 #     """
-    
+
 #     def __init__(self):
 #         self._store: Dict[str, Dict[str, Any]] = {}
 #         self._protection = CredentialProtection()
@@ -217,7 +217,7 @@ class ConnectionValidator:
 #                     for key, value in creds.items()
 #                 }
 #             return creds
-            
+
 #         except Exception as e:
 #             if isinstance(e, StorageSecurityError):
 #                 raise
@@ -240,7 +240,7 @@ class ConnectionValidator:
 #     Simple protection for configuration files.
 #     Focuses on basic security for local configuration storage.
 #     """
-    
+
 #     @staticmethod
 #     def protect_config(
 #         config: Dict[str, Any],
@@ -250,14 +250,14 @@ class ConnectionValidator:
 #         try:
 #             protection = CredentialProtection()
 #             protected = config.copy()
-            
+
 #             for key in sensitive_keys:
 #                 if key in protected:
 #                     if isinstance(protected[key], str):
 #                         protected[key] = protection.protect_value(protected[key])
-                        
+
 #             return protected
-            
+
 #         except Exception as e:
 #             raise StorageSecurityError(
 #                 f"Failed to protect configuration: {str(e)}",
@@ -273,29 +273,29 @@ class ConnectionValidator:
 #         """Safely save configuration to file"""
 #         try:
 #             path = UPath(file_path).resolve()
-            
+
 #             # Ensure directory is secure
 #             if not str(path).startswith(str(UPath.home())):
 #                 raise StorageSecurityError(
 #                     "Configuration file must be in user directory",
 #                     security_check="config_save"
 #                 )
-                
+
 #             # Protect sensitive values if specified
 #             if sensitive_keys:
 #                 config = ConfigurationProtection.protect_config(
 #                     config,
 #                     sensitive_keys
 #                 )
-                
+
 #             # Safely write configuration
 #             temp_path = path.with_suffix('.tmp')
 #             with open(temp_path, 'w') as f:
 #                 json.dump(config, f, indent=2)
-                
+
 #             # Atomic replace
 #             os.replace(temp_path, path)
-            
+
 #         except Exception as e:
 #             if isinstance(e, StorageSecurityError):
 #                 raise
