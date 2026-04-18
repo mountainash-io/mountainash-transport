@@ -51,3 +51,28 @@ class StoragePath:
     def matches(cls, pattern: str, name: str) -> bool:
         """Wildcard match via fnmatch. Supports `*` and `?`."""
         return fnmatch.fnmatch(name, pattern)
+
+    @classmethod
+    def normalize(cls, path: Union[str, UPath, None]) -> Optional[UPath]:
+        """Normalize a path.
+
+        - None or empty string → None.
+        - Bare/local paths: expanduser, strip trailing slash unless length 1.
+        - Schemed paths: validated + canonicalised via urlunparse (Task 5).
+        - Raises ValueError on invalid schemed input (Task 6).
+        """
+        if path is None:
+            return None
+        text = str(path)
+        if not text:
+            return None
+        scheme = cls.identify_scheme(text)
+        if scheme == "":
+            return cls._normalize_bare(text)
+        # Schemed paths handled in later tasks.
+        raise NotImplementedError(f"schemed normalization not yet implemented: {scheme}")
+
+    @staticmethod
+    def _normalize_bare(text: str) -> UPath:
+        stripped = text.rstrip("/\\") if len(text) > 1 else text
+        return UPath(stripped).expanduser()

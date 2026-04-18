@@ -113,3 +113,40 @@ def test_matches_question_mark():
 
 def test_matches_no_match():
     assert StoragePath.matches("*.csv", "file.parquet") is False
+
+
+@pytest.mark.parametrize(
+    "path,expected_str",
+    [
+        ("/path/to/file", "/path/to/file"),
+        ("/path/to/file/", "/path/to/file"),
+        ("/", "/"),
+        ("randomfile.txt", "randomfile.txt"),
+        ("randomfile.txt/", "randomfile.txt"),
+        ("./file.txt", "file.txt"),
+        ("../file.txt", "../file.txt"),
+    ],
+)
+def test_normalize_bare_paths(path: str, expected_str: str):
+    result = StoragePath.normalize(path)
+    assert result is not None
+    assert str(result) == str(UPath(expected_str))
+
+
+def test_normalize_none_returns_none():
+    assert StoragePath.normalize(None) is None
+
+
+def test_normalize_empty_string_returns_none():
+    assert StoragePath.normalize("") is None
+
+
+def test_normalize_expands_tilde():
+    result = StoragePath.normalize("~")
+    assert result is not None
+    assert not str(result).startswith("~"), f"~ should expand, got {result}"
+
+
+def test_normalize_upath_input():
+    result = StoragePath.normalize(UPath("/tmp/x"))
+    assert str(result) == "/tmp/x"
