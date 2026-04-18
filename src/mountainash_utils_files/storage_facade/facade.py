@@ -20,7 +20,10 @@ from mountainash_utils_files.storage_protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
 )
-from mountainash_utils_files.storage_registry import get_storage_backend
+from mountainash_utils_files.storage_registry import (
+    detect_provider_from_path,
+    get_storage_backend,
+)
 from mountainash_utils_files.storage_transforms import Pipeline, StreamTransform
 
 
@@ -79,6 +82,27 @@ class StorageFacade:
     def for_local(cls) -> StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
         return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, auth_params=None)
+
+    @classmethod
+    def from_path(
+        cls,
+        path: str,
+        auth_params: typing.Any = None,
+    ) -> StorageFacade:
+        """Construct a facade whose provider is inferred from a path's URL scheme.
+
+        Args:
+            path: Path string, optionally with a URL scheme.
+            auth_params: Optional auth params forwarded to the backend.
+
+        Returns:
+            A StorageFacade wired to the provider that matches *path*.
+
+        Raises:
+            ValueError: If *path*'s scheme is unrecognised or has no backend.
+        """
+        provider = detect_provider_from_path(path)
+        return cls(provider_type=provider, auth_params=auth_params)
 
     # ------------------------------------------------------------------
     # Protocol introspection
