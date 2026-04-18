@@ -40,7 +40,7 @@ def s3_key(path: Union[str, UPath, None]) -> Optional[str]:
         return None
     # UPath parts for "s3://bucket/key/..." → ("bucket/", "key", ...)
     # Skip the first part (bucket/) and join the rest.
-    parts = parsed.parts
+    parts = parsed.parts  # type: ignore[attr-defined]
     if len(parts) < 2:
         return ""
     return "/".join(parts[1:])

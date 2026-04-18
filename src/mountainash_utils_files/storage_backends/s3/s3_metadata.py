@@ -59,14 +59,10 @@ class S3MetadataMixin:
             return True
         except Exception as exc:
             # botocore.exceptions.ClientError with 404 → object not found
-            error_code = getattr(getattr(exc, "response", {}), "get", lambda *_: None)(
-                "Error", {}
-            ).get("Code", "")
-            if not error_code:
-                # Try attribute-based access (botocore ClientError)
-                response_attr = getattr(exc, "response", {})
-                if isinstance(response_attr, dict):
-                    error_code = response_attr.get("Error", {}).get("Code", "")
+            error_code = ""
+            response_attr = getattr(exc, "response", None)
+            if isinstance(response_attr, dict):
+                error_code = response_attr.get("Error", {}).get("Code", "")
             if error_code in ("404", "NoSuchKey"):
                 return False
             # Fallback: prefix-based list for any other error

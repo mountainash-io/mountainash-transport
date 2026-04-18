@@ -123,7 +123,7 @@ class StorageAuthBase(MountainAshBaseSettings):
     def post_init(
         self,
         template_settings_parameters: Optional[SettingsParameters] = None,
-        reinitialise: bool = False,
+        reinitialise: Optional[bool] = False,
     ) -> None:
         """Post-initialization validation and setup.
 
@@ -136,7 +136,7 @@ class StorageAuthBase(MountainAshBaseSettings):
             template_settings_parameters=template_settings_parameters,
             reinitialise=reinitialise,
         )
-        self._init_provider_specific(reinitialise)
+        self._init_provider_specific(bool(reinitialise))
 
     # def _validate_security_config(self) -> None:
     #     """Validate security configuration"""
