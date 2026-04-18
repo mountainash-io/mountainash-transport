@@ -63,6 +63,33 @@ Facade-level stream decorators for compression and encryption (restored 2026-04-
 
 The same `Pipeline` instance is used on both read and write paths; the facade applies transforms in the correct direction automatically.
 
+### Suffix-Aware Transform Inference (Phase 6, 2026-04-18)
+
+`infer_pipeline(path, gpg=..., gzip=...)` parses a path's suffix chain
+right-to-left into a `Pipeline`. `read_bytes` accepts an opt-in `infer=True`
+flag that routes through this inference.
+
+```python
+from mountainash_utils_files import read_bytes, GPG
+
+# Auto-decompress a gzip-encoded file.
+plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
+
+# Auto-decrypt-then-decompress. gpg= supplies key material — a .gpg-family
+# suffix without an instance raises ValueError.
+plaintext = read_bytes(
+    "s3://bucket/data.parquet.gz.gpg",
+    infer=True,
+    gpg=GPG(gnupghome="/path/to/keyring"),
+)
+```
+
+Baseline suffix map: `.gz`/`.gzip` → `Gzip`, `.gpg`/`.asc`/`.pgp` → `GPG`.
+Parsing stops at the first unknown suffix, so `data.parquet.gz.gpg` yields
+`Pipeline(GPG, Gzip)` and a stripped path of `data.parquet`. Write-side
+inference is intentionally not provided — writes take an explicit
+`pipeline=` argument.
+
 ### Package Structure
 
 ```
