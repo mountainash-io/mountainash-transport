@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
+
 
 @dataclass(frozen=True)
 class SchemeSpec:
@@ -18,11 +20,15 @@ class SchemeSpec:
             (e.g. "gcs" is an alias of "gs").
         strict: If True (default), mixed-case scheme input is rejected by
             `StoragePath.normalize`. Only the bare-local entry uses strict=False.
+        provider: The storage provider enum this scheme routes to, or None for
+            schemes described for registry completeness but with no registered
+            backend (e.g. hdfs, dbfs, sharepoint).
     """
 
     scheme: str
     aliases: tuple[str, ...] = field(default_factory=tuple)
     strict: bool = True
+    provider: CONST_STORAGE_PROVIDER_TYPE | None = None
 
 
 SCHEMES: dict[str, SchemeSpec] = {

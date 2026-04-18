@@ -5,6 +5,7 @@ import dataclasses
 
 import pytest
 
+from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.path_helpers.scheme import (
     SCHEMES,
     SchemeSpec,
@@ -65,3 +66,13 @@ def test_schemespec_is_frozen():
     spec = SCHEMES["s3"]
     with pytest.raises(dataclasses.FrozenInstanceError):
         spec.scheme = "nope"  # type: ignore[misc]
+
+
+def test_schemespec_has_provider_field_defaulting_to_none():
+    spec = SchemeSpec(scheme="example")
+    assert spec.provider is None
+
+
+def test_schemespec_accepts_provider():
+    spec = SchemeSpec(scheme="s3", provider=CONST_STORAGE_PROVIDER_TYPE.S3)
+    assert spec.provider == CONST_STORAGE_PROVIDER_TYPE.S3
