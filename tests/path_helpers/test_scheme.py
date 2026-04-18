@@ -1,6 +1,8 @@
 """Tests for the scheme registry."""
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from mountainash_utils_files.path_helpers.scheme import (
@@ -61,5 +63,5 @@ def test_az_alias_resolves_to_azure():
 
 def test_schemespec_is_frozen():
     spec = SCHEMES["s3"]
-    with pytest.raises(Exception):  # dataclasses.FrozenInstanceError subclasses AttributeError
+    with pytest.raises(dataclasses.FrozenInstanceError):
         spec.scheme = "nope"  # type: ignore[misc]
