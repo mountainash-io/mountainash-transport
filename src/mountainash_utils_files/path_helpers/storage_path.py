@@ -7,6 +7,7 @@ e.g. `s3://` → AWS S3 / MinIO / R2 / B2 / S3 Express).
 """
 from __future__ import annotations
 
+import fnmatch
 from typing import Optional, Union
 from urllib.parse import urlparse
 
@@ -38,3 +39,15 @@ class StoragePath:
         if raw_scheme in _ALIAS_TO_CANONICAL:
             return _ALIAS_TO_CANONICAL[raw_scheme]
         return None
+
+    @classmethod
+    def to_str(cls, path: Union[str, UPath, None]) -> Optional[str]:
+        """None passthrough; otherwise `str(path)`. No normalization."""
+        if path is None:
+            return None
+        return str(path)
+
+    @classmethod
+    def matches(cls, pattern: str, name: str) -> bool:
+        """Wildcard match via fnmatch. Supports `*` and `?`."""
+        return fnmatch.fnmatch(name, pattern)

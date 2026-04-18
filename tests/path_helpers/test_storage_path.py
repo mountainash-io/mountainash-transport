@@ -82,3 +82,34 @@ def test_bug_7_no_print_on_unknown_scheme():
     with redirect_stdout(buf):
         StoragePath.identify_scheme("nonsense://x")
     assert buf.getvalue() == ""
+
+
+def test_to_str_none_passthrough():
+    assert StoragePath.to_str(None) is None
+
+
+def test_to_str_string_input():
+    assert StoragePath.to_str("s3://b/k") == "s3://b/k"
+
+
+def test_to_str_upath_input():
+    assert StoragePath.to_str(UPath("s3://b/k")) == "s3://b/k"
+
+
+def test_matches_literal():
+    assert StoragePath.matches("file.csv", "file.csv") is True
+
+
+def test_matches_star():
+    assert StoragePath.matches("file*.csv", "file1.csv") is True
+    assert StoragePath.matches("file*.csv", "file.csv") is True
+    assert StoragePath.matches("file*.csv", "nope.csv") is False
+
+
+def test_matches_question_mark():
+    assert StoragePath.matches("f?le.csv", "file.csv") is True
+    assert StoragePath.matches("f?le.csv", "fle.csv") is False
+
+
+def test_matches_no_match():
+    assert StoragePath.matches("*.csv", "file.parquet") is False
