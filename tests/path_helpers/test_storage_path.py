@@ -1,0 +1,84 @@
+"""Tests for StoragePath.
+
+Regression tests for bugs documented in the hygiene spec are grouped
+under the `test_bug_*` names so coverage maps directly onto the bug list.
+"""
+from __future__ import annotations
+
+import io
+from contextlib import redirect_stdout
+
+import pytest
+from upath import UPath
+
+from mountainash_utils_files.path_helpers.storage_path import StoragePath
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("s3://bucket/object", "s3"),
+        ("gs://bucket/object", "gs"),
+        ("gcs://bucket/object", "gs"),        # alias resolves
+        ("azure://container/blob", "azure"),
+        ("az://container/blob", "azure"),     # alias resolves
+        ("sftp://user@host/p", "sftp"),
+        ("ftp://host/p", "ftp"),
+        ("ssh://user@host/p", "ssh"),
+        ("smb://host/share/p", "smb"),
+        ("b2://bucket/key", "b2"),
+        ("github://owner/repo/p", "github"),
+        ("dbfs:/some/path", "dbfs"),
+        ("hdfs://host/path", "hdfs"),
+        ("file:///tmp/x", "file"),
+        ("SSH://user@host/p", "ssh"),         # forgiving on case
+        ("S3://bucket/object", "s3"),         # forgiving on case
+    ],
+)
+def test_identify_scheme_known(path: str, expected: str):
+    assert StoragePath.identify_scheme(path) == expected
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/path/to/file",
+        "~",
+        "~/",
+        "~/data/dir/",
+        "randomfile.txt",
+        "./file.txt",
+        "../file.txt",
+        "/",
+    ],
+)
+def test_identify_scheme_bare_is_empty_string(path: str):
+    assert StoragePath.identify_scheme(path) == ""
+
+
+def test_identify_scheme_upath_input():
+    assert StoragePath.identify_scheme(UPath("s3://bucket/key")) == "s3"
+
+
+def test_identify_scheme_none_is_empty_string():
+    assert StoragePath.identify_scheme(None) == ""
+
+
+def test_identify_scheme_empty_string_is_empty_string():
+    assert StoragePath.identify_scheme("") == ""
+
+
+def test_bug_5_unknown_backend_scheme_returns_none_not_raises():
+    """Bug 5: Old identify_storage_system returned keys without matching helpers.
+
+    New contract: unrecognised scheme → None (not KeyError, not ValueError).
+    """
+    assert StoragePath.identify_scheme("nonsense://x") is None
+
+
+def test_bug_7_no_print_on_unknown_scheme():
+    """Bug 7: Old code printed a diagnostic on unknown schemes."""
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        StoragePath.identify_scheme("nonsense://x")
+    assert buf.getvalue() == ""
