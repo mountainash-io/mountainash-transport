@@ -113,7 +113,7 @@ def test_read_bytes_infer_true_no_known_suffix_falls_through(tmp_path: Path):
 def test_read_bytes_infer_gpg_suffix_without_gpg_raises(tmp_path: Path):
     target = tmp_path / "data.gpg"
     target.write_bytes(b"irrelevant")
-    with pytest.raises(ValueError, match=".gpg suffix"):
+    with pytest.raises(ValueError, match=r"\.gpg suffix"):
         read_bytes(str(target), infer=True)
 
 

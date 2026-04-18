@@ -43,8 +43,10 @@ def read_bytes(
             ``.gpg``, ``.asc``, ``.pgp``). Default False preserves
             byte-for-byte current behaviour.
         gpg: Required when *infer* is True and the suffix chain contains a
-            gpg-family suffix. Supplies key material.
+            gpg-family suffix. Supplies key material. Ignored when *infer*
+            is False.
         gzip: Optional; defaults to ``Gzip()`` when a gzip suffix is seen.
+            Ignored when *infer* is False.
 
     Returns:
         The full content of *path* as ``bytes``, optionally transform-decoded.
