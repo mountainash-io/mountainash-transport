@@ -150,3 +150,43 @@ def test_normalize_expands_tilde():
 def test_normalize_upath_input():
     result = StoragePath.normalize(UPath("/tmp/x"))
     assert str(result) == "/tmp/x"
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("s3://bucket/object", "s3://bucket/object"),
+        ("s3://bucket/object/", "s3://bucket/object"),
+        ("s3://bucket", "s3://bucket"),
+        ("sftp://user@host/p", "sftp://user@host/p"),
+        ("ssh://user@host/p", "ssh://user@host/p"),
+        ("github://owner/repo/p", "github://owner/repo/p"),
+        ("file:///tmp/x", "file:///tmp/x"),
+    ],
+)
+def test_normalize_schemed_canonical(path: str, expected: str):
+    result = StoragePath.normalize(path)
+    assert result is not None
+    assert str(result) == str(UPath(expected))
+
+
+def test_normalize_resolves_gcs_alias_to_gs():
+    result = StoragePath.normalize("gcs://bucket/key")
+    assert result is not None
+    assert str(result) == str(UPath("gs://bucket/key"))
+
+
+def test_normalize_resolves_az_alias_to_azure():
+    result = StoragePath.normalize("az://container/blob")
+    assert result is not None
+    assert str(result) == "azure://container/blob"
+
+
+def test_bug_2_normalize_always_returns_explicit_value():
+    """Bug 2: old `_normalize_path_schema` fell through to None on a valid input branch.
+
+    New contract: every reachable branch returns an explicit value.
+    A scheme-valid path is never silently dropped.
+    """
+    result = StoragePath.normalize("s3://bucket/object")
+    assert result is not None, "schemed path must not silently return None"

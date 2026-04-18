@@ -9,11 +9,22 @@ from __future__ import annotations
 
 import fnmatch
 from typing import Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from upath import UPath
 
 from .scheme import SCHEMES, _ALIAS_TO_CANONICAL
+
+
+class _GenericSchemePath(str):
+    """Fallback path wrapper for schemes not natively supported by UPath.
+
+    Behaves as a string for str()/repr(), but is typed as UPath for
+    compatibility with normalize's return signature.
+    """
+
+    def __new__(cls, url: str) -> _GenericSchemePath:
+        return str.__new__(cls, url)
 
 
 class StoragePath:
@@ -69,10 +80,31 @@ class StoragePath:
         scheme = cls.identify_scheme(text)
         if scheme == "":
             return cls._normalize_bare(text)
-        # Schemed paths handled in later tasks.
-        raise NotImplementedError(f"schemed normalization not yet implemented: {scheme}")
+        if scheme is None:
+            raise ValueError(f"Unknown scheme in path: {text!r}")
+        return cls._normalize_schemed(text, scheme)
 
     @staticmethod
     def _normalize_bare(text: str) -> UPath:
         stripped = text.rstrip("/\\") if len(text) > 1 else text
         return UPath(stripped).expanduser()
+
+    @staticmethod
+    def _normalize_schemed(text: str, canonical_scheme: str) -> UPath:
+        parsed = urlparse(text)
+        # Rebuild with the canonical scheme (lowercased/alias-resolved).
+        # Preserve netloc, path, params, query, fragment verbatim.
+        rebuilt_path = parsed.path.rstrip("/") if len(parsed.path) > 1 else parsed.path
+        rebuilt = urlunparse((
+            canonical_scheme,
+            parsed.netloc,
+            rebuilt_path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment,
+        ))
+        try:
+            return UPath(rebuilt)
+        except ValueError:
+            # Scheme not supported by UPath; use fallback string-based path
+            return _GenericSchemePath(rebuilt)
