@@ -15,12 +15,20 @@ from upath import UPath
 
 from .scheme import SCHEMES, _ALIAS_TO_CANONICAL
 
+# Return type for normalize: UPath for schemes fsspec supports,
+# _GenericSchemePath (str subclass) for schemes that only the registry
+# knows about. Callers should treat the result as path-like via str().
+_NormalizedPath = Union[UPath, "_GenericSchemePath"]
+
 
 class _GenericSchemePath(str):
-    """Fallback path wrapper for schemes not natively supported by UPath.
+    """Fallback path wrapper for schemes in SCHEMES that UPath cannot construct.
 
-    Behaves as a string for str()/repr(), but is typed as UPath for
-    compatibility with normalize's return signature.
+    UPath raises ValueError for schemes without an fsspec implementation
+    (e.g. "azure", "b2", "smb"). The hygiene spec keeps those schemes in
+    the registry because path parsing is decoupled from backend support.
+    For those schemes, normalize() returns this string subclass — stringifies
+    to the canonical URL, carries no filesystem behavior.
     """
 
     def __new__(cls, url: str) -> _GenericSchemePath:
@@ -64,7 +72,7 @@ class StoragePath:
         return fnmatch.fnmatch(name, pattern)
 
     @classmethod
-    def normalize(cls, path: Union[str, UPath, None]) -> Optional[UPath]:
+    def normalize(cls, path: Union[str, UPath, None]) -> Optional[_NormalizedPath]:
         """Normalize a path.
 
         - None or empty string → None.
@@ -90,7 +98,7 @@ class StoragePath:
         return UPath(stripped).expanduser()
 
     @staticmethod
-    def _normalize_schemed(text: str, canonical_scheme: str) -> UPath:
+    def _normalize_schemed(text: str, canonical_scheme: str) -> _NormalizedPath:
         parsed = urlparse(text)
         # Rebuild with the canonical scheme (lowercased/alias-resolved).
         # Preserve netloc, path, params, query, fragment verbatim.
