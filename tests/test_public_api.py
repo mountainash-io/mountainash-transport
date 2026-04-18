@@ -36,3 +36,17 @@ class TestPublicAPI:
         from mountainash_utils_files import storage, StorageReadProtocol
         facade = storage()
         assert facade.supports(StorageReadProtocol)
+
+    def test_transform_exports_are_top_level(self):
+        """Pipeline, Gzip, GPG, StreamTransform, TransformError import from package root."""
+        from mountainash_utils_files import (
+            GPG,
+            Gzip,
+            Pipeline,
+            StreamTransform,
+            TransformError,
+        )
+        # Construction smoke checks
+        assert isinstance(Pipeline(Gzip()).apply_read, type(Pipeline().apply_read))
+        assert issubclass(TransformError, Exception)
+        assert isinstance(Gzip(), StreamTransform)

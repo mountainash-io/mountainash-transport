@@ -160,3 +160,11 @@ class TestExceptionsRaisable:
         from mountainash_utils_files.exceptions import AuthenticationError
         with pytest.raises(Exception):
             raise AuthenticationError("auth failed")
+
+
+def test_transform_error_inherits_storage_error():
+    from mountainash_utils_files.exceptions import StorageError, TransformError
+    assert issubclass(TransformError, StorageError)
+    err = TransformError("boom")
+    assert isinstance(err, StorageError)
+    assert str(err) == "boom"
