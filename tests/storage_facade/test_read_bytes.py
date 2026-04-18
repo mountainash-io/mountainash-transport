@@ -94,3 +94,52 @@ def test_read_bytes_routes_s3_through_facade(monkeypatch):
 
     assert read_bytes("s3://bucket/key") == b"s3 body"
     assert calls == ["s3://bucket/key"]
+
+
+def test_read_bytes_infer_false_preserves_existing_behaviour(tmp_path: Path):
+    target = tmp_path / "data.gz"
+    target.write_bytes(b"\x1f\x8braw-gz-bytes")  # not valid gzip, but that's the point
+    # infer=False must NOT touch the bytes.
+    assert read_bytes(str(target)) == b"\x1f\x8braw-gz-bytes"
+    assert read_bytes(str(target), infer=False) == b"\x1f\x8braw-gz-bytes"
+
+
+def test_read_bytes_infer_true_no_known_suffix_falls_through(tmp_path: Path):
+    target = tmp_path / "plain.txt"
+    target.write_bytes(b"plain bytes")
+    assert read_bytes(str(target), infer=True) == b"plain bytes"
+
+
+def test_read_bytes_infer_gpg_suffix_without_gpg_raises(tmp_path: Path):
+    target = tmp_path / "data.gpg"
+    target.write_bytes(b"irrelevant")
+    with pytest.raises(ValueError, match=".gpg suffix"):
+        read_bytes(str(target), infer=True)
+
+
+def test_read_bytes_http_infer_applies_pipeline_to_bytes(monkeypatch):
+    """http body with a .gz suffix + infer=True must be gunzipped in-process."""
+    import gzip as gzlib
+    payload = gzlib.compress(b"plain text from web")
+
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self) -> bytes:
+            return payload
+
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url: _FakeResponse())
+
+    assert read_bytes("https://example.com/file.gz", infer=True) == b"plain text from web"
+
+
+def test_read_bytes_auth_params_still_accepted_as_keyword(tmp_path: Path):
+    target = tmp_path / "hello.txt"
+    target.write_bytes(b"hello")
+    # auth_params is now keyword-only — passing by keyword must still work.
+    assert read_bytes(str(target), auth_params=None) == b"hello"
