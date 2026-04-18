@@ -45,7 +45,7 @@ from .storage_transforms import (
 )
 
 # Path utilities
-from .path_helpers import PathHelper
+from .path_helpers import StoragePath
 
 # Trigger backend registrations
 from . import storage_backends  # noqa: F401
@@ -67,6 +67,6 @@ __all__ = [
     "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
     "PathNotFoundError", "AuthenticationError", "TransformError",
-    "PathHelper",
+    "StoragePath",
     "Pipeline", "StreamTransform", "Gzip", "GPG",
 ]

@@ -72,7 +72,11 @@ src/mountainash_utils_files/
 ├── constants.py                   # CONST_STORAGE_PROVIDER_TYPE, CONST_STORAGE_AUTH_METHOD
 ├── dataclasses/                   # FileMetadata
 ├── exceptions.py                  # StorageError hierarchy
-├── path_helpers/
+├── path_helpers/                  # Parse + normalize storage paths (scheme-aware)
+│   ├── __init__.py                # StoragePath, SchemeSpec, SCHEMES, s3
+│   ├── scheme.py                  # SchemeSpec + SCHEMES registry
+│   ├── storage_path.py            # StoragePath helper class
+│   └── s3.py                      # s3_bucket, s3_key free functions
 ├── storage_backends/              # Backend implementations
 │   ├── __init__.py                # Imports trigger @register_storage_backend
 │   ├── local/                     # LocalStorageBackend
