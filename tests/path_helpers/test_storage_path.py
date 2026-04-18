@@ -296,3 +296,15 @@ def test_join_with_generic_scheme_fallback():
     result = StoragePath.join("azure://container", "blob")
     assert result is not None
     assert str(result) == "azure://container/blob"
+
+
+def test_bug_4_path_util_classes_dispatcher_absent():
+    """Bug 4: legacy PathHelper.path_util_classes keyed on strings that didn't
+    match CONST_STORAGE_PROVIDER_TYPE. The new design has no dispatcher;
+    StoragePath is a single class with no provider-table lookup.
+    """
+    assert not hasattr(StoragePath, "path_util_classes")
+    # The legacy top-level symbol is also gone — if it ever came back,
+    # the hygiene pass's core decision has been undone.
+    import mountainash_utils_files as pkg
+    assert not hasattr(pkg, "PathHelper")
