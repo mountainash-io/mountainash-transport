@@ -72,6 +72,23 @@ class StoragePath:
         return fnmatch.fnmatch(name, pattern)
 
     @classmethod
+    def join(
+        cls,
+        path: Union[str, UPath, None],
+        name: Optional[str],
+    ) -> Optional[_NormalizedPath]:
+        """Return normalize(path) / stripped(name). None if either is falsy."""
+        if path is None or name is None:
+            return None
+        clean_name = name.strip("/\\") if len(name) > 0 else ""
+        if not clean_name:
+            return None
+        base = cls.normalize(path)
+        if base is None:
+            return None
+        return base / clean_name
+
+    @classmethod
     def normalize(cls, path: Union[str, UPath, None]) -> Optional[_NormalizedPath]:
         """Normalize a path (see module docstring for contract)."""
         if path is None:

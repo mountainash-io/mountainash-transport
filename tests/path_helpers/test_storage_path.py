@@ -242,3 +242,50 @@ def test_bug_1_no_str_replace_count_kwarg():
     result = StoragePath.normalize("s3://bucket/object")
     assert result is not None
     assert str(result) == "s3://bucket/object"
+
+
+def test_join_local():
+    result = StoragePath.join("/tmp", "file.txt")
+    assert str(result) == "/tmp/file.txt"
+
+
+def test_join_s3():
+    result = StoragePath.join("s3://bucket", "key.parquet")
+    assert result is not None
+    assert str(result) == str(UPath("s3://bucket/key.parquet"))
+
+
+def test_join_strips_leading_slash_from_name():
+    result = StoragePath.join("/tmp", "/file.txt")
+    assert str(result) == "/tmp/file.txt"
+
+
+def test_join_strips_trailing_slash_from_name():
+    result = StoragePath.join("/tmp", "file.txt/")
+    assert str(result) == "/tmp/file.txt"
+
+
+def test_join_none_path_returns_none():
+    assert StoragePath.join(None, "file.txt") is None
+
+
+def test_join_none_name_returns_none():
+    assert StoragePath.join("/tmp", None) is None
+
+
+def test_join_empty_name_returns_none():
+    assert StoragePath.join("/tmp", "") is None
+
+
+def test_bug_6_single_join_implementation():
+    """Bug 6: combine_path_and_filename was duplicated across GCS and SSH subclasses.
+
+    With one StoragePath class there is only one implementation by construction.
+    This test asserts the behavior is consistent across schemes.
+    """
+    local_result = str(StoragePath.join("/a", "b"))
+    s3_result = str(StoragePath.join("s3://a", "b"))
+    ssh_result = str(StoragePath.join("ssh://host/a", "b"))
+    assert local_result.endswith("/a/b")
+    assert s3_result.endswith("a/b")
+    assert ssh_result.endswith("a/b")
