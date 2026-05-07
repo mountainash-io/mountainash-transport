@@ -48,6 +48,7 @@ class CONST_STORAGE_PROVIDER_TYPE(_FindMemberMixin):
     B2 = "b2"
     GITHUB = "github"
     R2 = "r2"
+    HTTP = "http"
 
 class CONST_STORAGE_AUTH_METHOD(_FindMemberMixin):
     """Authentication methods"""

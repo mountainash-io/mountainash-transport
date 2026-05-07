@@ -93,10 +93,12 @@ _EXPECTED_PROVIDERS: dict[str, CONST_STORAGE_PROVIDER_TYPE] = {
     "ftp":       CONST_STORAGE_PROVIDER_TYPE.FTP,
     "smb":       CONST_STORAGE_PROVIDER_TYPE.SMB,
     "github":    CONST_STORAGE_PROVIDER_TYPE.GITHUB,
+    "http":      CONST_STORAGE_PROVIDER_TYPE.HTTP,
+    "https":     CONST_STORAGE_PROVIDER_TYPE.HTTP,
 }
 
 _DESCRIBE_ONLY_SCHEMES: tuple[str, ...] = (
-    "s3u", "http", "https", "dbfs", "hdfs", "webhdfs", "spark", "trino",
+    "s3u", "dbfs", "hdfs", "webhdfs", "spark", "trino",
     "gdrive", "dropbox", "onedrive", "sharepoint",
 )
 

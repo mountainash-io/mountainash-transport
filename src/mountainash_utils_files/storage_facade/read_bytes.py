@@ -1,23 +1,14 @@
 """Top-level read helper that dispatches by URL scheme.
 
-For http/https, uses urllib directly as a temporary bridge until the HTTP
-backend follow-up spec ships.
+All schemes — including http/https — route through StorageFacade.from_path().
 """
 from __future__ import annotations
 
-import io
 import typing
-import urllib.request
 
-from mountainash_utils_files.path_helpers.storage_path import StoragePath
 from mountainash_utils_files.path_helpers.suffixes import infer_pipeline
 from mountainash_utils_files.storage_facade.facade import StorageFacade
-from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline
-
-
-def _apply_pipeline_to_bytes(pipeline: Pipeline, raw: bytes) -> bytes:
-    """Run *pipeline*'s read-side over *raw* and return the decoded bytes."""
-    return pipeline.apply_read(io.BytesIO(raw)).read()
+from mountainash_utils_files.storage_transforms import GPG, Gzip
 
 
 def read_bytes(
@@ -30,10 +21,7 @@ def read_bytes(
 ) -> bytes:
     """Read the full contents of *path* as bytes, dispatching by URL scheme.
 
-    Local paths and recognised storage schemes route through
-    :meth:`StorageFacade.from_path`. ``http://`` and ``https://`` paths use
-    ``urllib.request.urlopen`` directly; this branch is removed when the
-    HTTP backend follow-up spec ships.
+    All recognised schemes route through :meth:`StorageFacade.from_path`.
 
     Args:
         path: Path or URL.
@@ -56,16 +44,6 @@ def read_bytes(
             is not registered, or *infer* is True and a gpg-family suffix
             was seen without a *gpg* instance.
     """
-    scheme = StoragePath.identify_scheme(path)
-
-    if scheme in ("http", "https"):
-        with urllib.request.urlopen(path) as response:  # noqa: S310
-            raw = response.read()
-        if not infer:
-            return raw
-        pipeline, _ = infer_pipeline(path, gpg=gpg, gzip=gzip)
-        return _apply_pipeline_to_bytes(pipeline, raw) if pipeline else raw
-
     facade = StorageFacade.from_path(path, auth_params)
     if not infer:
         return facade.read(path)

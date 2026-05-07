@@ -155,6 +155,26 @@ S3_DESCRIPTOR = StorageDescriptor(
             default=None,
             description="IAM Role ARN to assume via STS before creating the client.",
         ),
+        ParameterSpec(
+            name="CONNECT_TIMEOUT",
+            type=t.Optional[float],
+            tier="advanced",
+            default=None,
+            description=(
+                "Connection timeout in seconds for boto3 client. "
+                "None defers to boto3 default (~60s)."
+            ),
+        ),
+        ParameterSpec(
+            name="READ_TIMEOUT",
+            type=t.Optional[float],
+            tier="advanced",
+            default=None,
+            description=(
+                "Read timeout in seconds for boto3 client. "
+                "None defers to boto3 default (~60s)."
+            ),
+        ),
     ],
     auth_modes=[IAMAuth, TokenAuth, NoAuth],
     metadata={
