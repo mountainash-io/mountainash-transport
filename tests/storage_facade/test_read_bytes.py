@@ -15,48 +15,40 @@ def test_read_bytes_reads_local_file(tmp_path: Path):
     assert read_bytes(str(target)) == b"hello world"
 
 
-def test_read_bytes_http_uses_urllib(monkeypatch):
-    captured: dict[str, str] = {}
+def test_read_bytes_http_routes_through_facade(monkeypatch):
+    """http:// → StorageFacade.from_path(...).read(...) — no urllib."""
+    calls: list[str] = []
 
-    class _FakeResponse:
-        def __init__(self, payload: bytes) -> None:
-            self._payload = payload
+    class _StreamBackend:
+        def read_to_stream(self, path: str):
+            calls.append(path)
+            return io.BytesIO(b"http body")
 
-        def __enter__(self):
-            return self
+    from mountainash_utils_files.storage_facade import facade as facade_mod
+    from mountainash_utils_files.storage_facade.facade import StorageFacade
 
-        def __exit__(self, *exc):
-            return False
-
-        def read(self) -> bytes:
-            return self._payload
-
-    def _fake_urlopen(url):
-        captured["url"] = url
-        return _FakeResponse(b"http body")
-
-    import urllib.request
-    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(
+        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+    )
+    monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 
     assert read_bytes("http://example.com/file") == b"http body"
-    assert captured["url"] == "http://example.com/file"
+    assert calls == ["http://example.com/file"]
 
 
-def test_read_bytes_https_uses_urllib(monkeypatch):
-    class _FakeResponse:
-        def __enter__(self):
-            return self
+def test_read_bytes_https_routes_through_facade(monkeypatch):
+    """https:// → StorageFacade.from_path(...).read(...) — no urllib."""
+    class _StreamBackend:
+        def read_to_stream(self, path: str):
+            return io.BytesIO(b"https body")
 
-        def __exit__(self, *exc):
-            return False
+    from mountainash_utils_files.storage_facade import facade as facade_mod
+    from mountainash_utils_files.storage_facade.facade import StorageFacade
 
-        def read(self) -> bytes:
-            return b"https body"
-
-    import urllib.request
     monkeypatch.setattr(
-        urllib.request, "urlopen", lambda url: _FakeResponse()
+        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
     )
+    monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 
     assert read_bytes("https://example.com/file") == b"https body"
 
@@ -118,22 +110,21 @@ def test_read_bytes_infer_gpg_suffix_without_gpg_raises(tmp_path: Path):
 
 
 def test_read_bytes_http_infer_applies_pipeline_to_bytes(monkeypatch):
-    """http body with a .gz suffix + infer=True must be gunzipped in-process."""
+    """http body with a .gz suffix + infer=True must be gunzipped."""
     import gzip as gzlib
     payload = gzlib.compress(b"plain text from web")
 
-    class _FakeResponse:
-        def __enter__(self):
-            return self
+    class _StreamBackend:
+        def read_to_stream(self, path: str):
+            return io.BytesIO(payload)
 
-        def __exit__(self, *exc):
-            return False
+    from mountainash_utils_files.storage_facade import facade as facade_mod
+    from mountainash_utils_files.storage_facade.facade import StorageFacade
 
-        def read(self) -> bytes:
-            return payload
-
-    import urllib.request
-    monkeypatch.setattr(urllib.request, "urlopen", lambda url: _FakeResponse())
+    monkeypatch.setattr(
+        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+    )
+    monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 
     assert read_bytes("https://example.com/file.gz", infer=True) == b"plain text from web"
 
