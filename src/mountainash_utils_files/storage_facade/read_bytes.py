@@ -1,12 +1,12 @@
 """Top-level read helper that dispatches by URL scheme.
 
 All schemes — including http/https — route through StorageFacade.from_path().
+Suffix-driven transform inference delegates to the facade's read() method.
 """
 from __future__ import annotations
 
 import typing
 
-from mountainash_utils_files.path_helpers.suffixes import infer_pipeline
 from mountainash_utils_files.storage_facade.facade import StorageFacade
 from mountainash_utils_files.storage_transforms import GPG, Gzip
 
@@ -22,6 +22,8 @@ def read_bytes(
     """Read the full contents of *path* as bytes, dispatching by URL scheme.
 
     All recognised schemes route through :meth:`StorageFacade.from_path`.
+    When *infer* is True, the facade applies suffix-driven transform
+    inference via :func:`infer_pipeline`.
 
     Args:
         path: Path or URL.
@@ -45,10 +47,4 @@ def read_bytes(
             was seen without a *gpg* instance.
     """
     facade = StorageFacade.from_path(path, auth_params)
-    if not infer:
-        return facade.read(path)
-
-    pipeline, _stripped = infer_pipeline(path, gpg=gpg, gzip=gzip)
-    if pipeline is None:
-        return facade.read(path)
-    return facade.read(path, pipeline=pipeline)
+    return facade.read(path, infer=infer, gpg=gpg, gzip=gzip)
