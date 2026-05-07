@@ -213,3 +213,36 @@ class TestS3Descriptor:
 
     def test_descriptor_supports_multipart(self):
         assert S3_DESCRIPTOR.supports_multipart is True
+
+
+@pytest.mark.unit
+class TestS3TimeoutConfiguration:
+    """CONNECT_TIMEOUT and READ_TIMEOUT propagate to botocore.config.Config."""
+
+    def test_timeouts_default_to_none(self):
+        s = _make("aws")
+        assert s.CONNECT_TIMEOUT is None
+        assert s.READ_TIMEOUT is None
+
+    def test_timeouts_in_handler_kwargs_when_set(self):
+        s = _make("aws", CONNECT_TIMEOUT=5.0, READ_TIMEOUT=30.0)
+        kw = s.to_handler_kwargs()
+        config = kw["config"]
+        assert config._user_provided_options.get("connect_timeout") == 5.0
+        assert config._user_provided_options.get("read_timeout") == 30.0
+
+    def test_timeouts_omitted_from_config_when_none(self):
+        s = _make("aws")
+        kw = s.to_handler_kwargs()
+        config = kw["config"]
+        opts = config._user_provided_options
+        assert "connect_timeout" not in opts
+        assert "read_timeout" not in opts
+
+    def test_explicit_none_omitted_from_config(self):
+        s = _make("aws", CONNECT_TIMEOUT=None, READ_TIMEOUT=None)
+        kw = s.to_handler_kwargs()
+        config = kw["config"]
+        opts = config._user_provided_options
+        assert "connect_timeout" not in opts
+        assert "read_timeout" not in opts

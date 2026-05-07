@@ -140,7 +140,14 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
                 s3_config["use_accelerate_endpoint"] = True
             if dualstack:
                 s3_config["use_dualstack_endpoint"] = True
-        base["config"] = _botocore_config.Config(s3=s3_config)
+        config_kwargs: dict[str, t.Any] = {"s3": s3_config}
+        connect_timeout = getattr(profile, "CONNECT_TIMEOUT", None)
+        read_timeout = getattr(profile, "READ_TIMEOUT", None)
+        if connect_timeout is not None:
+            config_kwargs["connect_timeout"] = connect_timeout
+        if read_timeout is not None:
+            config_kwargs["read_timeout"] = read_timeout
+        base["config"] = _botocore_config.Config(**config_kwargs)
 
     if role_arn:
         return {
