@@ -24,7 +24,8 @@ from mountainash_utils_files.storage_registry import (
     detect_provider_from_path,
     get_storage_backend,
 )
-from mountainash_utils_files.storage_transforms import Pipeline, StreamTransform
+from mountainash_utils_files.path_helpers.suffixes import infer_pipeline as _infer_pipeline
+from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline, StreamTransform
 
 
 class _PairedStream(io.RawIOBase):
@@ -129,6 +130,26 @@ class StorageFacade:
             return pipeline
         return Pipeline(pipeline)
 
+    def _resolve_pipeline(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None,
+        infer: bool,
+        gpg: GPG | None,
+        gzip: Gzip | None,
+    ) -> Pipeline:
+        """Resolve the effective pipeline from explicit or inferred sources."""
+        if infer and pipeline is not None:
+            raise ValueError(
+                "Cannot pass both infer=True and an explicit pipeline"
+            )
+        if infer:
+            inferred, _ = _infer_pipeline(path, gpg=gpg, gzip=gzip)
+            if inferred is not None:
+                return inferred
+        return self._coerce_pipeline(pipeline)
+
     # ------------------------------------------------------------------
     # Read operations (StorageReadProtocol)
     # ------------------------------------------------------------------
@@ -138,12 +159,23 @@ class StorageFacade:
         path: str,
         *,
         pipeline: Pipeline | StreamTransform | None = None,
+        infer: bool = False,
+        gpg: GPG | None = None,
+        gzip: Gzip | None = None,
     ) -> bytes:
-        """Read file contents and return as bytes, optionally through *pipeline*."""
+        """Read file contents and return as bytes, optionally through *pipeline*.
+
+        When *infer* is True, the path's suffix chain is parsed into a
+        pipeline via :func:`infer_pipeline`. Raises ``ValueError`` if both
+        *infer* and *pipeline* are provided.
+        """
         self._require(StorageReadProtocol, "read")
+        effective = self._resolve_pipeline(
+            path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
+        )
         source_stream = self._backend.read_to_stream(path)
         try:
-            wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+            wrapped_stream = effective.apply_read(source_stream)
             try:
                 return wrapped_stream.read()
             finally:
