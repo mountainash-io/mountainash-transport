@@ -22,6 +22,8 @@ from mountainash_utils_files.settings.providers import (
     GCSSettings,
     GITHUB_REPO_DESCRIPTOR,
     GitHubRepoSettings,
+    HTTP_DESCRIPTOR,
+    HTTPSettings,
     LOCAL_DESCRIPTOR,
     LocalSettings,
     S3_DESCRIPTOR,
@@ -48,6 +50,7 @@ EXPECTED_PROVIDERS = {
     "smb",
     "local",
     "github_repo",
+    "http",
 }
 
 
