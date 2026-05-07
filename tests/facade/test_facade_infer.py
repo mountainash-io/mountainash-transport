@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import gzip as gzlib
+import io
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
 import mountainash_utils_files.storage_backends  # noqa: F401
 from mountainash_utils_files.storage_facade import StorageFacade
-from mountainash_utils_files.storage_transforms import Gzip
+from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline
 
 
 class TestReadInfer:
@@ -85,5 +88,58 @@ class TestReadStreamInfer:
 
         facade = StorageFacade.for_local()
         stream = facade.read_stream(str(target), infer=True)
+        assert stream.read() == payload
+        stream.close()
+
+
+_RECIPIENT = "test@mountainash.example"
+_FIXTURE_SCRIPT = (
+    Path(__file__).resolve().parent.parent
+    / "fixtures" / "gpg" / "generate_test_key.sh"
+)
+
+
+@pytest.mark.integration
+class TestReadInferGPG:
+    @pytest.fixture
+    def gpg_home(self, tmp_path: Path) -> Path:
+        if shutil.which("gpg") is None:
+            pytest.skip("gpg binary not available on PATH")
+        home = tmp_path / "gnupg"
+        subprocess.run([str(_FIXTURE_SCRIPT), str(home)], check=True)
+        return home
+
+    def test_read_infer_true_decompresses_gz_gpg(
+        self, tmp_path: Path, gpg_home: Path,
+    ):
+        payload = b"encrypted and compressed payload" * 50
+        encoded = Pipeline(
+            GPG(recipients=[_RECIPIENT], gnupghome=str(gpg_home), always_trust=True),
+            Gzip(),
+        ).apply_write(io.BytesIO(payload)).read()
+
+        target = tmp_path / "data.parquet.gz.gpg"
+        target.write_bytes(encoded)
+
+        facade = StorageFacade.for_local()
+        gpg = GPG(gnupghome=str(gpg_home))
+        result = facade.read(str(target), infer=True, gpg=gpg)
+        assert result == payload
+
+    def test_read_stream_infer_true_decompresses_gz_gpg(
+        self, tmp_path: Path, gpg_home: Path,
+    ):
+        payload = b"streamed encrypted compressed" * 50
+        encoded = Pipeline(
+            GPG(recipients=[_RECIPIENT], gnupghome=str(gpg_home), always_trust=True),
+            Gzip(),
+        ).apply_write(io.BytesIO(payload)).read()
+
+        target = tmp_path / "data.parquet.gz.gpg"
+        target.write_bytes(encoded)
+
+        facade = StorageFacade.for_local()
+        gpg = GPG(gnupghome=str(gpg_home))
+        stream = facade.read_stream(str(target), infer=True, gpg=gpg)
         assert stream.read() == payload
         stream.close()
