@@ -8,7 +8,7 @@ import typing
 
 from mountainash_utils_files.path_helpers.suffixes import infer_pipeline
 from mountainash_utils_files.storage_facade.facade import StorageFacade
-from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline
+from mountainash_utils_files.storage_transforms import GPG, Gzip
 
 
 def read_bytes(
