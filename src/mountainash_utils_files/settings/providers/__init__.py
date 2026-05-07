@@ -1,7 +1,7 @@
 """Storage provider settings classes.
 
 All 15 legacy provider classes are consolidated into eight descriptor-driven
-settings classes:
+settings classes, plus HTTP/HTTPS:
 
 * S3 / S3Express / R2 / MinIO / Backblaze B2 → :class:`S3Settings`
   (discriminated by ``FLAVOR``)
@@ -15,12 +15,14 @@ settings classes:
 * Local + NFS + CIFS mounts → :class:`LocalSettings` (NFS / CIFS drive
   a pre-mount step via ``MOUNT_SPEC``)
 * GitHub repository read → :class:`GitHubRepoSettings` (scope-cut)
+* HTTP / HTTPS → :class:`HTTPSettings` (httpx-backed)
 """
 
 from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
 from .ftp_settings import FTP_DESCRIPTOR, FTPSettings
 from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
 from .github_settings import GITHUB_REPO_DESCRIPTOR, GitHubRepoSettings
+from .http_settings import HTTP_DESCRIPTOR, HTTPSettings
 from .local_settings import LOCAL_DESCRIPTOR, LocalSettings
 from .s3_settings import S3_DESCRIPTOR, S3Settings
 from .smb_settings import SMB_DESCRIPTOR, SMBSettings
@@ -36,6 +38,8 @@ __all__ = [
     "GCSSettings",
     "GITHUB_REPO_DESCRIPTOR",
     "GitHubRepoSettings",
+    "HTTP_DESCRIPTOR",
+    "HTTPSettings",
     "LOCAL_DESCRIPTOR",
     "LocalSettings",
     "S3_DESCRIPTOR",
