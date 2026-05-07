@@ -38,6 +38,7 @@ Settings follow the Mountain Ash Phase 4 descriptor pattern:
 | `SMBSettings` | SMB | — |
 | `LocalSettings` | Local + NFS/CIFS (pre-mount) | `MOUNT_SPEC: Optional[dict]` |
 | `GitHubRepoSettings` | GitHub (scope-cut: read-only, fsspec-backed) | — |
+| `HTTPSettings` | HTTP/HTTPS (httpx-based, read + write via PUT + metadata) | — |
 
 Legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSStorageAuthSettings`, `GitHubStorageAuthSettings`) were aliased during Phase 4 and removed in Phase 4b. Downstream callers must use the new consolidated class names + discriminator fields.
 
@@ -106,6 +107,7 @@ src/mountainash_utils_files/
 │   └── s3.py                      # s3_bucket, s3_key free functions
 ├── storage_backends/              # Backend implementations
 │   ├── __init__.py                # Imports trigger @register_storage_backend
+│   ├── http/                      # HTTPStorageBackend (httpx — read/write/metadata for http:// + https://)
 │   ├── local/                     # LocalStorageBackend
 │   └── s3/                        # S3StorageBackend (flavor-dispatched — serves AWS/Express/R2/MinIO/B2)
 ├── storage_facade/                # StorageFacade + cross_backend utilities
@@ -127,8 +129,9 @@ src/mountainash_utils_files/
     │   ├── ftp.py                 # ftplib.FTP / FTP_TLS kwargs
     │   ├── smb.py                 # smbprotocol Session kwargs
     │   ├── local.py               # pass-through + optional mount_spec
-    │   └── github.py              # fsspec.GithubFileSystem kwargs
-    └── providers/                 # Shell classes + descriptor literals + 15 legacy aliases
+    │   ├── github.py              # fsspec.GithubFileSystem kwargs
+    │   └── http.py                # httpx.Client kwargs
+    └── providers/                 # Shell classes + descriptor literals
         ├── s3_settings.py
         ├── gcs_settings.py
         ├── azure_settings.py
@@ -136,7 +139,8 @@ src/mountainash_utils_files/
         ├── ftp_settings.py
         ├── smb_settings.py
         ├── local_settings.py
-        └── github_settings.py
+        ├── github_settings.py
+        └── http_settings.py
 ```
 
 ### Test Structure
@@ -170,6 +174,7 @@ tests/
 - **smart-open[all]==7.0.4**: Utils for streaming large files
 - **lxml>=4.5.0**: XML and HTML processing library
 - **xsdata[lxml]>=24.4**: XML data binding library
+- **httpx>=0.27**: HTTP client for HTTP/HTTPS storage backend
 
 ### Optional Dependencies
 - **S3**: boto3, s3fs, minio
@@ -244,11 +249,12 @@ tests/
 
 ### Storage System Support
 - **Local filesystem**: Native file operations
-- **AWS S3**: Standard and S3 Express support
+- **AWS S3**: Standard and S3 Express support (with configurable connect/read timeouts)
 - **Cloudflare R2**: R2-specific optimizations
 - **Google Cloud Storage**: Native GCS operations
 - **Azure Blob Storage**: Azure-specific implementations
 - **SFTP/SSH**: Secure file transfer protocols
+- **HTTP/HTTPS**: Read, write (PUT), and metadata via httpx — supports Bearer and Basic auth
 
 ### Advanced Capabilities
 - **File synchronization**: Orchestrated sync between storage systems
