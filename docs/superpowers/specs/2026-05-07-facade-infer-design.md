@@ -48,6 +48,7 @@ The consumer (mountainash core) needs the stripped path for format detection
 new API is needed — the consumer calls `infer_pipeline()` for format detection,
 then passes the pipeline to `facade.read()`.
 
+<<<<<<< feature/facade-infer
 Note: a consumer that calls both `infer_pipeline()` for format detection and
 `facade.read(path, infer=True)` runs inference twice. This is safe because
 `infer_pipeline` is a pure function — same path and config always yields the
@@ -56,6 +57,8 @@ the stripped path from the facade (via a tuple return or resolution object)
 would complicate the API for a theoretical coupling problem that cannot occur
 in practice.
 
+=======
+>>>>>>> develop
 ### `read_bytes()` delegates to facade
 
 After this change, `read_bytes()` simplifies to:
@@ -187,11 +190,14 @@ what remains is just the delegation pattern).
 - `test_read_stream_infer_true_with_pipeline_raises` — same conflict check.
 - `test_read_infer_gpg_suffix_without_gpg_raises` — `.gpg` suffix without
   `gpg=` raises `ValueError` (from `infer_pipeline`).
+<<<<<<< feature/facade-infer
 - `test_read_infer_true_decompresses_gz_gpg` — `.parquet.gz.gpg` file,
   `infer=True` with `gpg=GPG(...)`, returns fully decoded payload. Verifies
   the `Pipeline(GPG, Gzip)` ordering is correct (decrypt then decompress).
 - `test_read_stream_infer_true_decompresses_gz_gpg` — same as above but
   via `read_stream()`, verify stream yields fully decoded bytes.
+=======
+>>>>>>> develop
 
 ### `read_bytes` delegation tests
 
