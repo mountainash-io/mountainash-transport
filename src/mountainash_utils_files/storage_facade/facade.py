@@ -189,16 +189,26 @@ class StorageFacade:
         path: str,
         *,
         pipeline: Pipeline | StreamTransform | None = None,
+        infer: bool = False,
+        gpg: GPG | None = None,
+        gzip: Gzip | None = None,
     ) -> BinaryIO:
         """Read file contents and return as a binary stream, optionally through *pipeline*.
+
+        When *infer* is True, the path's suffix chain is parsed into a
+        pipeline via :func:`infer_pipeline`. Raises ``ValueError`` if both
+        *infer* and *pipeline* are provided.
 
         The returned stream should be closed by the caller (context manager
         recommended). Closing propagates to both the pipeline wrapper and the
         underlying backend stream so file descriptors are not leaked.
         """
         self._require(StorageReadProtocol, "read_stream")
+        effective = self._resolve_pipeline(
+            path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
+        )
         source_stream = self._backend.read_to_stream(path)
-        wrapped_stream = self._coerce_pipeline(pipeline).apply_read(source_stream)
+        wrapped_stream = effective.apply_read(source_stream)
         return _PairedStream(wrapped_stream, source_stream)  # type: ignore[return-value]
 
     # ------------------------------------------------------------------

@@ -55,3 +55,35 @@ class TestReadInfer:
         facade = StorageFacade.for_local()
         with pytest.raises(ValueError, match=r"\.gpg suffix"):
             facade.read(str(target), infer=True)
+
+
+class TestReadStreamInfer:
+    def test_read_stream_infer_true_decompresses_gz(self, tmp_path: Path):
+        payload = b"streamed decompression test"
+        target = tmp_path / "data.gz"
+        target.write_bytes(gzlib.compress(payload))
+
+        facade = StorageFacade.for_local()
+        stream = facade.read_stream(str(target), infer=True)
+        assert stream.read() == payload
+        stream.close()
+
+    def test_read_stream_infer_true_with_pipeline_raises(self, tmp_path: Path):
+        target = tmp_path / "data.gz"
+        target.write_bytes(b"irrelevant")
+
+        facade = StorageFacade.for_local()
+        with pytest.raises(ValueError, match="Cannot pass both"):
+            facade.read_stream(str(target), infer=True, pipeline=Gzip())
+
+    def test_read_stream_infer_true_no_known_suffix_returns_raw(
+        self, tmp_path: Path,
+    ):
+        payload = b"raw stream bytes"
+        target = tmp_path / "data.parquet"
+        target.write_bytes(payload)
+
+        facade = StorageFacade.for_local()
+        stream = facade.read_stream(str(target), infer=True)
+        assert stream.read() == payload
+        stream.close()
