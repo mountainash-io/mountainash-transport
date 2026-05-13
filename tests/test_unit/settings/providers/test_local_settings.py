@@ -8,7 +8,7 @@ from mountainash_settings.auth import NoAuth
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.local_settings import (
-    LOCAL_DESCRIPTOR,
+    LOCAL_SPEC,
     LocalSettings,
 )
 
@@ -91,14 +91,14 @@ class TestLocalMountSpecCIFS:
 @pytest.mark.unit
 class TestLocalDescriptor:
     def test_descriptor_name(self):
-        assert LOCAL_DESCRIPTOR.name == "local"
+        assert LOCAL_SPEC.name == "local"
 
     def test_descriptor_sdk_package_is_none(self):
         """Stdlib only — no SDK."""
-        assert LOCAL_DESCRIPTOR.sdk_package is None
+        assert LOCAL_SPEC.sdk_package is None
 
     def test_descriptor_not_read_only(self):
-        assert LOCAL_DESCRIPTOR.read_only is False
+        assert LOCAL_SPEC.read_only is False
 
     def test_descriptor_no_multipart(self):
-        assert LOCAL_DESCRIPTOR.supports_multipart is False
+        assert LOCAL_SPEC.supports_multipart is False

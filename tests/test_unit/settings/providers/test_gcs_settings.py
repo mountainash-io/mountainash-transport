@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.gcs_settings import (
-    GCS_DESCRIPTOR,
+    GCS_SPEC,
     GCSSettings,
 )
 
@@ -127,10 +127,10 @@ class TestGCSHandlerKwargs:
 @pytest.mark.unit
 class TestGCSDescriptor:
     def test_descriptor_name(self):
-        assert GCS_DESCRIPTOR.name == "gcs"
+        assert GCS_SPEC.name == "gcs"
 
     def test_descriptor_sdk_package(self):
-        assert GCS_DESCRIPTOR.sdk_package == "google-cloud-storage"
+        assert GCS_SPEC.sdk_package == "google-cloud-storage"
 
     def test_descriptor_not_read_only(self):
-        assert GCS_DESCRIPTOR.read_only is False
+        assert GCS_SPEC.read_only is False

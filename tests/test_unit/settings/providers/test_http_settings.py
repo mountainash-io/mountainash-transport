@@ -46,24 +46,24 @@ class TestHTTPSettingsConstruction:
 @pytest.mark.unit
 class TestHTTPDescriptor:
     def test_descriptor_name(self):
-        from mountainash_utils_files.settings.providers.http_settings import HTTP_DESCRIPTOR
-        assert HTTP_DESCRIPTOR.name == "http"
+        from mountainash_utils_files.settings.providers.http_settings import HTTP_SPEC
+        assert HTTP_SPEC.name == "http"
 
     def test_descriptor_provider_type(self):
-        from mountainash_utils_files.settings.providers.http_settings import HTTP_DESCRIPTOR
-        assert HTTP_DESCRIPTOR.provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP
+        from mountainash_utils_files.settings.providers.http_settings import HTTP_SPEC
+        assert HTTP_SPEC.provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP
 
     def test_descriptor_sdk_is_httpx(self):
-        from mountainash_utils_files.settings.providers.http_settings import HTTP_DESCRIPTOR
-        assert HTTP_DESCRIPTOR.sdk_package == "httpx"
+        from mountainash_utils_files.settings.providers.http_settings import HTTP_SPEC
+        assert HTTP_SPEC.sdk_package == "httpx"
 
     def test_descriptor_not_read_only(self):
-        from mountainash_utils_files.settings.providers.http_settings import HTTP_DESCRIPTOR
-        assert HTTP_DESCRIPTOR.read_only is False
+        from mountainash_utils_files.settings.providers.http_settings import HTTP_SPEC
+        assert HTTP_SPEC.read_only is False
 
     def test_descriptor_no_multipart(self):
-        from mountainash_utils_files.settings.providers.http_settings import HTTP_DESCRIPTOR
-        assert HTTP_DESCRIPTOR.supports_multipart is False
+        from mountainash_utils_files.settings.providers.http_settings import HTTP_SPEC
+        assert HTTP_SPEC.supports_multipart is False
 
 
 @pytest.mark.unit

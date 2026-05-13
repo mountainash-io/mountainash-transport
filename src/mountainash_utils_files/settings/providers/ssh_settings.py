@@ -8,7 +8,7 @@ There is no difference in connection kwargs, so one settings class covers
 both providers.
 
 Mirrors the Phase 4 ``S3Settings`` / ``AzureStorageSettings`` pattern: the
-class is a two-line shell; all parameters live on :data:`SSH_DESCRIPTOR`;
+class is a two-line shell; all parameters live on :data:`SSH_SPEC`;
 the adapter
 (:func:`mountainash_utils_files.settings.adapters.ssh.build_handler_kwargs`)
 produces kwargs for :meth:`paramiko.SSHClient.connect`.
@@ -26,7 +26,7 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["SSH_DESCRIPTOR", "SSHSettings"]
+__all__ = ["SSH_SPEC", "SSHSettings"]
 
 
 _VALID_HOST_KEY_POLICIES: frozenset[str] = frozenset(
@@ -51,7 +51,7 @@ def _validate_username_required(v: t.Optional[str]) -> str:
     return v
 
 
-SSH_DESCRIPTOR = StorageDescriptor(
+SSH_SPEC = StorageDescriptor(
     name="ssh",
     # Canonical provider_type is SSH; SFTPStorageAuthSettings is a pure
     # alias pointing at the same class (see providers/__init__.py).
@@ -170,12 +170,12 @@ def _adapter(profile: "SSHSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(SSH_DESCRIPTOR)
+@register
 class SSHSettings(StorageProfile, StorageAuthBase):
     """Unified SSH / SFTP settings.
 
-    Fields are installed from :data:`SSH_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`SSH_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
     :func:`~mountainash_utils_files.settings.adapters.ssh.build_handler_kwargs`.
 
@@ -187,7 +187,7 @@ class SSHSettings(StorageProfile, StorageAuthBase):
           ``gss_kex=True``
     """
 
-    __descriptor__ = SSH_DESCRIPTOR
+    __spec__ = SSH_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

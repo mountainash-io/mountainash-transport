@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.ftp_settings import (
-    FTP_DESCRIPTOR,
+    FTP_SPEC,
     FTPSettings,
 )
 
@@ -106,14 +106,14 @@ class TestFTPEnvelopeLayout:
 @pytest.mark.unit
 class TestFTPDescriptor:
     def test_descriptor_name(self):
-        assert FTP_DESCRIPTOR.name == "ftp"
+        assert FTP_SPEC.name == "ftp"
 
     def test_descriptor_sdk_package_is_none(self):
         """stdlib ftplib — no SDK dependency."""
-        assert FTP_DESCRIPTOR.sdk_package is None
+        assert FTP_SPEC.sdk_package is None
 
     def test_descriptor_not_read_only(self):
-        assert FTP_DESCRIPTOR.read_only is False
+        assert FTP_SPEC.read_only is False
 
     def test_descriptor_no_multipart(self):
-        assert FTP_DESCRIPTOR.supports_multipart is False
+        assert FTP_SPEC.supports_multipart is False

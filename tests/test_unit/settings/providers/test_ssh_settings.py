@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.ssh_settings import (
-    SSH_DESCRIPTOR,
+    SSH_SPEC,
     SSHSettings,
 )
 
@@ -187,13 +187,13 @@ class TestSSHPostConnectEnvelope:
 @pytest.mark.unit
 class TestSSHDescriptor:
     def test_descriptor_name(self):
-        assert SSH_DESCRIPTOR.name == "ssh"
+        assert SSH_SPEC.name == "ssh"
 
     def test_descriptor_sdk_package(self):
-        assert SSH_DESCRIPTOR.sdk_package == "paramiko"
+        assert SSH_SPEC.sdk_package == "paramiko"
 
     def test_descriptor_not_read_only(self):
-        assert SSH_DESCRIPTOR.read_only is False
+        assert SSH_SPEC.read_only is False
 
     def test_descriptor_does_not_support_multipart(self):
-        assert SSH_DESCRIPTOR.supports_multipart is False
+        assert SSH_SPEC.supports_multipart is False

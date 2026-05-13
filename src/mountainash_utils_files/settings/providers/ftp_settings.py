@@ -21,10 +21,10 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["FTP_DESCRIPTOR", "FTPSettings"]
+__all__ = ["FTP_SPEC", "FTPSettings"]
 
 
-FTP_DESCRIPTOR = StorageDescriptor(
+FTP_SPEC = StorageDescriptor(
     name="ftp",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.FTP,
     sdk_package=None,  # stdlib ftplib
@@ -135,12 +135,12 @@ def _adapter(profile: "FTPSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(FTP_DESCRIPTOR)
+@register
 class FTPSettings(StorageProfile, StorageAuthBase):
     """FTP / FTPS settings.
 
-    Fields are installed from :data:`FTP_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`FTP_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union:
         - :class:`PasswordAuth` → ``{passwd: ...}`` (ftplib uses ``passwd``)
         - :class:`NoAuth`       → anonymous login (``user="anonymous"``,
@@ -161,7 +161,7 @@ class FTPSettings(StorageProfile, StorageAuthBase):
     class and applying the connect/post-connect steps.
     """
 
-    __descriptor__ = FTP_DESCRIPTOR
+    __spec__ = FTP_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

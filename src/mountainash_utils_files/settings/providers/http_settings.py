@@ -15,10 +15,10 @@ from ..registry import register
 from ..base import StorageAuthBase
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["HTTP_DESCRIPTOR", "HTTPSettings"]
+__all__ = ["HTTP_SPEC", "HTTPSettings"]
 
 
-HTTP_DESCRIPTOR = StorageDescriptor(
+HTTP_SPEC = StorageDescriptor(
     name="http",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.HTTP,
     sdk_package="httpx",
@@ -88,11 +88,11 @@ def _adapter(profile: "HTTPSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(HTTP_DESCRIPTOR)
+@register
 class HTTPSettings(StorageProfile, StorageAuthBase):
     """HTTP/HTTPS provider settings."""
 
-    __descriptor__ = HTTP_DESCRIPTOR
+    __spec__ = HTTP_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

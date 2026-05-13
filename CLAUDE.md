@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **mountainash-utils-files** is a Python package for unified file operations across multiple storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), Azure Blob/Files, GCS, SFTP/SSH, FTP, SMB, and GitHub (read-only). It provides a consistent interface for file operations, path manipulation, and data synchronization across different storage backends.
 
-Settings follow the **descriptor-driven profiles pattern** (Phase 4, 2026-04-17) — see the Settings Architecture section below. Configuration uses upstream `mountainash_settings.profiles.DescriptorProfile` + typed `AuthSpec` discriminated union from `mountainash_settings.auth`.
+Settings follow the **spec-driven profiles pattern** (Phase 4, 2026-04-17; renamed from "descriptor" in Phase 5, 2026-05-14) — see the Settings Architecture section below. Configuration uses upstream `mountainash_settings.profiles.Profile` + typed `AuthSpec` discriminated union from `mountainash_settings.auth`.
 
 ## Architecture
 
@@ -17,14 +17,14 @@ Settings follow the **descriptor-driven profiles pattern** (Phase 4, 2026-04-17)
 - **Storage protocols**: Read/Write/List/Delete/Metadata/Copy/Directory/Connection protocols that backends implement à la carte
 - **Descriptor-driven settings**: Consolidated settings classes (see next section) that produce SDK-ready kwargs via per-provider adapters
 
-### Settings Architecture (descriptor-driven)
+### Settings Architecture (spec-driven)
 
-Settings follow the Mountain Ash Phase 4 descriptor pattern:
+Settings follow the Mountain Ash Phase 4 spec pattern (renamed from "descriptor" in mountainash-settings 26.5.0):
 
 **Base classes:**
-- `StorageProfile(DescriptorProfile)` — generic mechanism inherited from `mountainash_settings.profiles`; adds `to_handler_kwargs()` that walks MRO for an `__adapter__`
+- `StorageProfile(Profile)` — generic mechanism inherited from `mountainash_settings.profiles`; adds `to_handler_kwargs()` that uses `lookup_class_var` for `__adapter__`
 - `StorageAuthBase(MountainAshBaseSettings)` — shared-fields mixin (TIMEOUT, ROOT_PATH, CREATE_PATH, USERNAME, PASSWORD, etc.)
-- `StorageDescriptor(ProfileDescriptor)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`)
+- `StorageDescriptor(ProfileSpec)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`)
 
 **Consolidated provider classes (15 legacy → 8):**
 
@@ -43,10 +43,10 @@ Settings follow the Mountain Ash Phase 4 descriptor pattern:
 Legacy class names (`S3StorageAuthSettings`, `R2StorageAuthSettings`, …, `NFSStorageAuthSettings`, `GitHubStorageAuthSettings`) were aliased during Phase 4 and removed in Phase 4b. Downstream callers must use the new consolidated class names + discriminator fields.
 
 **Registry + factory:**
-- `STORAGE_REGISTRY = Registry("storage")` — descriptor registry for lookup by name
-- `@register(DESCRIPTOR)` decorator populates the registry
-- `get_descriptor(name)` / `get_settings_class(name)` lookups
-- Typed `AuthSpec` discriminated union — `auth: Union[IAMAuth, TokenAuth, ServiceAccountAuth, AzureADAuth, PasswordAuth, CertificateAuth, KerberosAuth, OAuth2Auth, JWTAuth, NoAuth]` (per-provider subset via `auth_modes` in descriptor)
+- `STORAGE_REGISTRY = Registry("storage", spec_type=StorageDescriptor, profile_type=StorageProfile)` — type-constrained registry for lookup by name
+- `@register` decorator (bare, no argument) populates the registry — reads `cls.__spec__`
+- `get_spec(name)` / `get_settings_class(name)` lookups
+- Typed `AuthSpec` discriminated union — `auth: Union[IAMAuth, TokenAuth, ServiceAccountAuth, AzureADAuth, PasswordAuth, CertificateAuth, KerberosAuth, OAuth2Auth, JWTAuth, NoAuth]` (per-provider subset via `auth_modes` in spec)
 
 **Pattern B (declarative templates):**
 - `ParameterSpec.template` auto-resolves composite fields (e.g. Azure `ACCOUNT_URL` from `ACCOUNT_NAME` + `ENDPOINT_SUFFIX`; S3 R2 endpoint URL from `ACCOUNT_ID`)
@@ -116,8 +116,8 @@ src/mountainash_utils_files/
 ├── storage_transforms/            # Stream transforms (Pipeline, Gzip, GPG, materialize)
 └── settings/
     ├── __init__.py                # StorageAuthBase, exceptions, templates
-    ├── descriptor.py              # StorageDescriptor(ProfileDescriptor)
-    ├── profile.py                 # StorageProfile(DescriptorProfile)
+    ├── descriptor.py              # StorageDescriptor(ProfileSpec)
+    ├── profile.py                 # StorageProfile(Profile)
     ├── registry.py                # STORAGE_REGISTRY = Registry("storage")
     ├── base.py                    # StorageAuthBase mixin (shared fields)
     ├── templates.py               # Legacy URL templates (most inlined as ParameterSpec.template)
@@ -131,7 +131,7 @@ src/mountainash_utils_files/
     │   ├── local.py               # pass-through + optional mount_spec
     │   ├── github.py              # fsspec.GithubFileSystem kwargs
     │   └── http.py                # httpx.Client kwargs
-    └── providers/                 # Shell classes + descriptor literals
+    └── providers/                 # Shell classes + spec literals
         ├── s3_settings.py
         ├── gcs_settings.py
         ├── azure_settings.py
@@ -265,7 +265,7 @@ tests/
 
 ## Usage Examples
 
-### Descriptor-driven settings (Phase 4)
+### Spec-driven settings (Phase 4 + Phase 5 rename)
 
 ```python
 from mountainash_utils_files.settings.providers import (

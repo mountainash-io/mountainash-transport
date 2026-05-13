@@ -34,7 +34,7 @@ from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
 __all__ = [
-    "AZURE_STORAGE_DESCRIPTOR",
+    "AZURE_STORAGE_SPEC",
     "AzureStorageSettings",
     "validate_service_type",
 ]
@@ -84,7 +84,7 @@ def _validate_container_or_share(v: t.Optional[str]) -> t.Optional[str]:
     return v
 
 
-AZURE_STORAGE_DESCRIPTOR = StorageDescriptor(
+AZURE_STORAGE_SPEC = StorageDescriptor(
     name="azure_storage",
     # Canonical provider_type is AZURE_BLOB; the AZURE_FILES type is
     # handled by the same settings class with SERVICE_TYPE='files'.
@@ -201,12 +201,12 @@ def _adapter(profile: "AzureStorageSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(AZURE_STORAGE_DESCRIPTOR)
+@register
 class AzureStorageSettings(StorageProfile, StorageAuthBase):
     """Unified Azure Storage settings for both Blob and Files services.
 
-    Fields are installed from :data:`AZURE_STORAGE_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`AZURE_STORAGE_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     The ``SERVICE_TYPE`` field discriminates per-service endpoint suffix
     and the concrete SDK client class the handler should instantiate
     (:class:`azure.storage.blob.BlobServiceClient` vs
@@ -221,7 +221,7 @@ class AzureStorageSettings(StorageProfile, StorageAuthBase):
         - :class:`NoAuth`       → ``credential=None``
     """
 
-    __descriptor__ = AZURE_STORAGE_DESCRIPTOR
+    __spec__ = AZURE_STORAGE_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

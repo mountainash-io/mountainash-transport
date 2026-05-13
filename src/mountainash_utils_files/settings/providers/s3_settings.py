@@ -24,7 +24,7 @@ from ..registry import register
 from ..base import StorageAuthBase
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["S3_DESCRIPTOR", "S3Settings", "validate_flavor"]
+__all__ = ["S3_SPEC", "S3Settings", "validate_flavor"]
 
 
 _VALID_FLAVORS: frozenset[str] = frozenset({"aws", "express", "r2", "minio", "b2"})
@@ -48,7 +48,7 @@ def _validate_addressing_style(v: str) -> str:
     return v
 
 
-S3_DESCRIPTOR = StorageDescriptor(
+S3_SPEC = StorageDescriptor(
     name="s3",
     # Canonical provider_type is AWS S3; all five flavors are re-registered
     # in the backend layer so that CONST_STORAGE_PROVIDER_TYPE.{R2,S3EXPRESS,
@@ -197,18 +197,18 @@ def _adapter(profile: "S3Settings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(S3_DESCRIPTOR)
+@register
 class S3Settings(StorageProfile, StorageAuthBase):
     """Unified S3-family settings for AWS S3, S3 Express, R2, MinIO, and B2.
 
-    Fields are installed from :data:`S3_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass. The
+    Fields are installed from :data:`S3_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass. The
     ``FLAVOR`` field discriminates per-flavor endpoint defaults and
     addressing-style constraints; see
     :func:`~mountainash_utils_files.settings.adapters.s3.build_handler_kwargs`.
     """
 
-    __descriptor__ = S3_DESCRIPTOR
+    __spec__ = S3_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

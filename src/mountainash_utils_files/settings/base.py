@@ -128,8 +128,8 @@ class StorageAuthBase(MountainAshBaseSettings):
         """Post-initialization validation and setup.
 
         Signature matches ``MountainAshBaseSettings.post_init`` and
-        ``DescriptorProfile.post_init`` so subclasses adopting the
-        descriptor-driven pattern (``StorageProfile``) inherit cleanly
+        ``Profile.post_init`` so subclasses adopting the
+        spec-driven pattern (``StorageProfile``) inherit cleanly
         without a signature-bridging override.
         """
         super().post_init(

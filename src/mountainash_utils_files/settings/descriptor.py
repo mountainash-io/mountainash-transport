@@ -1,4 +1,4 @@
-"""Storage-flavored ProfileDescriptor with typed metadata fields.
+"""Storage-flavored ProfileSpec with typed metadata fields.
 
 Retained in mountainash-utils-files (rather than lifted to mountainash-settings)
 because these fields are domain-specific: handler_module, supports_streaming,
@@ -7,20 +7,21 @@ and read_only are meaningful only for storage providers.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 from mountainash_settings.profiles import (
     MISSING,
     ParameterSpec,
-    ProfileDescriptor,
+    ProfileSpec,
 )
 
 __all__ = ["MISSING", "ParameterSpec", "StorageDescriptor"]
 
 
 @dataclass(frozen=True, kw_only=True)
-class StorageDescriptor(ProfileDescriptor):
-    """ProfileDescriptor with storage-provider-specific typed metadata.
+class StorageDescriptor(ProfileSpec):
+    """ProfileSpec with storage-provider-specific typed metadata.
 
     Extra fields:
         sdk_package: Canonical PyPI name of the SDK this provider uses

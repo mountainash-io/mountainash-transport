@@ -36,10 +36,10 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["LOCAL_DESCRIPTOR", "LocalSettings"]
+__all__ = ["LOCAL_SPEC", "LocalSettings"]
 
 
-LOCAL_DESCRIPTOR = StorageDescriptor(
+LOCAL_SPEC = StorageDescriptor(
     name="local",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
     sdk_package=None,  # stdlib only
@@ -92,12 +92,12 @@ def _adapter(profile: "LocalSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(LOCAL_DESCRIPTOR)
+@register
 class LocalSettings(StorageProfile, StorageAuthBase):
     """Local filesystem settings (also covers pre-mounted NFS / CIFS).
 
-    Fields are installed from :data:`LOCAL_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`LOCAL_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is always :class:`NoAuth` (local files have no connection-level
     auth); network-filesystem authentication is handled at mount time by
     the OS, driven by ``MOUNT_SPEC``.
@@ -118,7 +118,7 @@ class LocalSettings(StorageProfile, StorageAuthBase):
         )
     """
 
-    __descriptor__ = LOCAL_DESCRIPTOR
+    __spec__ = LOCAL_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

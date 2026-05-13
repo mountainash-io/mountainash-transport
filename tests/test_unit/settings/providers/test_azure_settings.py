@@ -11,7 +11,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.azure_settings import (
-    AZURE_STORAGE_DESCRIPTOR,
+    AZURE_STORAGE_SPEC,
     AzureStorageSettings,
     validate_service_type,
 )
@@ -194,10 +194,10 @@ class TestAzureFilesTokenIntent:
 @pytest.mark.unit
 class TestAzureDescriptor:
     def test_descriptor_name(self):
-        assert AZURE_STORAGE_DESCRIPTOR.name == "azure_storage"
+        assert AZURE_STORAGE_SPEC.name == "azure_storage"
 
     def test_descriptor_sdk_package(self):
-        assert AZURE_STORAGE_DESCRIPTOR.sdk_package == "azure-storage-blob"
+        assert AZURE_STORAGE_SPEC.sdk_package == "azure-storage-blob"
 
     def test_descriptor_not_read_only(self):
-        assert AZURE_STORAGE_DESCRIPTOR.read_only is False
+        assert AZURE_STORAGE_SPEC.read_only is False

@@ -3,7 +3,7 @@
 Descriptor-driven GCS settings class. Mirrors the Phase 3
 ``GCPSecretsSettings`` pattern and the Phase 4 ``S3Settings`` pattern:
 the class is a two-line shell; all parameters live on
-:data:`GCS_DESCRIPTOR`; the adapter
+:data:`GCS_SPEC`; the adapter
 (:func:`mountainash_utils_files.settings.adapters.gcs.build_handler_kwargs`)
 produces kwargs for ``google.cloud.storage.Client``.
 """
@@ -27,7 +27,7 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["GCS_DESCRIPTOR", "GCSSettings"]
+__all__ = ["GCS_SPEC", "GCSSettings"]
 
 
 _PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
@@ -69,7 +69,7 @@ def _validate_bucket_name(v: t.Optional[str]) -> t.Optional[str]:
     return v
 
 
-GCS_DESCRIPTOR = StorageDescriptor(
+GCS_SPEC = StorageDescriptor(
     name="gcs",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.GCS,
     sdk_package="google-cloud-storage",
@@ -142,18 +142,18 @@ def _adapter(profile: "GCSSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(GCS_DESCRIPTOR)
+@register
 class GCSSettings(StorageProfile, StorageAuthBase):
     """Google Cloud Storage settings.
 
-    Fields are installed from :data:`GCS_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`GCS_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union (defaulting to
     ``ServiceAccountAuth`` for GCS); see
     :func:`~mountainash_utils_files.settings.adapters.gcs.build_handler_kwargs`.
     """
 
-    __descriptor__ = GCS_DESCRIPTOR
+    __spec__ = GCS_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

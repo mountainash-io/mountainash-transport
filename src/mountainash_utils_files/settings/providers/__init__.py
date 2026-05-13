@@ -18,34 +18,64 @@ settings classes, plus HTTP/HTTPS:
 * HTTP / HTTPS → :class:`HTTPSettings` (httpx-backed)
 """
 
-from .azure_settings import AZURE_STORAGE_DESCRIPTOR, AzureStorageSettings
-from .ftp_settings import FTP_DESCRIPTOR, FTPSettings
-from .gcs_settings import GCS_DESCRIPTOR, GCSSettings
-from .github_settings import GITHUB_REPO_DESCRIPTOR, GitHubRepoSettings
-from .http_settings import HTTP_DESCRIPTOR, HTTPSettings
-from .local_settings import LOCAL_DESCRIPTOR, LocalSettings
-from .s3_settings import S3_DESCRIPTOR, S3Settings
-from .smb_settings import SMB_DESCRIPTOR, SMBSettings
-from .ssh_settings import SSH_DESCRIPTOR, SSHSettings
+from __future__ import annotations
+
+import warnings
+
+from .azure_settings import AZURE_STORAGE_SPEC, AzureStorageSettings
+from .ftp_settings import FTP_SPEC, FTPSettings
+from .gcs_settings import GCS_SPEC, GCSSettings
+from .github_settings import GITHUB_REPO_SPEC, GitHubRepoSettings
+from .http_settings import HTTP_SPEC, HTTPSettings
+from .local_settings import LOCAL_SPEC, LocalSettings
+from .s3_settings import S3_SPEC, S3Settings
+from .smb_settings import SMB_SPEC, SMBSettings
+from .ssh_settings import SSH_SPEC, SSHSettings
 
 
 __all__ = [
-    "AZURE_STORAGE_DESCRIPTOR",
+    "AZURE_STORAGE_SPEC",
     "AzureStorageSettings",
-    "FTP_DESCRIPTOR",
+    "FTP_SPEC",
     "FTPSettings",
-    "GCS_DESCRIPTOR",
+    "GCS_SPEC",
     "GCSSettings",
-    "GITHUB_REPO_DESCRIPTOR",
+    "GITHUB_REPO_SPEC",
     "GitHubRepoSettings",
-    "HTTP_DESCRIPTOR",
+    "HTTP_SPEC",
     "HTTPSettings",
-    "LOCAL_DESCRIPTOR",
+    "LOCAL_SPEC",
     "LocalSettings",
-    "S3_DESCRIPTOR",
+    "S3_SPEC",
     "S3Settings",
-    "SMB_DESCRIPTOR",
+    "SMB_SPEC",
     "SMBSettings",
-    "SSH_DESCRIPTOR",
+    "SSH_SPEC",
     "SSHSettings",
 ]
+
+
+_DEPRECATED = {
+    "AZURE_STORAGE_DESCRIPTOR": ("AZURE_STORAGE_SPEC", AZURE_STORAGE_SPEC),
+    "FTP_DESCRIPTOR": ("FTP_SPEC", FTP_SPEC),
+    "GCS_DESCRIPTOR": ("GCS_SPEC", GCS_SPEC),
+    "GITHUB_REPO_DESCRIPTOR": ("GITHUB_REPO_SPEC", GITHUB_REPO_SPEC),
+    "HTTP_DESCRIPTOR": ("HTTP_SPEC", HTTP_SPEC),
+    "LOCAL_DESCRIPTOR": ("LOCAL_SPEC", LOCAL_SPEC),
+    "S3_DESCRIPTOR": ("S3_SPEC", S3_SPEC),
+    "SMB_DESCRIPTOR": ("SMB_SPEC", SMB_SPEC),
+    "SSH_DESCRIPTOR": ("SSH_SPEC", SSH_SPEC),
+}
+
+
+def __getattr__(name: str):
+    if name in _DEPRECATED:
+        new_name, obj = _DEPRECATED[name]
+        warnings.warn(
+            f"{name!r} is renamed to {new_name!r}. "
+            f"Update imports before mountainash-utils-files 26.6.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return obj
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

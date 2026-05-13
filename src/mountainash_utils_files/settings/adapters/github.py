@@ -47,7 +47,7 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     """Build fsspec ``GithubFileSystem`` kwargs from a :class:`GitHubRepoSettings`.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
-    ``__adapter__: Callable[[DescriptorProfile], dict[str, Any]]``
+    ``__adapter__: Callable[[Profile], dict[str, Any]]``
     contract; callers always pass a :class:`GitHubRepoSettings`
     instance in practice.
     """

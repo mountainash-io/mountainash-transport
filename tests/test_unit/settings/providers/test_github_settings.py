@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.github_settings import (
-    GITHUB_REPO_DESCRIPTOR,
+    GITHUB_REPO_SPEC,
     GitHubRepoSettings,
 )
 
@@ -114,16 +114,16 @@ class TestGitHubFsspecKwargs:
 @pytest.mark.unit
 class TestGitHubDescriptor:
     def test_descriptor_name(self):
-        assert GITHUB_REPO_DESCRIPTOR.name == "github_repo"
+        assert GITHUB_REPO_SPEC.name == "github_repo"
 
     def test_descriptor_is_read_only(self):
         """GithubFileSystem is read-only — scope-cut enforces this."""
-        assert GITHUB_REPO_DESCRIPTOR.read_only is True
+        assert GITHUB_REPO_SPEC.read_only is True
 
     def test_descriptor_sdk_package(self):
-        assert GITHUB_REPO_DESCRIPTOR.sdk_package == "fsspec"
+        assert GITHUB_REPO_SPEC.sdk_package == "fsspec"
 
     def test_descriptor_handler_class(self):
         assert (
-            GITHUB_REPO_DESCRIPTOR.handler_class == "GitHubRepoStorageBackend"
+            GITHUB_REPO_SPEC.handler_class == "GitHubRepoStorageBackend"
         )

@@ -14,7 +14,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.s3_settings import (
-    S3_DESCRIPTOR,
+    S3_SPEC,
     S3Settings,
     validate_flavor,
 )
@@ -200,19 +200,19 @@ class TestS3RoleArnEnvelope:
 @pytest.mark.unit
 class TestS3Descriptor:
     def test_descriptor_name(self):
-        assert S3_DESCRIPTOR.name == "s3"
+        assert S3_SPEC.name == "s3"
 
     def test_descriptor_sdk_is_boto3(self):
-        assert S3_DESCRIPTOR.sdk_package == "boto3"
+        assert S3_SPEC.sdk_package == "boto3"
 
     def test_descriptor_handler_class(self):
-        assert S3_DESCRIPTOR.handler_class == "S3StorageBackend"
+        assert S3_SPEC.handler_class == "S3StorageBackend"
 
     def test_descriptor_not_read_only(self):
-        assert S3_DESCRIPTOR.read_only is False
+        assert S3_SPEC.read_only is False
 
     def test_descriptor_supports_multipart(self):
-        assert S3_DESCRIPTOR.supports_multipart is True
+        assert S3_SPEC.supports_multipart is True
 
 
 @pytest.mark.unit

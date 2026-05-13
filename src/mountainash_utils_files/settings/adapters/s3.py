@@ -74,7 +74,7 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     """Build boto3 S3 client kwargs from an :class:`S3Settings` profile.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
-    ``__adapter__: Callable[[DescriptorProfile], dict[str, Any]]`` contract;
+    ``__adapter__: Callable[[Profile], dict[str, Any]]`` contract;
     callers always pass an :class:`S3Settings` instance in practice.
 
     Returns either a flat dict ready for ``boto3.client("s3", **kwargs)`` or

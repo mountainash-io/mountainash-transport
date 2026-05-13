@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.smb_settings import (
-    SMB_DESCRIPTOR,
+    SMB_SPEC,
     SMBSettings,
 )
 
@@ -138,10 +138,10 @@ class TestSMBConnectionKwargs:
 @pytest.mark.unit
 class TestSMBDescriptor:
     def test_descriptor_name(self):
-        assert SMB_DESCRIPTOR.name == "smb"
+        assert SMB_SPEC.name == "smb"
 
     def test_descriptor_sdk_package(self):
-        assert SMB_DESCRIPTOR.sdk_package == "smbprotocol"
+        assert SMB_SPEC.sdk_package == "smbprotocol"
 
     def test_descriptor_not_read_only(self):
-        assert SMB_DESCRIPTOR.read_only is False
+        assert SMB_SPEC.read_only is False

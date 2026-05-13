@@ -1,19 +1,19 @@
-"""StorageProfile — storage-flavored subclass of DescriptorProfile.
+"""StorageProfile — storage-flavored subclass of Profile.
 
 Adds ``to_handler_kwargs()`` on top of the generic mechanism provided by
-:class:`mountainash_settings.profiles.DescriptorProfile`.
+:class:`mountainash_settings.profiles.Profile`.
 """
 
 from __future__ import annotations
 
 import typing as t
 
-from mountainash_settings.profiles import DescriptorProfile
+from mountainash_settings.profiles import Profile, lookup_class_var
 
 __all__ = ["StorageProfile"]
 
 
-class StorageProfile(DescriptorProfile):
+class StorageProfile(Profile):
     """Storage provider settings.
 
     Public API:
@@ -21,9 +21,9 @@ class StorageProfile(DescriptorProfile):
           constructor (``boto3.client``, ``google.cloud.storage.Client``,
           ``BlobServiceClient``, ``paramiko.SSHClient.connect``, etc.).
 
-    Subclasses set ``__descriptor__`` (a :class:`StorageDescriptor`) and
+    Subclasses set ``__spec__`` (a :class:`StorageDescriptor`) and
     optionally ``__adapter__``. Field installation, auth union, and template
-    wiring are inherited from :class:`DescriptorProfile`.
+    wiring are inherited from :class:`Profile`.
     """
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
@@ -31,16 +31,10 @@ class StorageProfile(DescriptorProfile):
 
         If ``__adapter__`` is set, adapter owns the full pipeline — typically
         it calls :meth:`_default_kwargs` and :meth:`_auth_kwargs` and layers
-        provider-specific construction on top. Otherwise defaults to descriptor
+        provider-specific construction on top. Otherwise defaults to spec
         ``driver_key`` mappings + default auth dispatch.
         """
-        adapter = type(self).__dict__.get("__adapter__")
-        if adapter is None:
-            for base in type(self).__mro__[1:]:
-                candidate = base.__dict__.get("__adapter__")
-                if candidate is not None:
-                    adapter = candidate
-                    break
+        adapter = lookup_class_var(type(self), "__adapter__")
         if adapter is not None:
             return adapter(self)
         kwargs = self._default_kwargs()

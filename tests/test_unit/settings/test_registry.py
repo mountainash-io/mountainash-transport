@@ -1,6 +1,6 @@
 """Tests for STORAGE_REGISTRY wrapper and helpers.
 
-This is the **settings** registry (descriptor-driven, wraps
+This is the **settings** registry (spec-driven, wraps
 ``mountainash_settings.profiles.Registry``). It is distinct from
 ``tests/test_registry.py`` which covers the older per-path
 ``storage_backends`` dispatch table.
@@ -14,28 +14,28 @@ import pytest
 import mountainash_utils_files.settings.providers  # noqa: F401
 
 from mountainash_utils_files.settings.providers import (
-    AZURE_STORAGE_DESCRIPTOR,
+    AZURE_STORAGE_SPEC,
     AzureStorageSettings,
-    FTP_DESCRIPTOR,
+    FTP_SPEC,
     FTPSettings,
-    GCS_DESCRIPTOR,
+    GCS_SPEC,
     GCSSettings,
-    GITHUB_REPO_DESCRIPTOR,
+    GITHUB_REPO_SPEC,
     GitHubRepoSettings,
-    HTTP_DESCRIPTOR,
+    HTTP_SPEC,
     HTTPSettings,
-    LOCAL_DESCRIPTOR,
+    LOCAL_SPEC,
     LocalSettings,
-    S3_DESCRIPTOR,
+    S3_SPEC,
     S3Settings,
-    SMB_DESCRIPTOR,
+    SMB_SPEC,
     SMBSettings,
-    SSH_DESCRIPTOR,
+    SSH_SPEC,
     SSHSettings,
 )
 from mountainash_utils_files.settings.registry import (
     STORAGE_REGISTRY,
-    get_descriptor,
+    get_spec,
     get_settings_class,
     register,
 )
@@ -61,7 +61,7 @@ class TestStorageRegistry:
         assert STORAGE_REGISTRY.name == "storage"
 
     def test_all_eight_providers_registered(self):
-        """All 8 Phase 4 descriptors register themselves at import time."""
+        """All 8 Phase 4 specs register themselves at import time."""
         registered = set(STORAGE_REGISTRY.descriptors.keys())
         missing = EXPECTED_PROVIDERS - registered
         assert not missing, f"missing from STORAGE_REGISTRY: {missing}"
@@ -73,23 +73,21 @@ class TestStorageRegistry:
         assert not extras, f"unexpected extras in STORAGE_REGISTRY: {extras}"
 
     @pytest.mark.parametrize(
-        "name,expected_descriptor",
+        "name,expected_spec",
         [
-            ("s3", S3_DESCRIPTOR),
-            ("gcs", GCS_DESCRIPTOR),
-            ("azure_storage", AZURE_STORAGE_DESCRIPTOR),
-            ("ssh", SSH_DESCRIPTOR),
-            ("ftp", FTP_DESCRIPTOR),
-            ("smb", SMB_DESCRIPTOR),
-            ("local", LOCAL_DESCRIPTOR),
-            ("github_repo", GITHUB_REPO_DESCRIPTOR),
+            ("s3", S3_SPEC),
+            ("gcs", GCS_SPEC),
+            ("azure_storage", AZURE_STORAGE_SPEC),
+            ("ssh", SSH_SPEC),
+            ("ftp", FTP_SPEC),
+            ("smb", SMB_SPEC),
+            ("local", LOCAL_SPEC),
+            ("github_repo", GITHUB_REPO_SPEC),
         ],
     )
-    def test_get_descriptor_returns_canonical_descriptor(
-        self, name, expected_descriptor
-    ):
-        """get_descriptor() returns the exact module-level descriptor object."""
-        assert get_descriptor(name) is expected_descriptor
+    def test_get_spec_returns_canonical_spec(self, name, expected_spec):
+        """get_spec() returns the exact module-level spec object."""
+        assert get_spec(name) is expected_spec
 
     @pytest.mark.parametrize(
         "name,expected_class",
@@ -113,12 +111,10 @@ class TestStorageRegistry:
     def test_nonexistent_provider_raises_key_error(self):
         """Looking up an unknown provider name raises ``KeyError``."""
         with pytest.raises(KeyError):
-            get_descriptor("does_not_exist")
+            get_spec("does_not_exist")
 
     def test_register_is_bound_to_storage_registry(self):
         """The exported ``register`` decorator targets STORAGE_REGISTRY."""
-        # register is a bound-method decorator — registering a dummy and
-        # checking it lands in STORAGE_REGISTRY confirms the binding.
         from mountainash_utils_files.settings.descriptor import (
             ParameterSpec,
             StorageDescriptor,
@@ -127,7 +123,7 @@ class TestStorageRegistry:
         from mountainash_utils_files.settings.base import StorageAuthBase
         from mountainash_settings.auth import NoAuth
 
-        dummy_desc = StorageDescriptor(
+        dummy_spec = StorageDescriptor(
             name="_test_registry_binding",
             provider_type="_test",
             parameters=[
@@ -137,9 +133,9 @@ class TestStorageRegistry:
         )
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         try:
-            @register(dummy_desc)
+            @register
             class _DummySettings(StorageProfile, StorageAuthBase):
-                __descriptor__ = dummy_desc
+                __spec__ = dummy_spec
 
             assert "_test_registry_binding" in STORAGE_REGISTRY.descriptors
             assert get_settings_class("_test_registry_binding") is _DummySettings
@@ -157,7 +153,7 @@ class TestStorageRegistry:
         from mountainash_settings.auth import NoAuth
 
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
-        tmp_desc = StorageDescriptor(
+        tmp_spec = StorageDescriptor(
             name="_snapshot_dummy",
             provider_type="_test",
             parameters=[
@@ -166,9 +162,9 @@ class TestStorageRegistry:
             auth_modes=[NoAuth],
         )
 
-        @register(tmp_desc)
+        @register
         class _TmpSettings(StorageProfile, StorageAuthBase):
-            __descriptor__ = tmp_desc
+            __spec__ = tmp_spec
 
         assert "_snapshot_dummy" in STORAGE_REGISTRY.descriptors
 

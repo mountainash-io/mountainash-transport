@@ -30,10 +30,10 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["GITHUB_REPO_DESCRIPTOR", "GitHubRepoSettings"]
+__all__ = ["GITHUB_REPO_SPEC", "GitHubRepoSettings"]
 
 
-GITHUB_REPO_DESCRIPTOR = StorageDescriptor(
+GITHUB_REPO_SPEC = StorageDescriptor(
     name="github_repo",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.GITHUB,
     sdk_package="fsspec",
@@ -100,12 +100,12 @@ def _adapter(profile: "GitHubRepoSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(GITHUB_REPO_DESCRIPTOR)
+@register
 class GitHubRepoSettings(StorageProfile, StorageAuthBase):
     """GitHub repository (read-only) settings.
 
-    Fields are installed from :data:`GITHUB_REPO_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`GITHUB_REPO_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
 
     Auth maps onto fsspec/PyGithub kwargs:
         - :class:`TokenAuth`   → ``{"token": ...}`` (PAT or fine-grained
@@ -125,7 +125,7 @@ class GitHubRepoSettings(StorageProfile, StorageAuthBase):
     supports.
     """
 
-    __descriptor__ = GITHUB_REPO_DESCRIPTOR
+    __spec__ = GITHUB_REPO_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:

@@ -1,6 +1,6 @@
-"""Tests for StorageProfile — storage-flavored DescriptorProfile.
+"""Tests for StorageProfile — storage-flavored Profile.
 
-DescriptorProfile mechanism tests live in mountainash-settings. Here we
+Profile mechanism tests live in mountainash-settings. Here we
 only exercise storage-specific behaviour: ``to_handler_kwargs()`` dispatch
 logic (adapter present vs absent, inherited-from-base dispatch).
 """
@@ -26,7 +26,7 @@ from mountainash_utils_files.settings.profile import StorageProfile
 # STORAGE_REGISTRY — it's only exercising in-class dispatch on StorageProfile.
 _DUMMY_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL
 
-DUMMY_DESCRIPTOR = StorageDescriptor(
+DUMMY_SPEC = StorageDescriptor(
     name="_dummy_storage",
     provider_type=_DUMMY_PROVIDER_TYPE,
     sdk_package=None,
@@ -52,13 +52,13 @@ DUMMY_DESCRIPTOR = StorageDescriptor(
 
 
 class DummyStorageProfile(StorageProfile, StorageAuthBase):
-    __descriptor__ = DUMMY_DESCRIPTOR
+    __spec__ = DUMMY_SPEC
 
 
 @pytest.mark.unit
 class TestStorageProfile:
     def test_to_handler_kwargs_default_no_adapter(self):
-        """Without an adapter, descriptor driver_key mappings flow through."""
+        """Without an adapter, spec driver_key mappings flow through."""
         p = DummyStorageProfile(
             PROVIDER_TYPE=_DUMMY_PROVIDER_TYPE,
             STORE_PATH="/tmp/files",
@@ -73,7 +73,7 @@ class TestStorageProfile:
             return {"custom_key": "custom_value"}
 
         class AdaptedProfile(StorageProfile, StorageAuthBase):
-            __descriptor__ = DUMMY_DESCRIPTOR
+            __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_my_adapter)
 
         p = AdaptedProfile(PROVIDER_TYPE=_DUMMY_PROVIDER_TYPE, auth=NoAuth())
@@ -88,7 +88,7 @@ class TestStorageProfile:
         )
         kwargs = p.to_handler_kwargs()
         # _default_kwargs supplies path; _auth_kwargs may surface a token —
-        # what matters for the profile-level test is that the descriptor
+        # what matters for the profile-level test is that the spec
         # driver_key mapping round-trips cleanly.
         assert kwargs.get("path") == "/tmp"
 
@@ -98,7 +98,7 @@ class TestStorageProfile:
             return {"from": "parent"}
 
         class ParentProfile(StorageProfile, StorageAuthBase):
-            __descriptor__ = DUMMY_DESCRIPTOR
+            __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_parent_adapter)
 
         class ChildProfile(ParentProfile):
@@ -107,13 +107,13 @@ class TestStorageProfile:
         p = ChildProfile(PROVIDER_TYPE=_DUMMY_PROVIDER_TYPE, auth=NoAuth())
         assert p.to_handler_kwargs() == {"from": "parent"}
 
-    def test_descriptor_name_accessible(self):
-        """The descriptor's typed metadata is reachable off the class."""
-        assert DummyStorageProfile.__descriptor__.name == "_dummy_storage"
-        assert DummyStorageProfile.__descriptor__.sdk_package is None
+    def test_spec_name_accessible(self):
+        """The spec's typed metadata is reachable off the class."""
+        assert DummyStorageProfile.__spec__.name == "_dummy_storage"
+        assert DummyStorageProfile.__spec__.sdk_package is None
         # StorageDescriptor-specific typed fields are set to defaults.
-        assert DummyStorageProfile.__descriptor__.read_only is False
-        assert DummyStorageProfile.__descriptor__.supports_streaming is True
+        assert DummyStorageProfile.__spec__.read_only is False
+        assert DummyStorageProfile.__spec__.supports_streaming is True
 
     def test_adapter_override_on_subclass_shadows_parent(self):
         """A subclass's ``__adapter__`` wins over the parent's (most-derived-first)."""
@@ -124,7 +124,7 @@ class TestStorageProfile:
             return {"from": "child"}
 
         class Parent(StorageProfile, StorageAuthBase):
-            __descriptor__ = DUMMY_DESCRIPTOR
+            __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_parent)
 
         class Child(Parent):

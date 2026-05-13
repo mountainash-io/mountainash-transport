@@ -32,10 +32,10 @@ from ..profile import StorageProfile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["SMB_DESCRIPTOR", "SMBSettings"]
+__all__ = ["SMB_SPEC", "SMBSettings"]
 
 
-SMB_DESCRIPTOR = StorageDescriptor(
+SMB_SPEC = StorageDescriptor(
     name="smb",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.SMB,
     sdk_package="smbprotocol",
@@ -110,12 +110,12 @@ def _adapter(profile: "SMBSettings") -> dict[str, t.Any]:
     return build_handler_kwargs(profile)
 
 
-@register(SMB_DESCRIPTOR)
+@register
 class SMBSettings(StorageProfile, StorageAuthBase):
     """SMB / CIFS settings.
 
-    Fields are installed from :data:`SMB_DESCRIPTOR` by the
-    :class:`~mountainash_settings.profiles.DescriptorProfile` metaclass.
+    Fields are installed from :data:`SMB_SPEC` by the
+    :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
     :func:`~mountainash_utils_files.settings.adapters.smb.build_handler_kwargs`.
 
@@ -126,7 +126,7 @@ class SMBSettings(StorageProfile, StorageAuthBase):
         - :class:`KerberosAuth`  → ``auth_protocol="kerberos"``.
     """
 
-    __descriptor__ = SMB_DESCRIPTOR
+    __spec__ = SMB_SPEC
     __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:
