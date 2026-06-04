@@ -25,7 +25,9 @@ def _resolve_auth_headers(auth: t.Any) -> dict[str, str]:
     if auth is None:
         return {}
     auth_type = type(auth).__name__
-    if auth_type == "TokenAuth":
+    if auth_type == "NoAuth":
+        return {}
+    if auth_type == "TokenAuth" or auth_type == "JWTAuth":
         token = _unwrap_secret(getattr(auth, "token", None))
         if token:
             return {"Authorization": f"Bearer {token}"}
@@ -34,6 +36,14 @@ def _resolve_auth_headers(auth: t.Any) -> dict[str, str]:
         password = _unwrap_secret(getattr(auth, "password", None)) or ""
         encoded = base64.b64encode(f"{username}:{password}".encode()).decode()
         return {"Authorization": f"Basic {encoded}"}
+    elif auth_type == "OAuth2Auth":
+        token = _unwrap_secret(getattr(auth, "token", None))
+        if token:
+            return {"Authorization": f"Bearer {token}"}
+    elif auth_type == "OAuth2AuthCodeAuth":
+        token = _unwrap_secret(getattr(auth, "access_token", None))
+        if token:
+            return {"Authorization": f"Bearer {token}"}
     return {}
 
 
