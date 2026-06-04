@@ -251,6 +251,7 @@ test-ci = [
 #================
 [envs.ruff]
 installer = "uv"
+skip-install = true
 dependencies = ["ruff==0.3.7"]
 [envs.ruff.scripts]
 check = "ruff check ./src"
