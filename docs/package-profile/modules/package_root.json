@@ -1,0 +1,54 @@
+{
+  "id": "mountainash_utils_files",
+  "path": "src/mountainash_utils_files/__init__.py",
+  "summary": "Package root. Defines __all__ and re-exports every public symbol: StorageFacade, copy_between, read_bytes, storage(), all eight storage protocols, CONST_STORAGE_PROVIDER_TYPE, FileMetadata, all public exceptions, Pipeline/Gzip/GPG/StreamTransform, StoragePath, infer_pipeline. Also imports storage_backends to trigger backend auto-registration.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "contributors", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageFacade", "copy_between", "read_bytes", "storage",
+    "get_storage_backend", "detect_provider_from_path",
+    "StorageConnectionProtocol", "StorageReadProtocol", "StorageWriteProtocol",
+    "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol",
+    "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
+    "StorageError", "UnsupportedOperationError", "StorageConnectionError",
+    "PathNotFoundError", "AuthenticationError", "TransformError",
+    "StoragePath", "infer_pipeline",
+    "Pipeline", "StreamTransform", "Gzip", "GPG"
+  ],
+  "key_classes": ["StorageFacade"],
+  "key_functions": ["storage", "read_bytes", "copy_between"],
+  "dependencies": [
+    "mountainash_utils_files.storage_facade",
+    "mountainash_utils_files.storage_registry",
+    "mountainash_utils_files.storage_protocols",
+    "mountainash_utils_files.constants",
+    "mountainash_utils_files.dataclasses.file_metadata",
+    "mountainash_utils_files.exceptions",
+    "mountainash_utils_files.storage_transforms",
+    "mountainash_utils_files.path_helpers",
+    "mountainash_utils_files.storage_backends"
+  ],
+  "dependents": [],
+  "extension_points": ["storage_backends import triggers @register_storage_backend"],
+  "lifecycle_notes": ["Importing this module side-effects backend registration via `from . import storage_backends`"],
+  "documentation_hooks": [
+    "The `storage()` convenience factory is the simplest entry point for users",
+    "StorageFacade.from_path() and read_bytes() are the path-driven entry points"
+  ],
+  "examples": ["CLAUDE.md usage examples"],
+  "tests": ["tests/test_public_api.py"],
+  "risks": ["Adding new public symbols requires updating __all__"],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/__init__.py", "detail": "__all__ enumerates all 30+ public exports"},
+    {"kind": "test", "path": "tests/test_public_api.py", "detail": "Verifies public API surface"},
+    {"kind": "doc", "path": "CLAUDE.md", "detail": "Usage examples reference StorageFacade and read_bytes"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

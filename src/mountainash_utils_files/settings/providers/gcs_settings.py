@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import typing as t
 
-from mountainash_settings.auth import (
+from mountainash_auth_client import (
     IAMAuth,
     NoAuth,
     OAuth2Auth,

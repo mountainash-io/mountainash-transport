@@ -1,0 +1,35 @@
+{
+  "id": "mountainash_utils_files.storage_transforms.base",
+  "path": "src/mountainash_utils_files/storage_transforms/base.py",
+  "summary": "StreamTransform abstract base class defining the transform interface: wrap(stream) → BinaryIO (for writes) and unwrap(stream) → BinaryIO (for reads). All concrete transforms (Gzip, GPG) must implement both methods.",
+  "role": "protocol",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "extension-authors"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StreamTransform"],
+  "key_classes": ["StreamTransform"],
+  "key_functions": ["wrap", "unwrap"],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_utils_files.storage_transforms.pipeline",
+    "mountainash_utils_files.storage_transforms.compression",
+    "mountainash_utils_files.storage_transforms.encryption"
+  ],
+  "extension_points": ["Subclass StreamTransform to create custom transforms; implement wrap() and unwrap()"],
+  "lifecycle_notes": [],
+  "documentation_hooks": [
+    "Extension authors writing custom transforms must implement both wrap() and unwrap() — symmetry is required for Pipeline correctness"
+  ],
+  "examples": [],
+  "tests": ["tests/storage_transforms/test_base.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/storage_transforms/test_base.py", "detail": "Tests StreamTransform abstract interface"},
+    {"kind": "symbol", "path": "src/mountainash_utils_files/__init__.py", "detail": "StreamTransform in __all__"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

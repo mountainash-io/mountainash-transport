@@ -15,6 +15,7 @@ def read_bytes(
     path: str,
     *,
     auth_params: typing.Any = None,
+    auth: typing.Any = None,
     infer: bool = False,
     gpg: GPG | None = None,
     gzip: Gzip | None = None,
@@ -28,6 +29,9 @@ def read_bytes(
     Args:
         path: Path or URL.
         auth_params: Optional auth params forwarded to the storage facade.
+        auth: Optional direct AuthSpec instance (e.g. TokenAuth, PasswordAuth).
+            When provided, overrides any Authorization header set by *auth_params*.
+            Only supported for HTTP/HTTPS paths.
         infer: When True, inspect *path*'s suffix chain and auto-apply a
             read-side ``Pipeline`` for known suffixes (``.gz``, ``.gzip``,
             ``.gpg``, ``.asc``, ``.pgp``). Default False preserves
@@ -46,5 +50,5 @@ def read_bytes(
             is not registered, or *infer* is True and a gpg-family suffix
             was seen without a *gpg* instance.
     """
-    facade = StorageFacade.from_path(path, auth_params)
+    facade = StorageFacade.from_path(path, auth_params, auth=auth)
     return facade.read(path, infer=infer, gpg=gpg, gzip=gzip)

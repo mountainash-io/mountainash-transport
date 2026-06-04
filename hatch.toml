@@ -20,6 +20,7 @@ dependencies = [
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
     "mountainash_utils_gpg @   {root:uri}/temp/mountainash-utils-gpg",
     "mountainash_utils_ssh @   {root:uri}/temp/mountainash-utils-ssh",
+    "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
 ]
 [envs.build_github.scripts]
 sbom-all = "cyclonedx-py environment > ./sbom-full.json"
@@ -41,6 +42,7 @@ dependencies = [
     # "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
     # "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
     # "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
+    "mountainash_auth_client @       {root:uri}/../mountainash-auth-client",
 ]
 
 #================
@@ -72,7 +74,7 @@ dependencies = [
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
     "mountainash_utils_gpg @   {root:uri}/temp/mountainash-utils-gpg",
     "mountainash_utils_ssh @   {root:uri}/temp/mountainash-utils-ssh",
-
+    "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
 ]
 [envs.test_github.scripts]
 test = "pytest"
@@ -109,9 +111,7 @@ dependencies = [
     "mountainash_settings @    {root:uri}/../mountainash-settings",
     "mountainash_utils_gpg @   {root:uri}/../mountainash-utils-gpg",
     "mountainash_utils_ssh @   {root:uri}/../mountainash-utils-ssh",
-
-
-
+    "mountainash_auth_client @ {root:uri}/../mountainash-auth-client",
 ]
 [envs.test.scripts]
 # ===========================================
@@ -251,6 +251,7 @@ test-ci = [
 #================
 [envs.ruff]
 installer = "uv"
+skip-install = true
 dependencies = ["ruff==0.3.7"]
 [envs.ruff.scripts]
 check = "ruff check ./src"

@@ -72,8 +72,15 @@ class StorageFacade:
         self,
         provider_type: CONST_STORAGE_PROVIDER_TYPE,
         auth_params: typing.Any = None,
+        *,
+        auth: typing.Any = None,
     ) -> None:
-        self._backend = get_storage_backend(provider_type, auth_params)
+        self._backend = get_storage_backend(provider_type, auth_params, auth=auth)
+        if auth is not None and not hasattr(self._backend, "auth"):
+            raise ValueError(
+                f"auth= is not supported for provider {provider_type!r}; "
+                "use auth_params with a profile instead"
+            )
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -89,21 +96,28 @@ class StorageFacade:
         cls,
         path: str,
         auth_params: typing.Any = None,
+        *,
+        auth: typing.Any = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
         Args:
             path: Path string, optionally with a URL scheme.
             auth_params: Optional auth params forwarded to the backend.
+            auth: Optional direct AuthSpec instance (e.g. TokenAuth, PasswordAuth).
+                When provided, overrides any Authorization header set by *auth_params*.
+                Only supported by backends that accept an ``auth`` parameter
+                (currently HTTP/HTTPS).
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
 
         Raises:
-            ValueError: If *path*'s scheme is unrecognised or has no backend.
+            ValueError: If *path*'s scheme is unrecognised or has no backend,
+                or if *auth* is provided for a backend that does not support it.
         """
         provider = detect_provider_from_path(path)
-        return cls(provider_type=provider, auth_params=auth_params)
+        return cls(provider_type=provider, auth_params=auth_params, auth=auth)
 
     # ------------------------------------------------------------------
     # Protocol introspection

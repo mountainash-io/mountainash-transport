@@ -38,5 +38,5 @@ class StorageProfile(Profile):
         if adapter is not None:
             return adapter(self)
         kwargs = self._default_kwargs()
-        kwargs.update(self._auth_kwargs())
+        kwargs.update(self._default_kwargs())
         return kwargs

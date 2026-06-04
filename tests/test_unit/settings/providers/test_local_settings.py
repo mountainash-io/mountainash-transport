@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_settings.auth import NoAuth
+from mountainash_auth_client import NoAuth
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.settings.providers.local_settings import (

@@ -121,7 +121,7 @@ class TestStorageRegistry:
         )
         from mountainash_utils_files.settings.profile import StorageProfile
         from mountainash_utils_files.settings.base import StorageAuthBase
-        from mountainash_settings.auth import NoAuth
+        from mountainash_auth_client import NoAuth
 
         dummy_spec = StorageDescriptor(
             name="_test_registry_binding",
@@ -150,7 +150,7 @@ class TestStorageRegistry:
         )
         from mountainash_utils_files.settings.profile import StorageProfile
         from mountainash_utils_files.settings.base import StorageAuthBase
-        from mountainash_settings.auth import NoAuth
+        from mountainash_auth_client import NoAuth
 
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         tmp_spec = StorageDescriptor(

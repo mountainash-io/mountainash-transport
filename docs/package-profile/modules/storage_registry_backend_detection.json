@@ -1,0 +1,36 @@
+{
+  "id": "mountainash_utils_files.storage_registry.backend_detection",
+  "path": "src/mountainash_utils_files/storage_registry/backend_detection.py",
+  "summary": "detect_provider_from_path(path) — maps a URL scheme (or bare path) to a CONST_STORAGE_PROVIDER_TYPE. Used by StorageFacade.from_path() and read_bytes() to select the correct backend based on path string alone.",
+  "role": "orchestration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["detect_provider_from_path"],
+  "key_classes": [],
+  "key_functions": ["detect_provider_from_path"],
+  "dependencies": [
+    "mountainash_utils_files.constants",
+    "mountainash_utils_files.path_helpers.scheme"
+  ],
+  "dependents": [
+    "mountainash_utils_files.storage_facade.facade",
+    "mountainash_utils_files.storage_facade.read_bytes"
+  ],
+  "extension_points": ["Mapping from scheme to provider type must be updated when adding new backends"],
+  "lifecycle_notes": [],
+  "documentation_hooks": [
+    "Used implicitly by from_path() — users do not call this directly but its scheme→provider mapping determines path-driven dispatch"
+  ],
+  "examples": [],
+  "tests": ["tests/storage_registry/test_backend_detection.py"],
+  "risks": ["Bare paths (no scheme) must be detected as LOCAL — any ambiguity here silently routes to wrong backend"],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/storage_registry/test_backend_detection.py", "detail": "Tests scheme → provider_type mapping"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

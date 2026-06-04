@@ -28,7 +28,7 @@ def test_read_bytes_http_routes_through_facade(monkeypatch):
     from mountainash_utils_files.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
-        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+        facade_mod, "get_storage_backend", lambda provider, auth_params=None, **kw: _StreamBackend()
     )
     monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 
@@ -46,7 +46,7 @@ def test_read_bytes_https_routes_through_facade(monkeypatch):
     from mountainash_utils_files.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
-        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+        facade_mod, "get_storage_backend", lambda provider, auth_params=None, **kw: _StreamBackend()
     )
     monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 
@@ -78,7 +78,7 @@ def test_read_bytes_routes_s3_through_facade(monkeypatch):
     from mountainash_utils_files.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
-        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+        facade_mod, "get_storage_backend", lambda provider, auth_params=None, **kw: _StreamBackend()
     )
     # _require() does an isinstance check against StorageReadProtocol; our
     # stub backend isn't registered with that protocol, so bypass the gate.
@@ -122,7 +122,7 @@ def test_read_bytes_http_infer_applies_pipeline_to_bytes(monkeypatch):
     from mountainash_utils_files.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
-        facade_mod, "get_storage_backend", lambda provider, auth=None: _StreamBackend()
+        facade_mod, "get_storage_backend", lambda provider, auth_params=None, **kw: _StreamBackend()
     )
     monkeypatch.setattr(StorageFacade, "_require", lambda self, protocol, op: None)
 

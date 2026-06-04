@@ -1,0 +1,36 @@
+{
+  "id": "mountainash_utils_files.settings.descriptor",
+  "path": "src/mountainash_utils_files/settings/descriptor.py",
+  "summary": "StorageDescriptor(ProfileSpec) — frozen dataclass with storage-domain metadata: sdk_package (e.g. 'boto3'), handler_module (dotted path to backend), handler_class, supports_streaming, supports_multipart, read_only. Each provider settings module defines a singleton *_SPEC instance of this class. Renamed from 'descriptor' to 'spec' in mountainash-settings 26.5.0.",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture", "extension-authors"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageDescriptor"],
+  "key_classes": ["StorageDescriptor"],
+  "key_functions": [],
+  "dependencies": ["mountainash_settings.profiles"],
+  "dependents": [
+    "mountainash_utils_files.settings.registry",
+    "mountainash_utils_files.settings.providers.*"
+  ],
+  "extension_points": ["New providers define a StorageDescriptor instance capturing their SDK, handler, and capability flags"],
+  "lifecycle_notes": [
+    "Renamed: formerly 'StorageDescriptor' (descriptor pattern), now aligned with mountainash-settings ProfileSpec naming — the class name itself remains StorageDescriptor but the *_DESCRIPTOR aliases were removed in Phase 4b"
+  ],
+  "documentation_hooks": [
+    "read_only=True on GitHubRepoSettings drives UnsupportedOperationError on write operations"
+  ],
+  "examples": [],
+  "tests": ["tests/test_unit/settings/test_descriptor_invariants.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_unit/settings/test_descriptor_invariants.py", "detail": "Tests that spec fields are consistent across provider specs"},
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/descriptor.py", "detail": "Frozen dataclass with typed fields"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

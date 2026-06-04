@@ -1,0 +1,32 @@
+{
+  "id": "mountainash_utils_files.settings.providers.http_settings",
+  "path": "src/mountainash_utils_files/settings/providers/http_settings.py",
+  "summary": "HTTPSettings — settings for HTTP/HTTPS storage via httpx. Supports read (GET), write (PUT), and metadata (HEAD). Accepts Bearer and Basic auth. HTTP_SPEC captures sdk_package='httpx'. Covers both http:// and https:// schemes.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["HTTPSettings", "HTTP_SPEC"],
+  "key_classes": ["HTTPSettings"],
+  "key_functions": [],
+  "dependencies": ["mountainash_utils_files.settings.profile", "mountainash_utils_files.settings.base"],
+  "dependents": ["mountainash_utils_files.storage_backends.http"],
+  "extension_points": [],
+  "lifecycle_notes": ["Added in Phase 5 (2026-05-07 HTTP backend plan). Evolving: multipart upload not yet implemented."],
+  "documentation_hooks": [
+    "Document that write is via PUT (not POST) — not all HTTP servers support PUT",
+    "Bearer and Basic auth both supported — configure via auth= argument"
+  ],
+  "examples": [],
+  "tests": ["tests/test_unit/settings/providers/test_http_settings.py", "tests/backends/test_http.py"],
+  "risks": ["PUT semantics differ from POST — servers must explicitly support PUT for writes"],
+  "open_questions": ["Multipart upload support for large files is not yet implemented"],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_unit/settings/providers/test_http_settings.py", "detail": "Tests HTTPSettings construction"},
+    {"kind": "test", "path": "tests/backends/test_http.py", "detail": "Tests HTTP backend operations"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

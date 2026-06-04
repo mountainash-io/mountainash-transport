@@ -7,7 +7,6 @@ and read_only are meaningful only for storage providers.
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 
 from mountainash_settings.profiles import (

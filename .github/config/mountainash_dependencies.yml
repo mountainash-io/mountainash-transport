@@ -4,6 +4,8 @@
 dependencies:
   # - name: mountainash-constants
   #   org-name: mountainash-io
+  - name: mountainash-auth-client
+    org-name: mountainash-io
   - name: mountainash-data
     org-name: mountainash-io
   - name: mountainash

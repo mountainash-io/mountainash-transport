@@ -1,0 +1,36 @@
+{
+  "id": "mountainash_utils_files.storage_backends.local",
+  "path": "src/mountainash_utils_files/storage_backends/local/",
+  "summary": "LocalStorageBackend — backend implementation for the local filesystem. Composed of 7 operation modules: local_connection.py (connect/disconnect), local_read.py (read_to_stream via open()), local_write.py (write_from_bytes, write_from_stream), local_list.py (list_files, list_directories using pathlib), local_delete.py (delete_file), local_copy.py (copy via shutil), local_directory.py (mkdir, rmdir), local_metadata.py (path_exists, get_metadata, get_size). Implements all 8 storage protocols. Registered for CONST_STORAGE_PROVIDER_TYPE.LOCAL.",
+  "role": "backend",
+  "visibility": "internal",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture", "contributors"],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": ["LocalStorageBackend"],
+  "key_functions": [],
+  "dependencies": [
+    "mountainash_utils_files.storage_protocols",
+    "mountainash_utils_files.storage_registry.registry",
+    "mountainash_utils_files.dataclasses.file_metadata",
+    "mountainash_utils_files.exceptions"
+  ],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": ["Reference backend — most complete protocol implementation; used to validate protocol alignment tests"],
+  "documentation_hooks": [
+    "The local backend is the reference implementation for new backend authors to follow the protocol patterns"
+  ],
+  "examples": [],
+  "tests": ["tests/backends/test_local.py", "tests/cross_backend/"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/backends/test_local.py", "detail": "Comprehensive local backend tests"},
+    {"kind": "test", "path": "tests/protocol_alignment/test_protocol_conformance.py", "detail": "Local backend verified against all 8 protocols"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

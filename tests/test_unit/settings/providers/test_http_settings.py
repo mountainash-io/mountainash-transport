@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_settings.auth import NoAuth, PasswordAuth, TokenAuth
+from mountainash_auth_client import NoAuth, PasswordAuth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -106,3 +106,48 @@ class TestHTTPHandlerKwargs:
         kw = s.to_handler_kwargs()
         assert kw["headers"]["X-Custom"] == "value"
         assert kw["headers"]["Authorization"] == "Bearer tok"
+
+
+@pytest.mark.unit
+class TestResolveAuthHeaders:
+    """Direct tests for _resolve_auth_headers — covers OAuth2 types."""
+
+    def test_noauth_returns_empty(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        from mountainash_auth_client import NoAuth
+        assert _resolve_auth_headers(NoAuth()) == {}
+
+    def test_oauth2_with_token(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        from mountainash_auth_client import OAuth2Auth
+        auth = OAuth2Auth(token=SecretStr("oauthtoken"))
+        assert _resolve_auth_headers(auth) == {"Authorization": "Bearer oauthtoken"}
+
+    def test_oauth2_without_token(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        from mountainash_auth_client import OAuth2Auth
+        auth = OAuth2Auth(client_id="id", client_secret=SecretStr("secret"))
+        assert _resolve_auth_headers(auth) == {}
+
+    def test_oauth2_authcode_with_access_token(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        from mountainash_auth_client import OAuth2AuthCodeAuth
+        auth = OAuth2AuthCodeAuth(
+            client_id="id",
+            client_secret=SecretStr("secret"),
+            access_token=SecretStr("myaccess"),
+        )
+        assert _resolve_auth_headers(auth) == {"Authorization": "Bearer myaccess"}
+
+    def test_oauth2_authcode_without_access_token(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        from mountainash_auth_client import OAuth2AuthCodeAuth
+        auth = OAuth2AuthCodeAuth(
+            client_id="id",
+            client_secret=SecretStr("secret"),
+        )
+        assert _resolve_auth_headers(auth) == {}
+
+    def test_none_returns_empty(self):
+        from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
+        assert _resolve_auth_headers(None) == {}

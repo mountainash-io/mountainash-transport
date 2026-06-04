@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.settings.base",
+  "path": "src/mountainash_utils_files/settings/base.py",
+  "summary": "StorageAuthBase — pydantic-settings mixin providing shared configuration fields across all provider settings classes: TIMEOUT, ROOT_PATH, CREATE_PATH, USERNAME, PASSWORD, and others. Inherited by all concrete provider settings classes (S3Settings, AzureStorageSettings, etc.).",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "contributors", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageAuthBase"],
+  "key_classes": ["StorageAuthBase"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["mountainash_utils_files.settings.providers.*"],
+  "extension_points": ["New shared fields should be added here rather than to individual provider classes"],
+  "lifecycle_notes": [],
+  "documentation_hooks": [
+    "Fields on StorageAuthBase apply to all providers — document the universal configuration surface here"
+  ],
+  "examples": [],
+  "tests": ["tests/test_unit/settings/"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/__init__.py", "detail": "StorageAuthBase exported"},
+    {"kind": "import", "path": "src/mountainash_utils_files/settings/providers/s3_settings.py", "detail": "S3Settings inherits StorageAuthBase"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

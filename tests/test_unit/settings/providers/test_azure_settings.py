@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from mountainash_settings.auth import AzureADAuth, NoAuth, PasswordAuth, TokenAuth
+from mountainash_auth_client import AzureADAuth, NoAuth, PasswordAuth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_settings.auth import IAMAuth, NoAuth, TokenAuth
+from mountainash_auth_client import IAMAuth, NoAuth, TokenAuth
 
 from ..descriptor import ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile

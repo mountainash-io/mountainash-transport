@@ -59,13 +59,38 @@ class HTTPStorageBackend:
     and StorageMetadataProtocol using httpx.
     """
 
-    def __init__(self, auth_params: t.Any) -> None:
+    def __init__(self, auth_params: t.Any, *, auth: t.Any = None) -> None:
         self.auth_params = auth_params
+        self.auth = auth
         self._client: httpx.Client | None = None
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
-            self._client = httpx.Client()
+            kwargs: dict[str, t.Any] = {}
+
+            # Start from profile kwargs if available.
+            if hasattr(self.auth_params, "to_handler_kwargs"):
+                kwargs = self.auth_params.to_handler_kwargs()
+
+            # Override auth headers if direct auth= is provided.
+            if self.auth is not None:
+                from mountainash_utils_files.settings.adapters.http import (
+                    _resolve_auth_headers,
+                )
+
+                auth_headers = _resolve_auth_headers(self.auth)
+                existing_headers = dict(kwargs.get("headers", {}))
+                # NoAuth: strip Authorization; others: override it.
+                if type(self.auth).__name__ == "NoAuth":
+                    existing_headers.pop("Authorization", None)
+                else:
+                    existing_headers.update(auth_headers)
+                if existing_headers:
+                    kwargs["headers"] = existing_headers
+                elif "headers" in kwargs:
+                    del kwargs["headers"]
+
+            self._client = httpx.Client(**kwargs)
         return self._client
 
     # -- StorageReadProtocol ------------------------------------------------

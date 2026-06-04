@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_settings.auth import IAMAuth, NoAuth
+from mountainash_auth_client import IAMAuth, NoAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE

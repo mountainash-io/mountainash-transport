@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.path_helpers.storage_path",
+  "path": "src/mountainash_utils_files/path_helpers/storage_path.py",
+  "summary": "StoragePath — classmethod-only helper for scheme-aware path parsing, normalization, joining, and matching. Provides identify_scheme(), normalize(), join(), to_str(), and matches() without instantiation.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StoragePath"],
+  "key_classes": ["StoragePath"],
+  "key_functions": ["identify_scheme", "normalize", "join", "to_str", "matches"],
+  "dependencies": ["mountainash_utils_files.path_helpers.scheme"],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [
+    "Classmethod-only design: users never instantiate StoragePath, only call StoragePath.normalize('s3://...')"
+  ],
+  "examples": [],
+  "tests": ["tests/path_helpers/test_storage_path.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/path_helpers/test_storage_path.py", "detail": "Comprehensive tests for all classmethods"},
+    {"kind": "symbol", "path": "src/mountainash_utils_files/__init__.py", "detail": "Exported in __all__ as StoragePath"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

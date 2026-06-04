@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_settings.auth import CertificateAuth, KerberosAuth, PasswordAuth
+from mountainash_auth_client import CertificateAuth, KerberosAuth, PasswordAuth
 
 from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
