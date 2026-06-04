@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_settings.auth import CertificateAuth, KerberosAuth, PasswordAuth
+from mountainash_auth_client import CertificateAuth, KerberosAuth, PasswordAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE

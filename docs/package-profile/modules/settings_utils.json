@@ -1,0 +1,28 @@
+{
+  "id": "mountainash_utils_files.settings.utils",
+  "path": "src/mountainash_utils_files/settings/utils/",
+  "summary": "Internal utility subpackage with three modules: connection.py (connection validation helpers), security.py (credential masking, secret detection), validation.py (field validators shared across provider settings). Not exported from the package root.",
+  "role": "backend",
+  "visibility": "internal",
+  "stability": "stable",
+  "audiences": ["maintainers"],
+  "doc_priority": "internal-note",
+  "confidence": "medium",
+  "public_api": [],
+  "key_classes": [],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["mountainash_utils_files.settings.providers.*"],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/utils/__init__.py", "detail": "Contains connection, security, validation submodules"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

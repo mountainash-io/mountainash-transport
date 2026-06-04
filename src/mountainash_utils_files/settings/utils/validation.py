@@ -7,7 +7,7 @@
 # from urllib.parse import urlparse
 # import ipaddress
 
-# from mountainash_settings.auth.storage.exceptions import StorageValidationError
+# from mountainash_auth_client import StorageValidationError  # TBD
 
 # class StorageValidator:
 #     """Storage configuration validation utilities"""

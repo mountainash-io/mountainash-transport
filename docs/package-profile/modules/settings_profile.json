@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.settings.profile",
+  "path": "src/mountainash_utils_files/settings/profile.py",
+  "summary": "StorageProfile(Profile) — base class for all provider settings classes. Inherits from mountainash_settings.profiles.Profile and adds to_handler_kwargs() which uses lookup_class_var for __adapter__ to dispatch to the per-provider adapter. Each provider settings class (S3Settings, etc.) is a subclass of StorageProfile.",
+  "role": "api-builder",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageProfile"],
+  "key_classes": ["StorageProfile"],
+  "key_functions": ["to_handler_kwargs"],
+  "dependencies": ["mountainash_settings.profiles"],
+  "dependents": ["mountainash_utils_files.settings.providers.*"],
+  "extension_points": ["New providers subclass StorageProfile and set __adapter__ to their adapter module"],
+  "lifecycle_notes": ["to_handler_kwargs() is the bridge from settings → SDK-ready kwargs dict"],
+  "documentation_hooks": [
+    "Document that to_handler_kwargs() is how settings are converted for SDK use — this is what users call if constructing backends manually"
+  ],
+  "examples": ["CLAUDE.md: s3.to_handler_kwargs() → dict ready for boto3.client('s3', **kwargs)"],
+  "tests": ["tests/test_unit/settings/test_profile.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_unit/settings/test_profile.py", "detail": "Tests to_handler_kwargs dispatch"},
+    {"kind": "doc", "path": "CLAUDE.md", "detail": "to_handler_kwargs() documented in usage examples"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.path_helpers.s3",
+  "path": "src/mountainash_utils_files/path_helpers/s3.py",
+  "summary": "Free functions s3_bucket(path) and s3_key(path) that parse an s3:// URL into its bucket name and object key components.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["s3_bucket", "s3_key"],
+  "key_classes": [],
+  "key_functions": ["s3_bucket", "s3_key"],
+  "dependencies": [],
+  "dependents": ["mountainash_utils_files.storage_backends.s3"],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [
+    "s3_bucket/s3_key are convenience utilities for users who work with raw boto3 alongside this library"
+  ],
+  "examples": [],
+  "tests": ["tests/path_helpers/test_s3.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/path_helpers/test_s3.py", "detail": "Tests bucket/key extraction from various s3:// paths"},
+    {"kind": "symbol", "path": "src/mountainash_utils_files/path_helpers/__init__.py", "detail": "Exported as submodule s3"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

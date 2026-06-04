@@ -1,0 +1,28 @@
+{
+  "id": "mountainash_utils_files.settings.providers.gcs_settings",
+  "path": "src/mountainash_utils_files/settings/providers/gcs_settings.py",
+  "summary": "GCSSettings — settings for Google Cloud Storage. Accepts ServiceAccountAuth for service account JSON key file authentication. GCS_SPEC captures sdk_package='google-cloud-storage'.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["GCSSettings", "GCS_SPEC"],
+  "key_classes": ["GCSSettings"],
+  "key_functions": [],
+  "dependencies": ["mountainash_utils_files.settings.profile", "mountainash_utils_files.settings.base"],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": ["tests/test_unit/settings/providers/test_gcs_settings.py"],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_unit/settings/providers/test_gcs_settings.py", "detail": "Tests GCSSettings construction"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

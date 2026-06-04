@@ -1,0 +1,40 @@
+{
+  "id": "mountainash_utils_files.storage_backends.http",
+  "path": "src/mountainash_utils_files/storage_backends/http/",
+  "summary": "HTTPStorageBackend — backend for HTTP/HTTPS storage via httpx. Implements read (GET), write (PUT), metadata (HEAD for exists/size/content-type). Registered for CONST_STORAGE_PROVIDER_TYPE.HTTP. Supports Bearer and Basic auth passed via HTTPSettings. Does not implement list, copy, or delete protocols (UnsupportedOperationError). Added in Phase 5 (2026-05-07).",
+  "role": "backend",
+  "visibility": "internal",
+  "stability": "evolving",
+  "audiences": ["maintainers", "backend-architecture", "contributors"],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": ["HTTPStorageBackend"],
+  "key_functions": [],
+  "dependencies": [
+    "mountainash_utils_files.storage_protocols",
+    "mountainash_utils_files.storage_registry.registry",
+    "mountainash_utils_files.settings.providers.http_settings",
+    "mountainash_utils_files.settings.adapters.http",
+    "mountainash_utils_files.dataclasses.file_metadata",
+    "mountainash_utils_files.exceptions"
+  ],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": [
+    "Added in 2026-05-07 HTTP backend plan",
+    "list, copy, delete not implemented — HTTP protocol does not universally support these",
+    "Multipart upload not yet implemented"
+  ],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": ["tests/backends/test_http.py"],
+  "risks": ["PUT write semantics require server cooperation — not all HTTP servers allow PUT"],
+  "open_questions": ["Should DELETE HTTP method be implemented for delete protocol?"],
+  "evidence": [
+    {"kind": "test", "path": "tests/backends/test_http.py", "detail": "HTTP backend tests"},
+    {"kind": "doc", "path": "docs/superpowers/plans/2026-05-07-http-backend-s3-timeouts.md", "detail": "HTTP backend implementation plan"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

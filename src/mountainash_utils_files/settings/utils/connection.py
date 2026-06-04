@@ -7,7 +7,7 @@
 # from contextlib import asynccontextmanager
 # from abc import abstractmethod
 
-# from mountainash_settings.auth.storage.exceptions import (
+# from mountainash_auth_client import (  # storage exceptions TBD
 #     StorageConnectionError,
 #     StorageTimeoutError,
 #     StoragePoolError

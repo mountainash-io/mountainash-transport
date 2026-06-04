@@ -1,0 +1,35 @@
+{
+  "id": "mountainash_utils_files.settings.exceptions",
+  "path": "src/mountainash_utils_files/settings/exceptions.py",
+  "summary": "Extended exception hierarchy for the settings subsystem: StorageAuthError, StorageConfigError, StorageConnectionError, StorageValidationError, StorageSecurityError, StoragePermissionError, StorageEncryptionError, StorageTimeoutError, StorageQuotaError, StorageRetryError, StoragePoolError, StorageOperationError, StorageVersionError, StorageStateError, StorageFeatureError, StorageCompatibilityError, StorageMigrationError. These are settings-layer errors distinct from the main exceptions.py hierarchy.",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers"],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [
+    "StorageAuthError", "StorageConfigError", "StorageValidationError",
+    "StorageSecurityError", "StoragePermissionError", "StorageEncryptionError",
+    "StorageTimeoutError", "StorageQuotaError", "StorageRetryError",
+    "StoragePoolError", "StorageOperationError", "StorageVersionError",
+    "StorageStateError", "StorageFeatureError", "StorageCompatibilityError",
+    "StorageMigrationError"
+  ],
+  "key_classes": ["StorageAuthError", "StorageConfigError", "StorageValidationError"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["mountainash_utils_files.settings.providers.*", "mountainash_utils_files.settings.utils.*"],
+  "extension_points": [],
+  "lifecycle_notes": ["These exceptions are not re-exported from the package root — only the main exceptions.py hierarchy is public"],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": ["Two separate exception hierarchies (settings vs main) may confuse users if both surfaces raise"],
+  "open_questions": ["Should any of these be merged into or aliased from the main exceptions.py hierarchy?"],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/__init__.py", "detail": "All 16 exceptions exported from settings package"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

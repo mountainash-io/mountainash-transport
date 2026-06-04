@@ -1,0 +1,29 @@
+{
+  "id": "mountainash_utils_files.settings.providers.local_settings",
+  "path": "src/mountainash_utils_files/settings/providers/local_settings.py",
+  "summary": "LocalSettings — settings for local filesystem and pre-mounted NFS/CIFS paths. ROOT_PATH is the base directory. Optional MOUNT_SPEC dict (mount_type, server, export_path, etc.) describes an NFS or CIFS share to mount before operations. Uses NoAuth. sdk_package=None (stdlib only).",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["LocalSettings", "LOCAL_SPEC"],
+  "key_classes": ["LocalSettings"],
+  "key_functions": [],
+  "dependencies": ["mountainash_utils_files.settings.profile", "mountainash_utils_files.settings.base"],
+  "dependents": ["mountainash_utils_files.storage_backends.local"],
+  "extension_points": [],
+  "lifecycle_notes": ["NFS/CIFS is handled via pre-mount: MOUNT_SPEC triggers mount, then uses the same LocalStorageBackend"],
+  "documentation_hooks": ["Document that MOUNT_SPEC causes a mount operation before first access — this has side effects"],
+  "examples": ["CLAUDE.md: LocalSettings(ROOT_PATH='/data', auth=NoAuth()) and NFS variant with MOUNT_SPEC"],
+  "tests": ["tests/test_unit/settings/providers/test_local_settings.py"],
+  "risks": ["Mount failures at LocalSettings init time produce errors that may be surprising"],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_unit/settings/providers/test_local_settings.py", "detail": "Tests LocalSettings with and without MOUNT_SPEC"},
+    {"kind": "doc", "path": "CLAUDE.md", "detail": "LocalSettings with MOUNT_SPEC documented"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

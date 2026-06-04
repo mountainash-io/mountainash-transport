@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.storage_transforms._stream_encoder",
+  "path": "src/mountainash_utils_files/storage_transforms/_stream_encoder.py",
+  "summary": "Internal stream encoding helpers used by Gzip and GPG transforms. Not part of the public API — underscore-prefixed and not exported from the package root.",
+  "role": "backend",
+  "visibility": "private",
+  "stability": "stable",
+  "audiences": ["maintainers"],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_utils_files.storage_transforms.compression",
+    "mountainash_utils_files.storage_transforms.encryption"
+  ],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_transforms/_stream_encoder.py", "detail": "Underscore prefix indicates private; not in __all__"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

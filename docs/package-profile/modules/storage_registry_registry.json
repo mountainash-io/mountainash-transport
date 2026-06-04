@@ -1,0 +1,36 @@
+{
+  "id": "mountainash_utils_files.storage_registry.registry",
+  "path": "src/mountainash_utils_files/storage_registry/registry.py",
+  "summary": "Runtime backend registry. _backend_registry dict maps CONST_STORAGE_PROVIDER_TYPE → backend class. register_storage_backend(provider_type) is a decorator that registers a backend at import time. get_storage_backend(provider_type, auth_params) instantiates and returns the backend. get_registered_backends() and clear_registry() (test-only) are provided.",
+  "role": "orchestration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture", "extension-authors"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["register_storage_backend", "get_storage_backend", "get_registered_backends", "clear_registry"],
+  "key_classes": [],
+  "key_functions": ["register_storage_backend", "get_storage_backend"],
+  "dependencies": ["mountainash_utils_files.constants"],
+  "dependents": ["mountainash_utils_files.storage_facade.facade", "mountainash_utils_files.storage_backends.*"],
+  "extension_points": [
+    "@register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.X) on a backend class registers it in the global dict"
+  ],
+  "lifecycle_notes": [
+    "Registration is triggered by importing storage_backends — the package root does `from . import storage_backends` to ensure all backends are registered before any get_storage_backend() call",
+    "clear_registry() exists only for test isolation — do not call in production"
+  ],
+  "documentation_hooks": [
+    "Extension authors adding a new backend must: (1) add a provider type to CONST_STORAGE_PROVIDER_TYPE, (2) decorate their class with @register_storage_backend, (3) ensure the module is imported"
+  ],
+  "examples": [],
+  "tests": ["tests/test_registry.py", "tests/protocol_alignment/test_registry_completeness.py"],
+  "risks": ["Circular import risk if backend modules import from facade before registration completes"],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "test", "path": "tests/test_registry.py", "detail": "Tests registration and lookup"},
+    {"kind": "test", "path": "tests/protocol_alignment/test_registry_completeness.py", "detail": "Verifies all provider types have a registered backend"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

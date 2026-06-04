@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_settings.auth import NoAuth, PasswordAuth
+from mountainash_auth_client import NoAuth, PasswordAuth
 
 from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor

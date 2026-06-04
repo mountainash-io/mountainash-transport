@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_settings.auth import JWTAuth, NoAuth, OAuth2Auth, TokenAuth
+from mountainash_auth_client import JWTAuth, NoAuth, OAuth2Auth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
