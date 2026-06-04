@@ -134,3 +134,27 @@ class TestHTTPBackendAuthPrecedence:
             call_kwargs = mock_client.call_args[1]
             expected = "Basic " + base64.b64encode(b"user:pass").decode()
             assert call_kwargs["headers"]["Authorization"] == expected
+
+
+from mountainash_utils_files.storage_facade.facade import StorageFacade
+
+
+@pytest.mark.unit
+class TestFacadeAuthParam:
+    def test_from_path_passes_auth_to_backend(self):
+        auth = TokenAuth(token=SecretStr("facadetok"))
+        facade = StorageFacade.from_path("https://example.com/file.txt", auth=auth)
+        assert facade._backend.auth is auth
+
+    def test_from_path_without_auth(self):
+        facade = StorageFacade.from_path("https://example.com/file.txt")
+        assert facade._backend.auth is None
+
+    def test_non_http_provider_with_auth_raises(self):
+        auth = TokenAuth(token=SecretStr("tok"))
+        with pytest.raises(ValueError, match="auth= is not supported"):
+            StorageFacade(
+                provider_type=CONST_STORAGE_PROVIDER_TYPE.S3,
+                auth_params=None,
+                auth=auth,
+            )
