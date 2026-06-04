@@ -64,3 +64,73 @@ class TestRegistryAuthForwarding:
             CONST_STORAGE_PROVIDER_TYPE.S3, auth_params=None, auth=auth,
         )
         assert not hasattr(backend, "auth") or backend.auth is None
+
+
+from mountainash_auth_client import NoAuth, TokenAuth, PasswordAuth
+from pydantic import SecretStr
+
+
+@pytest.mark.unit
+class TestHTTPBackendAuthPrecedence:
+    def test_direct_auth_creates_headers(self):
+        auth = TokenAuth(token=SecretStr("direct"))
+        backend = HTTPStorageBackend(auth_params=None, auth=auth)
+        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+            mock_client.return_value = MagicMock()
+            backend._get_client()
+            call_kwargs = mock_client.call_args[1]
+            assert call_kwargs["headers"]["Authorization"] == "Bearer direct"
+
+    def test_auth_overrides_profile_auth_header(self):
+        profile = MagicMock()
+        profile.to_handler_kwargs.return_value = {
+            "timeout": httpx.Timeout(connect=5.0, read=15.0, write=60.0, pool=5.0),
+            "follow_redirects": True,
+            "verify": True,
+            "headers": {"Authorization": "Bearer old", "X-Custom": "keep"},
+        }
+        auth = TokenAuth(token=SecretStr("new"))
+        backend = HTTPStorageBackend(auth_params=profile, auth=auth)
+        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+            mock_client.return_value = MagicMock()
+            backend._get_client()
+            call_kwargs = mock_client.call_args[1]
+            assert call_kwargs["headers"]["Authorization"] == "Bearer new"
+            assert call_kwargs["headers"]["X-Custom"] == "keep"
+            assert "timeout" in call_kwargs
+
+    def test_noauth_strips_profile_authorization(self):
+        profile = MagicMock()
+        profile.to_handler_kwargs.return_value = {
+            "headers": {"Authorization": "Bearer fromprofile", "X-Custom": "keep"},
+        }
+        backend = HTTPStorageBackend(auth_params=profile, auth=NoAuth())
+        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+            mock_client.return_value = MagicMock()
+            backend._get_client()
+            call_kwargs = mock_client.call_args[1]
+            assert "Authorization" not in call_kwargs.get("headers", {})
+            assert call_kwargs["headers"]["X-Custom"] == "keep"
+
+    def test_profile_only_no_auth(self):
+        profile = MagicMock()
+        profile.to_handler_kwargs.return_value = {
+            "headers": {"Authorization": "Bearer profonly"},
+        }
+        backend = HTTPStorageBackend(auth_params=profile)
+        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+            mock_client.return_value = MagicMock()
+            backend._get_client()
+            call_kwargs = mock_client.call_args[1]
+            assert call_kwargs["headers"]["Authorization"] == "Bearer profonly"
+
+    def test_password_auth_direct(self):
+        import base64
+        auth = PasswordAuth(username="user", password=SecretStr("pass"))
+        backend = HTTPStorageBackend(auth_params=None, auth=auth)
+        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+            mock_client.return_value = MagicMock()
+            backend._get_client()
+            call_kwargs = mock_client.call_args[1]
+            expected = "Basic " + base64.b64encode(b"user:pass").decode()
+            assert call_kwargs["headers"]["Authorization"] == expected
