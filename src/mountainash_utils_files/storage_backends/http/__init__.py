@@ -65,7 +65,10 @@ class HTTPStorageBackend:
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
-            self._client = httpx.Client()
+            kwargs: dict[str, t.Any] = {}
+            if hasattr(self.auth_params, "to_handler_kwargs"):
+                kwargs = self.auth_params.to_handler_kwargs()
+            self._client = httpx.Client(**kwargs)
         return self._client
 
     # -- StorageReadProtocol ------------------------------------------------
