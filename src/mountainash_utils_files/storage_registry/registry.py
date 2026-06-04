@@ -1,5 +1,6 @@
 # storage_registry/registry.py
 
+import inspect
 import typing as t
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -15,11 +16,27 @@ def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Ca
     return decorator
 
 
-def get_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE, auth_params: t.Any) -> t.Any:
+def _accepts_auth(cls: type) -> bool:
+    """Check if a backend class's __init__ accepts an 'auth' parameter."""
+    try:
+        sig = inspect.signature(cls.__init__)
+        return "auth" in sig.parameters
+    except (ValueError, TypeError):
+        return False
+
+
+def get_storage_backend(
+    provider_type: CONST_STORAGE_PROVIDER_TYPE,
+    auth_params: t.Any,
+    *,
+    auth: t.Any = None,
+) -> t.Any:
     """Instantiate and return a backend for the given provider type."""
     cls = _backend_registry.get(provider_type)
     if cls is None:
         raise ValueError(f"No backend registered for {provider_type!r}")
+    if auth is not None and _accepts_auth(cls):
+        return cls(auth_params, auth=auth)
     return cls(auth_params)
 
 

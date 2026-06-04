@@ -39,3 +39,28 @@ class TestHTTPBackendClientCreation:
             c2 = backend._get_client()
             assert c1 is c2
             mock_client.assert_called_once()
+
+
+from mountainash_utils_files.storage_registry.registry import get_storage_backend
+from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
+
+
+@pytest.mark.unit
+class TestRegistryAuthForwarding:
+    def test_auth_forwarded_to_http_backend(self):
+        from mountainash_auth_client import TokenAuth
+        from pydantic import SecretStr
+        auth = TokenAuth(token=SecretStr("tok"))
+        backend = get_storage_backend(
+            CONST_STORAGE_PROVIDER_TYPE.HTTP, auth_params=None, auth=auth,
+        )
+        assert backend.auth is auth
+
+    def test_auth_ignored_for_backend_without_auth_param(self):
+        from mountainash_auth_client import TokenAuth
+        from pydantic import SecretStr
+        auth = TokenAuth(token=SecretStr("tok"))
+        backend = get_storage_backend(
+            CONST_STORAGE_PROVIDER_TYPE.S3, auth_params=None, auth=auth,
+        )
+        assert not hasattr(backend, "auth") or backend.auth is None

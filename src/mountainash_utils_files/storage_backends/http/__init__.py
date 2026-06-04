@@ -59,8 +59,9 @@ class HTTPStorageBackend:
     and StorageMetadataProtocol using httpx.
     """
 
-    def __init__(self, auth_params: t.Any) -> None:
+    def __init__(self, auth_params: t.Any, *, auth: t.Any = None) -> None:
         self.auth_params = auth_params
+        self.auth = auth
         self._client: httpx.Client | None = None
 
     def _get_client(self) -> httpx.Client:
