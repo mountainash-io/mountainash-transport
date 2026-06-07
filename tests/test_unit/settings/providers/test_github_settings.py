@@ -65,28 +65,29 @@ class TestGitHubScopeCut:
 @pytest.mark.unit
 class TestGitHubAuthPaths:
     def test_token_auth_pat_surfaces_token(self):
-        s = _make(auth=TokenAuth(token=SecretStr("ghp_abc123")))
-        kw = s.to_handler_kwargs()
+        auth = TokenAuth(TOKEN=SecretStr("ghp_abc123"))
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["token"] == "ghp_abc123"
 
     def test_jwt_auth_surfaces_token(self):
-        s = _make(auth=JWTAuth(token=SecretStr("jwt.body.sig")))
-        kw = s.to_handler_kwargs()
+        auth = JWTAuth(TOKEN=SecretStr("jwt.body.sig"))
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["token"] == "jwt.body.sig"
 
     def test_oauth2_auth_surfaces_token(self):
-        s = _make(
-            auth=OAuth2Auth(
-                token=SecretStr("gho_xyz"),
-                client_id="my-app",
-            ),
+        auth = OAuth2Auth(
+            TOKEN=SecretStr("gho_xyz"),
+            CLIENT_ID="my-app",
         )
-        kw = s.to_handler_kwargs()
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["token"] == "gho_xyz"
 
     def test_noauth_produces_no_token(self):
-        s = _make(auth=NoAuth())
-        kw = s.to_handler_kwargs()
+        s = _make()
+        kw = s.to_handler_kwargs(auth=NoAuth())
         assert "token" not in kw
 
 

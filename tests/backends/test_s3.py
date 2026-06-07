@@ -35,7 +35,7 @@ from mountainash_utils_files.storage_backends.s3.s3_path import parse_s3_path
 
 def _make_backend(mock_client: MagicMock | None = None) -> S3StorageBackend:
     """Return an S3StorageBackend with a pre-injected mock boto3 client."""
-    backend = S3StorageBackend(auth_params=None)
+    backend = S3StorageBackend(None)
     backend._client = mock_client or MagicMock()
     return backend
 
@@ -133,7 +133,7 @@ class TestConnection:
         mock_auth = MagicMock()
         mock_auth.settings = mock_settings
 
-        backend = S3StorageBackend(auth_params=mock_auth)
+        backend = S3StorageBackend(mock_auth)
         assert not backend.is_connected()
 
         with patch("boto3.client") as mock_boto3_client:
@@ -163,7 +163,7 @@ class TestConnection:
         mock_auth = MagicMock()
         mock_auth.settings = mock_settings
 
-        backend = S3StorageBackend(auth_params=mock_auth)
+        backend = S3StorageBackend(mock_auth)
         with patch("boto3.client") as mock_boto3_client:
             mock_boto3_client.return_value = MagicMock()
             backend.connect()
@@ -179,7 +179,7 @@ class TestConnection:
             ACCESS_KEY_ID="a",
             REGION="us-east-1",
         )
-        backend = S3StorageBackend(auth_params=mock_auth)
+        backend = S3StorageBackend(mock_auth)
         with patch("boto3.client", side_effect=RuntimeError("boom")):
             with pytest.raises(StorageConnectionError, match="boom"):
                 backend.connect()
@@ -191,7 +191,7 @@ class TestConnection:
         assert not backend.is_connected()
 
     def test_is_connected_false_initially(self):
-        backend = S3StorageBackend(auth_params=None)
+        backend = S3StorageBackend(None)
         assert not backend.is_connected()
 
 

@@ -80,17 +80,16 @@ class TestGCSFieldSurface:
 class TestGCSHandlerKwargs:
     def test_noauth_produces_anonymous_client_kwargs(self):
         s = _make()
-        kw = s.to_handler_kwargs()
+        kw = s.to_handler_kwargs(auth=NoAuth())
         assert kw["project"] == "my-project-id"
         assert kw["credentials"] is None
         assert kw["anonymous"] is True
 
     def test_token_auth_ambient_credentials_null_when_token_empty(self):
-        # TokenAuth with a valid token requires google-cloud-storage; skip if
-        # not installed. Just verify the profile constructs.
-        s = _make(auth=TokenAuth(token=SecretStr("tok")))
+        auth = TokenAuth(TOKEN=SecretStr("tok"))
+        s = _make()
         try:
-            kw = s.to_handler_kwargs()
+            kw = s.to_handler_kwargs(auth=auth)
         except ImportError:
             pytest.skip("google-cloud-storage not installed")
         assert kw["project"] == "my-project-id"

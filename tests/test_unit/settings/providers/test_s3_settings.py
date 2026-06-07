@@ -156,14 +156,12 @@ class TestS3HandlerKwargsMatrix:
 @pytest.mark.unit
 class TestS3AuthIntegration:
     def test_iam_auth_credentials_flow_to_boto(self):
-        s = _make(
-            "aws",
-            auth=IAMAuth(
-                access_key_id="AKID",
-                secret_access_key=SecretStr("secret"),
-            ),
+        auth = IAMAuth(
+            ACCESS_KEY_ID="AKID",
+            SECRET_ACCESS_KEY=SecretStr("secret"),
         )
-        kw = s.to_handler_kwargs()
+        s = _make("aws")
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["aws_access_key_id"] == "AKID"
         assert kw["aws_secret_access_key"] == "secret"
 

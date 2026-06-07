@@ -41,13 +41,13 @@ class TestFTPAnonymous:
 
 @pytest.mark.unit
 class TestFTPPasswordAuth:
-    def test_password_auth_surfaces_user_and_passwd(self):
-        s = _make(
-            auth=PasswordAuth(
-                username="nathan", password=SecretStr("pw"),
-            ),
+    def test_password_auth_surfaces_user_and_passwd(self, monkeypatch):
+        monkeypatch.delenv("USERNAME", raising=False)
+        auth = PasswordAuth(
+            USERNAME="nathan", PASSWORD=SecretStr("pw"),
         )
-        kw = s.to_handler_kwargs()
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         init = kw["init_kwargs"]
         assert init["user"] == "nathan"
         # ftplib uses "passwd" NOT "password".

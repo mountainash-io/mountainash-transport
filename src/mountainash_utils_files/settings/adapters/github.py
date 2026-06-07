@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import AuthMode, JWTAuth, NoAuth, OAuth2Auth, TokenAuth
+from mountainash_auth_client import AuthMode, JWTAuth, OAuth2Auth, TokenAuth
 
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile

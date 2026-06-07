@@ -69,6 +69,15 @@ class HTTPStorageBackend:
             kwargs: dict[str, t.Any] = {}
             if hasattr(self.auth_params, "to_handler_kwargs"):
                 kwargs = self.auth_params.to_handler_kwargs(auth=self.auth)
+            elif self.auth is not None:
+                # No profile — build minimal kwargs from direct auth via adapter.
+                from mountainash_utils_files.settings.adapters.http import (
+                    _resolve_auth_headers,
+                )
+
+                headers = _resolve_auth_headers(self.auth)
+                if headers:
+                    kwargs["headers"] = headers
             self._client = httpx.Client(**kwargs)
         return self._client
 

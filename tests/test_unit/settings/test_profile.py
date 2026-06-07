@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth, TokenAuth
+from mountainash_auth_client import CONST_AUTH_MODE, NoAuth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.base import StorageAuthBase
 from mountainash_utils_files.settings.descriptor import (
     ParameterSpec,
     StorageDescriptor,
@@ -47,11 +46,12 @@ DUMMY_SPEC = StorageDescriptor(
             default=None,
         ),
     ],
-    auth_modes=[NoAuth, TokenAuth],
+    default_auth=CONST_AUTH_MODE.NONE,
+    supported_auth=frozenset({CONST_AUTH_MODE.NONE, CONST_AUTH_MODE.TOKEN}),
 )
 
 
-class DummyStorageProfile(StorageProfile, StorageAuthBase):
+class DummyStorageProfile(StorageProfile):
     __spec__ = DUMMY_SPEC
 
 
@@ -69,10 +69,10 @@ class TestStorageProfile:
 
     def test_to_handler_kwargs_adapter_owns_pipeline(self):
         """When ``__adapter__`` is set it owns the full kwargs pipeline."""
-        def _my_adapter(profile):
+        def _my_adapter(profile, auth=None):
             return {"custom_key": "custom_value"}
 
-        class AdaptedProfile(StorageProfile, StorageAuthBase):
+        class AdaptedProfile(StorageProfile):
             __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_my_adapter)
 
@@ -84,7 +84,7 @@ class TestStorageProfile:
         p = DummyStorageProfile(
             PROVIDER_TYPE=_DUMMY_PROVIDER_TYPE,
             STORE_PATH="/tmp",
-            auth=TokenAuth(token=SecretStr("my-tok")),
+            auth=TokenAuth(TOKEN=SecretStr("my-tok")),
         )
         kwargs = p.to_handler_kwargs()
         # _default_kwargs supplies path; _auth_kwargs may surface a token —
@@ -94,10 +94,10 @@ class TestStorageProfile:
 
     def test_adapter_inherited_from_parent(self):
         """``__adapter__`` on a parent class is picked up by subclasses via MRO."""
-        def _parent_adapter(profile):
+        def _parent_adapter(profile, auth=None):
             return {"from": "parent"}
 
-        class ParentProfile(StorageProfile, StorageAuthBase):
+        class ParentProfile(StorageProfile):
             __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_parent_adapter)
 
@@ -117,13 +117,13 @@ class TestStorageProfile:
 
     def test_adapter_override_on_subclass_shadows_parent(self):
         """A subclass's ``__adapter__`` wins over the parent's (most-derived-first)."""
-        def _parent(profile):
+        def _parent(profile, auth=None):
             return {"from": "parent"}
 
-        def _child(profile):
+        def _child(profile, auth=None):
             return {"from": "child"}
 
-        class Parent(StorageProfile, StorageAuthBase):
+        class Parent(StorageProfile):
             __spec__ = DUMMY_SPEC
             __adapter__ = staticmethod(_parent)
 

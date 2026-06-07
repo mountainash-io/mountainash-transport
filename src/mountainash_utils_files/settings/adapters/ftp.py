@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import AuthMode, NoAuth, PasswordAuth
+from mountainash_auth_client import AuthMode, PasswordAuth
 
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
