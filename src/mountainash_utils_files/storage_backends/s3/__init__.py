@@ -52,8 +52,9 @@ class S3StorageBackend(
     implemented.
     """
 
-    def __init__(self, auth_params: t.Any) -> None:
-        self.auth_params = auth_params
+    def __init__(self, profile=None, *, auth=None) -> None:
+        self.auth_params = profile
+        self.auth = auth
         self._client: t.Any = None
 
 

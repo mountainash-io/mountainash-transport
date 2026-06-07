@@ -30,8 +30,8 @@ class LocalStorageBackend(
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
-    def __init__(self, auth_params: t.Any) -> None:
-        self.auth_params = auth_params
+    def __init__(self, profile=None, *, auth=None) -> None:
+        self.auth_params = profile
 
 
 __all__ = [
