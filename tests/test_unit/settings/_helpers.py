@@ -1,11 +1,4 @@
-"""Shared helpers for mountainash-utils-files settings tests.
-
-Every descriptor-driven storage settings class inherits ``PROVIDER_TYPE``
-from :class:`mountainash_utils_files.settings.base.StorageAuthBase`, and
-that field is still required on construction. The descriptor-layer tests
-therefore always pass ``PROVIDER_TYPE=<C.X>`` explicitly — the helpers
-here keep the test construction sites terse.
-"""
+"""Shared helpers for mountainash-utils-files settings tests."""
 
 from __future__ import annotations
 

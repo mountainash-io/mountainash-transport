@@ -20,9 +20,9 @@ from mountainash_utils_files.settings.descriptor import (
 from mountainash_utils_files.settings.profile import StorageProfile
 
 
-# Use an existing provider_type slot so StorageAuthBase.validate_provider_type
-# accepts the dummy class. The test isn't registering anything on
-# STORAGE_REGISTRY — it's only exercising in-class dispatch on StorageProfile.
+# Use an existing provider_type so the dummy class is valid.
+# The test isn't registering on STORAGE_REGISTRY — it only exercises
+# in-class dispatch on StorageProfile.
 _DUMMY_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL
 
 DUMMY_SPEC = StorageDescriptor(

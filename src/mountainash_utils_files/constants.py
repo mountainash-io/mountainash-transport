@@ -8,8 +8,7 @@ class _FindMemberMixin(StrEnum):
     """Shared ``find_member`` classmethod for storage enums.
 
     Returns the enum member whose *value* matches ``v`` (case-insensitive),
-    or ``None`` if no match is found. Used by :class:`StorageAuthBase`
-    validators.
+    or ``None`` if no match is found.
     """
 
     @classmethod
