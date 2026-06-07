@@ -20,6 +20,7 @@ from mountainash_utils_files.storage_protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
 )
+from mountainash_auth_client import AuthMode
 from mountainash_utils_files.storage_registry import (
     detect_provider_from_path,
     get_storage_backend,
@@ -71,16 +72,11 @@ class StorageFacade:
     def __init__(
         self,
         provider_type: CONST_STORAGE_PROVIDER_TYPE,
-        auth_params: typing.Any = None,
+        profile: typing.Any = None,
         *,
-        auth: typing.Any = None,
+        auth: AuthMode | None = None,
     ) -> None:
-        self._backend = get_storage_backend(provider_type, auth_params, auth=auth)
-        if auth is not None and not hasattr(self._backend, "auth"):
-            raise ValueError(
-                f"auth= is not supported for provider {provider_type!r}; "
-                "use auth_params with a profile instead"
-            )
+        self._backend = get_storage_backend(provider_type, profile, auth=auth)
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -89,35 +85,32 @@ class StorageFacade:
     @classmethod
     def for_local(cls) -> StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
-        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, auth_params=None)
+        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile=None)
 
     @classmethod
     def from_path(
         cls,
         path: str,
-        auth_params: typing.Any = None,
+        profile: typing.Any = None,
         *,
-        auth: typing.Any = None,
+        auth: AuthMode | None = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
         Args:
             path: Path string, optionally with a URL scheme.
-            auth_params: Optional auth params forwarded to the backend.
-            auth: Optional direct AuthSpec instance (e.g. TokenAuth, PasswordAuth).
-                When provided, overrides any Authorization header set by *auth_params*.
-                Only supported by backends that accept an ``auth`` parameter
-                (currently HTTP/HTTPS).
+            profile: Optional storage profile forwarded to the backend.
+            auth: Optional direct AuthMode instance (e.g. TokenAuth, PasswordAuth).
+                When provided, overrides any Authorization header set by *profile*.
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
 
         Raises:
-            ValueError: If *path*'s scheme is unrecognised or has no backend,
-                or if *auth* is provided for a backend that does not support it.
+            ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
         provider = detect_provider_from_path(path)
-        return cls(provider_type=provider, auth_params=auth_params, auth=auth)
+        return cls(provider_type=provider, profile=profile, auth=auth)
 
     # ------------------------------------------------------------------
     # Protocol introspection

@@ -68,7 +68,7 @@ class S3ConnectionMixin:
             and not hasattr(auth_params, "_mock_name")
         )
         if is_profile:
-            kwargs = auth_params.to_handler_kwargs()
+            kwargs = auth_params.to_handler_kwargs(auth=getattr(self, "auth", None))
             if isinstance(kwargs, dict) and "base_kwargs" in kwargs:
                 # STS assume-role dispatch — not implemented at this layer.
                 raise StorageConnectionError(

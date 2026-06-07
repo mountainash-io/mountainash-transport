@@ -32,7 +32,7 @@ def _transport(handler):
 def _make_backend(transport: httpx.MockTransport):
     import mountainash_utils_files.storage_backends  # noqa: F401
     from mountainash_utils_files.storage_backends.http import HTTPStorageBackend
-    backend = HTTPStorageBackend(auth_params=None)
+    backend = HTTPStorageBackend(None)
     backend._client = httpx.Client(transport=transport)
     return backend
 

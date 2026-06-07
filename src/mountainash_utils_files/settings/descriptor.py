@@ -7,8 +7,9 @@ and read_only are meaningful only for storage providers.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from mountainash_auth_client import CONST_AUTH_MODE
 from mountainash_settings.profiles import (
     MISSING,
     ParameterSpec,
@@ -33,6 +34,8 @@ class StorageDescriptor(ProfileSpec):
         supports_streaming: Whether the backend supports streaming reads/writes.
         supports_multipart: Whether the backend supports multipart upload.
         read_only: Whether the backend is read-only (``GitHubRepoSettings`` = True).
+        default_auth: Auth mode used by ``load_storage()`` when caller doesn't specify.
+        supported_auth: Full set of valid auth modes for this provider.
     """
 
     sdk_package: str | None = None
@@ -41,3 +44,7 @@ class StorageDescriptor(ProfileSpec):
     supports_streaming: bool = True
     supports_multipart: bool = True
     read_only: bool = False
+    default_auth: CONST_AUTH_MODE = CONST_AUTH_MODE.NONE
+    supported_auth: frozenset[CONST_AUTH_MODE] = field(
+        default_factory=lambda: frozenset({CONST_AUTH_MODE.NONE})
+    )

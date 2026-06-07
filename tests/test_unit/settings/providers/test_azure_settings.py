@@ -105,19 +105,19 @@ class TestAzureAuthResolution:
 
     def test_token_auth_builds_sas_credential(self):
         sas = pytest.importorskip("azure.core.credentials")
-        s = _make("blob", auth=TokenAuth(token=SecretStr("?sv=2020-02-10&sig=abc")))
-        kw = s.to_handler_kwargs()
+        auth = TokenAuth(TOKEN=SecretStr("?sv=2020-02-10&sig=abc"))
+        s = _make("blob")
+        kw = s.to_handler_kwargs(auth=auth)
         assert isinstance(kw["credential"], sas.AzureSasCredential)
 
-    def test_password_auth_builds_named_key_credential(self):
+    def test_password_auth_builds_named_key_credential(self, monkeypatch):
+        monkeypatch.delenv("USERNAME", raising=False)
         az = pytest.importorskip("azure.core.credentials")
-        s = _make(
-            "blob",
-            auth=PasswordAuth(
-                username="teststg", password=SecretStr("sh4redK3y=")
-            ),
+        auth = PasswordAuth(
+            USERNAME="teststg", PASSWORD=SecretStr("sh4redK3y=")
         )
-        kw = s.to_handler_kwargs()
+        s = _make("blob")
+        kw = s.to_handler_kwargs(auth=auth)
         cred = kw["credential"]
         assert isinstance(cred, az.AzureNamedKeyCredential)
         # Named key uses plain strings — not SecretStr
@@ -131,10 +131,10 @@ class TestAzureAuthResolution:
         s = _make(
             "blob",
             auth=AzureADAuth(
-                tenant_id="my-tenant",
-                client_id="my-client",
-                client_secret=SecretStr("supersecret"),
-                managed_identity=False,
+                TENANT_ID="my-tenant",
+                CLIENT_ID="my-client",
+                CLIENT_SECRET=SecretStr("supersecret"),
+                MANAGED_IDENTITY=False,
             ),
         )
         kw = s.to_handler_kwargs()
@@ -147,8 +147,8 @@ class TestAzureAuthResolution:
         s = _make(
             "blob",
             auth=AzureADAuth(
-                managed_identity=True,
-                client_id="managed-id",
+                MANAGED_IDENTITY=True,
+                CLIENT_ID="managed-id",
             ),
         )
         kw = s.to_handler_kwargs()
@@ -166,8 +166,8 @@ class TestAzureFilesTokenIntent:
         s = _make(
             "files",
             auth=AzureADAuth(
-                tenant_id="t", client_id="c",
-                client_secret=SecretStr("s"), managed_identity=False,
+                TENANT_ID="t", CLIENT_ID="c",
+                CLIENT_SECRET=SecretStr("s"), MANAGED_IDENTITY=False,
             ),
         )
         kw = s.to_handler_kwargs()
@@ -183,8 +183,8 @@ class TestAzureFilesTokenIntent:
         s = _make(
             "blob",
             auth=AzureADAuth(
-                tenant_id="t", client_id="c",
-                client_secret=SecretStr("s"), managed_identity=False,
+                TENANT_ID="t", CLIENT_ID="c",
+                CLIENT_SECRET=SecretStr("s"), MANAGED_IDENTITY=False,
             ),
         )
         kw = s.to_handler_kwargs()

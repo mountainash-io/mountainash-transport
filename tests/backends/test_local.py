@@ -44,7 +44,7 @@ def tmp_dir():
 @pytest.fixture()
 def backend():
     """Return a LocalStorageBackend instance with no auth params."""
-    return LocalStorageBackend(auth_params=None)
+    return LocalStorageBackend(None)
 
 
 # ---------------------------------------------------------------------------

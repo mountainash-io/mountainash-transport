@@ -120,8 +120,7 @@ class TestStorageRegistry:
             StorageDescriptor,
         )
         from mountainash_utils_files.settings.profile import StorageProfile
-        from mountainash_utils_files.settings.base import StorageAuthBase
-        from mountainash_auth_client import NoAuth
+        from mountainash_auth_client import CONST_AUTH_MODE
 
         dummy_spec = StorageDescriptor(
             name="_test_registry_binding",
@@ -129,12 +128,13 @@ class TestStorageRegistry:
             parameters=[
                 ParameterSpec(name="FOO", type=str, tier="core", default=None)
             ],
-            auth_modes=[NoAuth],
+            default_auth=CONST_AUTH_MODE.NONE,
+            supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
         )
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         try:
             @register
-            class _DummySettings(StorageProfile, StorageAuthBase):
+            class _DummySettings(StorageProfile):
                 __spec__ = dummy_spec
 
             assert "_test_registry_binding" in STORAGE_REGISTRY.descriptors
@@ -149,8 +149,7 @@ class TestStorageRegistry:
             StorageDescriptor,
         )
         from mountainash_utils_files.settings.profile import StorageProfile
-        from mountainash_utils_files.settings.base import StorageAuthBase
-        from mountainash_auth_client import NoAuth
+        from mountainash_auth_client import CONST_AUTH_MODE
 
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         tmp_spec = StorageDescriptor(
@@ -159,11 +158,12 @@ class TestStorageRegistry:
             parameters=[
                 ParameterSpec(name="BAR", type=str, tier="core", default=None)
             ],
-            auth_modes=[NoAuth],
+            default_auth=CONST_AUTH_MODE.NONE,
+            supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
         )
 
         @register
-        class _TmpSettings(StorageProfile, StorageAuthBase):
+        class _TmpSettings(StorageProfile):
             __spec__ = tmp_spec
 
         assert "_snapshot_dummy" in STORAGE_REGISTRY.descriptors

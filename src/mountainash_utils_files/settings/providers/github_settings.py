@@ -22,9 +22,8 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import JWTAuth, NoAuth, OAuth2Auth, TokenAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
@@ -88,20 +87,21 @@ GITHUB_REPO_SPEC = StorageDescriptor(
             description="HTTP request timeout in seconds.",
         ),
     ],
-    auth_modes=[TokenAuth, OAuth2Auth, JWTAuth, NoAuth],
+    default_auth=CONST_AUTH_MODE.TOKEN,
+    supported_auth=frozenset({CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.OAUTH2, CONST_AUTH_MODE.JWT, CONST_AUTH_MODE.NONE}),
 )
 
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "GitHubRepoSettings") -> dict[str, t.Any]:
+def _adapter(profile: "GitHubRepoSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.github import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class GitHubRepoSettings(StorageProfile, StorageAuthBase):
+class GitHubRepoSettings(StorageProfile):
     """GitHub repository (read-only) settings.
 
     Fields are installed from :data:`GITHUB_REPO_SPEC` by the

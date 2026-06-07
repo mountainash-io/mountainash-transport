@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, NoAuth, OAuth2Auth, ServiceAccountAuth, TokenAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -32,7 +34,7 @@ def _unwrap_secret(v: t.Any) -> t.Optional[str]:
     return str(v)
 
 
-def _resolve_credentials(auth: t.Any) -> t.Any:
+def _resolve_credentials(auth: AuthMode | None) -> t.Any:
     """Resolve a google-auth ``Credentials`` instance (or ``None``) from auth.
 
     - ``ServiceAccountAuth`` with ``file``  → ``from_service_account_file``
@@ -43,11 +45,10 @@ def _resolve_credentials(auth: t.Any) -> t.Any:
     """
     if auth is None:
         return None
-    auth_type = type(auth).__name__
 
-    if auth_type == "ServiceAccountAuth":
-        sa_file = getattr(auth, "file", None)
-        sa_info = getattr(auth, "info", None)
+    if isinstance(auth, ServiceAccountAuth):
+        sa_file = auth.FILE
+        sa_info = auth.INFO
         if sa_file:
             from google.oauth2 import service_account  # type: ignore[import-untyped]
 
@@ -62,8 +63,8 @@ def _resolve_credentials(auth: t.Any) -> t.Any:
             )
         return None
 
-    if auth_type == "TokenAuth":
-        token = _unwrap_secret(getattr(auth, "token", None))
+    if isinstance(auth, TokenAuth):
+        token = _unwrap_secret(auth.TOKEN)
         if not token:
             return None
         from google.oauth2.credentials import (  # type: ignore[import-untyped]
@@ -72,12 +73,12 @@ def _resolve_credentials(auth: t.Any) -> t.Any:
 
         return Credentials(token=token)
 
-    if auth_type == "OAuth2Auth":
-        access_token = _unwrap_secret(getattr(auth, "token", None))
-        refresh_token = _unwrap_secret(getattr(auth, "refresh_token", None))
-        client_id = getattr(auth, "client_id", None)
-        client_secret = _unwrap_secret(getattr(auth, "client_secret", None))
-        token_uri = getattr(auth, "server_uri", None) or "https://oauth2.googleapis.com/token"
+    if isinstance(auth, OAuth2Auth):
+        access_token = _unwrap_secret(auth.TOKEN)
+        refresh_token = _unwrap_secret(auth.REFRESH_TOKEN)
+        client_id = auth.CLIENT_ID
+        client_secret = _unwrap_secret(auth.CLIENT_SECRET)
+        token_uri = auth.SERVER_URI or "https://oauth2.googleapis.com/token"
         if not access_token and not refresh_token:
             return None
         from google.oauth2.credentials import (  # type: ignore[import-untyped]
@@ -98,7 +99,7 @@ def _resolve_credentials(auth: t.Any) -> t.Any:
     return None
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build ``google.cloud.storage.Client`` kwargs from a :class:`GCSSettings` profile.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -109,8 +110,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     project = getattr(profile, "PROJECT", None)
     api_endpoint = getattr(profile, "API_ENDPOINT", None)
     user_project = getattr(profile, "USER_PROJECT", None)
-    auth = getattr(profile, "auth", None)
-    auth_type = type(auth).__name__ if auth is not None else "NoAuth"
 
     credentials = _resolve_credentials(auth)
 
@@ -122,7 +121,7 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     # NoAuth signals that the caller wants an anonymous client. Pass a
     # hint the handler can act on; google-cloud-storage exposes
     # ``Client.create_anonymous_client()`` rather than a constructor flag.
-    if auth_type == "NoAuth":
+    if isinstance(auth, NoAuth):
         kwargs["anonymous"] = True
 
     client_options_kwargs: dict[str, t.Any] = {}

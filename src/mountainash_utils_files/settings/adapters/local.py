@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -21,7 +23,7 @@ __all__ = ["build_handler_kwargs"]
 _MOUNTABLE_TYPES: frozenset[str] = frozenset({"nfs", "cifs"})
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build LocalStorageBackend kwargs from a :class:`LocalSettings` profile.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream

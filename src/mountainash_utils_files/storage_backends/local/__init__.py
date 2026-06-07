@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import typing as t
-
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.storage_registry import register_storage_backend
 
@@ -30,8 +28,8 @@ class LocalStorageBackend(
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
-    def __init__(self, auth_params: t.Any) -> None:
-        self.auth_params = auth_params
+    def __init__(self, profile=None, *, auth=None) -> None:
+        self.auth_params = profile
 
 
 __all__ = [

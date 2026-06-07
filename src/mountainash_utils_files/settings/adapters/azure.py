@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, AzureADAuth, NoAuth, PasswordAuth, TokenAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -63,7 +65,7 @@ def _resolve_account_url(
     return None
 
 
-def _resolve_credential(auth: t.Any, account_name: t.Optional[str]) -> t.Any:
+def _resolve_credential(auth: AuthMode | None, account_name: t.Optional[str]) -> t.Any:
     """Resolve an Azure credential object from the discriminated auth union.
 
     - ``AzureADAuth`` (managed_identity=True) → ``ManagedIdentityCredential``
@@ -76,22 +78,21 @@ def _resolve_credential(auth: t.Any, account_name: t.Optional[str]) -> t.Any:
     """
     if auth is None:
         return None
-    auth_type = type(auth).__name__
 
-    if auth_type == "NoAuth":
+    if isinstance(auth, NoAuth):
         return None
 
-    if auth_type == "AzureADAuth":
+    if isinstance(auth, AzureADAuth):
         from azure.identity import (  # type: ignore[import-untyped]
             ClientSecretCredential,
             DefaultAzureCredential,
             ManagedIdentityCredential,
         )
 
-        tenant_id = getattr(auth, "tenant_id", None)
-        client_id = getattr(auth, "client_id", None)
-        client_secret = getattr(auth, "client_secret", None)
-        managed_identity = getattr(auth, "managed_identity", False)
+        tenant_id = auth.TENANT_ID
+        client_id = auth.CLIENT_ID
+        client_secret = auth.CLIENT_SECRET
+        managed_identity = auth.MANAGED_IDENTITY
 
         if managed_identity:
             return ManagedIdentityCredential(
@@ -105,8 +106,8 @@ def _resolve_credential(auth: t.Any, account_name: t.Optional[str]) -> t.Any:
             )
         return DefaultAzureCredential()
 
-    if auth_type == "TokenAuth":
-        token = _unwrap_secret(getattr(auth, "token", None))
+    if isinstance(auth, TokenAuth):
+        token = _unwrap_secret(auth.TOKEN)
         if not token:
             return None
         from azure.core.credentials import (  # type: ignore[import-untyped]
@@ -115,9 +116,9 @@ def _resolve_credential(auth: t.Any, account_name: t.Optional[str]) -> t.Any:
 
         return AzureSasCredential(signature=token)
 
-    if auth_type == "PasswordAuth":
-        username = getattr(auth, "username", None) or account_name
-        password = _unwrap_secret(getattr(auth, "password", None))
+    if isinstance(auth, PasswordAuth):
+        username = auth.USERNAME or account_name
+        password = _unwrap_secret(auth.PASSWORD)
         if not username or not password:
             return None
         from azure.core.credentials import (  # type: ignore[import-untyped]
@@ -130,7 +131,7 @@ def _resolve_credential(auth: t.Any, account_name: t.Optional[str]) -> t.Any:
     return None
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build ``BlobServiceClient`` / ``ShareServiceClient`` kwargs from profile.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -160,7 +161,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
         endpoint_suffix=endpoint_suffix,
     )
 
-    auth = getattr(profile, "auth", None)
     credential = _resolve_credential(auth, account_name)
 
     kwargs: dict[str, t.Any] = {
@@ -173,10 +173,9 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
 
     # Files + AAD requires token_intent="backup" (SDK raises otherwise).
     if service_type == "files":
-        auth_type = type(auth).__name__ if auth is not None else "NoAuth"
         if token_intent:
             kwargs["token_intent"] = token_intent
-        elif auth_type == "AzureADAuth":
+        elif isinstance(auth, AzureADAuth):
             kwargs["token_intent"] = "backup"
 
     if api_version:

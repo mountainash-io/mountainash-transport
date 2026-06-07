@@ -203,7 +203,7 @@ class TestUnsupportedOperation:
 
         # Patch boto3.client so S3 backend can be instantiated without real AWS creds
         with patch("boto3.client"):
-            facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3, auth_params=None)
+            facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3, profile=None)
 
         assert not facade.supports(StorageDirectoryProtocol)
         with pytest.raises(UnsupportedOperationError, match="mkdir"):
@@ -212,7 +212,7 @@ class TestUnsupportedOperation:
     def test_rmdir_raises_on_s3_backend(self):
         """S3StorageBackend does not implement StorageDirectoryProtocol."""
         with patch("boto3.client"):
-            facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3, auth_params=None)
+            facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3, profile=None)
 
         with pytest.raises(UnsupportedOperationError, match="rmdir"):
             facade.rmdir("s3://bucket/prefix/")

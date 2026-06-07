@@ -77,14 +77,16 @@ class TestHTTPHandlerKwargs:
         assert "Authorization" not in kw.get("headers", {})
 
     def test_token_auth_produces_bearer_header(self):
-        s = _make(auth=TokenAuth(token=SecretStr("mytoken")))
-        kw = s.to_handler_kwargs()
+        auth = TokenAuth(TOKEN=SecretStr("mytoken"))
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["headers"]["Authorization"] == "Bearer mytoken"
 
     def test_password_auth_produces_basic_header(self):
         import base64
-        s = _make(auth=PasswordAuth(username="user", password=SecretStr("pass")))
-        kw = s.to_handler_kwargs()
+        auth = PasswordAuth(USERNAME="user", PASSWORD=SecretStr("pass"))
+        s = _make()
+        kw = s.to_handler_kwargs(auth=auth)
         expected = "Basic " + base64.b64encode(b"user:pass").decode()
         assert kw["headers"]["Authorization"] == expected
 
@@ -99,11 +101,9 @@ class TestHTTPHandlerKwargs:
         assert timeout.write == 10.0
 
     def test_custom_headers_merged_with_auth(self):
-        s = _make(
-            HEADERS={"X-Custom": "value"},
-            auth=TokenAuth(token=SecretStr("tok")),
-        )
-        kw = s.to_handler_kwargs()
+        auth = TokenAuth(TOKEN=SecretStr("tok"))
+        s = _make(HEADERS={"X-Custom": "value"})
+        kw = s.to_handler_kwargs(auth=auth)
         assert kw["headers"]["X-Custom"] == "value"
         assert kw["headers"]["Authorization"] == "Bearer tok"
 
@@ -120,22 +120,22 @@ class TestResolveAuthHeaders:
     def test_oauth2_with_token(self):
         from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
         from mountainash_auth_client import OAuth2Auth
-        auth = OAuth2Auth(token=SecretStr("oauthtoken"))
+        auth = OAuth2Auth(TOKEN=SecretStr("oauthtoken"))
         assert _resolve_auth_headers(auth) == {"Authorization": "Bearer oauthtoken"}
 
     def test_oauth2_without_token(self):
         from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
         from mountainash_auth_client import OAuth2Auth
-        auth = OAuth2Auth(client_id="id", client_secret=SecretStr("secret"))
+        auth = OAuth2Auth(CLIENT_ID="id", CLIENT_SECRET=SecretStr("secret"))
         assert _resolve_auth_headers(auth) == {}
 
     def test_oauth2_authcode_with_access_token(self):
         from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
         from mountainash_auth_client import OAuth2AuthCodeAuth
         auth = OAuth2AuthCodeAuth(
-            client_id="id",
-            client_secret=SecretStr("secret"),
-            access_token=SecretStr("myaccess"),
+            CLIENT_ID="id",
+            CLIENT_SECRET=SecretStr("secret"),
+            ACCESS_TOKEN=SecretStr("myaccess"),
         )
         assert _resolve_auth_headers(auth) == {"Authorization": "Bearer myaccess"}
 
@@ -143,8 +143,8 @@ class TestResolveAuthHeaders:
         from mountainash_utils_files.settings.adapters.http import _resolve_auth_headers
         from mountainash_auth_client import OAuth2AuthCodeAuth
         auth = OAuth2AuthCodeAuth(
-            client_id="id",
-            client_secret=SecretStr("secret"),
+            CLIENT_ID="id",
+            CLIENT_SECRET=SecretStr("secret"),
         )
         assert _resolve_auth_headers(auth) == {}
 

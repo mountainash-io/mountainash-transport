@@ -20,14 +20,8 @@ from __future__ import annotations
 import re
 import typing as t
 
-from mountainash_auth_client import (
-    AzureADAuth,
-    NoAuth,
-    PasswordAuth,
-    TokenAuth,
-)
+from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
@@ -183,7 +177,8 @@ AZURE_STORAGE_SPEC = StorageDescriptor(
             description="Override max block/upload size in bytes (blob only).",
         ),
     ],
-    auth_modes=[AzureADAuth, TokenAuth, PasswordAuth, NoAuth],
+    default_auth=CONST_AUTH_MODE.AZURE_AD,
+    supported_auth=frozenset({CONST_AUTH_MODE.AZURE_AD, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.NONE}),
     metadata={
         "service_class_paths": {
             "blob": "azure.storage.blob.BlobServiceClient",
@@ -195,14 +190,14 @@ AZURE_STORAGE_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the
 # adapters package which depends on StorageProfile.
-def _adapter(profile: "AzureStorageSettings") -> dict[str, t.Any]:
+def _adapter(profile: "AzureStorageSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.azure import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class AzureStorageSettings(StorageProfile, StorageAuthBase):
+class AzureStorageSettings(StorageProfile):
     """Unified Azure Storage settings for both Blob and Files services.
 
     Fields are installed from :data:`AZURE_STORAGE_SPEC` by the

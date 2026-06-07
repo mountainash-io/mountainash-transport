@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, PasswordAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -47,7 +49,7 @@ def _unwrap_secret(v: t.Any) -> t.Optional[str]:
     return str(v)
 
 
-def _auth_kwargs(auth: t.Any) -> dict[str, t.Any]:
+def _auth_kwargs(auth: AuthMode | None) -> dict[str, t.Any]:
     """Translate the discriminated auth union into ftplib kwargs.
 
     - :class:`PasswordAuth` → ``{"passwd": ...}`` (ftplib uses ``passwd``,
@@ -58,11 +60,10 @@ def _auth_kwargs(auth: t.Any) -> dict[str, t.Any]:
     """
     if auth is None:
         return {}
-    auth_type = type(auth).__name__
-    if auth_type == "PasswordAuth":
+    if isinstance(auth, PasswordAuth):
         out: dict[str, t.Any] = {}
-        username = getattr(auth, "username", None)
-        password = _unwrap_secret(getattr(auth, "password", None))
+        username = auth.USERNAME
+        password = _unwrap_secret(auth.PASSWORD)
         if username:
             out["user"] = username
         if password is not None:
@@ -72,7 +73,7 @@ def _auth_kwargs(auth: t.Any) -> dict[str, t.Any]:
     return {}
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build an ftplib construction envelope from an :class:`FTPSettings`.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -93,7 +94,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
             continue
         init_kwargs[driver_key] = value
 
-    auth = getattr(profile, "auth", None)
     init_kwargs.update(_auth_kwargs(auth))
 
     connect_kwargs: dict[str, t.Any] = {}

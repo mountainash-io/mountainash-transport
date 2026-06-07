@@ -8,8 +8,7 @@ class _FindMemberMixin(StrEnum):
     """Shared ``find_member`` classmethod for storage enums.
 
     Returns the enum member whose *value* matches ``v`` (case-insensitive),
-    or ``None`` if no match is found. Used by :class:`StorageAuthBase`
-    validators.
+    or ``None`` if no match is found.
     """
 
     @classmethod
@@ -49,18 +48,6 @@ class CONST_STORAGE_PROVIDER_TYPE(_FindMemberMixin):
     GITHUB = "github"
     R2 = "r2"
     HTTP = "http"
-
-class CONST_STORAGE_AUTH_METHOD(_FindMemberMixin):
-    """Authentication methods"""
-    NONE = "none"
-    KEY = "key"
-    PASSWORD = "password"
-    TOKEN = "token"
-    CERTIFICATE = "certificate"
-    IAM = "iam"
-    MANAGED_IDENTITY = "managed_identity"
-    KERBEROS = "kerberos"
-    SERVICE_ACCOUNT = "service_account"
 
 class CONST_STORAGE_ACCESS_TYPE(_FindMemberMixin):
     """Storage access types"""

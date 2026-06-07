@@ -19,8 +19,9 @@ from mountainash_utils_files.storage_registry import (
 class _FakeBackend:
     """Minimal backend stub used across tests."""
 
-    def __init__(self, auth_params):
-        self.auth_params = auth_params
+    def __init__(self, profile=None, *, auth=None):
+        self.auth_params = profile
+        self.auth = auth
 
 
 # ---------------------------------------------------------------------------
@@ -110,16 +111,16 @@ class TestRegisterAndGetBackend:
 
         assert S3Backend.__name__ == "S3Backend"
 
-    def test_get_storage_backend_instantiates_with_auth_params(self):
-        auth = {"key": "value"}
+    def test_get_storage_backend_instantiates_with_profile(self):
+        profile = {"key": "value"}
 
         @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
         class LocalBackend(_FakeBackend):
             pass
 
-        instance = get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL, auth)
+        instance = get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile)
         assert isinstance(instance, LocalBackend)
-        assert instance.auth_params is auth
+        assert instance.auth_params is profile
 
     def test_unregistered_provider_raises_value_error(self):
         with pytest.raises(ValueError, match="No backend registered"):
