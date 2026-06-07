@@ -50,18 +50,6 @@ class CONST_STORAGE_PROVIDER_TYPE(_FindMemberMixin):
     R2 = "r2"
     HTTP = "http"
 
-class CONST_STORAGE_AUTH_METHOD(_FindMemberMixin):
-    """Authentication methods"""
-    NONE = "none"
-    KEY = "key"
-    PASSWORD = "password"
-    TOKEN = "token"
-    CERTIFICATE = "certificate"
-    IAM = "iam"
-    MANAGED_IDENTITY = "managed_identity"
-    KERBEROS = "kerberos"
-    SERVICE_ACCOUNT = "service_account"
-
 class CONST_STORAGE_ACCESS_TYPE(_FindMemberMixin):
     """Storage access types"""
     READ_ONLY = "read_only"
