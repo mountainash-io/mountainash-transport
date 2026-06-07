@@ -18,9 +18,8 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CertificateAuth, KerberosAuth, PasswordAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
@@ -158,20 +157,21 @@ SSH_SPEC = StorageDescriptor(
             ),
         ),
     ],
-    auth_modes=[PasswordAuth, CertificateAuth, KerberosAuth],
+    default_auth=CONST_AUTH_MODE.PASSWORD,
+    supported_auth=frozenset({CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.CERTIFICATE, CONST_AUTH_MODE.KERBEROS}),
 )
 
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "SSHSettings") -> dict[str, t.Any]:
+def _adapter(profile: "SSHSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.ssh import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class SSHSettings(StorageProfile, StorageAuthBase):
+class SSHSettings(StorageProfile):
     """Unified SSH / SFTP settings.
 
     Fields are installed from :data:`SSH_SPEC` by the

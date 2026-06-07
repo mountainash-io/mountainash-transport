@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import NoAuth, PasswordAuth, TokenAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
 from ..descriptor import ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
-from ..base import StorageAuthBase
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
 __all__ = ["HTTP_SPEC", "HTTPSettings"]
@@ -78,18 +77,19 @@ HTTP_SPEC = StorageDescriptor(
             description="Custom request headers merged with auth headers.",
         ),
     ],
-    auth_modes=[NoAuth, TokenAuth, PasswordAuth],
+    default_auth=CONST_AUTH_MODE.NONE,
+    supported_auth=frozenset({CONST_AUTH_MODE.NONE, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.PASSWORD}),
 )
 
 
-def _adapter(profile: "HTTPSettings") -> dict[str, t.Any]:
+def _adapter(profile: "HTTPSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.http import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class HTTPSettings(StorageProfile, StorageAuthBase):
+class HTTPSettings(StorageProfile):
     """HTTP/HTTPS provider settings."""
 
     __spec__ = HTTP_SPEC

@@ -16,12 +16,11 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import IAMAuth, NoAuth, TokenAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
 from ..descriptor import ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
-from ..base import StorageAuthBase
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
 __all__ = ["S3_SPEC", "S3Settings", "validate_flavor"]
@@ -176,7 +175,8 @@ S3_SPEC = StorageDescriptor(
             ),
         ),
     ],
-    auth_modes=[IAMAuth, TokenAuth, NoAuth],
+    default_auth=CONST_AUTH_MODE.IAM,
+    supported_auth=frozenset({CONST_AUTH_MODE.IAM, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.NONE}),
     metadata={
         "flavor_endpoints": {
             "aws": None,
@@ -191,14 +191,14 @@ S3_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "S3Settings") -> dict[str, t.Any]:
+def _adapter(profile: "S3Settings", auth=None) -> dict[str, t.Any]:
     from ..adapters.s3 import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class S3Settings(StorageProfile, StorageAuthBase):
+class S3Settings(StorageProfile):
     """Unified S3-family settings for AWS S3, S3 Express, R2, MinIO, and B2.
 
     Fields are installed from :data:`S3_SPEC` by the

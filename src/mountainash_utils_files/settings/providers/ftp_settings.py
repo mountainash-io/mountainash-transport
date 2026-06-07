@@ -13,9 +13,8 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import NoAuth, PasswordAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
@@ -123,20 +122,21 @@ FTP_SPEC = StorageDescriptor(
             ),
         ),
     ],
-    auth_modes=[PasswordAuth, NoAuth],
+    default_auth=CONST_AUTH_MODE.PASSWORD,
+    supported_auth=frozenset({CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.NONE}),
 )
 
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "FTPSettings") -> dict[str, t.Any]:
+def _adapter(profile: "FTPSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.ftp import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class FTPSettings(StorageProfile, StorageAuthBase):
+class FTPSettings(StorageProfile):
     """FTP / FTPS settings.
 
     Fields are installed from :data:`FTP_SPEC` by the

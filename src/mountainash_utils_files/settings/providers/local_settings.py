@@ -28,9 +28,8 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import NoAuth
+from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..base import StorageAuthBase
 from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
 from ..profile import StorageProfile
 from ..registry import register
@@ -80,20 +79,21 @@ LOCAL_SPEC = StorageDescriptor(
             ),
         ),
     ],
-    auth_modes=[NoAuth],
+    default_auth=CONST_AUTH_MODE.NONE,
+    supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
 )
 
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "LocalSettings") -> dict[str, t.Any]:
+def _adapter(profile: "LocalSettings", auth=None) -> dict[str, t.Any]:
     from ..adapters.local import build_handler_kwargs
 
-    return build_handler_kwargs(profile)
+    return build_handler_kwargs(profile, auth)
 
 
 @register
-class LocalSettings(StorageProfile, StorageAuthBase):
+class LocalSettings(StorageProfile):
     """Local filesystem settings (also covers pre-mounted NFS / CIFS).
 
     Fields are installed from :data:`LOCAL_SPEC` by the
