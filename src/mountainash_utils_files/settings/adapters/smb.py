@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, KerberosAuth, PasswordAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -40,7 +42,7 @@ def _encode_username(username: t.Optional[str], domain: t.Optional[str]) -> t.Op
 
 
 def _auth_kwargs(
-    auth: t.Any,
+    auth: AuthMode | None,
     profile_username: t.Optional[str],
     domain: t.Optional[str],
 ) -> dict[str, t.Any]:
@@ -55,11 +57,10 @@ def _auth_kwargs(
     """
     if auth is None:
         return {}
-    auth_type = type(auth).__name__
 
-    if auth_type == "PasswordAuth":
-        username = getattr(auth, "username", None) or profile_username
-        password = _unwrap_secret(getattr(auth, "password", None))
+    if isinstance(auth, PasswordAuth):
+        username = auth.USERNAME or profile_username
+        password = _unwrap_secret(auth.PASSWORD)
         encoded_user = _encode_username(username, domain)
         out: dict[str, t.Any] = {"auth_protocol": "negotiate"}
         if encoded_user is not None:
@@ -68,8 +69,8 @@ def _auth_kwargs(
             out["password"] = password
         return out
 
-    if auth_type == "KerberosAuth":
-        principal = getattr(auth, "principal", None) or profile_username
+    if isinstance(auth, KerberosAuth):
+        principal = auth.PRINCIPAL or profile_username
         encoded_user = _encode_username(principal, domain)
         out = {"auth_protocol": "kerberos"}
         if encoded_user is not None:
@@ -80,7 +81,7 @@ def _auth_kwargs(
     return {}
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build smbprotocol session-registration kwargs from an :class:`SMBSettings`.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -103,7 +104,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     if connection_timeout is not None:
         kwargs["connection_timeout"] = connection_timeout
 
-    auth = getattr(profile, "auth", None)
     auth_kwargs = _auth_kwargs(auth, username, domain)
     kwargs.update(auth_kwargs)
 

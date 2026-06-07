@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, IAMAuth, TokenAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -70,7 +72,7 @@ def _resolve_addressing_style(flavor: str, configured: str) -> str:
     return configured
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build boto3 S3 client kwargs from an :class:`S3Settings` profile.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -116,21 +118,16 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
         base["endpoint_url"] = resolved_endpoint
 
     # Credentials from IAMAuth / TokenAuth fields.
-    auth = getattr(profile, "auth", None)
-    if auth is not None:
-        auth_type = type(auth).__name__
-        if auth_type == "IAMAuth":
-            if getattr(auth, "access_key_id", None):
-                base["aws_access_key_id"] = auth.access_key_id
-            if getattr(auth, "secret_access_key", None):
-                base["aws_secret_access_key"] = _unwrap_secret(
-                    auth.secret_access_key
-                )
-            if getattr(auth, "session_token", None):
-                base["aws_session_token"] = _unwrap_secret(auth.session_token)
-        elif auth_type == "TokenAuth":
-            if getattr(auth, "token", None):
-                base["aws_session_token"] = _unwrap_secret(auth.token)
+    if isinstance(auth, IAMAuth):
+        if auth.ACCESS_KEY_ID:
+            base["aws_access_key_id"] = auth.ACCESS_KEY_ID
+        if auth.SECRET_ACCESS_KEY:
+            base["aws_secret_access_key"] = _unwrap_secret(auth.SECRET_ACCESS_KEY)
+        if auth.SESSION_TOKEN:
+            base["aws_session_token"] = _unwrap_secret(auth.SESSION_TOKEN)
+    elif isinstance(auth, TokenAuth):
+        if auth.TOKEN:
+            base["aws_session_token"] = _unwrap_secret(auth.TOKEN)
 
     if _botocore_config is not None:
         s3_config: dict[str, t.Any] = {"addressing_style": addressing_style}

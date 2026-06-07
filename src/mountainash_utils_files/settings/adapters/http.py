@@ -5,6 +5,7 @@ import base64
 import typing as t
 
 import httpx
+from mountainash_auth_client import AuthMode, JWTAuth, NoAuth, OAuth2Auth, OAuth2AuthCodeAuth, PasswordAuth, TokenAuth
 
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
@@ -20,34 +21,33 @@ def _unwrap_secret(v: t.Any) -> t.Optional[str]:
     return str(v)
 
 
-def _resolve_auth_headers(auth: t.Any) -> dict[str, str]:
+def _resolve_auth_headers(auth: AuthMode | None) -> dict[str, str]:
     """Build Authorization header from an AuthSpec instance."""
     if auth is None:
         return {}
-    auth_type = type(auth).__name__
-    if auth_type == "NoAuth":
+    if isinstance(auth, NoAuth):
         return {}
-    if auth_type == "TokenAuth" or auth_type == "JWTAuth":
-        token = _unwrap_secret(getattr(auth, "token", None))
+    if isinstance(auth, (TokenAuth, JWTAuth)):
+        token = _unwrap_secret(auth.TOKEN)
         if token:
             return {"Authorization": f"Bearer {token}"}
-    elif auth_type == "PasswordAuth":
-        username = getattr(auth, "username", None) or ""
-        password = _unwrap_secret(getattr(auth, "password", None)) or ""
+    elif isinstance(auth, PasswordAuth):
+        username = auth.USERNAME or ""
+        password = _unwrap_secret(auth.PASSWORD) or ""
         encoded = base64.b64encode(f"{username}:{password}".encode()).decode()
         return {"Authorization": f"Basic {encoded}"}
-    elif auth_type == "OAuth2Auth":
-        token = _unwrap_secret(getattr(auth, "token", None))
+    elif isinstance(auth, OAuth2Auth):
+        token = _unwrap_secret(auth.TOKEN)
         if token:
             return {"Authorization": f"Bearer {token}"}
-    elif auth_type == "OAuth2AuthCodeAuth":
-        token = _unwrap_secret(getattr(auth, "access_token", None))
+    elif isinstance(auth, OAuth2AuthCodeAuth):
+        token = _unwrap_secret(auth.ACCESS_TOKEN)
         if token:
             return {"Authorization": f"Bearer {token}"}
     return {}
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build httpx.Client kwargs from an :class:`HTTPSettings` profile."""
     timeout_connect = getattr(profile, "TIMEOUT_CONNECT", 10.0)
     timeout_read = getattr(profile, "TIMEOUT_READ", 30.0)
@@ -57,7 +57,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
     verify = getattr(profile, "VERIFY_SSL", True)
     custom_headers = getattr(profile, "HEADERS", None) or {}
 
-    auth = getattr(profile, "auth", None)
     auth_headers = _resolve_auth_headers(auth)
 
     headers = {**custom_headers, **auth_headers}

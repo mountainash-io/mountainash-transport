@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import AuthMode, CertificateAuth, KerberosAuth, PasswordAuth
+
 if t.TYPE_CHECKING:
     from ..profile import StorageProfile
 
@@ -43,7 +45,7 @@ def _unwrap_secret(v: t.Any) -> t.Optional[str]:
     return str(v)
 
 
-def _auth_kwargs(auth: t.Any, host: t.Optional[str]) -> dict[str, t.Any]:
+def _auth_kwargs(auth: AuthMode | None, host: t.Optional[str]) -> dict[str, t.Any]:
     """Translate the discriminated auth union into ``connect()`` kwargs.
 
     - :class:`PasswordAuth`    → ``{"password": ...}``
@@ -58,19 +60,18 @@ def _auth_kwargs(auth: t.Any, host: t.Optional[str]) -> dict[str, t.Any]:
     """
     if auth is None:
         return {}
-    auth_type = type(auth).__name__
     out: dict[str, t.Any] = {}
 
-    if auth_type == "PasswordAuth":
-        password = _unwrap_secret(getattr(auth, "password", None))
+    if isinstance(auth, PasswordAuth):
+        password = _unwrap_secret(auth.PASSWORD)
         if password is not None:
             out["password"] = password
         return out
 
-    if auth_type == "CertificateAuth":
-        key_path = getattr(auth, "private_key_path", None)
-        private_key = getattr(auth, "private_key", None)
-        passphrase = _unwrap_secret(getattr(auth, "passphrase", None))
+    if isinstance(auth, CertificateAuth):
+        key_path = auth.PRIVATE_KEY_PATH
+        private_key = auth.PRIVATE_KEY
+        passphrase = _unwrap_secret(auth.PASSPHRASE)
         if key_path:
             out["key_filename"] = str(key_path)
         elif private_key is not None:
@@ -81,7 +82,7 @@ def _auth_kwargs(auth: t.Any, host: t.Optional[str]) -> dict[str, t.Any]:
             out["passphrase"] = passphrase
         return out
 
-    if auth_type == "KerberosAuth":
+    if isinstance(auth, KerberosAuth):
         out["gss_auth"] = True
         out["gss_kex"] = True
         if host:
@@ -94,7 +95,7 @@ def _auth_kwargs(auth: t.Any, host: t.Optional[str]) -> dict[str, t.Any]:
     return out
 
 
-def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
+def build_handler_kwargs(profile: "StorageProfile", auth: AuthMode | None = None) -> dict[str, t.Any]:
     """Build paramiko ``SSHClient.connect`` kwargs from an :class:`SSHSettings`.
 
     Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -118,7 +119,6 @@ def build_handler_kwargs(profile: "StorageProfile") -> dict[str, t.Any]:
 
     host = kwargs.get("hostname") or getattr(profile, "HOST", None)
 
-    auth = getattr(profile, "auth", None)
     kwargs.update(_auth_kwargs(auth, host))
 
     post_connect: dict[str, t.Any] = {}
