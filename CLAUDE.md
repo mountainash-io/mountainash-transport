@@ -88,46 +88,37 @@ inference is intentionally not provided — writes take an explicit
 
 ```
 src/mountainash_transport/
-├── __init__.py                    # Public API (StorageFacade, read_bytes, protocols, constants, transforms)
+├── __init__.py                    # Public API re-exports (27 items)
 ├── __version__.py
-├── constants.py                   # CONST_STORAGE_PROVIDER_TYPE + other storage enums
-├── dataclasses/                   # FileMetadata
-├── exceptions.py                  # StorageError hierarchy
-├── path_helpers/                  # Parse + normalize storage paths (scheme-aware)
-│   ├── __init__.py                # StoragePath, SchemeSpec, SCHEMES, infer_pipeline
-│   ├── scheme.py                  # SchemeSpec + SCHEMES registry
-│   ├── storage_path.py            # StoragePath helper class
-│   ├── suffixes.py                # Suffix-aware transform inference
-│   └── s3.py                      # s3_bucket, s3_key free functions
-├── storage_backends/              # Backend implementations
-│   ├── __init__.py                # Imports trigger backend registration
-│   ├── http/                      # HTTPStorageBackend (httpx — read/write/metadata for http:// + https://)
-│   ├── local/                     # LocalStorageBackend (connection/read/write/list/delete/metadata/copy/directory)
-│   └── s3/                        # S3StorageBackend (flavor-dispatched — serves AWS/Express/R2/MinIO/B2)
-├── storage_facade/                # StorageFacade, from_path(), cross_backend, read_bytes
-├── storage_protocols/             # 8 granular protocols (prtcl_*.py)
-├── storage_registry/              # get_storage_backend, detect_provider_from_path, backend_detection
-├── storage_transforms/            # Stream transforms (Pipeline, Gzip, GPG, materialize)
-└── settings/
-    ├── __init__.py                # Exceptions + StorageAuthTemplates
-    ├── exceptions.py              # Settings-specific exceptions
-    ├── profile_protocol.py        # StorageProfileProtocol (runtime-checkable)
-    ├── profile_spec.py            # StorageProfileSpec(ProfileSpec)
-    ├── registry.py                # STORAGE_REGISTRY = Registry("storage")
-    ├── loader.py                  # load_storage() — config-driven materialisation (WIP)
-    ├── templates.py               # URL templates
-    ├── types.py                   # Type aliases
-    ├── utils/                     # Shared utilities (connection, secrets, security, validation)
-    └── profiles/                  # Per-provider profile classes
-        ├── s3_storage_profile.py
-        ├── gcs_storage_profile.py
-        ├── azure_storage_profile.py
-        ├── ssh_storage_profile.py
-        ├── ftp_storage_profile.py
-        ├── smb_storage_profile.py
-        ├── local_storage_profile.py
-        ├── github_storage_profile.py
-        └── http_storage_profile.py
+├── _core/                         # Shared foundation (no upward imports)
+│   ├── constants.py               # CONST_STORAGE_PROVIDER_TYPE + other enums
+│   ├── exceptions.py              # StorageError hierarchy
+│   ├── dataclasses/               # FileMetadata
+│   ├── protocols.py               # Stub — future ConnectionProtocol, BatchSource/BatchSink
+│   ├── http.py                    # Stub — future shared httpx client factory
+│   └── transforms/                # Stream transforms (Pipeline, Gzip, GPG, materialize)
+├── connections/                   # Stub — future home of OAuth flows from auth-client
+├── settings/                      # Profile infrastructure (shared between families)
+│   ├── profile_protocol.py        # StorageProfileProtocol (runtime-checkable)
+│   ├── profile_spec.py            # StorageProfileSpec(ProfileSpec)
+│   ├── exceptions.py              # Settings-specific exceptions
+│   ├── types.py                   # Type aliases
+│   ├── utils/                     # Shared utilities (connection, secrets, security, validation)
+│   ├── storage/                   # Storage-specific settings
+│   │   ├── registry.py            # STORAGE_REGISTRY
+│   │   ├── templates.py           # URL templates
+│   │   ├── loader.py              # load_storage() (WIP)
+│   │   └── profiles/              # 9 per-provider profile classes
+│   └── messaging/                 # Stub — future messaging profiles
+└── storage/                       # Request/response family
+    ├── protocols/                 # 8 granular protocols (prtcl_*.py)
+    ├── backends/                  # S3, Local, HTTP backend implementations
+    │   ├── http/                  # HTTPStorageBackend (httpx — read/write/metadata)
+    │   ├── local/                 # LocalStorageBackend (all 8 protocols)
+    │   └── s3/                    # S3StorageBackend (flavor-dispatched)
+    ├── facade/                    # StorageFacade, from_path(), cross_backend, read_bytes
+    ├── path_helpers/              # StoragePath, SchemeSpec, suffixes, S3 helpers
+    └── registry/                  # get_storage_backend, detect_provider_from_path
 ```
 
 ### Test Structure
@@ -136,34 +127,19 @@ src/mountainash_transport/
 tests/
 ├── conftest.py
 ├── test_public_api.py                          # Public API surface tests
-├── test_constants_and_exceptions.py            # Constants + exception hierarchy
+├── _core/
+│   └── test_constants_and_exceptions.py        # Constants + exception hierarchy
 ├── cross_backend/                              # Cross-backend integration tests
-│   ├── test_delete.py, test_list.py
-│   ├── test_metadata.py, test_read_write.py
 ├── path_helpers/                               # StoragePath, SchemeSpec, suffixes, S3 path
-│   ├── test_s3.py, test_scheme.py
-│   ├── test_storage_path.py, test_suffixes.py
 ├── settings/
-│   ├── profiles/                               # Per-provider profile tests (9 files)
 │   ├── test_profile_protocol.py
 │   ├── test_profile_spec.py
-│   └── test_registry.py
-├── storage_backends/                           # Per-backend unit tests
-│   ├── test_http.py, test_local.py, test_s3.py
+│   └── profiles/                               # Per-provider profile tests (9 files)
+├── storage_backends/                           # Per-backend unit tests (http, local, s3)
 ├── storage_facade/                             # Facade, from_path, read_bytes, infer
-│   ├── test_facade.py, test_facade_infer.py
-│   ├── test_from_path.py, test_read_bytes.py
-│   └── test_read_bytes_infer.py
-├── storage_protocols/                          # Protocol conformance + shapes
-│   ├── test_backend_conformance.py             # Data-driven: EXPECTED_PROTOCOLS + EXCLUDED_PROTOCOLS
-│   ├── test_protocol_shapes.py
-│   └── test_registry_completeness.py
+├── storage_protocols/                          # Protocol conformance + shapes + registry completeness
 ├── storage_registry/                           # Registry + backend detection
-│   ├── test_backend_detection.py, test_registry.py
 └── storage_transforms/                         # Pipeline, Gzip, GPG, materialize, facade integration
-    ├── test_base.py, test_gzip.py, test_gpg.py
-    ├── test_pipeline.py, test_materialize.py
-    └── test_facade_integration.py
 ```
 
 
@@ -273,8 +249,8 @@ tests/
 ### Profile + auth separation
 
 ```python
-from mountainash_transport.settings.profiles.s3_storage_profile import S3StorageProfile
-from mountainash_transport.settings.profiles.local_storage_profile import LocalStorageProfile
+from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles.local_storage_profile import LocalStorageProfile
 from mountainash_auth_client import IAMAuth, TokenAuth, NoAuth
 
 # S3-family: single class discriminated by FLAVOR
@@ -313,8 +289,8 @@ local = read_bytes("/tmp/local-file")
 ### Storage backend registry
 
 ```python
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage_registry import get_storage_backend
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage.registry import get_storage_backend
 from mountainash_auth_client import IAMAuth
 
 auth = IAMAuth(ACCESS_KEY_ID="...", SECRET_ACCESS_KEY="...")

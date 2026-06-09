@@ -1,6 +1,6 @@
 # Release Procedure
 
-This document outlines the process for creating a new release of the mountainash-utils-files package.
+This document outlines the process for creating a new release of the mountainash-transport package.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ This document outlines the process for creating a new release of the mountainash
 ## Release Process
 
 1. **Update Version**
-   - Navigate to `src/mountainash_utils_files/__version__.py`
+   - Navigate to `src/mountainash_transport/__version__.py`
    - Update the `__version__` variable with the new version number
    - Ensure the version number follows the specified semantic versioning format:
      - Year and month: `YYYYMM`
@@ -34,8 +34,8 @@ This document outlines the process for creating a new release of the mountainash
    - You should see a new release created with the version number you specified
    - Verify that the following assets are attached to the release:
      - Wheel file (`mountainash_utils-files-{version}-py3-none-any.whl`)
-     - Full SBOM (`mountainash-utils-files-{version}-sbom-full.xml`)
-     - Direct dependencies SBOM (`mountainash-utils-files-{version}-sbom-direct.xml`)
+     - Full SBOM (`mountainash-transport-{version}-sbom-full.xml`)
+     - Direct dependencies SBOM (`mountainash-transport-{version}-sbom-direct.xml`)
 
 5. **Release Branch**
    - The workflow will create a new `release-{version}` branch
