@@ -29,7 +29,6 @@ from mountainash_auth_client import AuthProfile, KerberosAuth, PasswordAuth
 
 from ..profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
-from ..profile_protocol import StorageProfileProtocol
 
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE

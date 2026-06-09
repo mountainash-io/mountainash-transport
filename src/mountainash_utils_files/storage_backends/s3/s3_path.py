@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from mountainash_utils_files.storage_protocols import StorageCopyProtocol
 
 #TECHDEBT: should use /home/nathanielramm/git/mountainash-io/mountainash/mountainash-utils-files/src/mountainash_utils_files/path_helpers/s3.py
 

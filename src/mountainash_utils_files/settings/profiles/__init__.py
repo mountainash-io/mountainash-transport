@@ -20,9 +20,6 @@ settings classes, plus HTTP/HTTPS:
 
 from __future__ import annotations
 
-import warnings
-import typing as t
-
 from .azure_storage_profile import AZURE_STORAGE_SPEC, AzureStorageProfile, validate_service_type
 from .ftp_storage_profile import FTP_SPEC, FTPStorageProfile
 from .gcs_storage_profile import GCS_SPEC, GCSStorageProfile

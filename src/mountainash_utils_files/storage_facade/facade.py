@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import io
-import typing
 from typing import BinaryIO
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE

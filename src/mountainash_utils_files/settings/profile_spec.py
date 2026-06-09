@@ -2,21 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import typing as t
-from typing import Protocol, Optional
 
 from mountainash_auth_client import CONST_AUTH_MODE
 from mountainash_settings.profiles import (
     MISSING,
     ParameterSpec,
-    ProfileSpec,
-    Profile
+    ProfileSpec
 )
 
 
 
 
 if t.TYPE_CHECKING:
-    from mountainash_auth_client import AuthProfile
+    pass
 
 
 __all__ = ["MISSING", "ParameterSpec", "StorageProfileSpec"]
