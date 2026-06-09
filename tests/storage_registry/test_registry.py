@@ -2,8 +2,8 @@
 
 import pytest
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage_registry import (
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage.registry import (
     clear_registry,
     detect_provider_from_path,
     get_registered_backends,
@@ -85,13 +85,13 @@ class TestRegisterAndGetBackend:
 
     def setup_method(self):
         """Save registry state before each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         self._saved_registry = dict(_backend_registry)
         _backend_registry.clear()
 
     def teardown_method(self):
         """Restore registry state after each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         _backend_registry.clear()
         _backend_registry.update(self._saved_registry)
 
@@ -165,13 +165,13 @@ class TestGetRegisteredBackends:
 
     def setup_method(self):
         """Save registry state before each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         self._saved_registry = dict(_backend_registry)
         _backend_registry.clear()
 
     def teardown_method(self):
         """Restore registry state after each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         _backend_registry.clear()
         _backend_registry.update(self._saved_registry)
 
@@ -199,13 +199,13 @@ class TestClearRegistry:
 
     def setup_method(self):
         """Save registry state before each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         self._saved_registry = dict(_backend_registry)
         _backend_registry.clear()
 
     def teardown_method(self):
         """Restore registry state after each test."""
-        from mountainash_transport.storage_registry.registry import _backend_registry
+        from mountainash_transport.storage.registry.registry import _backend_registry
         _backend_registry.clear()
         _backend_registry.update(self._saved_registry)
 

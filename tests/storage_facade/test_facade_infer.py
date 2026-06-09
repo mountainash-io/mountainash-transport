@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-import mountainash_transport.storage_backends  # noqa: F401
-from mountainash_transport.storage_facade import StorageFacade
-from mountainash_transport.storage_transforms import GPG, Gzip, Pipeline
+import mountainash_transport.storage.backends  # noqa: F401
+from mountainash_transport.storage.facade import StorageFacade
+from mountainash_transport._core.transforms import GPG, Gzip, Pipeline
 
 
 class TestReadInfer:

@@ -1,15 +1,15 @@
-"""mountainash-transport — unified storage operations across backends."""
+"""mountainash-transport — unified storage and messaging operations across backends."""
 
 from .__version__ import __version__
 
 # Facade — main user API
-from .storage_facade import StorageFacade, copy_between, read_bytes
+from .storage.facade import StorageFacade, copy_between, read_bytes
 
 # Registry
-from .storage_registry import get_storage_backend, detect_provider_from_path
+from .storage.registry import get_storage_backend, detect_provider_from_path
 
 # Protocols — for isinstance checks and type hints
-from .storage_protocols import (
+from .storage.protocols import (
     StorageConnectionProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
@@ -21,13 +21,13 @@ from .storage_protocols import (
 )
 
 # Constants
-from .constants import CONST_STORAGE_PROVIDER_TYPE
+from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 # Dataclasses
-from .dataclasses.file_metadata import FileMetadata
+from ._core.dataclasses.file_metadata import FileMetadata
 
 # Exceptions
-from .exceptions import (
+from ._core.exceptions import (
     StorageError,
     UnsupportedOperationError,
     StorageConnectionError,
@@ -37,7 +37,7 @@ from .exceptions import (
 )
 
 # Stream transforms
-from .storage_transforms import (
+from ._core.transforms import (
     Pipeline,
     StreamTransform,
     Gzip,
@@ -45,10 +45,10 @@ from .storage_transforms import (
 )
 
 # Path utilities
-from .path_helpers import StoragePath, infer_pipeline
+from .storage.path_helpers import StoragePath, infer_pipeline
 
 # Trigger backend registrations
-from . import storage_backends  # noqa: F401
+from .storage import backends  # noqa: F401
 
 
 def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,

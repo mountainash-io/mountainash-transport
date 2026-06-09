@@ -1,9 +1,9 @@
 """Verify every expected provider type has a registered backend."""
 
 import pytest
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage_registry import get_registered_backends
-import mountainash_transport.storage_backends  # trigger registrations
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage.registry import get_registered_backends
+import mountainash_transport.storage.backends  # trigger registrations
 
 REQUIRED_BACKENDS = {
     CONST_STORAGE_PROVIDER_TYPE.LOCAL,

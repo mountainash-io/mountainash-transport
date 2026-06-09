@@ -2,7 +2,7 @@
 from .exceptions import StorageAuthError, StorageConfigError, StorageConnectionError, StorageValidationError, StorageSecurityError, StoragePermissionError, StorageEncryptionError, StorageTimeoutError, StorageQuotaError, StorageRetryError, StoragePoolError, StorageOperationError, StorageVersionError, StorageStateError, StorageFeatureError, StorageCompatibilityError, StorageMigrationError
 # from .factory import StorageAuthFactory
 # from .loader import load_storage
-from .templates import StorageAuthTemplates
+from .storage.templates import StorageAuthTemplates
 
 
 __all__ = [

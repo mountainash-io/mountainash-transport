@@ -9,8 +9,8 @@ import tempfile
 
 import pytest
 
-import mountainash_transport.storage_backends  # noqa: F401 - trigger registrations
-from mountainash_transport.storage_facade import StorageFacade
+import mountainash_transport.storage.backends  # noqa: F401 - trigger registrations
+from mountainash_transport.storage.facade import StorageFacade
 
 LOCAL_BACKENDS = ["local"]
 

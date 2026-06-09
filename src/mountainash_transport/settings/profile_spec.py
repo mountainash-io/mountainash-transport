@@ -37,7 +37,7 @@ class StorageProfileSpec(ProfileSpec):
             (``"boto3"``, ``"google-cloud-storage"``, ``"paramiko"``, etc.).
             ``None`` for stdlib-only providers (``LocalSettings``, ``FTPSettings``).
         handler_module: Dotted module path where the storage backend lives
-            (e.g. ``"mountainash_transport.storage_backends.s3"``).
+            (e.g. ``"mountainash_transport.storage.backends.s3"``).
         handler_class: Class name of the backend within handler_module
             (e.g. ``"S3StorageBackend"``).
         supports_streaming: Whether the backend supports streaming reads/writes.
