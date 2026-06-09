@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import IAMAuth, NoAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -93,7 +92,7 @@ class TestS3StorageProfileConstruction:
 
 @pytest.mark.unit
 class TestS3HandlerKwargsMatrix:
-    """Flavor × adapter-output matrix."""
+    """Flavor x adapter-output matrix."""
 
     @pytest.mark.parametrize(
         "flavor", ["aws", "express", "r2", "b2"]
@@ -152,24 +151,13 @@ class TestS3HandlerKwargsMatrix:
         assert s3_cfg is not None
         assert s3_cfg.get("addressing_style") == "virtual"
 
-
-@pytest.mark.unit
-class TestS3AuthIntegration:
-    def test_iam_auth_credentials_flow_to_boto(self):
-        auth = IAMAuth(
-            ACCESS_KEY_ID="AKID",
-            SECRET_ACCESS_KEY=SecretStr("secret"),
-        )
-        s = _make("aws")
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["aws_access_key_id"] == "AKID"
-        assert kw["aws_secret_access_key"] == "secret"
-
-    def test_noauth_surfaces_no_creds(self):
+    def test_no_auth_credentials_in_kwargs(self):
+        """to_handler_kwargs no longer embeds auth credentials."""
         s = _make("aws")
         kw = s.to_handler_kwargs()
         assert "aws_access_key_id" not in kw
         assert "aws_secret_access_key" not in kw
+        assert "auth_protocol" not in kw
 
 
 @pytest.mark.unit

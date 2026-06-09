@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import CertificateAuth, KerberosAuth, NoAuth, PasswordAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -87,18 +86,12 @@ class TestSSHFakeFieldsAbsent:
 
 
 @pytest.mark.unit
-class TestSSHPasswordAuth:
-    def test_password_becomes_plain_string_in_kwargs(self):
-        auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        # Unwrapped -- paramiko.SSHClient.connect takes a plain string.
-        assert kw["password"] == "pw"
+class TestSSHHandlerKwargs:
+    """to_handler_kwargs returns SDK-level config only (no auth)."""
 
-    def test_password_kwargs_includes_canonical_keys(self):
-        auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
+    def test_canonical_keys_present(self):
         s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
+        kw = s.to_handler_kwargs()
         assert kw["hostname"] == "server.example"
         assert kw["port"] == 22
         assert kw["username"] == "alice"
@@ -107,47 +100,14 @@ class TestSSHPasswordAuth:
         assert kw["look_for_keys"] is True
         assert kw["compress"] is False
 
-
-@pytest.mark.unit
-class TestSSHCertificateAuth:
-    def test_key_filename_surfaced_from_private_key_path(self):
-        auth = CertificateAuth(
-            PRIVATE_KEY_PATH="/home/alice/.ssh/id_ed25519",
-        )
+    def test_no_auth_keys_in_kwargs(self):
+        """Auth credentials are injected by the strategy layer, not the profile."""
         s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["key_filename"] == "/home/alice/.ssh/id_ed25519"
-        assert "pkey" not in kw
-
-    def test_pkey_surfaced_from_inline_private_key(self):
-        auth = CertificateAuth(
-            PRIVATE_KEY=SecretStr("-----BEGIN OPENSSH PRIVATE KEY-----\n..."),
-        )
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert "pkey" in kw
-        assert kw["pkey"].startswith("-----BEGIN OPENSSH")
+        kw = s.to_handler_kwargs()
+        assert "password" not in kw
         assert "key_filename" not in kw
-
-    def test_passphrase_forwarded_when_present(self):
-        auth = CertificateAuth(
-            PRIVATE_KEY_PATH="/k/id_rsa",
-            PASSPHRASE=SecretStr("kpw"),
-        )
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["passphrase"] == "kpw"
-
-
-@pytest.mark.unit
-class TestSSHKerberosAuth:
-    def test_kerberos_sets_gss_flags(self):
-        auth = KerberosAuth(PRINCIPAL="alice@EXAMPLE.COM")
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["gss_auth"] is True
-        assert kw["gss_kex"] is True
-        assert kw["gss_host"] == "server.example"
+        assert "pkey" not in kw
+        assert "gss_auth" not in kw
 
 
 @pytest.mark.unit

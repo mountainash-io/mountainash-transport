@@ -198,51 +198,23 @@ class TestHTTPBackendClientCreation:
             mock_client.assert_called_once()
 
 
-class TestHTTPBackendAuthPrecedence:
-    def test_auth_flows_through_profile_adapter(self):
+class TestHTTPBackendProfileKwargs:
+    def test_profile_kwargs_used_without_auth(self):
+        """to_handler_kwargs is called with no arguments (auth is separate)."""
         profile = MagicMock()
-        auth_profile = TokenAuth(TOKEN=SecretStr("new"))
         profile.to_handler_kwargs.return_value = {
             "timeout": httpx.Timeout(connect=5.0, read=15.0, write=60.0, pool=5.0),
             "follow_redirects": True,
             "verify": True,
-            "headers": {"Authorization": "Bearer new", "X-Custom": "keep"},
-        }
-        backend = HTTPStorageBackend(profile, auth_profile=auth_profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=auth_profile)
-            call_kwargs = mock_client.call_args[1]
-            assert call_kwargs["headers"]["Authorization"] == "Bearer new"
-            assert call_kwargs["headers"]["X-Custom"] == "keep"
-
-    def test_noauth_flows_through_profile_adapter(self):
-        profile = MagicMock()
-        profile.to_handler_kwargs.return_value = {
             "headers": {"X-Custom": "keep"},
         }
-        backend = HTTPStorageBackend(profile, auth_profile=NoAuth())
+        backend = HTTPStorageBackend(profile, auth_profile=TokenAuth(TOKEN=SecretStr("new")))
         with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
             mock_client.return_value = MagicMock()
             backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=NoAuth())
+            profile.to_handler_kwargs.assert_called_once_with()
             call_kwargs = mock_client.call_args[1]
-            assert "Authorization" not in call_kwargs.get("headers", {})
             assert call_kwargs["headers"]["X-Custom"] == "keep"
-
-    def test_profile_only_no_auth(self):
-        profile = MagicMock()
-        profile.to_handler_kwargs.return_value = {
-            "headers": {"Authorization": "Bearer profonly"},
-        }
-        backend = HTTPStorageBackend(profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=None)
-            call_kwargs = mock_client.call_args[1]
-            assert call_kwargs["headers"]["Authorization"] == "Bearer profonly"
 
 
 class TestRegistryAuthForwarding:

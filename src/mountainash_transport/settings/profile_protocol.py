@@ -10,21 +10,11 @@ import typing as t
 
 from typing import Protocol
 
-# from.types import StorageProfileT
-
-if t.TYPE_CHECKING:
-    from mountainash_auth_client import AuthProfile
-
-# __all__ = ["StorageProfileProtocol"]
 
 @t.runtime_checkable
 class StorageProfileProtocol(Protocol):
-    """Storage provider protocol.
-    """
+    """Storage provider protocol."""
 
-    # def to_handler_kwargs(
-    #     self, auth_profile: AuthProfile | None = None ) -> dict[str, t.Any]:
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]: ...
+    def to_handler_kwargs(self) -> dict[str, t.Any]: ...
 
     def get_connection_url(self) -> str: ...

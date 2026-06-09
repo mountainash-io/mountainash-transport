@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 
-from mountainash_auth_client import AzureADAuth, NoAuth, PasswordAuth, TokenAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -97,96 +94,23 @@ class TestAzureServiceClassDispatch:
 
 
 @pytest.mark.unit
-class TestAzureAuthResolution:
-    def test_noauth_credential_is_none(self):
-        s = _make("blob", auth=NoAuth())
-        kw = s.to_handler_kwargs()
-        assert kw["credential"] is None
+class TestAzureHandlerKwargs:
+    """to_handler_kwargs returns SDK-level config only (no auth)."""
 
-    def test_token_auth_builds_sas_credential(self):
-        sas = pytest.importorskip("azure.core.credentials")
-        auth = TokenAuth(TOKEN=SecretStr("?sv=2020-02-10&sig=abc"))
+    def test_no_credential_key_in_kwargs(self):
+        """Credential resolution is handled by the auth strategy layer."""
         s = _make("blob")
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert isinstance(kw["credential"], sas.AzureSasCredential)
-
-    def test_password_auth_builds_named_key_credential(self, monkeypatch):
-        monkeypatch.delenv("USERNAME", raising=False)
-        az = pytest.importorskip("azure.core.credentials")
-        auth = PasswordAuth(
-            USERNAME="teststg", PASSWORD=SecretStr("sh4redK3y=")
-        )
-        s = _make("blob")
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        cred = kw["credential"]
-        assert isinstance(cred, az.AzureNamedKeyCredential)
-        # Named key uses plain strings — not SecretStr
-        # .named_key is a namedtuple (name, key) on real credentials.
-        name, key = cred.named_key
-        assert name == "teststg"
-        assert key == "sh4redK3y="
-
-    def test_azure_ad_auth_builds_client_secret_credential(self):
-        az_identity = pytest.importorskip("azure.identity")
-        s = _make(
-            "blob",
-            auth=AzureADAuth(
-                TENANT_ID="my-tenant",
-                CLIENT_ID="my-client",
-                CLIENT_SECRET=SecretStr("supersecret"),
-                MANAGED_IDENTITY=False,
-            ),
-        )
         kw = s.to_handler_kwargs()
-        assert isinstance(
-            kw["credential"], az_identity.ClientSecretCredential
-        )
+        assert "credential" not in kw
 
-    def test_azure_ad_auth_managed_identity_branch(self):
-        az_identity = pytest.importorskip("azure.identity")
-        s = _make(
-            "blob",
-            auth=AzureADAuth(
-                MANAGED_IDENTITY=True,
-                CLIENT_ID="managed-id",
-            ),
-        )
+    def test_token_intent_forwarded_when_explicit(self):
+        s = _make("files", TOKEN_INTENT="backup")
         kw = s.to_handler_kwargs()
-        assert isinstance(
-            kw["credential"], az_identity.ManagedIdentityCredential
-        )
+        assert kw["token_intent"] == "backup"
 
-
-@pytest.mark.unit
-class TestAzureFilesTokenIntent:
-    """Azure Files + AAD requires token_intent."""
-
-    def test_files_with_ad_auto_sets_backup_intent(self):
-        pytest.importorskip("azure.identity")
-        s = _make(
-            "files",
-            auth=AzureADAuth(
-                TENANT_ID="t", CLIENT_ID="c",
-                CLIENT_SECRET=SecretStr("s"), MANAGED_IDENTITY=False,
-            ),
-        )
-        kw = s.to_handler_kwargs()
-        assert kw.get("token_intent") == "backup"
-
-    def test_files_without_aad_no_token_intent(self):
-        s = _make("files", auth=NoAuth())
-        kw = s.to_handler_kwargs()
-        assert "token_intent" not in kw
-
-    def test_blob_never_sets_token_intent_by_default(self):
-        pytest.importorskip("azure.identity")
-        s = _make(
-            "blob",
-            auth=AzureADAuth(
-                TENANT_ID="t", CLIENT_ID="c",
-                CLIENT_SECRET=SecretStr("s"), MANAGED_IDENTITY=False,
-            ),
-        )
+    def test_no_token_intent_without_explicit_setting(self):
+        """Auto-injection of token_intent for AAD is handled by the strategy layer."""
+        s = _make("files")
         kw = s.to_handler_kwargs()
         assert "token_intent" not in kw
 

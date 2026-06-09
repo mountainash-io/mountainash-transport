@@ -29,7 +29,6 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -143,7 +142,7 @@ class LocalStorageProfile(Profile):
 
 
 
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build LocalStorageBackend kwargs from a :class:`LocalSettings` profile.
 
         Signature widened to ``StorageProfile`` to satisfy the upstream

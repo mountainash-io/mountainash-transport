@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth, PasswordAuth, TokenAuth
-from pydantic import SecretStr
-
+from mountainash_auth_client import NoAuth
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 
@@ -74,21 +72,8 @@ class TestHTTPHandlerKwargs:
         assert kw["follow_redirects"] is True
         assert kw["max_redirects"] == 10
         assert kw["verify"] is True
+        # No auth headers — auth is handled by the strategy layer.
         assert "Authorization" not in kw.get("headers", {})
-
-    def test_token_auth_produces_bearer_header(self):
-        auth = TokenAuth(TOKEN=SecretStr("mytoken"))
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["headers"]["Authorization"] == "Bearer mytoken"
-
-    def test_password_auth_produces_basic_header(self):
-        import base64
-        auth = PasswordAuth(USERNAME="user", PASSWORD=SecretStr("pass"))
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        expected = "Basic " + base64.b64encode(b"user:pass").decode()
-        assert kw["headers"]["Authorization"] == expected
 
     def test_timeout_object_in_kwargs(self):
         import httpx
@@ -100,53 +85,12 @@ class TestHTTPHandlerKwargs:
         assert timeout.read == 5.0
         assert timeout.write == 10.0
 
-    def test_custom_headers_merged_with_auth(self):
-        auth = TokenAuth(TOKEN=SecretStr("tok"))
+    def test_custom_headers_forwarded(self):
         s = _make(HEADERS={"X-Custom": "value"})
-        kw = s.to_handler_kwargs(auth_profile=auth)
+        kw = s.to_handler_kwargs()
         assert kw["headers"]["X-Custom"] == "value"
-        assert kw["headers"]["Authorization"] == "Bearer tok"
 
-
-@pytest.mark.unit
-class TestResolveAuthHeaders:
-    """Tests for _resolve_auth_headers via an HTTPStorageProfile instance."""
-
-    def test_noauth_returns_empty(self):
+    def test_no_headers_key_when_empty(self):
         s = _make()
-        assert s._resolve_auth_headers(NoAuth()) == {}
-
-    def test_oauth2_with_token(self):
-        from mountainash_auth_client import OAuth2Auth
-        s = _make()
-        auth = OAuth2Auth(TOKEN=SecretStr("oauthtoken"))
-        assert s._resolve_auth_headers(auth) == {"Authorization": "Bearer oauthtoken"}
-
-    def test_oauth2_without_token(self):
-        from mountainash_auth_client import OAuth2Auth
-        s = _make()
-        auth = OAuth2Auth(CLIENT_ID="id", CLIENT_SECRET=SecretStr("secret"))
-        assert s._resolve_auth_headers(auth) == {}
-
-    def test_oauth2_authcode_with_access_token(self):
-        from mountainash_auth_client import OAuth2AuthCodeAuth
-        s = _make()
-        auth = OAuth2AuthCodeAuth(
-            CLIENT_ID="id",
-            CLIENT_SECRET=SecretStr("secret"),
-            ACCESS_TOKEN=SecretStr("myaccess"),
-        )
-        assert s._resolve_auth_headers(auth) == {"Authorization": "Bearer myaccess"}
-
-    def test_oauth2_authcode_without_access_token(self):
-        from mountainash_auth_client import OAuth2AuthCodeAuth
-        s = _make()
-        auth = OAuth2AuthCodeAuth(
-            CLIENT_ID="id",
-            CLIENT_SECRET=SecretStr("secret"),
-        )
-        assert s._resolve_auth_headers(auth) == {}
-
-    def test_none_returns_empty(self):
-        s = _make()
-        assert s._resolve_auth_headers(None) == {}
+        kw = s.to_handler_kwargs()
+        assert "headers" not in kw

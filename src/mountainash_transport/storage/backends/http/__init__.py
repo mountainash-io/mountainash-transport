@@ -67,7 +67,7 @@ class HTTPStorageBackend:
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
-            kwargs = self.storage_profile.to_handler_kwargs(auth_profile=self.auth_profile)
+            kwargs = self.storage_profile.to_handler_kwargs()
             self._client = httpx.Client(**kwargs)
         return self._client
 

@@ -45,9 +45,8 @@ class S3ConnectionMixin(StorageConnectionProtocol):
             import boto3  # type: ignore[import-untyped]
 
             storage_profile = self.storage_profile  # type: ignore[attr-defined]
-            auth_profile = self.auth_profile  # type: ignore[attr-defined]
 
-            kwargs = storage_profile.to_handler_kwargs(auth_profile)
+            kwargs = storage_profile.to_handler_kwargs()
 
             # Strip the adapter's service_name (boto3.client takes it
             # positionally) so the call is always ``boto3.client("s3", ...)``.

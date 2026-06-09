@@ -25,14 +25,12 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, KerberosAuth, PasswordAuth
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from ...utils.secrets import _unwrap_secret
 
 __all__ = ["SMB_SPEC", "SMBStorageProfile"]
 
@@ -141,14 +139,6 @@ class SMBStorageProfile(Profile):
 
 
 
-    def _unwrap_secret(self, v: t.Any) -> t.Optional[str]:
-        if v is None:
-            return None
-        if hasattr(v, "get_secret_value"):
-            return v.get_secret_value()
-        return str(v)
-
-
     def _encode_username(self, username: t.Optional[str], domain: t.Optional[str]) -> t.Optional[str]:
         """Return ``DOMAIN\\username`` when a domain is set, else plain username."""
         if not username:
@@ -158,53 +148,12 @@ class SMBStorageProfile(Profile):
         return username
 
 
-    def _auth_kwargs(self,
-        auth_profile: AuthProfile | None,
-        profile_username: t.Optional[str],
-        domain: t.Optional[str],
-    ) -> dict[str, t.Any]:
-        """Translate the discriminated auth union into smbprotocol kwargs.
-
-        - :class:`PasswordAuth` → ``auth_protocol="negotiate"`` +
-        ``username = DOMAIN\\user`` + ``password``. ``negotiate`` uses
-        SPNEGO to auto-select NTLM or Kerberos — the broadest default in
-        heterogeneous AD environments.
-        - :class:`KerberosAuth` → ``auth_protocol="kerberos"``. Principal
-        (if provided) flows through ``username``.
-        """
-        if auth_profile is None:
-            return {}
-
-        if isinstance(auth_profile, PasswordAuth):
-            username = auth_profile.USERNAME or profile_username
-            password = _unwrap_secret(auth_profile.PASSWORD)
-            encoded_user = self._encode_username(username, domain)
-            out: dict[str, t.Any] = {"auth_protocol": "negotiate"}
-            if encoded_user is not None:
-                out["username"] = encoded_user
-            if password is not None:
-                out["password"] = password
-            return out
-
-        if isinstance(auth_profile, KerberosAuth):
-            principal = auth_profile.PRINCIPAL or profile_username
-            encoded_user = self._encode_username(principal, domain)
-            out = {"auth_protocol": "kerberos"}
-            if encoded_user is not None:
-                out["username"] = encoded_user
-            return out
-
-        # Unknown auth type — surface no credentials, let the handler decide.
-        return {}
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build smbprotocol session-registration kwargs from an :class:`SMBSettings`.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass an :class:`SMBSettings` instance in
-        practice.
+        Returns SDK-level config only (server, port, encrypt, timeout,
+        profile-level username). Auth credentials (password, Kerberos
+        principal) are injected by the auth strategy layer.
         """
         server = getattr(self, "SERVER", None)
         port = getattr(self, "PORT", 445)
@@ -221,13 +170,9 @@ class SMBStorageProfile(Profile):
         if connection_timeout is not None:
             kwargs["connection_timeout"] = connection_timeout
 
-        auth_kwargs = self._auth_kwargs(auth_profile, username, domain)
-        kwargs.update(auth_kwargs)
-
-        # If auth didn't set a username and the profile has one, surface it.
-        if "username" not in kwargs:
-            encoded_user = self._encode_username(username, domain)
-            if encoded_user is not None:
-                kwargs["username"] = encoded_user
+        # Surface profile-level username (with domain encoding) if set.
+        encoded_user = self._encode_username(username, domain)
+        if encoded_user is not None:
+            kwargs["username"] = encoded_user
 
         return kwargs

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth, TokenAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -78,27 +77,25 @@ class TestGCSFieldSurface:
 
 @pytest.mark.unit
 class TestGCSHandlerKwargs:
-    def test_noauth_produces_anonymous_client_kwargs(self):
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=NoAuth())
-        assert kw["project"] == "my-project-id"
-        assert kw["credentials"] is None
-        assert kw["anonymous"] is True
+    """to_handler_kwargs returns SDK-level config only (no auth)."""
 
-    def test_token_auth_ambient_credentials_null_when_token_empty(self):
-        auth = TokenAuth(TOKEN=SecretStr("tok"))
+    def test_project_in_kwargs(self):
         s = _make()
-        try:
-            kw = s.to_handler_kwargs(auth_profile=auth)
-        except ImportError:
-            pytest.skip("google-cloud-storage not installed")
+        kw = s.to_handler_kwargs()
         assert kw["project"] == "my-project-id"
+
+    def test_no_credentials_key(self):
+        """Credentials are handled by the auth strategy layer."""
+        s = _make()
+        kw = s.to_handler_kwargs()
+        assert "credentials" not in kw
+        assert "anonymous" not in kw
 
     def test_api_endpoint_forwarded_via_client_options(self):
         s = _make(API_ENDPOINT="https://custom.endpoint.example")
         kw = s.to_handler_kwargs()
         co = kw.get("client_options")
-        # google-api-core installed → ClientOptions object; else plain dict.
+        # google-api-core installed -> ClientOptions object; else plain dict.
         if co is None:
             pytest.skip("client_options absent — unexpected path")
         if hasattr(co, "api_endpoint"):

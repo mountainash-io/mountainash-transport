@@ -17,14 +17,12 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, IAMAuth, TokenAuth
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from ...utils.secrets import _unwrap_secret
 
 __all__ = ["S3_SPEC", "S3StorageProfile", "validate_flavor"]
 
@@ -273,38 +271,7 @@ class S3StorageProfile(Profile):
         return configured
 
 
-    def _auth_kwargs(self,
-        auth_profile: AuthProfile | None
-    ) -> dict[str, t.Any]:
-        """Translate the discriminated auth union into s3 kwargs.
-        """
-        if auth_profile is None:
-            return {}
-
-        if isinstance(auth_profile, IAMAuth):
-            out: dict[str, t.Any] = {"auth_protocol": "iam"}
-
-
-            if auth_profile.ACCESS_KEY_ID:
-                out["aws_access_key_id"] = auth_profile.ACCESS_KEY_ID
-            if auth_profile.SECRET_ACCESS_KEY:
-                out["aws_secret_access_key"] = _unwrap_secret(auth_profile.SECRET_ACCESS_KEY)
-            if auth_profile.SESSION_TOKEN:
-                out["aws_session_token"] = _unwrap_secret(auth_profile.SESSION_TOKEN)
-
-            return out
-
-        elif isinstance(auth_profile, TokenAuth):
-            out: dict[str, t.Any] = {"auth_protocol": "token"}
-            if auth_profile.TOKEN:
-                out["aws_session_token"] = _unwrap_secret(auth_profile.TOKEN)
-
-            return out
-        # Unknown auth type — surface no credentials, let the handler decide.
-        return {}
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build boto3 S3 client kwargs from an :class:`S3Settings` profile.
 
         Signature widened to ``StorageProfile`` to satisfy the upstream
@@ -349,9 +316,7 @@ class S3StorageProfile(Profile):
         if resolved_endpoint is not None:
             base["endpoint_url"] = resolved_endpoint
 
-
-        auth_kwargs = self._auth_kwargs(auth_profile)
-        base.update(auth_kwargs)
+        # Auth credentials are injected by the auth strategy layer, not here.
 
         # # Credentials from IAMAuth / TokenAuth fields.
         # if isinstance(auth, IAMAuth):

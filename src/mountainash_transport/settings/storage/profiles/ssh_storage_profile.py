@@ -19,14 +19,12 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, CertificateAuth, KerberosAuth, PasswordAuth
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from ...utils.secrets import _unwrap_secret
 
 
 __all__ = ["SSH_SPEC", "SSHStorageProfile"]
@@ -223,77 +221,12 @@ class SSHStorageProfile(Profile):
 
 
 
-    def _unwrap_secret(self, v: t.Any) -> t.Optional[str]:
-        if v is None:
-            return None
-        if hasattr(v, "get_secret_value"):
-            return v.get_secret_value()
-        return str(v)
-
-
-    def _auth_kwargs(self, auth_profile: AuthProfile | None, host: t.Optional[str]) -> dict[str, t.Any]:
-        """Translate the discriminated auth union into ``connect()`` kwargs.
-
-        - :class:`PasswordAuth`    → ``{"password": ...}``
-        - :class:`CertificateAuth` → ``{"key_filename": ...}`` when a file path
-        is given (paramiko auto-detects RSA/ED25519/ECDSA). If only an
-        in-memory private-key blob is provided, it is forwarded as ``pkey``
-        for the handler to wrap — loading the key material requires
-        paramiko which the adapter avoids importing.
-        ``passphrase`` is forwarded when present.
-        - :class:`KerberosAuth`    → ``{"gss_auth": True, "gss_host": <host>,
-        "gss_kex": True}``
-        """
-        if auth_profile is None:
-            return {}
-        out: dict[str, t.Any] = {}
-
-        if isinstance(auth_profile, PasswordAuth):
-            password = _unwrap_secret(auth_profile.PASSWORD)
-            if password is not None:
-                out["password"] = password
-            return out
-
-        if isinstance(auth_profile, CertificateAuth):
-            key_path = auth_profile.PRIVATE_KEY_PATH
-            private_key = auth_profile.PRIVATE_KEY
-            passphrase = _unwrap_secret(auth_profile.PASSPHRASE)
-            if key_path:
-                out["key_filename"] = str(key_path)
-            elif private_key is not None:
-                # Surface the raw key material; the handler is responsible
-                # for building a ``paramiko.PKey`` subclass from it.
-                out["pkey"] = _unwrap_secret(private_key)
-            if passphrase is not None:
-                out["passphrase"] = passphrase
-            return out
-
-        if isinstance(auth_profile, KerberosAuth):
-            out["gss_auth"] = True
-            out["gss_kex"] = True
-            if host:
-                out["gss_host"] = host
-            return out
-
-        # Unknown auth type — return no credentials and let paramiko fall
-        # back to agent / key discovery (subject to ``allow_agent`` /
-        # ``look_for_keys``).
-        return out
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build paramiko ``SSHClient.connect`` kwargs from an :class:`SSHSettings`.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass an :class:`SSHSettings` instance in
-        practice.
-
-        Returns a dict whose keys match :meth:`paramiko.SSHClient.connect`
-        parameters. A nested ``"_post_connect"`` dict carries
-        ``known_hosts_file`` / ``host_key_policy`` — these are applied to
-        the :class:`SSHClient` instance *before* ``connect()``, not passed
-        as kwargs.
+        Returns SDK-level config only (hostname, port, timeout, agent/key
+        discovery flags, post-connect envelope). Auth credentials (password,
+        key, Kerberos) are injected by the auth strategy layer.
         """
         kwargs: dict[str, t.Any] = {}
 
@@ -302,10 +235,6 @@ class SSHStorageProfile(Profile):
             if value is None:
                 continue
             kwargs[driver_key] = value
-
-        host = kwargs.get("hostname") or getattr(self, "HOST", None)
-
-        kwargs.update(self._auth_kwargs(auth_profile, host))
 
         post_connect: dict[str, t.Any] = {}
         known_hosts = getattr(self, "KNOWN_HOSTS_FILE", None)

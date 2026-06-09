@@ -6,19 +6,17 @@ schemes. Uses httpx under the hood.
 from __future__ import annotations
 
 import typing as t
-import base64
+
 import httpx
 
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, JWTAuth, NoAuth, OAuth2Auth, OAuth2AuthCodeAuth, PasswordAuth, TokenAuth
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from ...utils.secrets import _unwrap_secret
 
 __all__ = ["HTTP_SPEC", "HTTPStorageProfile"]
 
@@ -106,42 +104,13 @@ class HTTPStorageProfile(Profile):
 
 
 
-    def _unwrap_secret(self, v: t.Any) -> t.Optional[str]:
-        if v is None:
-            return None
-        if hasattr(v, "get_secret_value"):
-            return v.get_secret_value()
-        return str(v)
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
+        """Build httpx.Client kwargs from an :class:`HTTPSettings` profile.
 
-
-    def _resolve_auth_headers(self, auth_profile: AuthProfile | None) -> dict[str, str]:
-        """Build Authorization header from an AuthSpec instance."""
-        if auth_profile is None:
-            return {}
-        if isinstance(auth_profile, NoAuth):
-            return {}
-        if isinstance(auth_profile, (TokenAuth, JWTAuth)):
-            token = _unwrap_secret(auth_profile.TOKEN)
-            if token:
-                return {"Authorization": f"Bearer {token}"}
-        elif isinstance(auth_profile, PasswordAuth):
-            username = auth_profile.USERNAME or ""
-            password = _unwrap_secret(auth_profile.PASSWORD) or ""
-            encoded = base64.b64encode(f"{username}:{password}".encode()).decode()
-            return {"Authorization": f"Basic {encoded}"}
-        elif isinstance(auth_profile, OAuth2Auth):
-            token = _unwrap_secret(auth_profile.TOKEN)
-            if token:
-                return {"Authorization": f"Bearer {token}"}
-        elif isinstance(auth_profile, OAuth2AuthCodeAuth):
-            token = _unwrap_secret(auth_profile.ACCESS_TOKEN)
-            if token:
-                return {"Authorization": f"Bearer {token}"}
-        return {}
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
-        """Build httpx.Client kwargs from an :class:`HTTPSettings` profile."""
+        Returns SDK-level config only (timeouts, redirects, TLS, custom
+        headers). Auth headers are injected by the auth strategy layer, not
+        here.
+        """
         timeout_connect = getattr(self, "TIMEOUT_CONNECT", 10.0)
         timeout_read = getattr(self, "TIMEOUT_READ", 30.0)
         timeout_write = getattr(self, "TIMEOUT_WRITE", 60.0)
@@ -149,10 +118,6 @@ class HTTPStorageProfile(Profile):
         max_redirects = getattr(self, "MAX_REDIRECTS", 10)
         verify = getattr(self, "VERIFY_SSL", True)
         custom_headers = getattr(self, "HEADERS", None) or {}
-
-        auth_headers = self._resolve_auth_headers(auth_profile)
-
-        headers = {**custom_headers, **auth_headers}
 
         kwargs: dict[str, t.Any] = {
             "timeout": httpx.Timeout(
@@ -165,7 +130,7 @@ class HTTPStorageProfile(Profile):
             "max_redirects": max_redirects,
             "verify": verify,
         }
-        if headers:
-            kwargs["headers"] = headers
+        if custom_headers:
+            kwargs["headers"] = dict(custom_headers)
 
         return kwargs

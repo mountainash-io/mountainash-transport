@@ -14,14 +14,12 @@ import re
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, NoAuth, OAuth2Auth, ServiceAccountAuth, TokenAuth
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from ...utils.secrets import _unwrap_secret
 
 __all__ = ["GCS_SPEC", "GCSStorageProfile"]
 
@@ -30,9 +28,6 @@ _PROJECT_ID_RE = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$")
 _BUCKET_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$")
 _IP_RE = re.compile(r"^\d+\.\d+\.\d+\.\d+$")
 
-_GCS_SCOPES: tuple[str, ...] = (
-    "https://www.googleapis.com/auth/devstorage.read_write",
-)
 
 def _validate_project(v: str) -> str:
     """Validate GCP project ID."""
@@ -165,95 +160,19 @@ class GCSStorageProfile(Profile):
         return base
 
 
-    def _resolve_credentials(self, auth_profile: AuthProfile | None) -> t.Any:
-        """Resolve a google-auth ``Credentials`` instance (or ``None``) from auth.
-
-        - ``ServiceAccountAuth`` with ``file``  → ``from_service_account_file``
-        - ``ServiceAccountAuth`` with ``info``  → ``from_service_account_info``
-        - ``TokenAuth``                         → ``google.oauth2.credentials.Credentials(token=...)``
-        - ``OAuth2Auth``                        → token-based Credentials with refresh data
-        - ``IAMAuth`` / ``NoAuth`` / missing    → ``None`` (SDK falls back to ADC or anonymous)
-        """
-        if auth_profile is None:
-            return None
-
-        if isinstance(auth_profile, ServiceAccountAuth):
-            sa_file = auth_profile.FILE
-            sa_info = auth_profile.INFO
-            if sa_file:
-                from google.oauth2 import service_account  # type: ignore[import-untyped]
-
-                return service_account.Credentials.from_service_account_file(
-                    str(sa_file), scopes=list(_GCS_SCOPES)
-                )
-            if sa_info:
-                from google.oauth2 import service_account  # type: ignore[import-untyped]
-
-                return service_account.Credentials.from_service_account_info(
-                    sa_info, scopes=list(_GCS_SCOPES)
-                )
-            return None
-
-        if isinstance(auth_profile, TokenAuth):
-            token = _unwrap_secret(auth_profile.TOKEN)
-            if not token:
-                return None
-            from google.oauth2.credentials import (  # type: ignore[import-untyped]
-                Credentials,
-            )
-
-            return Credentials(token=token)
-
-        if isinstance(auth_profile, OAuth2Auth):
-            access_token = _unwrap_secret(auth_profile.TOKEN)
-            refresh_token = _unwrap_secret(auth_profile.REFRESH_TOKEN)
-            client_id = auth_profile.CLIENT_ID
-            client_secret = _unwrap_secret(auth_profile.CLIENT_SECRET)
-            token_uri = auth_profile.SERVER_URI or "https://oauth2.googleapis.com/token"
-            if not access_token and not refresh_token:
-                return None
-            from google.oauth2.credentials import (  # type: ignore[import-untyped]
-                Credentials,
-            )
-
-            return Credentials(
-                token=access_token,
-                refresh_token=refresh_token,
-                token_uri=token_uri,
-                client_id=client_id,
-                client_secret=client_secret,
-                scopes=list(_GCS_SCOPES),
-            )
-
-        # IAMAuth / NoAuth / anything else: let the SDK's ambient resolution
-        # (google.auth.default() / anonymous client) take over.
-        return None
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build ``google.cloud.storage.Client`` kwargs from a :class:`GCSSettings` profile.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass a :class:`GCSSettings` instance in
-        practice.
+        Returns SDK-level config only (project, client options).
+        Credential resolution is handled by the auth strategy layer.
         """
         project = getattr(self, "PROJECT", None)
         api_endpoint = getattr(self, "API_ENDPOINT", None)
         user_project = getattr(self, "USER_PROJECT", None)
 
-        credentials = self._resolve_credentials(auth_profile)
-
         kwargs: dict[str, t.Any] = {
             "project": project,
-            "credentials": credentials,
         }
-
-        # NoAuth signals that the caller wants an anonymous client. Pass a
-        # hint the handler can act on; google-cloud-storage exposes
-        # ``Client.create_anonymous_client()`` rather than a constructor flag.
-        if isinstance(auth_profile, NoAuth):
-            kwargs["anonymous"] = True
 
         client_options_kwargs: dict[str, t.Any] = {}
         if api_endpoint:
