@@ -16,8 +16,8 @@ def parse_s3_path(path: str) -> tuple[str, str]:
         refers to the bucket root.
     """
 
-    bucket = s3_bucket(path)
-    key = s3_key(path)
+    bucket = s3_bucket(path, assume_s3=True)
+    key = s3_key(path, assume_s3=True)
 
     if bucket is None or key is None:
         raise ValueError(f"Invalid S3 path: {path}")

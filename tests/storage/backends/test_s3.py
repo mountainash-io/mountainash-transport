@@ -57,7 +57,7 @@ class TestParseS3Path:
     def test_bucket_with_trailing_slash(self):
         bucket, key = parse_s3_path("s3://my-bucket/prefix/")
         assert bucket == "my-bucket"
-        assert key == "prefix/"
+        assert key == "prefix"
 
 
 # ---------------------------------------------------------------------------
