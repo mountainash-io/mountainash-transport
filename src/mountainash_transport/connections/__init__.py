@@ -9,16 +9,14 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 # --- Legacy/existing public API (kept for backward compat) -------------------
 from .protocols import (
     OAuth2FlowProtocol, OAuth1FlowProtocol,
-    CallbackServerProtocol, ConnectionMixinProtocol,
+    CallbackServerProtocol,
 )
 from .errors import (
     ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
     TransportConnectionError, ConnectionTimeoutError,
 )
 from .oauth2.flow import OAuthFlow
-from .oauth2.mixin import OAuth2ConnectionMixin
 from .oauth1.flow import OAuth1Flow
-from .oauth1.mixin import OAuth1ConnectionMixin
 from .server.callback import LocalCallbackServer
 from .server.manual import extract_code_from_input, prompt_for_code
 
@@ -83,11 +81,11 @@ def create_connection(
 __all__ = [
     # Legacy
     "OAuth2FlowProtocol", "OAuth1FlowProtocol",
-    "CallbackServerProtocol", "ConnectionMixinProtocol",
+    "CallbackServerProtocol",
     "ConnectionError", "TokenExchangeError", "TokenRefreshError", "AuthorizationRequired",
     "TransportConnectionError", "ConnectionTimeoutError",
-    "OAuthFlow", "OAuth2ConnectionMixin",
-    "OAuth1Flow", "OAuth1ConnectionMixin",
+    "OAuthFlow",
+    "OAuth1Flow",
     "LocalCallbackServer", "extract_code_from_input", "prompt_for_code",
     # New
     "HTTPConnection", "NullConnection", "S3Connection", "OAuth2Connection", "OAuth1Connection",

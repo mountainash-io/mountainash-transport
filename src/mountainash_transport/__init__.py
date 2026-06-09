@@ -10,7 +10,6 @@ from .storage.registry import get_storage_backend, detect_provider_from_path
 
 # Protocols — for isinstance checks and type hints
 from .storage.protocols import (
-    StorageConnectionProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
     StorageListProtocol,
@@ -19,6 +18,8 @@ from .storage.protocols import (
     StorageCopyProtocol,
     StorageDirectoryProtocol,
 )
+from ._core.protocols import ConnectionProtocol
+from .connections.errors import TransportConnectionError
 
 # Constants
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -61,7 +62,8 @@ __all__ = [
     "__version__",
     "StorageFacade", "copy_between", "read_bytes", "storage",
     "get_storage_backend", "detect_provider_from_path",
-    "StorageConnectionProtocol", "StorageReadProtocol", "StorageWriteProtocol",
+    "ConnectionProtocol", "TransportConnectionError",
+    "StorageReadProtocol", "StorageWriteProtocol",
     "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
     "StorageCopyProtocol", "StorageDirectoryProtocol",
     "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",

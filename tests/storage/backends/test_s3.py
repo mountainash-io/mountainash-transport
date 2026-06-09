@@ -77,17 +77,9 @@ class TestRegistration:
 
 class TestConnection:
     def test_connect_raises_storage_connection_error_on_failure(self):
-        mock_auth = MagicMock()
-        mock_auth.settings = MagicMock(
-            SECRET_ACCESS_KEY="s",
-            ENDPOINT_URL=None,
-            ACCESS_KEY_ID="a",
-            REGION="us-east-1",
-        )
-        backend = S3StorageBackend(mock_auth)
-        with patch("boto3.client", side_effect=RuntimeError("boom")):
-            with pytest.raises(StorageConnectionError, match="boom"):
-                backend.connect()
+        backend = S3StorageBackend(None)
+        with pytest.raises(StorageConnectionError, match="requires a connection"):
+            backend.connect()
 
     def test_disconnect_clears_client(self):
         backend = _make_backend()
