@@ -5,6 +5,7 @@ from .strategies import (
     AuthStrategy,
     BasicAuthStrategy,
     BearerTokenStrategy,
+    IAMCredentialStrategy,
     NoAuthStrategy,
     OAuth1SignedStrategy,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "AuthStrategy",
     "BasicAuthStrategy",
     "BearerTokenStrategy",
+    "IAMCredentialStrategy",
     "NoAuthStrategy",
     "OAuth1SignedStrategy",
     "resolve_auth_strategy",

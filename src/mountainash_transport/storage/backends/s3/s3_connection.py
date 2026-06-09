@@ -38,9 +38,22 @@ class S3ConnectionMixin(StorageConnectionProtocol):
     def connect(self) -> None:
         """Create and cache a boto3 S3 client.
 
+        If an injected :class:`S3Connection` is available (``self._connection``),
+        its pre-built client is used directly.  Otherwise falls back to creating
+        a client from ``self.storage_profile.to_handler_kwargs()``.
+
         Raises:
             StorageConnectionError: if the boto3 client cannot be created.
         """
+        # Prefer injected connection (new path via create_connection factory).
+        _conn = getattr(self, "_connection", None)
+        if _conn is not None:
+            if not _conn.is_connected:
+                _conn.connect()
+            self._client = _conn.client
+            return
+
+        # Legacy fallback — build client directly from profile kwargs.
         try:
             import boto3  # type: ignore[import-untyped]
 

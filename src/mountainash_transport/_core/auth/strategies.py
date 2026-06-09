@@ -57,6 +57,30 @@ class BasicAuthStrategy:
         return result
 
 
+class IAMCredentialStrategy:
+    """Inject AWS IAM credentials into boto3 client kwargs."""
+
+    def __init__(
+        self,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        session_token: str | None = None,
+    ) -> None:
+        self._access_key_id = access_key_id
+        self._secret_access_key = secret_access_key
+        self._session_token = session_token
+
+    def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        result = {**kwargs}
+        if self._access_key_id:
+            result["aws_access_key_id"] = self._access_key_id
+        if self._secret_access_key:
+            result["aws_secret_access_key"] = self._secret_access_key
+        if self._session_token:
+            result["aws_session_token"] = self._session_token
+        return result
+
+
 class OAuth1SignedStrategy:
     """Inject authlib OAuth1Auth handler into httpx kwargs (auth= parameter)."""
 

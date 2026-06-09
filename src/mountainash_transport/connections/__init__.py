@@ -25,6 +25,7 @@ from .server.manual import extract_code_from_input, prompt_for_code
 # --- New connection classes ---------------------------------------------------
 from .http import HTTPConnection
 from .null import NullConnection
+from .s3 import S3Connection
 from .oauth2.connection import OAuth2Connection
 from .oauth1.connection import OAuth1Connection
 
@@ -38,6 +39,11 @@ if t.TYPE_CHECKING:
 _PROVIDER_CONNECTION_MAP: dict[str, type] = {
     "http": HTTPConnection,
     "local": NullConnection,
+    "s3": S3Connection,
+    "s3express": S3Connection,
+    "r2": S3Connection,
+    "minio": S3Connection,
+    "b2": S3Connection,
 }
 
 
@@ -84,6 +90,6 @@ __all__ = [
     "OAuth1Flow", "OAuth1ConnectionMixin",
     "LocalCallbackServer", "extract_code_from_input", "prompt_for_code",
     # New
-    "HTTPConnection", "NullConnection", "OAuth2Connection", "OAuth1Connection",
+    "HTTPConnection", "NullConnection", "S3Connection", "OAuth2Connection", "OAuth1Connection",
     "create_connection",
 ]
