@@ -6,6 +6,7 @@ from .strategies import (
     BasicAuthStrategy,
     BearerTokenStrategy,
     NoAuthStrategy,
+    OAuth1SignedStrategy,
 )
 from .resolver import resolve_auth_strategy
 
@@ -14,5 +15,6 @@ __all__ = [
     "BasicAuthStrategy",
     "BearerTokenStrategy",
     "NoAuthStrategy",
+    "OAuth1SignedStrategy",
     "resolve_auth_strategy",
 ]

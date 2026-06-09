@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import importlib
 import typing as t
 
 from typing import Protocol, runtime_checkable
@@ -53,4 +54,38 @@ class BasicAuthStrategy:
         existing = dict(result.get("headers", {}))
         existing["Authorization"] = f"Basic {encoded}"
         result["headers"] = existing
+        return result
+
+
+class OAuth1SignedStrategy:
+    """Inject authlib OAuth1Auth handler into httpx kwargs (auth= parameter)."""
+
+    def __init__(
+        self,
+        consumer_key: str,
+        consumer_secret: str,
+        oauth_token: str,
+        oauth_token_secret: str,
+    ) -> None:
+        self._consumer_key = consumer_key
+        self._consumer_secret = consumer_secret
+        self._oauth_token = oauth_token
+        self._oauth_token_secret = oauth_token_secret
+
+    def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        try:
+            _mod = importlib.import_module("authlib.integrations.httpx_client.oauth1_client")
+            AuthlibOAuth1Auth = _mod.OAuth1Auth
+        except ImportError as exc:
+            raise ImportError(
+                "OAuth1 requires authlib: pip install mountainash-transport[oauth1]"
+            ) from exc
+
+        result = {**kwargs}
+        result["auth"] = AuthlibOAuth1Auth(
+            client_id=self._consumer_key,
+            client_secret=self._consumer_secret,
+            token=self._oauth_token,
+            token_secret=self._oauth_token_secret,
+        )
         return result
