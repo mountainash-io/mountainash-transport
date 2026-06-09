@@ -12,9 +12,9 @@ import pytest
 
 from mountainash_auth_client import NoAuth
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
-from mountainash_utils_files.settings.profiles import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.settings.profiles import (
     LocalStorageProfile,
     LOCAL_SPEC,
     S3StorageProfile,

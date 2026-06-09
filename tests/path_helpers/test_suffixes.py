@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_utils_files.path_helpers.suffixes import infer_pipeline, SUFFIX_TRANSFORMS
-from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline
+from mountainash_transport.path_helpers.suffixes import infer_pipeline, SUFFIX_TRANSFORMS
+from mountainash_transport.storage_transforms import GPG, Gzip, Pipeline
 
 
 def _kinds(pipeline: Pipeline) -> list[str]:
@@ -98,18 +98,18 @@ def test_no_splitting_on_dot_in_directory_segment():
 
 
 def test_infer_pipeline_exported_from_path_helpers():
-    from mountainash_utils_files.path_helpers import infer_pipeline as from_subpkg
-    from mountainash_utils_files.path_helpers.suffixes import infer_pipeline as from_mod
+    from mountainash_transport.path_helpers import infer_pipeline as from_subpkg
+    from mountainash_transport.path_helpers.suffixes import infer_pipeline as from_mod
     assert from_subpkg is from_mod
 
 
 def test_infer_pipeline_exported_at_top_level():
-    from mountainash_utils_files import infer_pipeline as from_top
-    from mountainash_utils_files.path_helpers.suffixes import infer_pipeline as from_mod
+    from mountainash_transport import infer_pipeline as from_top
+    from mountainash_transport.path_helpers.suffixes import infer_pipeline as from_mod
     assert from_top is from_mod
 
 
 def test_suffix_transforms_exported_from_path_helpers():
-    from mountainash_utils_files.path_helpers import SUFFIX_TRANSFORMS as from_subpkg
-    from mountainash_utils_files.path_helpers.suffixes import SUFFIX_TRANSFORMS as from_mod
+    from mountainash_transport.path_helpers import SUFFIX_TRANSFORMS as from_subpkg
+    from mountainash_transport.path_helpers.suffixes import SUFFIX_TRANSFORMS as from_mod
     assert from_subpkg is from_mod

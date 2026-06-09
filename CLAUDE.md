@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**mountainash-utils-files** is a Python package for unified file operations across multiple storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), Azure Blob/Files, GCS, SFTP/SSH, FTP, SMB, HTTP/HTTPS, and GitHub (read-only). It provides a consistent interface for file operations, path manipulation, and data synchronization across different storage backends.
+**mountainash-transport** is a Python package for unified file operations across multiple storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), Azure Blob/Files, GCS, SFTP/SSH, FTP, SMB, HTTP/HTTPS, and GitHub (read-only). It provides a consistent interface for file operations, path manipulation, and data synchronization across different storage backends.
 
 Settings follow the **profile + auth separation pattern** — see the Settings Architecture section below. Storage profiles implement `StorageProfileProtocol` (`to_handler_kwargs()` + `get_connection_url()`). Authentication is handled externally via `mountainash-auth-client` auth profiles (`IAMAuth`, `TokenAuth`, `PasswordAuth`, `NoAuth`, etc.).
 
@@ -64,7 +64,7 @@ right-to-left into a `Pipeline`. `read_bytes` accepts an opt-in `infer=True`
 flag that routes through this inference.
 
 ```python
-from mountainash_utils_files import read_bytes, GPG
+from mountainash_transport import read_bytes, GPG
 
 # Auto-decompress a gzip-encoded file.
 plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
@@ -87,7 +87,7 @@ inference is intentionally not provided — writes take an explicit
 ### Package Structure
 
 ```
-src/mountainash_utils_files/
+src/mountainash_transport/
 ├── __init__.py                    # Public API (StorageFacade, read_bytes, protocols, constants, transforms)
 ├── __version__.py
 ├── constants.py                   # CONST_STORAGE_PROVIDER_TYPE + other storage enums
@@ -273,8 +273,8 @@ tests/
 ### Profile + auth separation
 
 ```python
-from mountainash_utils_files.settings.profiles.s3_storage_profile import S3StorageProfile
-from mountainash_utils_files.settings.profiles.local_storage_profile import LocalStorageProfile
+from mountainash_transport.settings.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.profiles.local_storage_profile import LocalStorageProfile
 from mountainash_auth_client import IAMAuth, TokenAuth, NoAuth
 
 # S3-family: single class discriminated by FLAVOR
@@ -292,7 +292,7 @@ local_profile = LocalStorageProfile(ROOT_PATH="/data")
 ### Storage facade and read_bytes
 
 ```python
-from mountainash_utils_files import StorageFacade, read_bytes
+from mountainash_transport import StorageFacade, read_bytes
 from mountainash_auth_client import TokenAuth
 
 # Facade from a path — provider inferred from the URL scheme
@@ -313,8 +313,8 @@ local = read_bytes("/tmp/local-file")
 ### Storage backend registry
 
 ```python
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.storage_registry import get_storage_backend
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage_registry import get_storage_backend
 from mountainash_auth_client import IAMAuth
 
 auth = IAMAuth(ACCESS_KEY_ID="...", SECRET_ACCESS_KEY="...")

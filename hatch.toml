@@ -2,10 +2,10 @@
 allow-direct-references = true
 
 [version]
-path = "src/mountainash_utils_files/__version__.py"
+path = "src/mountainash_transport/__version__.py"
 
 [build.targets.wheel]
-packages = ["src/mountainash_utils_files"]
+packages = ["src/mountainash_transport"]
 
 #================
 # Env: build_github
@@ -182,4 +182,4 @@ radon-cc-detail = "radon cc ./src"
 installer = "uv"
 dependencies = ["mypy==1.10.1"]
 [envs.mypy.scripts]
-check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
+check = "mypy --install-types --non-interactive {args:src/mountainash_transport tests}"

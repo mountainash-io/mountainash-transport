@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 from typing import BinaryIO
 
-from mountainash_utils_files.storage_transforms import Pipeline
+from mountainash_transport.storage_transforms import Pipeline
 
 
 class _RecordingTransform:

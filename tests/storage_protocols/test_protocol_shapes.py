@@ -7,8 +7,8 @@ from typing import BinaryIO
 
 import pytest
 
-from mountainash_utils_files.dataclasses.file_metadata import FileMetadata
-from mountainash_utils_files.storage_protocols import (
+from mountainash_transport.dataclasses.file_metadata import FileMetadata
+from mountainash_transport.storage_protocols import (
     StorageConnectionProtocol,
     StorageCopyProtocol,
     StorageDeleteProtocol,

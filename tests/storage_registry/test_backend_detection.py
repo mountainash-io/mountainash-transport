@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.storage_registry.backend_detection import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage_registry.backend_detection import (
     detect_provider_from_path,
 )
 
@@ -90,12 +90,12 @@ def test_describe_only_scheme_raises_no_backend():
 
 
 def test_http_scheme_resolves_to_http_provider():
-    from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
+    from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
     assert detect_provider_from_path("http://example.com/file.txt") == CONST_STORAGE_PROVIDER_TYPE.HTTP
 
 
 def test_https_scheme_resolves_to_http_provider():
-    from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
+    from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
     assert detect_provider_from_path("https://example.com/file.txt") == CONST_STORAGE_PROVIDER_TYPE.HTTP
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from mountainash_utils_files.storage_transforms import Pipeline
+from mountainash_transport.storage_transforms import Pipeline
 
 # GPG suite is integration-only: requires the gpg binary on PATH and python-gnupg.
 pytestmark = pytest.mark.integration
@@ -27,13 +27,13 @@ def gpg_home(tmp_path) -> Path:
 
 
 def test_gpg_implements_stream_transform_protocol():
-    from mountainash_utils_files.storage_transforms import GPG, StreamTransform
+    from mountainash_transport.storage_transforms import GPG, StreamTransform
     # recipients not required for protocol conformance (only required for wrap())
     assert isinstance(GPG(), StreamTransform)
 
 
 def test_gpg_round_trip_via_pipeline(gpg_home):
-    from mountainash_utils_files.storage_transforms import GPG
+    from mountainash_transport.storage_transforms import GPG
 
     transform = GPG(
         recipients=[_RECIPIENT],
@@ -49,15 +49,15 @@ def test_gpg_round_trip_via_pipeline(gpg_home):
 
 
 def test_gpg_wrap_without_recipients_raises_transform_error():
-    from mountainash_utils_files.exceptions import TransformError
-    from mountainash_utils_files.storage_transforms import GPG
+    from mountainash_transport.exceptions import TransformError
+    from mountainash_transport.storage_transforms import GPG
 
     with pytest.raises(TransformError, match="recipients"):
         GPG().wrap(io.BytesIO(b"data"))
 
 
 def test_gpg_pipeline_with_gzip_round_trip(gpg_home):
-    from mountainash_utils_files.storage_transforms import GPG, Gzip
+    from mountainash_transport.storage_transforms import GPG, Gzip
 
     pipeline = Pipeline(
         Gzip(),
@@ -77,8 +77,8 @@ def test_gpg_unwrap_wrong_passphrase_raises_transform_error(tmp_path):
     if shutil.which("gpg") is None:
         pytest.skip("gpg binary not available on PATH")
 
-    from mountainash_utils_files.exceptions import TransformError
-    from mountainash_utils_files.storage_transforms import GPG
+    from mountainash_transport.exceptions import TransformError
+    from mountainash_transport.storage_transforms import GPG
 
     # Generate a test key WITH a passphrase
     gpg_home = tmp_path / "gnupg"

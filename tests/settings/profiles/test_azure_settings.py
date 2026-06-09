@@ -9,8 +9,8 @@ import pytest
 from mountainash_auth_client import AzureADAuth, NoAuth, PasswordAuth, TokenAuth
 from pydantic import SecretStr
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.profiles import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.profiles import (
     AZURE_STORAGE_SPEC,
     AzureStorageProfile,
     validate_service_type,

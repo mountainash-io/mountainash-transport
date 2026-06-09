@@ -5,8 +5,8 @@ import dataclasses
 
 import pytest
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.path_helpers.scheme import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.path_helpers.scheme import (
     SCHEMES,
     SchemeSpec,
     _ALIAS_TO_CANONICAL,

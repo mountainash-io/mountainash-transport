@@ -1,4 +1,4 @@
-# mountainash-utils-files
+# mountainash-transport
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
 
@@ -30,21 +30,21 @@ Unified file operations across multiple storage systems. Read, write, list, copy
 ## Installation
 
 ```bash
-pip install mountainash-utils-files
+pip install mountainash-transport
 
 # With optional extras
-pip install mountainash-utils-files[s3]        # s3fs, minio
-pip install mountainash-utils-files[gcs]       # google-cloud-storage, gcsfs
-pip install mountainash-utils-files[azure]     # azure-storage-blob, adlfs
-pip install mountainash-utils-files[sftp]      # paramiko, smart-open[ssh]
-pip install mountainash-utils-files[encryption] # python-gnupg
-pip install mountainash-utils-files[all]       # everything
+pip install mountainash-transport[s3]        # s3fs, minio
+pip install mountainash-transport[gcs]       # google-cloud-storage, gcsfs
+pip install mountainash-transport[azure]     # azure-storage-blob, adlfs
+pip install mountainash-transport[sftp]      # paramiko, smart-open[ssh]
+pip install mountainash-transport[encryption] # python-gnupg
+pip install mountainash-transport[all]       # everything
 ```
 
 ## Quick Start
 
 ```python
-from mountainash_utils_files import StorageFacade, read_bytes
+from mountainash_transport import StorageFacade, read_bytes
 
 # Read from any supported scheme
 data = read_bytes("s3://my-bucket/data.parquet")
@@ -60,7 +60,7 @@ facade.copy("s3://my-bucket/src.txt", "s3://my-bucket/dst.txt")
 plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
 
 # Explicit pipeline
-from mountainash_utils_files import Pipeline, Gzip
+from mountainash_transport import Pipeline, Gzip
 facade.write("s3://bucket/out.gz", data, pipeline=Pipeline(Gzip()))
 ```
 

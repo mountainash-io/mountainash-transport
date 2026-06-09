@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 import pytest
 from upath import UPath
 
-from mountainash_utils_files.path_helpers.storage_path import StoragePath
+from mountainash_transport.path_helpers.storage_path import StoragePath
 
 
 @pytest.mark.parametrize(
@@ -306,5 +306,5 @@ def test_bug_4_path_util_classes_dispatcher_absent():
     assert not hasattr(StoragePath, "path_util_classes")
     # The legacy top-level symbol is also gone — if it ever came back,
     # the hygiene pass's core decision has been undone.
-    import mountainash_utils_files as pkg
+    import mountainash_transport as pkg
     assert not hasattr(pkg, "PathHelper")

@@ -9,14 +9,14 @@ import tempfile
 
 import pytest
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.dataclasses.file_metadata import FileMetadata
-from mountainash_utils_files.exceptions import PathNotFoundError
-from mountainash_utils_files.storage_registry import get_registered_backends
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.dataclasses.file_metadata import FileMetadata
+from mountainash_transport.exceptions import PathNotFoundError
+from mountainash_transport.storage_registry import get_registered_backends
 
 # Trigger backend registration
-import mountainash_utils_files.storage_backends  # noqa: F401
-from mountainash_utils_files.storage_backends.local import LocalStorageBackend
+import mountainash_transport.storage_backends  # noqa: F401
+from mountainash_transport.storage_backends.local import LocalStorageBackend
 
 
 # ---------------------------------------------------------------------------
