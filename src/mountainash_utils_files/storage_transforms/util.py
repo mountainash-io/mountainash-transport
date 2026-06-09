@@ -25,12 +25,20 @@ def materialize(
     """
     if to == "memory":
         buffer: BinaryIO = io.BytesIO()
+
+        shutil.copyfileobj(stream, buffer)
+        length = buffer.tell()
+        buffer.seek(0)
+        return buffer, length
+
     elif to == "tempfile":
-        buffer = tempfile.SpooledTemporaryFile(max_size=memory_cutoff)
+        file_buffer: tempfile.SpooledTemporaryFile = tempfile.SpooledTemporaryFile(max_size=memory_cutoff)
+        shutil.copyfileobj(stream, file_buffer)
+
+        #Need to open stream to the file
+        length = file_buffer.tell()
+        file_buffer.seek(0)
+        return file_buffer, length
+
     else:
         raise ValueError(f"to={to!r} must be 'memory' or 'tempfile'")
-
-    shutil.copyfileobj(stream, buffer)
-    length = buffer.tell()
-    buffer.seek(0)
-    return buffer, length

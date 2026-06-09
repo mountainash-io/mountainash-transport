@@ -14,16 +14,30 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import AuthProfile, PasswordAuth
 
-from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
-from ..profile import StorageProfile
+from ..profile_spec import MISSING, ParameterSpec, StorageProfileSpec
+from mountainash_settings.profiles import Profile
+from ..profile_protocol import StorageProfileProtocol
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
+from ..utils.secrets import _unwrap_secret
 
-__all__ = ["FTP_SPEC", "FTPSettings"]
+__all__ = ["FTP_SPEC", "FTPStorageProfile"]
+
+    # Canonical descriptor-field name → ftplib.FTP ``__init__`` kwarg name.
+_INIT_DRIVER_KEYS: tuple[tuple[str, str], ...] = (
+    ("HOST", "host"),
+    ("USERNAME", "user"),
+    ("ACCOUNT", "acct"),
+    ("TIMEOUT", "timeout"),
+    ("SOURCE_ADDRESS", "source_address"),
+    ("ENCODING", "encoding"),
+)
 
 
-FTP_SPEC = StorageDescriptor(
+
+FTP_SPEC = StorageProfileSpec(
     name="ftp",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.FTP,
     sdk_package=None,  # stdlib ftplib
@@ -129,14 +143,14 @@ FTP_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "FTPSettings", auth=None) -> dict[str, t.Any]:
-    from ..adapters.ftp import build_handler_kwargs
+# def _adapter(profile: "FTPStorageProfile", auth=None) -> dict[str, t.Any]:
+#     from ..adapters.ftp import build_handler_kwargs
 
-    return build_handler_kwargs(profile, auth)
+#     return build_handler_kwargs(profile, auth)
 
 
 @register
-class FTPSettings(StorageProfile):
+class FTPStorageProfile(Profile):
     """FTP / FTPS settings.
 
     Fields are installed from :data:`FTP_SPEC` by the
@@ -162,7 +176,6 @@ class FTPSettings(StorageProfile):
     """
 
     __spec__ = FTP_SPEC
-    __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -175,3 +188,79 @@ class FTPSettings(StorageProfile):
         if root:
             url = f"{url}{root}"
         return url
+
+
+
+
+
+
+    def _unwrap_secret(self, v: t.Any) -> t.Optional[str]:
+        if v is None:
+            return None
+        if hasattr(v, "get_secret_value"):
+            return v.get_secret_value()
+        return str(v)
+
+
+    def _auth_kwargs(self, auth_profile: AuthProfile | None) -> dict[str, t.Any]:
+        """Translate the discriminated auth union into ftplib kwargs.
+
+        - :class:`PasswordAuth` → ``{"passwd": ...}`` (ftplib uses ``passwd``,
+        not ``password``). If a username is present on the auth spec, it
+        overrides ``USERNAME`` on the profile.
+        - :class:`NoAuth`       → ``{}`` (caller relies on
+        ``USERNAME="anonymous"``).
+        """
+        if auth_profile is None:
+            return {}
+        if isinstance(auth_profile, PasswordAuth):
+            out: dict[str, t.Any] = {}
+            username = auth_profile.USERNAME
+            password = self._unwrap_secret(auth_profile.PASSWORD)
+            if username:
+                out["user"] = username
+            if password is not None:
+                out["passwd"] = password
+            return out
+        # NoAuth / anything else: leave init kwargs alone.
+        return {}
+
+
+    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+        """Build an ftplib construction envelope from an :class:`FTPSettings`.
+
+        Signature widened to ``StorageProfile`` to satisfy the upstream
+        ``__adapter__: Callable[[Profile], dict[str, Any]]``
+        contract; callers always pass an :class:`FTPSettings` instance in
+        practice.
+
+        Returns a dict with ``ftp_class_path`` + ``init_kwargs`` +
+        ``_connect_kwargs`` + ``_post_connect`` — see module docstring.
+        """
+        use_tls = bool(getattr(self, "USE_TLS", False))
+        ftp_class_path = "ftplib.FTP_TLS" if use_tls else "ftplib.FTP"
+
+        init_kwargs: dict[str, t.Any] = {}
+        for field_name, driver_key in _INIT_DRIVER_KEYS:
+            value = getattr(self, field_name, None)
+            if value is None:
+                continue
+            init_kwargs[driver_key] = value
+
+        init_kwargs.update(self._auth_kwargs(auth_profile))
+
+        connect_kwargs: dict[str, t.Any] = {}
+        port = getattr(self, "PORT", None)
+        if port is not None:
+            connect_kwargs["port"] = port
+
+        post_connect: dict[str, t.Any] = {
+            "passive": bool(getattr(self, "PASSIVE_MODE", True)),
+        }
+
+        return {
+            "ftp_class_path": ftp_class_path,
+            "init_kwargs": init_kwargs,
+            "_connect_kwargs": connect_kwargs,
+            "_post_connect": post_connect,
+        }

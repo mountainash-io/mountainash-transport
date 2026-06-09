@@ -6,9 +6,10 @@ import gzip
 from typing import BinaryIO
 
 from ._stream_encoder import GzipCompressingReader
+from .base import StreamTransform
 
 
-class Gzip:
+class Gzip(StreamTransform):
     """Gzip transform — compresses on wrap, decompresses on unwrap.
 
     Uses Python stdlib — no external dependency required.

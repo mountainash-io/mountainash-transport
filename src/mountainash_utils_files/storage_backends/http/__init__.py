@@ -17,6 +17,7 @@ from mountainash_utils_files.exceptions import (
     StorageError,
 )
 from mountainash_utils_files.storage_registry import register_storage_backend
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
 
 
 def _raise_for_status(response: httpx.Response, path: str) -> None:
@@ -59,25 +60,14 @@ class HTTPStorageBackend:
     and StorageMetadataProtocol using httpx.
     """
 
-    def __init__(self, profile=None, *, auth=None) -> None:
-        self.auth_params = profile
-        self.auth = auth
+    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+        self.storage_profile = storage_profile
+        self.auth_profile = auth_profile
         self._client: httpx.Client | None = None
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
-            kwargs: dict[str, t.Any] = {}
-            if hasattr(self.auth_params, "to_handler_kwargs"):
-                kwargs = self.auth_params.to_handler_kwargs(auth=self.auth)
-            elif self.auth is not None:
-                # No profile — build minimal kwargs from direct auth via adapter.
-                from mountainash_utils_files.settings.adapters.http import (
-                    _resolve_auth_headers,
-                )
-
-                headers = _resolve_auth_headers(self.auth)
-                if headers:
-                    kwargs["headers"] = headers
+            kwargs = self.storage_profile.to_handler_kwargs(auth_profile=self.auth_profile)
             self._client = httpx.Client(**kwargs)
         return self._client
 

@@ -1,4 +1,4 @@
-"""Tests for FTPSettings — FTP / FTPS (ftplib) settings."""
+"""Tests for FTPStorageProfile — FTP / FTPS (ftplib) settings."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from mountainash_auth_client import NoAuth, PasswordAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.ftp_settings import (
+from mountainash_utils_files.settings.profiles import (
     FTP_SPEC,
-    FTPSettings,
+    FTPStorageProfile,
 )
 
 
@@ -21,7 +21,7 @@ def _make(*, auth=None, host: str = "ftp.example", **extra):
         "auth": auth if auth is not None else NoAuth(),
     }
     kwargs.update(extra)
-    return FTPSettings(**kwargs)
+    return FTPStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -47,7 +47,7 @@ class TestFTPPasswordAuth:
             USERNAME="nathan", PASSWORD=SecretStr("pw"),
         )
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         init = kw["init_kwargs"]
         assert init["user"] == "nathan"
         # ftplib uses "passwd" NOT "password".

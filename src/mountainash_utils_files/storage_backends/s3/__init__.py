@@ -17,6 +17,7 @@ import typing as t
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.storage_registry import register_storage_backend
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
 
 from .s3_connection import S3ConnectionMixin
 from .s3_copy import S3CopyMixin
@@ -52,9 +53,10 @@ class S3StorageBackend(
     implemented.
     """
 
-    def __init__(self, profile=None, *, auth=None) -> None:
-        self.auth_params = profile
-        self.auth = auth
+    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+
+        self.storage_profile = storage_profile
+        self.auth_profile = auth_profile
         self._client: t.Any = None
 
 

@@ -6,8 +6,9 @@ from typing import BinaryIO
 
 from .s3_path import parse_s3_path
 
+from mountainash_utils_files.storage_protocols import StorageWriteProtocol
 
-class S3WriteMixin:
+class S3WriteMixin(StorageWriteProtocol):
     """Write mixin for AWS S3."""
 
     def write_from_bytes(self, path: str, data: bytes) -> None:

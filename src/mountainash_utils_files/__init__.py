@@ -52,9 +52,9 @@ from . import storage_backends  # noqa: F401
 
 
 def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-            profile=None, *, auth=None) -> StorageFacade:
+            profile=None, *, auth_profile=None) -> StorageFacade:
     """Convenience factory for creating a StorageFacade."""
-    return StorageFacade(provider_type, profile, auth=auth)
+    return StorageFacade(provider_type, profile, auth_profile=auth_profile)
 
 
 __all__ = [

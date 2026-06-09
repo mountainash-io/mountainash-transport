@@ -17,7 +17,7 @@ exercised by whichever phase fully wires each backend.
 from __future__ import annotations
 
 # Trigger provider registration so STORAGE_REGISTRY is populated.
-import mountainash_utils_files.settings.providers  # noqa: F401
+import mountainash_utils_files.settings.profiles  # noqa: F401
 
 from mountainash_settings.profiles import spec_invariants_for
 from mountainash_utils_files.settings.registry import STORAGE_REGISTRY

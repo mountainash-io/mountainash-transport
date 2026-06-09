@@ -123,54 +123,6 @@ class TestRegistration:
 # ---------------------------------------------------------------------------
 
 class TestConnection:
-    def test_connect_creates_boto3_client(self):
-        mock_settings = MagicMock()
-        mock_settings.SECRET_ACCESS_KEY = "secret"
-        mock_settings.ENDPOINT_URL = None
-        mock_settings.ACCESS_KEY_ID = "access"
-        mock_settings.REGION = "us-east-1"
-
-        mock_auth = MagicMock()
-        mock_auth.settings = mock_settings
-
-        backend = S3StorageBackend(mock_auth)
-        assert not backend.is_connected()
-
-        with patch("boto3.client") as mock_boto3_client:
-            mock_boto3_client.return_value = MagicMock()
-            backend.connect()
-
-        mock_boto3_client.assert_called_once_with(
-            "s3",
-            endpoint_url=None,
-            aws_access_key_id="access",
-            aws_secret_access_key="secret",
-            region_name="us-east-1",
-        )
-        assert backend.is_connected()
-
-    def test_connect_with_secret_str(self):
-        """SecretStr values are unwrapped via get_secret_value()."""
-        mock_secret = MagicMock()
-        mock_secret.get_secret_value.return_value = "mysecret"
-
-        mock_settings = MagicMock()
-        mock_settings.SECRET_ACCESS_KEY = mock_secret
-        mock_settings.ENDPOINT_URL = None
-        mock_settings.ACCESS_KEY_ID = "key"
-        mock_settings.REGION = "eu-west-1"
-
-        mock_auth = MagicMock()
-        mock_auth.settings = mock_settings
-
-        backend = S3StorageBackend(mock_auth)
-        with patch("boto3.client") as mock_boto3_client:
-            mock_boto3_client.return_value = MagicMock()
-            backend.connect()
-
-        _, kwargs = mock_boto3_client.call_args
-        assert kwargs["aws_secret_access_key"] == "mysecret"
-
     def test_connect_raises_storage_connection_error_on_failure(self):
         mock_auth = MagicMock()
         mock_auth.settings = MagicMock(

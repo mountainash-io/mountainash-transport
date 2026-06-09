@@ -1,4 +1,4 @@
-"""Tests for SSHSettings — unified SSH + SFTP settings."""
+"""Tests for SSHStorageProfile — unified SSH + SFTP settings."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from mountainash_auth_client import CertificateAuth, KerberosAuth, NoAuth, Passw
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.ssh_settings import (
+from mountainash_utils_files.settings.profiles import (
     SSH_SPEC,
-    SSHSettings,
+    SSHStorageProfile,
 )
 
 
@@ -21,7 +21,7 @@ def _make(*, host: str = "server.example", username: str = "alice", **extra):
         "USERNAME": username,
     }
     kwargs.update(extra)
-    return SSHSettings(**kwargs)
+    return SSHStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -33,7 +33,7 @@ class TestSSHConstruction:
 
     def test_username_required(self):
         with pytest.raises(Exception):
-            SSHSettings(
+            SSHStorageProfile(
                 PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.SSH,
                 HOST="h",
                 USERNAME="",
@@ -74,7 +74,7 @@ class TestSSHFakeFieldsAbsent:
         ],
     )
     def test_fake_ssh_field_absent(self, field):
-        assert field not in SSHSettings.model_fields
+        assert field not in SSHStorageProfile.model_fields
 
     def test_extras_silently_ignored(self):
         """Profile inherits extra='ignore' -- unknown kwargs drop."""
@@ -91,14 +91,14 @@ class TestSSHPasswordAuth:
     def test_password_becomes_plain_string_in_kwargs(self):
         auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         # Unwrapped -- paramiko.SSHClient.connect takes a plain string.
         assert kw["password"] == "pw"
 
     def test_password_kwargs_includes_canonical_keys(self):
         auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["hostname"] == "server.example"
         assert kw["port"] == 22
         assert kw["username"] == "alice"
@@ -115,7 +115,7 @@ class TestSSHCertificateAuth:
             PRIVATE_KEY_PATH="/home/alice/.ssh/id_ed25519",
         )
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["key_filename"] == "/home/alice/.ssh/id_ed25519"
         assert "pkey" not in kw
 
@@ -124,7 +124,7 @@ class TestSSHCertificateAuth:
             PRIVATE_KEY=SecretStr("-----BEGIN OPENSSH PRIVATE KEY-----\n..."),
         )
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert "pkey" in kw
         assert kw["pkey"].startswith("-----BEGIN OPENSSH")
         assert "key_filename" not in kw
@@ -135,7 +135,7 @@ class TestSSHCertificateAuth:
             PASSPHRASE=SecretStr("kpw"),
         )
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["passphrase"] == "kpw"
 
 
@@ -144,7 +144,7 @@ class TestSSHKerberosAuth:
     def test_kerberos_sets_gss_flags(self):
         auth = KerberosAuth(PRINCIPAL="alice@EXAMPLE.COM")
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["gss_auth"] is True
         assert kw["gss_kex"] is True
         assert kw["gss_host"] == "server.example"

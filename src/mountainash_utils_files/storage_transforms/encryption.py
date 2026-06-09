@@ -15,7 +15,9 @@ import io
 from typing import Any, BinaryIO
 
 from mountainash_utils_files.exceptions import TransformError
+from .base import StreamTransform
 
+#TERCHDEBT: Need to use GPGHelper here!
 
 def _import_gnupg() -> Any:
     try:
@@ -28,7 +30,7 @@ def _import_gnupg() -> Any:
     return gnupg
 
 
-class GPG:
+class GPG(StreamTransform):
     """GPG transform — encrypts on wrap, decrypts on unwrap.
 
     Args:

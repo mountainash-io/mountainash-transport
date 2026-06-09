@@ -20,13 +20,15 @@ from mountainash_utils_files.storage_protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
 )
-from mountainash_auth_client import AuthMode
+from mountainash_auth_client import AuthProfile
 from mountainash_utils_files.storage_registry import (
     detect_provider_from_path,
     get_storage_backend,
 )
 from mountainash_utils_files.path_helpers.suffixes import infer_pipeline as _infer_pipeline
 from mountainash_utils_files.storage_transforms import GPG, Gzip, Pipeline, StreamTransform
+
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
 
 
 class _PairedStream(io.RawIOBase):
@@ -72,11 +74,11 @@ class StorageFacade:
     def __init__(
         self,
         provider_type: CONST_STORAGE_PROVIDER_TYPE,
-        profile: typing.Any = None,
+        storage_profile: StorageProfileProtocol | None = None,
         *,
-        auth: AuthMode | None = None,
+        auth_profile: AuthProfile | None = None,
     ) -> None:
-        self._backend = get_storage_backend(provider_type, profile, auth=auth)
+        self._backend = get_storage_backend(provider_type, storage_profile, auth_profile=auth_profile)
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -85,22 +87,22 @@ class StorageFacade:
     @classmethod
     def for_local(cls) -> StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
-        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile=None)
+        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, storage_profile=None)
 
     @classmethod
     def from_path(
         cls,
         path: str,
-        profile: typing.Any = None,
+        storage_profile: StorageProfileProtocol | None = None,
         *,
-        auth: AuthMode | None = None,
+        auth_profile: AuthProfile | None = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
         Args:
             path: Path string, optionally with a URL scheme.
             profile: Optional storage profile forwarded to the backend.
-            auth: Optional direct AuthMode instance (e.g. TokenAuth, PasswordAuth).
+            auth: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
                 When provided, overrides any Authorization header set by *profile*.
 
         Returns:
@@ -110,7 +112,7 @@ class StorageFacade:
             ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
         provider = detect_provider_from_path(path)
-        return cls(provider_type=provider, profile=profile, auth=auth)
+        return cls(provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile)
 
     # ------------------------------------------------------------------
     # Protocol introspection

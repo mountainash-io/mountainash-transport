@@ -1,4 +1,4 @@
-"""Tests for GCSSettings — Google Cloud Storage settings."""
+"""Tests for GCSStorageProfile — Google Cloud Storage settings."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from mountainash_auth_client import NoAuth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.gcs_settings import (
+from mountainash_utils_files.settings.profiles import (
     GCS_SPEC,
-    GCSSettings,
+    GCSStorageProfile,
 )
 
 
@@ -21,11 +21,11 @@ def _make(project: str = "my-project-id", **extra):
         "auth": NoAuth(),
     }
     kwargs.update(extra)
-    return GCSSettings(**kwargs)
+    return GCSStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
-class TestGCSSettingsConstruction:
+class TestGCSStorageProfileConstruction:
     def test_instantiates_with_minimal_fields(self):
         s = _make()
         assert s.PROJECT == "my-project-id"
@@ -61,26 +61,26 @@ class TestGCSSettingsConstruction:
 class TestGCSFieldSurface:
     def test_oauth_credentials_field_removed(self):
         """Regression: dead OAUTH_CREDENTIALS field is not present."""
-        assert "OAUTH_CREDENTIALS" not in GCSSettings.model_fields
+        assert "OAUTH_CREDENTIALS" not in GCSStorageProfile.model_fields
 
     def test_api_version_field_not_declared(self):
         """Regression: API_VERSION was a bug — not referenced / not declared."""
         # GCS descriptor defines API_ENDPOINT but not API_VERSION.
-        assert "API_VERSION" not in GCSSettings.model_fields
+        assert "API_VERSION" not in GCSStorageProfile.model_fields
 
     def test_has_expected_core_fields(self):
-        assert "PROJECT" in GCSSettings.model_fields
-        assert "BUCKET_NAME" in GCSSettings.model_fields
-        assert "API_ENDPOINT" in GCSSettings.model_fields
-        assert "LOCATION" in GCSSettings.model_fields
-        assert "USER_PROJECT" in GCSSettings.model_fields
+        assert "PROJECT" in GCSStorageProfile.model_fields
+        assert "BUCKET_NAME" in GCSStorageProfile.model_fields
+        assert "API_ENDPOINT" in GCSStorageProfile.model_fields
+        assert "LOCATION" in GCSStorageProfile.model_fields
+        assert "USER_PROJECT" in GCSStorageProfile.model_fields
 
 
 @pytest.mark.unit
 class TestGCSHandlerKwargs:
     def test_noauth_produces_anonymous_client_kwargs(self):
         s = _make()
-        kw = s.to_handler_kwargs(auth=NoAuth())
+        kw = s.to_handler_kwargs(auth_profile=NoAuth())
         assert kw["project"] == "my-project-id"
         assert kw["credentials"] is None
         assert kw["anonymous"] is True
@@ -89,7 +89,7 @@ class TestGCSHandlerKwargs:
         auth = TokenAuth(TOKEN=SecretStr("tok"))
         s = _make()
         try:
-            kw = s.to_handler_kwargs(auth=auth)
+            kw = s.to_handler_kwargs(auth_profile=auth)
         except ImportError:
             pytest.skip("google-cloud-storage not installed")
         assert kw["project"] == "my-project-id"

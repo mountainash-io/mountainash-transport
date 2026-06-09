@@ -7,8 +7,9 @@ from typing import BinaryIO
 
 from .s3_path import parse_s3_path
 
+from mountainash_utils_files.storage_protocols import StorageReadProtocol
 
-class S3ReadMixin:
+class S3ReadMixin(StorageReadProtocol):
     """Read mixin for AWS S3."""
 
     def read_to_bytes(self, path: str) -> bytes:
