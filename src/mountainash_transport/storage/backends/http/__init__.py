@@ -64,12 +64,10 @@ class HTTPStorageBackend:
         self,
         storage_profile: StorageProfileProtocol | None = None,
         *,
-        auth_profile=None,
         connection=None,
     ) -> None:
         self._connection = connection
         self.storage_profile = storage_profile
-        self.auth_profile = auth_profile
 
     def _get_client(self) -> httpx.Client:
         if self._connection is not None and self._connection.client is not None:

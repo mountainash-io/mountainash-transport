@@ -51,10 +51,9 @@ class S3StorageBackend(
     implemented.
     """
 
-    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None, connection=None) -> None:
+    def __init__(self, storage_profile: StorageProfileProtocol, *, connection=None) -> None:
 
         self.storage_profile = storage_profile
-        self.auth_profile = auth_profile
         self._connection = connection
         self._client: t.Any = None
 

@@ -6,7 +6,7 @@ import typing as t
 from typing_extensions import Self
 
 from mountainash_transport._core.auth.strategies import AuthStrategy
-from mountainash_transport._core.exceptions import StorageConnectionError
+from mountainash_transport.connections.errors import TransportConnectionError
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
 
@@ -26,7 +26,7 @@ class S3Connection:
         try:
             import boto3  # type: ignore[import-untyped]
         except ImportError as exc:
-            raise StorageConnectionError(
+            raise TransportConnectionError(
                 "boto3 is required for S3 connections"
             ) from exc
 
@@ -39,7 +39,7 @@ class S3Connection:
         try:
             self._client = boto3.client("s3", **kwargs)
         except Exception as exc:
-            raise StorageConnectionError(
+            raise TransportConnectionError(
                 f"Failed to create S3 client: {exc}"
             ) from exc
 

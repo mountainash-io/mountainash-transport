@@ -9,8 +9,8 @@ class FileMetadata(BaseModel):
     full_path: str = Field(..., description="Complete path including filename")
     size: int = Field(0, description="File size in bytes")
     last_modified: Optional[datetime] = Field(None, description="Last modification timestamp")
-    etag: str = Field("", description="Entity tag identifier")
-    storage_class: str = Field("", description="Storage class information")
+    etag: Optional[str] = Field("", description="Entity tag identifier")
+    storage_class:  Optional[str] = Field("", description="Storage class information")
     checksum: List[str] = Field(default_factory=list, description="Checksum algorithms used")
     source: str = Field(..., description="Source system (s3, local, etc.)")
 

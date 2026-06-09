@@ -220,43 +220,13 @@ class TestHTTPBackendClientCreation:
 
 
 class TestHTTPBackendProfileKwargs:
-    def test_profile_kwargs_used_without_auth(self):
-        """Connection is provided; profile and auth are stored but client comes from connection."""
+    def test_client_comes_from_connection(self):
+        """Backend delegates to the injected connection's client."""
         mock_client = MagicMock()
         conn = MagicMock()
         conn.client = mock_client
         profile = MagicMock()
-        backend = HTTPStorageBackend(profile, auth_profile=TokenAuth(TOKEN=SecretStr("new")), connection=conn)
+        backend = HTTPStorageBackend(profile, connection=conn)
         assert backend._get_client() is mock_client
-        assert backend.auth_profile is not None
 
 
-class TestRegistryAuthForwarding:
-    def test_auth_forwarded_to_http_backend(self):
-        from mountainash_transport.storage.registry.registry import get_storage_backend
-        auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
-        backend = get_storage_backend(
-            CONST_STORAGE_PROVIDER_TYPE.HTTP, None, auth_profile=auth_profile,
-        )
-        assert backend.auth_profile is auth_profile
-
-    def test_auth_stored_on_all_backends(self):
-        from mountainash_transport.storage.registry.registry import get_storage_backend
-        auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
-        backend = get_storage_backend(
-            CONST_STORAGE_PROVIDER_TYPE.S3, None, auth_profile=auth_profile,
-        )
-        assert backend.auth_profile is auth_profile
-
-
-class TestFacadeAuthParam:
-    def test_from_path_passes_auth_to_backend(self):
-        from mountainash_transport.storage.facade.facade import StorageFacade
-        auth_profile = TokenAuth(TOKEN=SecretStr("facadetok"))
-        facade = StorageFacade.from_path("https://example.com/file.txt", auth_profile=auth_profile)
-        assert facade._backend.auth_profile is auth_profile
-
-    def test_from_path_without_auth(self):
-        from mountainash_transport.storage.facade.facade import StorageFacade
-        facade = StorageFacade.from_path("https://example.com/file.txt")
-        assert facade._backend.auth_profile is None

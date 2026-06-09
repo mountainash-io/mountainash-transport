@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import base64
+import json
 import secrets
 import time
 from typing import Literal
@@ -108,7 +109,21 @@ class OAuthFlow:
                     status_code=exc.response.status_code,
                     body=exc.response.text[:2000],
                 ) from exc
-            token_data = resp.json()
+            try:
+                token_data = resp.json()
+            except (ValueError, json.JSONDecodeError) as exc:
+                raise TokenExchangeError(
+                    url=self.token_url,
+                    status_code=resp.status_code,
+                    body=f"Invalid JSON in token response: {resp.text[:200]}",
+                ) from exc
+
+        if "access_token" not in token_data:
+            raise TokenExchangeError(
+                url=self.token_url,
+                status_code=resp.status_code,
+                body=f"Missing access_token in response: {str(token_data)[:200]}",
+            )
 
         expires_at: int | None = None
         if "expires_in" in token_data:
@@ -143,7 +158,21 @@ class OAuthFlow:
                     status_code=exc.response.status_code,
                     body=exc.response.text[:2000],
                 ) from exc
-            token_data = resp.json()
+            try:
+                token_data = resp.json()
+            except (ValueError, json.JSONDecodeError) as exc:
+                raise TokenRefreshError(
+                    url=self.token_url,
+                    status_code=resp.status_code,
+                    body=f"Invalid JSON in refresh response: {resp.text[:200]}",
+                ) from exc
+
+        if "access_token" not in token_data:
+            raise TokenRefreshError(
+                url=self.token_url,
+                status_code=resp.status_code,
+                body=f"Missing access_token in refresh response: {str(token_data)[:200]}",
+            )
 
         expires_at: int | None = None
         if "expires_in" in token_data:
