@@ -29,9 +29,10 @@ class LocalStorageBackend(
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
-    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None, connection=None) -> None:
         self.storage_profile = storage_profile
         self.auth_profile = auth_profile
+        self._connection = connection
 
 
 __all__ = [

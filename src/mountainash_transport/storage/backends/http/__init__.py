@@ -60,16 +60,23 @@ class HTTPStorageBackend:
     and StorageMetadataProtocol using httpx.
     """
 
-    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+    def __init__(
+        self,
+        storage_profile: StorageProfileProtocol | None = None,
+        *,
+        auth_profile=None,
+        connection=None,
+    ) -> None:
+        self._connection = connection
         self.storage_profile = storage_profile
         self.auth_profile = auth_profile
-        self._client: httpx.Client | None = None
 
     def _get_client(self) -> httpx.Client:
-        if self._client is None:
-            kwargs = self.storage_profile.to_handler_kwargs()
-            self._client = httpx.Client(**kwargs)
-        return self._client
+        if self._connection is not None and self._connection.client is not None:
+            return self._connection.client
+        raise StorageConnectionError(
+            "HTTPStorageBackend requires a connection — use create_connection()"
+        )
 
     # -- StorageReadProtocol ------------------------------------------------
 
