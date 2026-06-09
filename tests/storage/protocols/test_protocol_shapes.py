@@ -9,7 +9,6 @@ import pytest
 
 from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
 from mountainash_transport.storage.protocols import (
-    StorageConnectionProtocol,
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
@@ -32,35 +31,6 @@ def _make_metadata(path: str = "file.txt") -> FileMetadata:
         size=0,
         source="local",
     )
-
-
-# ---------------------------------------------------------------------------
-# StorageConnectionProtocol
-# ---------------------------------------------------------------------------
-
-class GoodConnection:
-    def connect(self) -> None: ...
-    def disconnect(self) -> None: ...
-    def is_connected(self) -> bool: return True
-
-
-class BadConnection:
-    def connect(self) -> None: ...
-    # missing disconnect and is_connected
-
-
-class TestStorageConnectionProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodConnection(), StorageConnectionProtocol)
-
-    def test_positive_conformance(self) -> None:
-        assert isinstance(GoodConnection(), StorageConnectionProtocol)
-
-    def test_negative_conformance_missing_methods(self) -> None:
-        assert not isinstance(BadConnection(), StorageConnectionProtocol)
-
-    def test_empty_class_does_not_conform(self) -> None:
-        assert not isinstance(object(), StorageConnectionProtocol)
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +261,6 @@ class FullBackend:
 class TestFullBackendConformance:
     def test_conforms_to_all_protocols(self) -> None:
         backend = FullBackend()
-        assert isinstance(backend, StorageConnectionProtocol)
         assert isinstance(backend, StorageReadProtocol)
         assert isinstance(backend, StorageWriteProtocol)
         assert isinstance(backend, StorageListProtocol)

@@ -8,6 +8,8 @@ from mountainash_transport.connections.errors import (
     ConnectionError,
     TokenExchangeError,
     TokenRefreshError,
+    TransportConnectionError,
+    ConnectionTimeoutError,
 )
 
 
@@ -86,3 +88,33 @@ class TestAuthorizationRequired:
         with pytest.raises(AuthorizationRequired) as exc_info:
             raise AuthorizationRequired(provider="oura", user="eve")
         assert exc_info.value.provider == "oura"
+
+
+class TestTransportConnectionError:
+    def test_is_exception(self):
+        assert issubclass(TransportConnectionError, Exception)
+
+    def test_backwards_compat_alias(self):
+        """ConnectionError name still importable for transition period."""
+        from mountainash_transport.connections.errors import ConnectionError as LegacyAlias
+        assert LegacyAlias is TransportConnectionError
+
+
+class TestConnectionTimeoutError:
+    def test_is_subclass_of_transport_connection_error(self):
+        assert issubclass(ConnectionTimeoutError, TransportConnectionError)
+
+    def test_message(self):
+        err = ConnectionTimeoutError("timed out connecting to host")
+        assert "timed out" in str(err)
+
+
+class TestExistingSubclassesReparented:
+    def test_token_exchange_error(self):
+        assert issubclass(TokenExchangeError, TransportConnectionError)
+
+    def test_token_refresh_error(self):
+        assert issubclass(TokenRefreshError, TransportConnectionError)
+
+    def test_authorization_required(self):
+        assert issubclass(AuthorizationRequired, TransportConnectionError)

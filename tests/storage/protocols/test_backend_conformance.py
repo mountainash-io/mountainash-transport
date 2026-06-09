@@ -4,7 +4,7 @@ CI enforcement mechanism — if a mixin is missing a method, this test fails."""
 import pytest
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.storage.protocols import (
-    StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+    StorageReadProtocol, StorageWriteProtocol,
     StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
     StorageCopyProtocol, StorageDirectoryProtocol,
 )
@@ -14,27 +14,27 @@ import mountainash_transport.storage.backends  # trigger registrations
 # Single source of truth for what each backend MUST implement
 EXPECTED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.LOCAL: {
-        StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+        StorageReadProtocol, StorageWriteProtocol,
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol, StorageDirectoryProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.S3: {
-        StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+        StorageReadProtocol, StorageWriteProtocol,
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.R2: {
-        StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+        StorageReadProtocol, StorageWriteProtocol,
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {
-        StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+        StorageReadProtocol, StorageWriteProtocol,
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {
-        StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
+        StorageReadProtocol, StorageWriteProtocol,
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
@@ -50,7 +50,7 @@ EXCLUDED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.HTTP: {
-        StorageConnectionProtocol, StorageListProtocol,
+        StorageListProtocol,
         StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol,
     },
 }

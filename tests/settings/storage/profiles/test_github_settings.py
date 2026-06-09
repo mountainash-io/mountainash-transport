@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import JWTAuth, NoAuth, OAuth2Auth, TokenAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -63,36 +62,9 @@ class TestGitHubScopeCut:
 
 
 @pytest.mark.unit
-class TestGitHubAuthPaths:
-    def test_token_auth_pat_surfaces_token(self):
-        auth = TokenAuth(TOKEN=SecretStr("ghp_abc123"))
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["token"] == "ghp_abc123"
-
-    def test_jwt_auth_surfaces_token(self):
-        auth = JWTAuth(TOKEN=SecretStr("jwt.body.sig"))
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["token"] == "jwt.body.sig"
-
-    def test_oauth2_auth_surfaces_token(self):
-        auth = OAuth2Auth(
-            TOKEN=SecretStr("gho_xyz"),
-            CLIENT_ID="my-app",
-        )
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
-        assert kw["token"] == "gho_xyz"
-
-    def test_noauth_produces_no_token(self):
-        s = _make()
-        kw = s.to_handler_kwargs(auth_profile=NoAuth())
-        assert "token" not in kw
-
-
-@pytest.mark.unit
 class TestGitHubFsspecKwargs:
+    """to_handler_kwargs returns SDK-level config only (no auth)."""
+
     def test_kwargs_shape_minimal(self):
         s = _make(auth=NoAuth())
         kw = s.to_handler_kwargs()
@@ -110,6 +82,13 @@ class TestGitHubFsspecKwargs:
         s = _make(BASE_URL="https://github.example.corp/api/v3")
         kw = s.to_handler_kwargs()
         assert kw["base_url"] == "https://github.example.corp/api/v3"
+
+    def test_no_token_in_kwargs(self):
+        """Token injection is handled by the auth strategy layer."""
+        s = _make()
+        kw = s.to_handler_kwargs()
+        assert "token" not in kw
+        assert "username" not in kw
 
 
 @pytest.mark.unit

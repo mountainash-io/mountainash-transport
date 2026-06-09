@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth, PasswordAuth
-from pydantic import SecretStr
+from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -40,19 +39,15 @@ class TestFTPAnonymous:
 
 
 @pytest.mark.unit
-class TestFTPPasswordAuth:
-    def test_password_auth_surfaces_user_and_passwd(self, monkeypatch):
-        monkeypatch.delenv("USERNAME", raising=False)
-        auth = PasswordAuth(
-            USERNAME="nathan", PASSWORD=SecretStr("pw"),
-        )
+class TestFTPHandlerKwargs:
+    """to_handler_kwargs returns SDK-level config only (no auth)."""
+
+    def test_no_auth_keys_in_init_kwargs(self):
+        """Auth credentials are injected by the strategy layer, not the profile."""
         s = _make()
-        kw = s.to_handler_kwargs(auth_profile=auth)
+        kw = s.to_handler_kwargs()
         init = kw["init_kwargs"]
-        assert init["user"] == "nathan"
-        # ftplib uses "passwd" NOT "password".
-        assert init["passwd"] == "pw"
-        assert "password" not in init
+        assert "passwd" not in init
 
 
 @pytest.mark.unit

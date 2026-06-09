@@ -77,7 +77,17 @@ class StorageFacade:
         *,
         auth_profile: AuthProfile | None = None,
     ) -> None:
-        self._backend = get_storage_backend(provider_type, storage_profile, auth_profile=auth_profile)
+        from mountainash_transport.connections import create_connection
+
+        connection = None
+        if storage_profile is not None:
+            connection = create_connection(storage_profile, auth_profile)
+            connection.connect()
+
+        self._backend = get_storage_backend(
+            provider_type, storage_profile,
+            auth_profile=auth_profile, connection=connection,
+        )
 
     # ------------------------------------------------------------------
     # Convenience factories

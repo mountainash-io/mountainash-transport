@@ -3,8 +3,7 @@
 A single :class:`S3StorageBackend` class is registered against all five
 S3-compatible provider types (S3, S3Express, R2, MinIO, B2). Per-flavor
 differences (endpoint URL, ``use_ssl`` defaults, ``region_name="auto"`` for
-R2) are handled inside :class:`S3ConnectionMixin` by reading
-``auth_params.settings.FLAVOR`` when available.
+R2) are resolved at connection time via :class:`S3Connection`.
 
 Backwards-compatible class aliases are exported so legacy imports
 (``from mountainash_transport.storage.backends.s3 import R2StorageBackend``
@@ -16,10 +15,10 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.exceptions import StorageConnectionError
 from mountainash_transport.storage.registry import register_storage_backend
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
-from .s3_connection import S3ConnectionMixin
 from .s3_copy import S3CopyMixin
 from .s3_delete import S3DeleteMixin
 from .s3_list import S3ListMixin
@@ -34,7 +33,6 @@ from .s3_write import S3WriteMixin
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.MINIO)
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.B2)
 class S3StorageBackend(
-    S3ConnectionMixin,
     S3ReadMixin,
     S3WriteMixin,
     S3ListMixin,
@@ -45,19 +43,37 @@ class S3StorageBackend(
     """Unified S3-family storage backend.
 
     Wraps boto3 for AWS S3, AWS S3 Express One Zone, Cloudflare R2, MinIO,
-    and Backblaze B2. Flavor dispatch happens in :meth:`connect` via
-    ``auth_params.settings.FLAVOR`` (default ``"aws"``).
+    and Backblaze B2. Connection management is handled by the injected
+    :class:`S3Connection` instance.
 
     Note: None of the S3-compatible services implement a real directory
     concept, so :class:`StorageDirectoryProtocol` is intentionally **not**
     implemented.
     """
 
-    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+    def __init__(self, storage_profile: StorageProfileProtocol, *, connection=None) -> None:
 
         self.storage_profile = storage_profile
-        self.auth_profile = auth_profile
+        self._connection = connection
         self._client: t.Any = None
+
+    def connect(self) -> None:
+        """Delegate to injected S3Connection, or raise if none provided."""
+        if self._connection is None:
+            raise StorageConnectionError(
+                "S3StorageBackend requires a connection — use create_connection()"
+            )
+        if not self._connection.is_connected:
+            self._connection.connect()
+        self._client = self._connection.client
+
+    def disconnect(self) -> None:
+        """Release the cached boto3 client."""
+        self._client = None
+
+    def is_connected(self) -> bool:
+        """Return True if a client has been created."""
+        return self._client is not None
 
 
 # --- Backwards-compatible aliases ------------------------------------------
@@ -76,7 +92,6 @@ __all__ = [
     "S3ExpressStorageBackend",
     "MinIOStorageBackend",
     "B2StorageBackend",
-    "S3ConnectionMixin",
     "S3ReadMixin",
     "S3WriteMixin",
     "S3ListMixin",

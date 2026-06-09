@@ -6,7 +6,6 @@ from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.storage.registry import register_storage_backend
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
-from .local_connection import LocalConnectionMixin
 from .local_copy import LocalCopyMixin
 from .local_delete import LocalDeleteMixin
 from .local_directory import LocalDirectoryMixin
@@ -18,7 +17,6 @@ from .local_write import LocalWriteMixin
 
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
 class LocalStorageBackend(
-    LocalConnectionMixin,
     LocalReadMixin,
     LocalWriteMixin,
     LocalListMixin,
@@ -29,14 +27,23 @@ class LocalStorageBackend(
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
-    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+    def __init__(self, storage_profile: StorageProfileProtocol, *, connection=None) -> None:
         self.storage_profile = storage_profile
-        self.auth_profile = auth_profile
+        self._connection = connection
+
+    def connect(self) -> None:
+        """No-op: local filesystem requires no connection."""
+
+    def disconnect(self) -> None:
+        """No-op: local filesystem requires no disconnection."""
+
+    def is_connected(self) -> bool:
+        """Always connected for local filesystem."""
+        return True
 
 
 __all__ = [
     "LocalStorageBackend",
-    "LocalConnectionMixin",
     "LocalReadMixin",
     "LocalWriteMixin",
     "LocalListMixin",

@@ -14,7 +14,7 @@ class TestPublicAPI:
         from mountainash_transport import (
             StorageReadProtocol, StorageWriteProtocol, StorageListProtocol,
             StorageDeleteProtocol, StorageMetadataProtocol, StorageCopyProtocol,
-            StorageDirectoryProtocol, StorageConnectionProtocol,
+            StorageDirectoryProtocol, ConnectionProtocol, TransportConnectionError,
         )
 
     def test_registry_importable(self):

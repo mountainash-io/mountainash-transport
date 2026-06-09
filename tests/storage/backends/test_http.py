@@ -17,11 +17,33 @@ def _transport(handler):
     return httpx.MockTransport(handler)
 
 
+class _FakeConnection:
+    """Minimal connection stub that wraps an httpx.Client with a mock transport."""
+    def __init__(self, transport: httpx.MockTransport):
+        self._client = httpx.Client(transport=transport)
+
+    @property
+    def client(self) -> httpx.Client:
+        return self._client
+
+    def connect(self):
+        return self
+
+    def disconnect(self):
+        if self._client is not None:
+            self._client.close()
+        self._client = None
+
+    @property
+    def is_connected(self) -> bool:
+        return self._client is not None
+
+
 def _make_backend(transport: httpx.MockTransport):
     import mountainash_transport.storage.backends  # noqa: F401
     from mountainash_transport.storage.backends.http import HTTPStorageBackend
-    backend = HTTPStorageBackend(None)
-    backend._client = httpx.Client(transport=transport)
+    conn = _FakeConnection(transport)
+    backend = HTTPStorageBackend(None, connection=conn)
     return backend
 
 
@@ -172,105 +194,39 @@ from mountainash_transport.storage.backends.http import HTTPStorageBackend
 
 
 class TestHTTPBackendClientCreation:
-    def test_profile_kwargs_forwarded_to_client(self):
-        profile = MagicMock()
-        expected_kwargs = {
-            "timeout": httpx.Timeout(connect=5.0, read=15.0, write=60.0, pool=5.0),
-            "follow_redirects": True,
-            "max_redirects": 10,
-            "verify": True,
-            "headers": {"Authorization": "Bearer tok123"},
-        }
-        profile.to_handler_kwargs.return_value = expected_kwargs
-        backend = HTTPStorageBackend(profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
+    def test_connection_client_used(self):
+        """_get_client returns the connection's client when a connection is provided."""
+        mock_client = MagicMock()
+        conn = MagicMock()
+        conn.client = mock_client
+        backend = HTTPStorageBackend(None, connection=conn)
+        assert backend._get_client() is mock_client
+
+    def test_client_stable_across_calls(self):
+        """_get_client returns the same client on repeated calls."""
+        mock_client = MagicMock()
+        conn = MagicMock()
+        conn.client = mock_client
+        backend = HTTPStorageBackend(None, connection=conn)
+        c1 = backend._get_client()
+        c2 = backend._get_client()
+        assert c1 is c2
+
+    def test_no_connection_raises(self):
+        """_get_client raises StorageConnectionError when no connection is provided."""
+        backend = HTTPStorageBackend(None)
+        with pytest.raises(StorageConnectionError, match="requires a connection"):
             backend._get_client()
-            mock_client.assert_called_once_with(**expected_kwargs)
 
-    def test_client_cached_after_first_call(self):
+
+class TestHTTPBackendProfileKwargs:
+    def test_client_comes_from_connection(self):
+        """Backend delegates to the injected connection's client."""
+        mock_client = MagicMock()
+        conn = MagicMock()
+        conn.client = mock_client
         profile = MagicMock()
-        profile.to_handler_kwargs.return_value = {}
-        backend = HTTPStorageBackend(profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            c1 = backend._get_client()
-            c2 = backend._get_client()
-            assert c1 is c2
-            mock_client.assert_called_once()
+        backend = HTTPStorageBackend(profile, connection=conn)
+        assert backend._get_client() is mock_client
 
 
-class TestHTTPBackendAuthPrecedence:
-    def test_auth_flows_through_profile_adapter(self):
-        profile = MagicMock()
-        auth_profile = TokenAuth(TOKEN=SecretStr("new"))
-        profile.to_handler_kwargs.return_value = {
-            "timeout": httpx.Timeout(connect=5.0, read=15.0, write=60.0, pool=5.0),
-            "follow_redirects": True,
-            "verify": True,
-            "headers": {"Authorization": "Bearer new", "X-Custom": "keep"},
-        }
-        backend = HTTPStorageBackend(profile, auth_profile=auth_profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=auth_profile)
-            call_kwargs = mock_client.call_args[1]
-            assert call_kwargs["headers"]["Authorization"] == "Bearer new"
-            assert call_kwargs["headers"]["X-Custom"] == "keep"
-
-    def test_noauth_flows_through_profile_adapter(self):
-        profile = MagicMock()
-        profile.to_handler_kwargs.return_value = {
-            "headers": {"X-Custom": "keep"},
-        }
-        backend = HTTPStorageBackend(profile, auth_profile=NoAuth())
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=NoAuth())
-            call_kwargs = mock_client.call_args[1]
-            assert "Authorization" not in call_kwargs.get("headers", {})
-            assert call_kwargs["headers"]["X-Custom"] == "keep"
-
-    def test_profile_only_no_auth(self):
-        profile = MagicMock()
-        profile.to_handler_kwargs.return_value = {
-            "headers": {"Authorization": "Bearer profonly"},
-        }
-        backend = HTTPStorageBackend(profile)
-        with patch("mountainash_transport.storage.backends.http.httpx.Client") as mock_client:
-            mock_client.return_value = MagicMock()
-            backend._get_client()
-            profile.to_handler_kwargs.assert_called_once_with(auth_profile=None)
-            call_kwargs = mock_client.call_args[1]
-            assert call_kwargs["headers"]["Authorization"] == "Bearer profonly"
-
-
-class TestRegistryAuthForwarding:
-    def test_auth_forwarded_to_http_backend(self):
-        from mountainash_transport.storage.registry.registry import get_storage_backend
-        auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
-        backend = get_storage_backend(
-            CONST_STORAGE_PROVIDER_TYPE.HTTP, None, auth_profile=auth_profile,
-        )
-        assert backend.auth_profile is auth_profile
-
-    def test_auth_stored_on_all_backends(self):
-        from mountainash_transport.storage.registry.registry import get_storage_backend
-        auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
-        backend = get_storage_backend(
-            CONST_STORAGE_PROVIDER_TYPE.S3, None, auth_profile=auth_profile,
-        )
-        assert backend.auth_profile is auth_profile
-
-
-class TestFacadeAuthParam:
-    def test_from_path_passes_auth_to_backend(self):
-        from mountainash_transport.storage.facade.facade import StorageFacade
-        auth_profile = TokenAuth(TOKEN=SecretStr("facadetok"))
-        facade = StorageFacade.from_path("https://example.com/file.txt", auth_profile=auth_profile)
-        assert facade._backend.auth_profile is auth_profile
-
-    def test_from_path_without_auth(self):
-        from mountainash_transport.storage.facade.facade import StorageFacade
-        facade = StorageFacade.from_path("https://example.com/file.txt")
-        assert facade._backend.auth_profile is None

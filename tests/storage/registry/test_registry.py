@@ -19,9 +19,10 @@ from mountainash_transport.storage.registry import (
 class _FakeBackend:
     """Minimal backend stub used across tests."""
 
-    def __init__(self, storage_profile=None, *, auth_profile=None):
+    def __init__(self, storage_profile=None, *, auth_profile=None, connection=None):
         self.storage_profile = storage_profile
         self.auth_profile = auth_profile
+        self._connection = connection
 
 
 # ---------------------------------------------------------------------------

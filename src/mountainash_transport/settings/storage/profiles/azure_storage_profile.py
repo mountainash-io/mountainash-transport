@@ -21,14 +21,11 @@ import re
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, AzureADAuth, NoAuth, PasswordAuth, TokenAuth
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-
-from ...utils.secrets import _unwrap_secret
 
 __all__ = [
     "AZURE_STORAGE_SPEC",
@@ -249,17 +246,12 @@ class AzureStorageProfile(Profile):
 
 
 
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build ``BlobServiceClient`` / ``ShareServiceClient`` kwargs from profile.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass an :class:`AzureStorageSettings`
-        instance in practice.
-
-        Returns a dict with SDK kwargs plus ``service_type`` and
-        ``service_class_path`` metadata the handler uses to dispatch to the
-        correct concrete client class.
+        Returns SDK-level config only (account URL, service dispatch
+        metadata, optional fields). Credential resolution and
+        ``token_intent`` injection are handled by the auth strategy layer.
         """
         service_type = getattr(self, "SERVICE_TYPE", "blob") or "blob"
         account_name = getattr(self, "ACCOUNT_NAME", None)
@@ -279,22 +271,15 @@ class AzureStorageProfile(Profile):
             endpoint_suffix=endpoint_suffix,
         )
 
-        credential = self._resolve_credential(auth_profile, account_name)
-
         kwargs: dict[str, t.Any] = {
             "account_url": resolved_url,
-            "credential": credential,
             # Metadata the handler uses to pick the concrete SDK client class.
             "service_type": service_type,
             "service_class_path": _SERVICE_CLASS_PATHS.get(service_type),
         }
 
-        # Files + AAD requires token_intent="backup" (SDK raises otherwise).
-        if service_type == "files":
-            if token_intent:
-                kwargs["token_intent"] = token_intent
-            elif isinstance(auth_profile, AzureADAuth):
-                kwargs["token_intent"] = "backup"
+        if service_type == "files" and token_intent:
+            kwargs["token_intent"] = token_intent
 
         if api_version:
             kwargs["api_version"] = api_version
@@ -317,70 +302,4 @@ class AzureStorageProfile(Profile):
         if account_name:
             host_token = _SERVICE_URL_TOKEN.get(service_type, service_type)
             return f"https://{account_name}.{host_token}.{endpoint_suffix}"
-        return None
-
-
-    def _resolve_credential(self, auth_profile: AuthProfile | None, account_name: t.Optional[str]) -> t.Any:
-        """Resolve an Azure credential object from the discriminated auth union.
-
-        - ``AzureADAuth`` (managed_identity=True) → ``ManagedIdentityCredential``
-        - ``AzureADAuth`` + tenant/client/secret  → ``ClientSecretCredential``
-        - ``AzureADAuth`` otherwise               → ``DefaultAzureCredential``
-        - ``TokenAuth``                           → ``AzureSasCredential``
-        - ``PasswordAuth``                        → ``AzureNamedKeyCredential``
-        (``name = username or ACCOUNT_NAME``; ``key = password``)
-        - ``NoAuth`` / missing                    → ``None``
-        """
-        if auth_profile is None:
-            return None
-
-        if isinstance(auth_profile, NoAuth):
-            return None
-
-        if isinstance(auth_profile, AzureADAuth):
-            from azure.identity import (  # type: ignore[import-untyped]
-                ClientSecretCredential,
-                DefaultAzureCredential,
-                ManagedIdentityCredential,
-            )
-
-            tenant_id = auth_profile.TENANT_ID
-            client_id = auth_profile.CLIENT_ID
-            client_secret = auth_profile.CLIENT_SECRET
-            managed_identity = auth_profile.MANAGED_IDENTITY
-
-            if managed_identity:
-                return ManagedIdentityCredential(
-                    client_id=client_id if client_id else None
-                )
-            if tenant_id and client_id and client_secret:
-                return ClientSecretCredential(
-                    tenant_id=tenant_id,
-                    client_id=client_id,
-                    client_secret=_unwrap_secret(client_secret) or "",
-                )
-            return DefaultAzureCredential()
-
-        if isinstance(auth_profile, TokenAuth):
-            token = _unwrap_secret(auth_profile.TOKEN)
-            if not token:
-                return None
-            from azure.core.credentials import (  # type: ignore[import-untyped]
-                AzureSasCredential,
-            )
-
-            return AzureSasCredential(signature=token)
-
-        if isinstance(auth_profile, PasswordAuth):
-            username = auth_profile.USERNAME or account_name
-            password = _unwrap_secret(auth_profile.PASSWORD)
-            if not username or not password:
-                return None
-            from azure.core.credentials import (  # type: ignore[import-untyped]
-                AzureNamedKeyCredential,
-            )
-
-            return AzureNamedKeyCredential(name=username, key=password)
-
-        # Unknown auth type — let the caller fall back to ambient credentials.
         return None

@@ -14,7 +14,6 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_auth_client import AuthProfile, PasswordAuth
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -192,48 +191,12 @@ class FTPStorageProfile(Profile):
 
 
 
-    def _unwrap_secret(self, v: t.Any) -> t.Optional[str]:
-        if v is None:
-            return None
-        if hasattr(v, "get_secret_value"):
-            return v.get_secret_value()
-        return str(v)
-
-
-    def _auth_kwargs(self, auth_profile: AuthProfile | None) -> dict[str, t.Any]:
-        """Translate the discriminated auth union into ftplib kwargs.
-
-        - :class:`PasswordAuth` → ``{"passwd": ...}`` (ftplib uses ``passwd``,
-        not ``password``). If a username is present on the auth spec, it
-        overrides ``USERNAME`` on the profile.
-        - :class:`NoAuth`       → ``{}`` (caller relies on
-        ``USERNAME="anonymous"``).
-        """
-        if auth_profile is None:
-            return {}
-        if isinstance(auth_profile, PasswordAuth):
-            out: dict[str, t.Any] = {}
-            username = auth_profile.USERNAME
-            password = self._unwrap_secret(auth_profile.PASSWORD)
-            if username:
-                out["user"] = username
-            if password is not None:
-                out["passwd"] = password
-            return out
-        # NoAuth / anything else: leave init kwargs alone.
-        return {}
-
-
-    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
         """Build an ftplib construction envelope from an :class:`FTPSettings`.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass an :class:`FTPSettings` instance in
-        practice.
-
-        Returns a dict with ``ftp_class_path`` + ``init_kwargs`` +
-        ``_connect_kwargs`` + ``_post_connect`` — see module docstring.
+        Returns SDK-level config only (ftp class, init kwargs from profile
+        fields, connect kwargs, post-connect envelope). Auth credentials
+        (user override, passwd) are injected by the auth strategy layer.
         """
         use_tls = bool(getattr(self, "USE_TLS", False))
         ftp_class_path = "ftplib.FTP_TLS" if use_tls else "ftplib.FTP"
@@ -244,8 +207,6 @@ class FTPStorageProfile(Profile):
             if value is None:
                 continue
             init_kwargs[driver_key] = value
-
-        init_kwargs.update(self._auth_kwargs(auth_profile))
 
         connect_kwargs: dict[str, t.Any] = {}
         port = getattr(self, "PORT", None)

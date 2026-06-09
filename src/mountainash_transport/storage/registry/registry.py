@@ -23,12 +23,13 @@ def get_storage_backend(
     storage_profile: StorageProfileProtocol | None,
     *,
     auth_profile: AuthProfile | None = None,
+    connection=None,
 ) -> t.Any:
     """Instantiate and return a backend for the given provider type."""
     cls = _backend_registry.get(provider_type)
     if cls is None:
         raise ValueError(f"No backend registered for {provider_type!r}")
-    return cls(storage_profile, auth_profile=auth_profile)
+    return cls(storage_profile, connection=connection)
 
 
 def get_registered_backends() -> dict[CONST_STORAGE_PROVIDER_TYPE, type]:

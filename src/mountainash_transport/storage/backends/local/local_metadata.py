@@ -23,7 +23,8 @@ class LocalMetadataMixin:
             full_path=os.path.abspath(path),
             size=stat.st_size,
             last_modified=last_modified,
-            source="local",
+            storage_class="local",
+            source="local"
         )
 
     def path_exists(self, path: str) -> bool:

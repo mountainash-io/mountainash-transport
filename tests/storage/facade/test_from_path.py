@@ -22,7 +22,7 @@ def test_from_path_returns_storagefacade_for_s3(monkeypatch):
 
     from mountainash_transport.storage.facade import facade as facade_mod
 
-    def _fake_get(provider, storage_profile=None, *, auth_profile=None):
+    def _fake_get(provider, storage_profile=None, *, auth_profile=None, connection=None):
         captured["provider"] = provider
         captured["storage_profile"] = storage_profile
         captured["auth_profile"] = auth_profile
@@ -43,14 +43,23 @@ def test_from_path_passes_profile(monkeypatch):
     class _Dummy:
         pass
 
-    def _fake_get(provider, storage_profile=None, *, auth_profile=None):
+    class _FakeConn:
+        def connect(self):
+            return self
+
+    def _fake_get(provider, storage_profile=None, *, auth_profile=None, connection=None):
         captured["provider"] = provider
         captured["storage_profile"] = storage_profile
         return _Dummy()
 
+    def _fake_create_conn(profile, auth_profile=None, **kw):
+        return _FakeConn()
+
     from mountainash_transport.storage.facade import facade as facade_mod
+    from mountainash_transport import connections as conn_mod
 
     monkeypatch.setattr(facade_mod, "get_storage_backend", _fake_get)
+    monkeypatch.setattr(conn_mod, "create_connection", _fake_create_conn)
 
     sentinel = object()
     StorageFacade.from_path("gs://bucket/key", storage_profile=sentinel)  # type: ignore[arg-type]
