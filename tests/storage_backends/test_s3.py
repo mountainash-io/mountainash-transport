@@ -11,16 +11,6 @@ import pytest
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.dataclasses.file_metadata import FileMetadata
 from mountainash_utils_files.exceptions import StorageConnectionError
-from mountainash_utils_files.storage_protocols import (
-    StorageConnectionProtocol,
-    StorageCopyProtocol,
-    StorageDeleteProtocol,
-    StorageDirectoryProtocol,
-    StorageListProtocol,
-    StorageMetadataProtocol,
-    StorageReadProtocol,
-    StorageWriteProtocol,
-)
 from mountainash_utils_files.storage_registry import get_registered_backends
 
 # Trigger backend registration
@@ -68,43 +58,6 @@ class TestParseS3Path:
         bucket, key = parse_s3_path("s3://my-bucket/prefix/")
         assert bucket == "my-bucket"
         assert key == "prefix/"
-
-
-# ---------------------------------------------------------------------------
-# Protocol conformance
-# ---------------------------------------------------------------------------
-
-class TestProtocolConformance:
-    """S3StorageBackend must satisfy 7 storage protocols (NOT StorageDirectoryProtocol)."""
-
-    @pytest.fixture()
-    def backend(self):
-        return _make_backend()
-
-    def test_connection_protocol(self, backend):
-        assert isinstance(backend, StorageConnectionProtocol)
-
-    def test_read_protocol(self, backend):
-        assert isinstance(backend, StorageReadProtocol)
-
-    def test_write_protocol(self, backend):
-        assert isinstance(backend, StorageWriteProtocol)
-
-    def test_list_protocol(self, backend):
-        assert isinstance(backend, StorageListProtocol)
-
-    def test_delete_protocol(self, backend):
-        assert isinstance(backend, StorageDeleteProtocol)
-
-    def test_metadata_protocol(self, backend):
-        assert isinstance(backend, StorageMetadataProtocol)
-
-    def test_copy_protocol(self, backend):
-        assert isinstance(backend, StorageCopyProtocol)
-
-    def test_NOT_directory_protocol(self, backend):
-        """S3 has no real directories — must NOT implement StorageDirectoryProtocol."""
-        assert not isinstance(backend, StorageDirectoryProtocol)
 
 
 # ---------------------------------------------------------------------------

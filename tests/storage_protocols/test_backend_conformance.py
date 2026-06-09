@@ -38,6 +38,9 @@ EXPECTED_PROTOCOLS = {
         StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
+    CONST_STORAGE_PROVIDER_TYPE.HTTP: {
+        StorageReadProtocol, StorageWriteProtocol, StorageMetadataProtocol,
+    },
 }
 
 # Protocols that backends must NOT implement
@@ -46,6 +49,10 @@ EXCLUDED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.R2: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {StorageDirectoryProtocol},
+    CONST_STORAGE_PROVIDER_TYPE.HTTP: {
+        StorageConnectionProtocol, StorageListProtocol,
+        StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol,
+    },
 }
 
 class TestProtocolConformance:
