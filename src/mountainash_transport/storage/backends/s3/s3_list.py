@@ -65,8 +65,6 @@ class S3ListMixin(StorageListProtocol):
             List of S3 path strings for each common prefix.
         """
         bucket, key_prefix = parse_s3_path(prefix)
-        if key_prefix and not key_prefix.endswith("/"):
-            key_prefix += "/"
         results: list[str] = []
 
         paginator = self._client.get_paginator("list_objects_v2")  # type: ignore[attr-defined]

@@ -237,7 +237,7 @@ class TestList:
         backend.list_directories("s3://bucket/prefix/")
 
         paginator.paginate.assert_called_once_with(
-            Bucket="bucket", Prefix="prefix/", Delimiter="/"
+            Bucket="bucket", Prefix="prefix", Delimiter="/"
         )
 
 
