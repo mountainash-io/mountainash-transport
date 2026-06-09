@@ -2,88 +2,101 @@
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
 
+Unified file operations across multiple storage systems. Read, write, list, copy, and delete files with a consistent API regardless of whether the data lives on local disk, S3, Azure, GCS, SFTP, HTTP, or any other supported backend.
 
-Mountain Ash - Utils - Files
+## Features
 
-This utility package provides common functionality used across the Mountain Ash ecosystem.
+- **Consistent API** — `StorageFacade` provides the same read/write/list/delete/copy/metadata interface across all backends
+- **Scheme-driven dispatch** — `StorageFacade.from_path("s3://bucket/key")` infers the provider from the URL scheme
+- **8 granular protocols** — backends implement Connection, Read, Write, List, Delete, Metadata, Copy, and Directory à la carte
+- **Stream transforms** — composable `Pipeline` of `Gzip` and `GPG` transforms for compression and encryption
+- **Suffix-aware inference** — `read_bytes("s3://bucket/data.parquet.gz", infer=True)` auto-decompresses based on file extensions
+- **Profile + auth separation** — storage configuration (profile) and authentication (auth profile) are independent concerns
 
+## Supported Storage Backends
 
+| Backend | Provider types | Protocols |
+|---------|---------------|-----------|
+| **Local** | `LOCAL` | Connection, Read, Write, List, Delete, Metadata, Copy, Directory |
+| **S3** | `S3`, `S3EXPRESS`, `R2`, `MINIO` | Connection, Read, Write, List, Delete, Metadata, Copy |
+| **HTTP/HTTPS** | `HTTP` | Read, Write, Metadata |
+| **Azure** | Blob, Files | Via profile (not yet backend-implemented) |
+| **GCS** | Google Cloud Storage | Via profile (not yet backend-implemented) |
+| **SSH/SFTP** | SSH | Via profile (not yet backend-implemented) |
+| **FTP** | FTP, FTPS | Via profile (not yet backend-implemented) |
+| **SMB** | SMB | Via profile (not yet backend-implemented) |
+| **GitHub** | GitHub repos (read-only) | Via profile (not yet backend-implemented) |
 
 ## Installation
 
-### Development Installation
-
 ```bash
-# Clone and install in development mode
-git clone <repository-url>
-cd mountainash-utils-files
-pip install -e .
+pip install mountainash-utils-files
+
+# With optional extras
+pip install mountainash-utils-files[s3]        # boto3, s3fs, minio
+pip install mountainash-utils-files[gcs]       # google-cloud-storage, gcsfs
+pip install mountainash-utils-files[azure]     # azure-storage-blob, adlfs
+pip install mountainash-utils-files[sftp]      # paramiko, smart-open[ssh]
+pip install mountainash-utils-files[encryption] # python-gnupg
+pip install mountainash-utils-files[all]       # everything
 ```
-
-### Using Hatch
-
-```bash
-# Create development environment
-hatch env create
-
-# Run commands in the environment
-hatch run <command>
-```
-
-
 
 ## Quick Start
 
 ```python
-import mountainash_utils_files
+from mountainash_utils_files import StorageFacade, read_bytes
 
-# Basic usage example
-# TODO: Add specific usage example
+# Read from any supported scheme
+data = read_bytes("s3://my-bucket/data.parquet")
+page = read_bytes("https://example.com/page.html")
+local = read_bytes("/tmp/local-file.csv")
+
+# Facade for richer operations
+facade = StorageFacade.from_path("s3://my-bucket/prefix/")
+files = facade.list_files("s3://my-bucket/prefix/")
+facade.copy("s3://my-bucket/src.txt", "s3://my-bucket/dst.txt")
+
+# Stream transforms — auto-decompress based on suffix
+plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
+
+# Explicit pipeline
+from mountainash_utils_files import Pipeline, Gzip
+facade.write("s3://bucket/out.gz", data, pipeline=Pipeline(Gzip()))
 ```
-
-
-
-## Features
-
-- **1 Python modules** providing core functionality
-- **Comprehensive test suite** ensuring reliability
-- **12 core dependencies** for robust functionality
-
-
-
-## Documentation
-
-- **[CLAUDE.md](CLAUDE.md)** - Technical documentation and development guide
-- **Testing** - Run tests with `pytest` or `hatch run test`
-- **[Mountain Ash Documentation](https://mountainash-io.github.io/mountainash-docs/)** - Complete ecosystem documentation
-
-
 
 ## Development
 
-### Testing
-
 ```bash
-# Run tests with Hatch
-hatch run test
+# Build
+hatch build
 
-# Run with coverage
+# Run tests
+hatch run test:test
+
+# Run tests with coverage
 hatch run test:cov
+
+# Lint
+hatch run ruff:check
+hatch run ruff:fix    # auto-fix
+
+# Type check
+hatch run mypy:check
+
+# Single test
+pytest tests/path/to/test_file.py::TestClass::test_function -v
 ```
 
-### Build Commands
+## Documentation
 
-See [CLAUDE.md](CLAUDE.md) for complete build and development commands.
+- **[CLAUDE.md](CLAUDE.md)** — Architecture, settings, and development guide
+- **[Mountain Ash Documentation](https://mountainash-io.github.io/mountainash-docs/)** — Complete ecosystem documentation
 
-### Contributing
+## Branch Strategy
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-
+- `main` — production releases (CalVer `YY.MM.MICRO`)
+- `develop` — integration branch for development
+- `feature/*`, `bugfix/*`, `hotfix/*` — work branches targeting `develop`
 
 ## License
 
@@ -92,7 +105,3 @@ See LICENSE file for details.
 ## Mountain Ash Ecosystem
 
 This package is part of the [Mountain Ash](https://github.com/mountainash-io) ecosystem of Python packages.
-
----
-*README.md generated by [Mountain Ash Documentation Generator](https://github.com/mountainash-io/mountainash-docs) on 2025-07-21*
-
