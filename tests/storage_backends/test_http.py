@@ -6,8 +6,8 @@ import io
 import httpx
 import pytest
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.exceptions import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.exceptions import (
     AuthenticationError,
     PathNotFoundError,
     StorageConnectionError,
@@ -18,8 +18,8 @@ def _transport(handler):
 
 
 def _make_backend(transport: httpx.MockTransport):
-    import mountainash_utils_files.storage_backends  # noqa: F401
-    from mountainash_utils_files.storage_backends.http import HTTPStorageBackend
+    import mountainash_transport.storage_backends  # noqa: F401
+    from mountainash_transport.storage_backends.http import HTTPStorageBackend
     backend = HTTPStorageBackend(None)
     backend._client = httpx.Client(transport=transport)
     return backend
@@ -153,8 +153,8 @@ class TestGetSize:
 
 class TestRegistration:
     def test_http_provider_registered(self):
-        import mountainash_utils_files.storage_backends  # noqa: F401
-        from mountainash_utils_files.storage_registry import get_registered_backends
+        import mountainash_transport.storage_backends  # noqa: F401
+        from mountainash_transport.storage_registry import get_registered_backends
         backends = get_registered_backends()
         assert CONST_STORAGE_PROVIDER_TYPE.HTTP in backends
 
@@ -168,7 +168,7 @@ from unittest.mock import patch, MagicMock
 from mountainash_auth_client import NoAuth, TokenAuth, PasswordAuth
 from pydantic import SecretStr
 
-from mountainash_utils_files.storage_backends.http import HTTPStorageBackend
+from mountainash_transport.storage_backends.http import HTTPStorageBackend
 
 
 class TestHTTPBackendClientCreation:
@@ -183,7 +183,7 @@ class TestHTTPBackendClientCreation:
         }
         profile.to_handler_kwargs.return_value = expected_kwargs
         backend = HTTPStorageBackend(profile)
-        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+        with patch("mountainash_transport.storage_backends.http.httpx.Client") as mock_client:
             backend._get_client()
             mock_client.assert_called_once_with(**expected_kwargs)
 
@@ -191,7 +191,7 @@ class TestHTTPBackendClientCreation:
         profile = MagicMock()
         profile.to_handler_kwargs.return_value = {}
         backend = HTTPStorageBackend(profile)
-        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+        with patch("mountainash_transport.storage_backends.http.httpx.Client") as mock_client:
             c1 = backend._get_client()
             c2 = backend._get_client()
             assert c1 is c2
@@ -209,7 +209,7 @@ class TestHTTPBackendAuthPrecedence:
             "headers": {"Authorization": "Bearer new", "X-Custom": "keep"},
         }
         backend = HTTPStorageBackend(profile, auth_profile=auth_profile)
-        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+        with patch("mountainash_transport.storage_backends.http.httpx.Client") as mock_client:
             mock_client.return_value = MagicMock()
             backend._get_client()
             profile.to_handler_kwargs.assert_called_once_with(auth_profile=auth_profile)
@@ -223,7 +223,7 @@ class TestHTTPBackendAuthPrecedence:
             "headers": {"X-Custom": "keep"},
         }
         backend = HTTPStorageBackend(profile, auth_profile=NoAuth())
-        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+        with patch("mountainash_transport.storage_backends.http.httpx.Client") as mock_client:
             mock_client.return_value = MagicMock()
             backend._get_client()
             profile.to_handler_kwargs.assert_called_once_with(auth_profile=NoAuth())
@@ -237,7 +237,7 @@ class TestHTTPBackendAuthPrecedence:
             "headers": {"Authorization": "Bearer profonly"},
         }
         backend = HTTPStorageBackend(profile)
-        with patch("mountainash_utils_files.storage_backends.http.httpx.Client") as mock_client:
+        with patch("mountainash_transport.storage_backends.http.httpx.Client") as mock_client:
             mock_client.return_value = MagicMock()
             backend._get_client()
             profile.to_handler_kwargs.assert_called_once_with(auth_profile=None)
@@ -247,7 +247,7 @@ class TestHTTPBackendAuthPrecedence:
 
 class TestRegistryAuthForwarding:
     def test_auth_forwarded_to_http_backend(self):
-        from mountainash_utils_files.storage_registry.registry import get_storage_backend
+        from mountainash_transport.storage_registry.registry import get_storage_backend
         auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
         backend = get_storage_backend(
             CONST_STORAGE_PROVIDER_TYPE.HTTP, None, auth_profile=auth_profile,
@@ -255,7 +255,7 @@ class TestRegistryAuthForwarding:
         assert backend.auth_profile is auth_profile
 
     def test_auth_stored_on_all_backends(self):
-        from mountainash_utils_files.storage_registry.registry import get_storage_backend
+        from mountainash_transport.storage_registry.registry import get_storage_backend
         auth_profile = TokenAuth(TOKEN=SecretStr("tok"))
         backend = get_storage_backend(
             CONST_STORAGE_PROVIDER_TYPE.S3, None, auth_profile=auth_profile,
@@ -265,12 +265,12 @@ class TestRegistryAuthForwarding:
 
 class TestFacadeAuthParam:
     def test_from_path_passes_auth_to_backend(self):
-        from mountainash_utils_files.storage_facade.facade import StorageFacade
+        from mountainash_transport.storage_facade.facade import StorageFacade
         auth_profile = TokenAuth(TOKEN=SecretStr("facadetok"))
         facade = StorageFacade.from_path("https://example.com/file.txt", auth_profile=auth_profile)
         assert facade._backend.auth_profile is auth_profile
 
     def test_from_path_without_auth(self):
-        from mountainash_utils_files.storage_facade.facade import StorageFacade
+        from mountainash_transport.storage_facade.facade import StorageFacade
         facade = StorageFacade.from_path("https://example.com/file.txt")
         assert facade._backend.auth_profile is None

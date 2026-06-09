@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from mountainash_utils_files.storage_transforms.util import materialize
+from mountainash_transport.storage_transforms.util import materialize
 
 
 def test_materialize_memory_mode_small_stream():

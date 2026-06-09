@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from mountainash_utils_files import StorageFacade
-from mountainash_utils_files.storage_transforms import Gzip, Pipeline
+from mountainash_transport import StorageFacade
+from mountainash_transport.storage_transforms import Gzip, Pipeline
 
 
 @pytest.fixture
@@ -117,7 +117,7 @@ def test_facade_write_with_none_pipeline_is_unchanged(local_facade, tmp_path):
 
 def test_copy_between_source_pipeline_decodes(local_facade, tmp_path):
     """Copy a gzipped source to a plaintext destination using source_pipeline."""
-    from mountainash_utils_files import copy_between
+    from mountainash_transport import copy_between
 
     src_path = tmp_path / "source.gz"
     dst_path = tmp_path / "dest.bin"
@@ -135,7 +135,7 @@ def test_copy_between_source_pipeline_decodes(local_facade, tmp_path):
 
 def test_copy_between_destination_pipeline_encodes(local_facade, tmp_path):
     """Copy a plaintext source to a gzipped destination using destination_pipeline."""
-    from mountainash_utils_files import copy_between
+    from mountainash_transport import copy_between
 
     src_path = tmp_path / "source.bin"
     dst_path = tmp_path / "dest.gz"
@@ -153,7 +153,7 @@ def test_copy_between_destination_pipeline_encodes(local_facade, tmp_path):
 
 def test_copy_between_no_pipeline_uses_native_copy(local_facade, tmp_path):
     """With no pipelines, same-backend copy uses the native copy fast-path."""
-    from mountainash_utils_files import copy_between
+    from mountainash_transport import copy_between
 
     src_path = tmp_path / "source.bin"
     dst_path = tmp_path / "dest.bin"
@@ -165,7 +165,7 @@ def test_copy_between_no_pipeline_uses_native_copy(local_facade, tmp_path):
 
 def test_copy_between_forces_stream_when_pipeline_present(local_facade, tmp_path, monkeypatch):
     """When any pipeline is given, native copy is skipped even for same-backend."""
-    from mountainash_utils_files import copy_between
+    from mountainash_transport import copy_between
 
     src_path = tmp_path / "source.bin"
     dst_path = tmp_path / "dest.gz"

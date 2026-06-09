@@ -6,8 +6,8 @@ import pytest
 
 from mountainash_auth_client import NoAuth
 
-from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.profiles import (
+from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.profiles import (
     LOCAL_SPEC,
     LocalStorageProfile,
 )

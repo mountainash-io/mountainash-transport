@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mountainash_utils_files import read_bytes
+from mountainash_transport import read_bytes
 
 
 def test_read_bytes_reads_local_file(tmp_path: Path):
@@ -24,8 +24,8 @@ def test_read_bytes_http_routes_through_facade(monkeypatch):
             calls.append(path)
             return io.BytesIO(b"http body")
 
-    from mountainash_utils_files.storage_facade import facade as facade_mod
-    from mountainash_utils_files.storage_facade.facade import StorageFacade
+    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
         facade_mod, "get_storage_backend", lambda provider, storage_profile=None, **kw: _StreamBackend()
@@ -42,8 +42,8 @@ def test_read_bytes_https_routes_through_facade(monkeypatch):
         def read_to_stream(self, path: str):
             return io.BytesIO(b"https body")
 
-    from mountainash_utils_files.storage_facade import facade as facade_mod
-    from mountainash_utils_files.storage_facade.facade import StorageFacade
+    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
         facade_mod, "get_storage_backend", lambda provider, storage_profile=None, **kw: _StreamBackend()
@@ -74,8 +74,8 @@ def test_read_bytes_routes_s3_through_facade(monkeypatch):
             calls.append(path)
             return io.BytesIO(b"s3 body")
 
-    from mountainash_utils_files.storage_facade import facade as facade_mod
-    from mountainash_utils_files.storage_facade.facade import StorageFacade
+    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
         facade_mod, "get_storage_backend", lambda provider, storage_profile=None, **kw: _StreamBackend()
@@ -118,8 +118,8 @@ def test_read_bytes_http_infer_applies_pipeline_to_bytes(monkeypatch):
         def read_to_stream(self, path: str):
             return io.BytesIO(payload)
 
-    from mountainash_utils_files.storage_facade import facade as facade_mod
-    from mountainash_utils_files.storage_facade.facade import StorageFacade
+    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage_facade.facade import StorageFacade
 
     monkeypatch.setattr(
         facade_mod, "get_storage_backend", lambda provider, storage_profile=None, **kw: _StreamBackend()

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mountainash_utils_files"
+name = "mountainash_transport"
 dynamic = ["version"]
-description = 'Mountain Ash - Utils - Files'
+description = 'Mountain Ash - Transport — unified storage and messaging operations'
 readme = "README.md"
 requires-python = ">=3.10"
 # license = "Proprietary"
@@ -71,15 +71,15 @@ Source = "https://github.com/mountainash-io/mountainash-utils-files"
 # Tool: Coverage
 #================
 [tool.coverage.run]
-source_pkgs = ["mountainash_utils_files", "tests"]
+source_pkgs = ["mountainash_transport", "tests"]
 branch = true
 parallel = true
-omit = ["src/mountainash_utils_files/__version__.py"]
+omit = ["src/mountainash_transport/__version__.py"]
 
 [tool.coverage.paths]
-mountainash_utils_files = [
-    "src/mountainash_utils_files",
-    "*/mountainash-utils-files/src/mountainash_utils_files",
+mountainash_transport = [
+    "src/mountainash_transport",
+    "*/mountainash-utils-files/src/mountainash_transport",
 ]
 tests = ["tests", "*/mountainash-utils-files/tests"]
 

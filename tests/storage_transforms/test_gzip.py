@@ -6,7 +6,7 @@ import io
 
 import pytest
 
-from mountainash_utils_files.storage_transforms import Gzip, Pipeline, StreamTransform
+from mountainash_transport.storage_transforms import Gzip, Pipeline, StreamTransform
 
 
 def test_gzip_implements_stream_transform_protocol():

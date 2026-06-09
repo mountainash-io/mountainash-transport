@@ -70,8 +70,8 @@ jobs:
 
       - name: Setup Environment Variables
         run: |
-          echo "PACKAGE_SRCDIR=mountainash_utils_files" >> $GITHUB_ENV
-          echo "PACKAGE_NAME=mountainash-utils-files" >> $GITHUB_ENV
+          echo "PACKAGE_SRCDIR=mountainash_transport" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=mountainash-transport" >> $GITHUB_ENV
           echo "ORGNAME=mountainash-io" >> $GITHUB_ENV
 
       - name: Set up Python ${{ matrix.python-version }}

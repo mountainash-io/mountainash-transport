@@ -1,11 +1,11 @@
-"""Shared test fixtures for mountainash-utils-files tests."""
+"""Shared test fixtures for mountainash-transport tests."""
 import pytest
 import tempfile
 import shutil
 from pathlib import Path
 from typing import Generator
 
-from mountainash_utils_files import StorageFacade
+from mountainash_transport import StorageFacade
 
 
 @pytest.fixture
