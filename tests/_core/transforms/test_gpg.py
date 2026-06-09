@@ -14,7 +14,7 @@ from mountainash_transport._core.transforms import Pipeline
 pytestmark = pytest.mark.integration
 
 _RECIPIENT = "test@mountainash.example"
-_FIXTURE_SCRIPT = Path(__file__).resolve().parent.parent / "fixtures" / "gpg" / "generate_test_key.sh"
+_FIXTURE_SCRIPT = Path(__file__).resolve().parent.parent.parent / "fixtures" / "gpg" / "generate_test_key.sh"
 
 
 @pytest.fixture

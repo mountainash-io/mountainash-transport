@@ -18,7 +18,7 @@ from mountainash_transport._core.transforms import GPG, Gzip, Pipeline
 
 _RECIPIENT = "test@mountainash.example"
 _FIXTURE_SCRIPT = (
-    Path(__file__).resolve().parent.parent
+    Path(__file__).resolve().parent.parent.parent
     / "fixtures" / "gpg" / "generate_test_key.sh"
 )
 
