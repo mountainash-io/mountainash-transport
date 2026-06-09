@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from mountainash_transport import read_bytes
-from mountainash_transport.storage_transforms import GPG, Gzip, Pipeline
+from mountainash_transport._core.transforms import GPG, Gzip, Pipeline
 
 _RECIPIENT = "test@mountainash.example"
 _FIXTURE_SCRIPT = (

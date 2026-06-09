@@ -17,10 +17,10 @@ exercised by whichever phase fully wires each backend.
 from __future__ import annotations
 
 # Trigger provider registration so STORAGE_REGISTRY is populated.
-import mountainash_transport.settings.profiles  # noqa: F401
+import mountainash_transport.settings.storage.profiles  # noqa: F401
 
 from mountainash_settings.profiles import spec_invariants_for
-from mountainash_transport.settings.registry import STORAGE_REGISTRY
+from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY
 
 
 # Instantiating this at module import time generates one parametric test

@@ -5,7 +5,7 @@ from typing import BinaryIO
 
 
 def test_stream_transform_protocol_is_runtime_checkable():
-    from mountainash_transport.storage_transforms import StreamTransform
+    from mountainash_transport._core.transforms import StreamTransform
 
     class Identity:
         def wrap(self, stream: BinaryIO) -> BinaryIO:
@@ -17,7 +17,7 @@ def test_stream_transform_protocol_is_runtime_checkable():
 
 
 def test_stream_transform_protocol_rejects_incomplete_impl():
-    from mountainash_transport.storage_transforms import StreamTransform
+    from mountainash_transport._core.transforms import StreamTransform
 
     class OnlyWrap:
         def wrap(self, stream: BinaryIO) -> BinaryIO:

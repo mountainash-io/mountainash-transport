@@ -11,9 +11,9 @@ from __future__ import annotations
 import pytest
 
 # Trigger provider registration so STORAGE_REGISTRY is populated.
-import mountainash_transport.settings.profiles  # noqa: F401
+import mountainash_transport.settings.storage.profiles  # noqa: F401
 
-from mountainash_transport.settings.profiles import (
+from mountainash_transport.settings.storage.profiles import (
     AZURE_STORAGE_SPEC,
     AzureStorageProfile,
     FTP_SPEC,
@@ -33,7 +33,7 @@ from mountainash_transport.settings.profiles import (
     SSH_SPEC,
     SSHStorageProfile,
 )
-from mountainash_transport.settings.registry import (
+from mountainash_transport.settings.storage.registry import (
     STORAGE_REGISTRY,
     get_spec,
     get_settings_class,

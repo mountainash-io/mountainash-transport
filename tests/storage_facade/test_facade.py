@@ -11,13 +11,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Trigger backend registrations before importing the facade
-import mountainash_transport.storage_backends  # noqa: F401
+import mountainash_transport.storage.backends  # noqa: F401
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.dataclasses.file_metadata import FileMetadata
-from mountainash_transport.exceptions import UnsupportedOperationError
-from mountainash_transport.storage_facade import StorageFacade, copy_between
-from mountainash_transport.storage_protocols import (
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.exceptions import UnsupportedOperationError
+from mountainash_transport.storage.facade import StorageFacade, copy_between
+from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
@@ -199,7 +199,7 @@ class TestMkdir:
 class TestUnsupportedOperation:
     def test_mkdir_raises_on_s3_backend(self, tmp_dir):
         """S3StorageBackend does not implement StorageDirectoryProtocol."""
-        from mountainash_transport.storage_backends.s3 import S3StorageBackend
+        from mountainash_transport.storage.backends.s3 import S3StorageBackend
 
         # Patch boto3.client so S3 backend can be instantiated without real AWS creds
         with patch("boto3.client"):

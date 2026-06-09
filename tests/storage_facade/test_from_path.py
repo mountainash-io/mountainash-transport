@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage_facade import StorageFacade
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage.facade import StorageFacade
 
 
 def test_from_path_returns_storagefacade_for_local():
@@ -20,7 +20,7 @@ def test_from_path_returns_storagefacade_for_s3(monkeypatch):
     class _Dummy:
         pass
 
-    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage.facade import facade as facade_mod
 
     def _fake_get(provider, storage_profile=None, *, auth_profile=None):
         captured["provider"] = provider
@@ -48,7 +48,7 @@ def test_from_path_passes_profile(monkeypatch):
         captured["storage_profile"] = storage_profile
         return _Dummy()
 
-    from mountainash_transport.storage_facade import facade as facade_mod
+    from mountainash_transport.storage.facade import facade as facade_mod
 
     monkeypatch.setattr(facade_mod, "get_storage_backend", _fake_get)
 

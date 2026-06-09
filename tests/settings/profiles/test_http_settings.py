@@ -6,12 +6,12 @@ import pytest
 from mountainash_auth_client import NoAuth, PasswordAuth, TokenAuth
 from pydantic import SecretStr
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 
 def _make(**overrides):
     """Return an HTTPStorageProfile with minimal required fields."""
-    from mountainash_transport.settings.profiles import HTTPStorageProfile
+    from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
 
     kwargs = {
         "PROVIDER_TYPE": CONST_STORAGE_PROVIDER_TYPE.HTTP,
@@ -46,23 +46,23 @@ class TestHTTPStorageProfileConstruction:
 @pytest.mark.unit
 class TestHTTPDescriptor:
     def test_descriptor_name(self):
-        from mountainash_transport.settings.profiles.http_storage_profile import HTTP_SPEC
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
         assert HTTP_SPEC.name == "http"
 
     def test_descriptor_provider_type(self):
-        from mountainash_transport.settings.profiles.http_storage_profile import HTTP_SPEC
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
         assert HTTP_SPEC.provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP
 
     def test_descriptor_sdk_is_httpx(self):
-        from mountainash_transport.settings.profiles.http_storage_profile import HTTP_SPEC
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
         assert HTTP_SPEC.sdk_package == "httpx"
 
     def test_descriptor_not_read_only(self):
-        from mountainash_transport.settings.profiles.http_storage_profile import HTTP_SPEC
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
         assert HTTP_SPEC.read_only is False
 
     def test_descriptor_no_multipart(self):
-        from mountainash_transport.settings.profiles.http_storage_profile import HTTP_SPEC
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
         assert HTTP_SPEC.supports_multipart is False
 
 

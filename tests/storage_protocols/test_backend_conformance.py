@@ -2,14 +2,14 @@
 CI enforcement mechanism — if a mixin is missing a method, this test fails."""
 
 import pytest
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage_protocols import (
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.storage.protocols import (
     StorageConnectionProtocol, StorageReadProtocol, StorageWriteProtocol,
     StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
     StorageCopyProtocol, StorageDirectoryProtocol,
 )
-from mountainash_transport.storage_registry import get_registered_backends
-import mountainash_transport.storage_backends  # trigger registrations
+from mountainash_transport.storage.registry import get_registered_backends
+import mountainash_transport.storage.backends  # trigger registrations
 
 # Single source of truth for what each backend MUST implement
 EXPECTED_PROTOCOLS = {

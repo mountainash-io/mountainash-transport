@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from upath import UPath
 
-from mountainash_transport.path_helpers.s3 import s3_bucket, s3_key
+from mountainash_transport.storage.path_helpers.s3 import s3_bucket, s3_key
 
 
 @pytest.mark.parametrize(
@@ -63,6 +63,6 @@ def test_bug_3_format_namespace_is_gone():
     bucket was extractable. Function deleted — callers compose the string
     from s3_bucket() instead.
     """
-    from mountainash_transport.path_helpers import s3
+    from mountainash_transport.storage.path_helpers import s3
 
     assert not hasattr(s3, "format_namespace")

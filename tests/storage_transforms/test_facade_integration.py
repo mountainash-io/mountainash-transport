@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from mountainash_transport import StorageFacade
-from mountainash_transport.storage_transforms import Gzip, Pipeline
+from mountainash_transport._core.transforms import Gzip, Pipeline
 
 
 @pytest.fixture

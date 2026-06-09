@@ -8,15 +8,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.dataclasses.file_metadata import FileMetadata
-from mountainash_transport.exceptions import StorageConnectionError
-from mountainash_transport.storage_registry import get_registered_backends
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.exceptions import StorageConnectionError
+from mountainash_transport.storage.registry import get_registered_backends
 
 # Trigger backend registration
-import mountainash_transport.storage_backends  # noqa: F401
-from mountainash_transport.storage_backends.s3 import S3StorageBackend
-from mountainash_transport.storage_backends.s3.s3_path import parse_s3_path
+import mountainash_transport.storage.backends  # noqa: F401
+from mountainash_transport.storage.backends.s3 import S3StorageBackend
+from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
 
 
 # ---------------------------------------------------------------------------

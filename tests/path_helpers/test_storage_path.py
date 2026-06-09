@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 import pytest
 from upath import UPath
 
-from mountainash_transport.path_helpers.storage_path import StoragePath
+from mountainash_transport.storage.path_helpers.storage_path import StoragePath
 
 
 @pytest.mark.parametrize(

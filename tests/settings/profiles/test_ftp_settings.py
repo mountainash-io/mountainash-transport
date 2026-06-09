@@ -7,8 +7,8 @@ import pytest
 from mountainash_auth_client import NoAuth, PasswordAuth
 from pydantic import SecretStr
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.settings.profiles import (
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.storage.profiles import (
     FTP_SPEC,
     FTPStorageProfile,
 )

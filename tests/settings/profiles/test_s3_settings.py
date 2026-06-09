@@ -12,8 +12,8 @@ import pytest
 from mountainash_auth_client import IAMAuth, NoAuth
 from pydantic import SecretStr
 
-from mountainash_transport.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.settings.profiles import (
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.storage.profiles import (
     S3_SPEC,
     S3StorageProfile,
     validate_flavor,
