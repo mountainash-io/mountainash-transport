@@ -13,9 +13,9 @@ from mountainash_transport.connections.errors import (
     TransportConnectionError,
 )
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from .._core.protocols import ConnectionProtocol
 
-
-class HTTPConnection:
+class HTTPConnection(ConnectionProtocol):
     """Creates an authenticated httpx.Client from profile config + auth strategy."""
 
     def __init__(

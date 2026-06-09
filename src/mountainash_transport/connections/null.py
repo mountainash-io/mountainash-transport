@@ -4,9 +4,10 @@ from __future__ import annotations
 import typing as t
 
 from typing_extensions import Self
+from .._core.protocols import ConnectionProtocol
 
 
-class NullConnection:
+class NullConnection(ConnectionProtocol):
     """Always-connected, no-op connection for local filesystem and similar backends."""
 
     def connect(self) -> Self:
