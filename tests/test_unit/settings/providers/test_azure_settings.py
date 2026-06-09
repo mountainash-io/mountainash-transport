@@ -1,4 +1,4 @@
-"""Tests for AzureStorageSettings — unified Azure Blob + Files settings."""
+"""Tests for AzureStorageProfile — unified Azure Blob + Files settings."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from mountainash_auth_client import AzureADAuth, NoAuth, PasswordAuth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.azure_settings import (
+from mountainash_utils_files.settings.profiles import (
     AZURE_STORAGE_SPEC,
-    AzureStorageSettings,
+    AzureStorageProfile,
     validate_service_type,
 )
 
@@ -31,7 +31,7 @@ def _make(service_type: str = "blob", *, auth=None, **extra):
         "auth": auth if auth is not None else NoAuth(),
     }
     kwargs.update(extra)
-    return AzureStorageSettings(**kwargs)
+    return AzureStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -107,7 +107,7 @@ class TestAzureAuthResolution:
         sas = pytest.importorskip("azure.core.credentials")
         auth = TokenAuth(TOKEN=SecretStr("?sv=2020-02-10&sig=abc"))
         s = _make("blob")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert isinstance(kw["credential"], sas.AzureSasCredential)
 
     def test_password_auth_builds_named_key_credential(self, monkeypatch):
@@ -117,7 +117,7 @@ class TestAzureAuthResolution:
             USERNAME="teststg", PASSWORD=SecretStr("sh4redK3y=")
         )
         s = _make("blob")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         cred = kw["credential"]
         assert isinstance(cred, az.AzureNamedKeyCredential)
         # Named key uses plain strings — not SecretStr

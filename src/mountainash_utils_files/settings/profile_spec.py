@@ -1,3 +1,24 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import typing as t
+
+from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_settings.profiles import (
+    MISSING,
+    ParameterSpec,
+    ProfileSpec
+)
+
+
+
+
+if t.TYPE_CHECKING:
+    pass
+
+
+__all__ = ["MISSING", "ParameterSpec", "StorageProfileSpec"]
+
 """Storage-flavored ProfileSpec with typed metadata fields.
 
 Retained in mountainash-utils-files (rather than lifted to mountainash-settings)
@@ -5,22 +26,10 @@ because these fields are domain-specific: handler_module, supports_streaming,
 and read_only are meaningful only for storage providers.
 """
 
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-
-from mountainash_auth_client import CONST_AUTH_MODE
-from mountainash_settings.profiles import (
-    MISSING,
-    ParameterSpec,
-    ProfileSpec,
-)
-
-__all__ = ["MISSING", "ParameterSpec", "StorageDescriptor"]
 
 
 @dataclass(frozen=True, kw_only=True)
-class StorageDescriptor(ProfileSpec):
+class StorageProfileSpec(ProfileSpec):
     """ProfileSpec with storage-provider-specific typed metadata.
 
     Extra fields:

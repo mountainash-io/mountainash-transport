@@ -1,4 +1,4 @@
-"""Tests for LocalSettings — local filesystem + NFS/CIFS fold-in."""
+"""Tests for LocalStorageProfile — local filesystem + NFS/CIFS fold-in."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import pytest
 from mountainash_auth_client import NoAuth
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.local_settings import (
+from mountainash_utils_files.settings.profiles import (
     LOCAL_SPEC,
-    LocalSettings,
+    LocalStorageProfile,
 )
 
 
@@ -19,7 +19,7 @@ def _make(**extra):
         "auth": NoAuth(),
     }
     kwargs.update(extra)
-    return LocalSettings(**kwargs)
+    return LocalStorageProfile(**kwargs)
 
 
 @pytest.mark.unit

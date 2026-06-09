@@ -22,9 +22,10 @@ def test_from_path_returns_storagefacade_for_s3(monkeypatch):
 
     from mountainash_utils_files.storage_facade import facade as facade_mod
 
-    def _fake_get(provider, profile=None, *, auth=None):
+    def _fake_get(provider, storage_profile=None, *, auth_profile=None):
         captured["provider"] = provider
-        captured["profile"] = profile
+        captured["storage_profile"] = storage_profile
+        captured["auth_profile"] = auth_profile
         return _Dummy()
 
     # facade.py binds get_storage_backend at module load; patch it there.
@@ -32,7 +33,8 @@ def test_from_path_returns_storagefacade_for_s3(monkeypatch):
 
     StorageFacade.from_path("s3://bucket/key")
     assert captured["provider"] == CONST_STORAGE_PROVIDER_TYPE.S3
-    assert captured["profile"] is None
+    assert captured["storage_profile"] is None
+    assert captured["auth_profile"] is None
 
 
 def test_from_path_passes_profile(monkeypatch):
@@ -41,9 +43,9 @@ def test_from_path_passes_profile(monkeypatch):
     class _Dummy:
         pass
 
-    def _fake_get(provider, profile=None, *, auth=None):
+    def _fake_get(provider, storage_profile=None, *, auth_profile=None):
         captured["provider"] = provider
-        captured["profile"] = profile
+        captured["storage_profile"] = storage_profile
         return _Dummy()
 
     from mountainash_utils_files.storage_facade import facade as facade_mod
@@ -51,9 +53,9 @@ def test_from_path_passes_profile(monkeypatch):
     monkeypatch.setattr(facade_mod, "get_storage_backend", _fake_get)
 
     sentinel = object()
-    StorageFacade.from_path("gs://bucket/key", profile=sentinel)  # type: ignore[arg-type]
+    StorageFacade.from_path("gs://bucket/key", storage_profile=sentinel)  # type: ignore[arg-type]
     assert captured["provider"] == CONST_STORAGE_PROVIDER_TYPE.GCS
-    assert captured["profile"] is sentinel
+    assert captured["storage_profile"] is sentinel
 
 
 def test_from_path_raises_for_unrecognised_scheme():

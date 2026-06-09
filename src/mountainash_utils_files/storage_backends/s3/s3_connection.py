@@ -17,8 +17,9 @@ import typing as t
 
 from mountainash_utils_files.exceptions import StorageConnectionError
 
+from mountainash_utils_files.storage_protocols import StorageConnectionProtocol
 
-class S3ConnectionMixin:
+class S3ConnectionMixin(StorageConnectionProtocol):
     """Connection mixin wrapping ``boto3.client("s3", ...)``.
 
     The mixin accepts three ``auth_params`` shapes for compatibility:
@@ -43,7 +44,11 @@ class S3ConnectionMixin:
         try:
             import boto3  # type: ignore[import-untyped]
 
-            kwargs = self._resolve_kwargs()
+            storage_profile = self.storage_profile  # type: ignore[attr-defined]
+            auth_profile = self.auth_profile  # type: ignore[attr-defined]
+
+            kwargs = storage_profile.to_handler_kwargs(auth_profile)
+
             # Strip the adapter's service_name (boto3.client takes it
             # positionally) so the call is always ``boto3.client("s3", ...)``.
             kwargs.pop("service_name", None)
@@ -55,81 +60,6 @@ class S3ConnectionMixin:
                 f"Failed to create S3 client: {exc}"
             ) from exc
 
-    def _resolve_kwargs(self) -> dict[str, t.Any]:
-        """Return boto3 client kwargs for the wrapped auth_params shape."""
-        auth_params = self.auth_params  # type: ignore[attr-defined]
-
-        # Shape 1: S3Settings profile (preferred). Use the class-level
-        # descriptor check rather than ``hasattr`` — MagicMock auto-generates
-        # ``to_handler_kwargs`` on access, which would otherwise match.
-        cls = type(auth_params)
-        is_profile = (
-            any("to_handler_kwargs" in b.__dict__ for b in cls.__mro__)
-            and not hasattr(auth_params, "_mock_name")
-        )
-        if is_profile:
-            kwargs = auth_params.to_handler_kwargs(auth=getattr(self, "auth", None))
-            if isinstance(kwargs, dict) and "base_kwargs" in kwargs:
-                # STS assume-role dispatch — not implemented at this layer.
-                raise StorageConnectionError(
-                    "ROLE_ARN dispatch (STS assume-role) is not yet "
-                    "implemented in S3ConnectionMixin; call "
-                    "profile.to_handler_kwargs() and perform STS before "
-                    "instantiating the backend."
-                )
-            return kwargs
-
-        # Shape 2: legacy ``.settings`` wrapper.
-        settings = getattr(auth_params, "settings", None)
-        if settings is None:
-            raise StorageConnectionError(
-                "auth_params must be an S3Settings profile or expose a "
-                "`settings` attribute."
-            )
-
-        flavor = getattr(settings, "FLAVOR", None) or "aws"
-        endpoint_url = getattr(settings, "ENDPOINT_URL", None)
-        account_id = getattr(settings, "ACCOUNT_ID", None)
-
-        # Flavor-specific endpoint URL resolution for legacy mocks.
-        if flavor == "r2":
-            endpoint_url = endpoint_url or (
-                f"https://{account_id}.r2.cloudflarestorage.com"
-                if account_id
-                else None
-            )
-            region = "auto"
-        else:
-            region = getattr(settings, "REGION", None)
-
-        secret = getattr(settings, "SECRET_ACCESS_KEY", None)
-        secret_str: t.Optional[str]
-        if secret is None:
-            secret_str = None
-        elif hasattr(secret, "get_secret_value"):
-            secret_str = secret.get_secret_value()
-        else:
-            secret_str = secret
-
-        kwargs: dict[str, t.Any] = {
-            "endpoint_url": endpoint_url,
-            "aws_access_key_id": getattr(settings, "ACCESS_KEY_ID", None),
-            "aws_secret_access_key": secret_str,
-            "region_name": region,
-        }
-
-        # Only pass use_ssl when explicitly set on legacy settings objects;
-        # keeps the pre-consolidation AWS S3 call signature intact for tests
-        # that don't set USE_SSL on the mock.
-        if "USE_SSL" in getattr(settings, "__dict__", {}) or (
-            hasattr(settings, "USE_SSL") and not _is_magicmock_default(settings, "USE_SSL")
-        ):
-            use_ssl = getattr(settings, "USE_SSL", None)
-            if isinstance(use_ssl, bool):
-                kwargs["use_ssl"] = use_ssl
-
-        return kwargs
-
     def disconnect(self) -> None:
         """Release the cached boto3 client."""
         self._client = None  # type: ignore[assignment]
@@ -139,14 +69,93 @@ class S3ConnectionMixin:
         return self._client is not None
 
 
-def _is_magicmock_default(obj: t.Any, attr: str) -> bool:
-    """Return True if ``obj.attr`` is an auto-generated MagicMock attribute.
+    # def _resolve_kwargs(self) -> dict[str, t.Any]:
+    #     """Return boto3 client kwargs for the wrapped auth_params shape."""
+    #     storage_profile = self.storage_profile  # type: ignore[attr-defined]
+    #     auth_profile = self.auth_profile  # type: ignore[attr-defined]
 
-    MagicMock auto-creates attributes on access, yielding a non-bool value
-    for ``USE_SSL``. Tests that don't set USE_SSL on their mock settings
-    should not have ``use_ssl`` appear in the boto3 call.
-    """
-    # Heuristic: MagicMock attributes have a ``_mock_name`` attribute; plain
-    # bools / Nones do not.
-    val = getattr(obj, attr, None)
-    return hasattr(val, "_mock_name") and not isinstance(val, bool)
+
+    #     # Shape 1: S3Settings profile (preferred). Use the class-level
+    #     # descriptor check rather than ``hasattr`` — MagicMock auto-generates
+    #     # ``to_handler_kwargs`` on access, which would otherwise match.
+    #     cls = type(storage_profile)
+    #     is_profile = (
+    #         any("to_handler_kwargs" in b.__dict__ for b in cls.__mro__)
+    #         and not hasattr(storage_profile, "_mock_name")
+    #     )
+    #     if is_profile:
+    #         kwargs = storage_profile.to_handler_kwargs(auth_profile)
+    #         if isinstance(kwargs, dict) and "base_kwargs" in kwargs:
+    #             # STS assume-role dispatch — not implemented at this layer.
+    #             raise StorageConnectionError(
+    #                 "ROLE_ARN dispatch (STS assume-role) is not yet "
+    #                 "implemented in S3ConnectionMixin; call "
+    #                 "profile.to_handler_kwargs() and perform STS before "
+    #                 "instantiating the backend."
+    #             )
+    #         return kwargs
+
+        # # Shape 2: legacy ``.settings`` wrapper.
+        # settings = getattr(storage_profile, "settings", None)
+        # if settings is None:
+        #     raise StorageConnectionError(
+        #         "auth_params must be an S3Settings profile or expose a "
+        #         "`settings` attribute."
+        #     )
+
+        # flavor = getattr(settings, "FLAVOR", None) or "aws"
+        # endpoint_url = getattr(settings, "ENDPOINT_URL", None)
+        # account_id = getattr(settings, "ACCOUNT_ID", None)
+
+        # # Flavor-specific endpoint URL resolution for legacy mocks.
+        # if flavor == "r2":
+        #     endpoint_url = endpoint_url or (
+        #         f"https://{account_id}.r2.cloudflarestorage.com"
+        #         if account_id
+        #         else None
+        #     )
+        #     region = "auto"
+        # else:
+        #     region = getattr(settings, "REGION", None)
+
+        # secret = getattr(settings, "SECRET_ACCESS_KEY", None)
+        # secret_str: t.Optional[str]
+        # if secret is None:
+        #     secret_str = None
+        # elif hasattr(secret, "get_secret_value"):
+        #     secret_str = secret.get_secret_value()
+        # else:
+        #     secret_str = secret
+
+        # kwargs: dict[str, t.Any] = {
+        #     "endpoint_url": endpoint_url,
+        #     "aws_access_key_id": getattr(settings, "ACCESS_KEY_ID", None),
+        #     "aws_secret_access_key": secret_str,
+        #     "region_name": region,
+        # }
+
+        # # Only pass use_ssl when explicitly set on legacy settings objects;
+        # # keeps the pre-consolidation AWS S3 call signature intact for tests
+        # # that don't set USE_SSL on the mock.
+        # if "USE_SSL" in getattr(settings, "__dict__", {}) or (
+        #     hasattr(settings, "USE_SSL") and not _is_magicmock_default(settings, "USE_SSL")
+        # ):
+        #     use_ssl = getattr(settings, "USE_SSL", None)
+        #     if isinstance(use_ssl, bool):
+        #         kwargs["use_ssl"] = use_ssl
+
+        # return kwargs
+
+
+
+# def _is_magicmock_default(obj: t.Any, attr: str) -> bool:
+#     """Return True if ``obj.attr`` is an auto-generated MagicMock attribute.
+
+#     MagicMock auto-creates attributes on access, yielding a non-bool value
+#     for ``USE_SSL``. Tests that don't set USE_SSL on their mock settings
+#     should not have ``use_ssl`` appear in the boto3 call.
+#     """
+#     # Heuristic: MagicMock attributes have a ``_mock_name`` attribute; plain
+#     # bools / Nones do not.
+#     val = getattr(obj, attr, None)
+#     return hasattr(val, "_mock_name") and not isinstance(val, bool)

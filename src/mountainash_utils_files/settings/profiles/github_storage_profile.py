@@ -24,15 +24,19 @@ import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
 
-from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
-from ..profile import StorageProfile
+from mountainash_auth_client import AuthProfile, JWTAuth, OAuth2Auth, TokenAuth
+
+from ..profile_spec import MISSING, ParameterSpec, StorageProfileSpec
+from mountainash_settings.profiles import Profile
+
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
+from ..utils.secrets import _unwrap_secret
 
-__all__ = ["GITHUB_REPO_SPEC", "GitHubRepoSettings"]
+__all__ = ["GITHUB_REPO_SPEC", "GitHubRepoStorageProfile"]
 
 
-GITHUB_REPO_SPEC = StorageDescriptor(
+GITHUB_REPO_SPEC = StorageProfileSpec(
     name="github_repo",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.GITHUB,
     sdk_package="fsspec",
@@ -94,14 +98,14 @@ GITHUB_REPO_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "GitHubRepoSettings", auth=None) -> dict[str, t.Any]:
-    from ..adapters.github import build_handler_kwargs
+# def _adapter(profile: "GitHubRepoStorageProfile", auth=None) -> dict[str, t.Any]:
+#     from ..adapters.github import build_handler_kwargs
 
-    return build_handler_kwargs(profile, auth)
+#     return build_handler_kwargs(profile, auth)
 
 
 @register
-class GitHubRepoSettings(StorageProfile):
+class GitHubRepoStorageProfile(Profile):
     """GitHub repository (read-only) settings.
 
     Fields are installed from :data:`GITHUB_REPO_SPEC` by the
@@ -126,7 +130,6 @@ class GitHubRepoSettings(StorageProfile):
     """
 
     __spec__ = GITHUB_REPO_SPEC
-    __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -134,3 +137,57 @@ class GitHubRepoSettings(StorageProfile):
         org = getattr(self, "ORG", "") or ""
         repo = getattr(self, "REPO", "") or ""
         return f"{base}/repos/{org}/{repo}"
+
+
+    def _token_from_auth(self, auth_profile: AuthProfile | None) -> t.Optional[str]:
+        """Extract a string bearer token from the discriminated auth union.
+
+        - :class:`TokenAuth` / :class:`JWTAuth` → ``auth.token``
+        - :class:`OAuth2Auth`                   → ``auth.token``
+        - Anything else (incl. :class:`NoAuth`) → ``None``
+        """
+        if auth_profile is None:
+            return None
+        if isinstance(auth_profile, (TokenAuth, JWTAuth)):
+            return _unwrap_secret(auth_profile.TOKEN)
+        if isinstance(auth_profile, OAuth2Auth):
+            return _unwrap_secret(auth_profile.TOKEN)
+        return None
+
+
+    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+        """Build fsspec ``GithubFileSystem`` kwargs from a :class:`GitHubRepoSettings`.
+
+        Signature widened to ``StorageProfile`` to satisfy the upstream
+        ``__adapter__: Callable[[Profile], dict[str, Any]]``
+        contract; callers always pass a :class:`GitHubRepoSettings`
+        instance in practice.
+        """
+        org = getattr(self, "ORG", None)
+        repo = getattr(self, "REPO", None)
+        ref = getattr(self, "REF", None)
+        base_url = getattr(self, "BASE_URL", None)
+        timeout = getattr(self, "TIMEOUT", None)
+
+        kwargs: dict[str, t.Any] = {
+            "org": org,
+            "repo": repo,
+        }
+        if ref is not None:
+            kwargs["sha"] = ref
+        if base_url:
+            kwargs["base_url"] = base_url
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+
+        token = self._token_from_auth(auth_profile)
+        if token is not None:
+            kwargs["token"] = token
+            # For authenticated access fsspec also accepts ``username`` — if
+            # the auth spec carries a username surface it. (TokenAuth doesn't
+            # currently have one, but OAuth2Auth might.)
+            username = getattr(auth_profile, "USERNAME", None) if auth_profile is not None else None
+            if username:
+                kwargs["username"] = username
+
+        return kwargs

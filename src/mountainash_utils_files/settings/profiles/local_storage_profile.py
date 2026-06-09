@@ -3,7 +3,7 @@
 Descriptor-driven settings class covering both direct local-filesystem
 access and pre-mounted network filesystems (NFS, CIFS). The legacy
 ``NFSStorageAuthSettings`` is retired in favour of
-``LocalSettings(MOUNT_SPEC={"mount_type": "nfs", ...})`` — the handler
+``LocalStorageProfile(MOUNT_SPEC={"mount_type": "nfs", ...})`` — the handler
 issues an OS-level ``mount`` command if ``MOUNT_SPEC`` is populated
 and then operates on the local path.
 
@@ -29,16 +29,21 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import AuthProfile
 
-from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
-from ..profile import StorageProfile
+from ..profile_spec import ParameterSpec, StorageProfileSpec
+from mountainash_settings.profiles import Profile
+
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
-__all__ = ["LOCAL_SPEC", "LocalSettings"]
+__all__ = ["LOCAL_SPEC", "LocalStorageProfile"]
 
 
-LOCAL_SPEC = StorageDescriptor(
+_MOUNTABLE_TYPES: frozenset[str] = frozenset({"nfs", "cifs"})
+
+
+LOCAL_SPEC = StorageProfileSpec(
     name="local",
     provider_type=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
     sdk_package=None,  # stdlib only
@@ -86,14 +91,14 @@ LOCAL_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the adapters
 # package which depends on StorageProfile.
-def _adapter(profile: "LocalSettings", auth=None) -> dict[str, t.Any]:
-    from ..adapters.local import build_handler_kwargs
+# def _adapter(profile: "LocalStorageProfile", auth=None) -> dict[str, t.Any]:
+#     from ..adapters.local import build_handler_kwargs
 
-    return build_handler_kwargs(profile, auth)
+#     return build_handler_kwargs(profile, auth)
 
 
 @register
-class LocalSettings(StorageProfile):
+class LocalStorageProfile(Profile):
     """Local filesystem settings (also covers pre-mounted NFS / CIFS).
 
     Fields are installed from :data:`LOCAL_SPEC` by the
@@ -106,7 +111,7 @@ class LocalSettings(StorageProfile):
 
     .. code-block:: python
 
-        LocalSettings(
+        LocalStorageProfile(
             ROOT_PATH="/mnt/share",
             MOUNT_SPEC={
                 "mount_type":  "nfs",
@@ -119,7 +124,6 @@ class LocalSettings(StorageProfile):
     """
 
     __spec__ = LOCAL_SPEC
-    __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -134,3 +138,28 @@ class LocalSettings(StorageProfile):
         if root:
             return f"file://{root}"
         return "file://"
+
+
+
+
+
+    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+        """Build LocalStorageBackend kwargs from a :class:`LocalSettings` profile.
+
+        Signature widened to ``StorageProfile`` to satisfy the upstream
+        ``__adapter__: Callable[[Profile], dict[str, Any]]``
+        contract; callers always pass a :class:`LocalSettings` instance in
+        practice.
+        """
+        kwargs: dict[str, t.Any] = {
+            "root_path": getattr(self, "ROOT_PATH", None),
+            "create_path": bool(getattr(self, "CREATE_PATH", False)),
+        }
+
+        mount_spec = getattr(self, "MOUNT_SPEC", None)
+        if mount_spec:
+            mount_type = mount_spec.get("mount_type") if isinstance(mount_spec, dict) else None
+            if mount_type in _MOUNTABLE_TYPES:
+                kwargs["mount_spec"] = mount_spec
+
+        return kwargs

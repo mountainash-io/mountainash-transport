@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_utils_files.storage_registry import register_storage_backend
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
 
 from .local_connection import LocalConnectionMixin
 from .local_copy import LocalCopyMixin
@@ -28,8 +29,9 @@ class LocalStorageBackend(
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
-    def __init__(self, profile=None, *, auth=None) -> None:
-        self.auth_params = profile
+    def __init__(self, storage_profile: StorageProfileProtocol, *, auth_profile=None) -> None:
+        self.storage_profile = storage_profile
+        self.auth_profile = auth_profile
 
 
 __all__ = [

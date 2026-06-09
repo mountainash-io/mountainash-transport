@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from .s3_path import parse_s3_path
 
+from mountainash_utils_files.storage_protocols import StorageDeleteProtocol
 
-class S3DeleteMixin:
+class S3DeleteMixin(StorageDeleteProtocol):
     """Delete mixin for AWS S3."""
 
     def delete_file(self, path: str) -> None:

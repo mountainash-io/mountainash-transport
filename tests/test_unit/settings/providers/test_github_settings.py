@@ -1,4 +1,4 @@
-"""Tests for GitHubRepoSettings — GitHub repository (read-only)."""
+"""Tests for GitHubRepoStorageProfile — GitHub repository (read-only)."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from mountainash_auth_client import JWTAuth, NoAuth, OAuth2Auth, TokenAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.github_settings import (
+from mountainash_utils_files.settings.profiles import (
     GITHUB_REPO_SPEC,
-    GitHubRepoSettings,
+    GitHubRepoStorageProfile,
 )
 
 
@@ -22,7 +22,7 @@ def _make(*, auth=None, **extra):
         "auth": auth if auth is not None else NoAuth(),
     }
     kwargs.update(extra)
-    return GitHubRepoSettings(**kwargs)
+    return GitHubRepoStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -38,7 +38,7 @@ class TestGitHubConstruction:
 
     def test_timeout_field_explicitly_declared(self):
         """Regression: TIMEOUT was previously undefined in the legacy class."""
-        assert "TIMEOUT" in GitHubRepoSettings.model_fields
+        assert "TIMEOUT" in GitHubRepoStorageProfile.model_fields
         s = _make()
         # Default value should be set to 30.0 by the descriptor.
         assert s.TIMEOUT == 30.0
@@ -59,7 +59,7 @@ class TestGitHubScopeCut:
         ],
     )
     def test_scope_cut_field_absent(self, field):
-        assert field not in GitHubRepoSettings.model_fields
+        assert field not in GitHubRepoStorageProfile.model_fields
 
 
 @pytest.mark.unit
@@ -67,13 +67,13 @@ class TestGitHubAuthPaths:
     def test_token_auth_pat_surfaces_token(self):
         auth = TokenAuth(TOKEN=SecretStr("ghp_abc123"))
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["token"] == "ghp_abc123"
 
     def test_jwt_auth_surfaces_token(self):
         auth = JWTAuth(TOKEN=SecretStr("jwt.body.sig"))
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["token"] == "jwt.body.sig"
 
     def test_oauth2_auth_surfaces_token(self):
@@ -82,12 +82,12 @@ class TestGitHubAuthPaths:
             CLIENT_ID="my-app",
         )
         s = _make()
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["token"] == "gho_xyz"
 
     def test_noauth_produces_no_token(self):
         s = _make()
-        kw = s.to_handler_kwargs(auth=NoAuth())
+        kw = s.to_handler_kwargs(auth_profile=NoAuth())
         assert "token" not in kw
 
 

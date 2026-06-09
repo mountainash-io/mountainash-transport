@@ -11,27 +11,27 @@ from __future__ import annotations
 import pytest
 
 # Trigger provider registration so STORAGE_REGISTRY is populated.
-import mountainash_utils_files.settings.providers  # noqa: F401
+import mountainash_utils_files.settings.profiles  # noqa: F401
 
-from mountainash_utils_files.settings.providers import (
+from mountainash_utils_files.settings.profiles import (
     AZURE_STORAGE_SPEC,
-    AzureStorageSettings,
+    AzureStorageProfile,
     FTP_SPEC,
-    FTPSettings,
+    FTPStorageProfile,
     GCS_SPEC,
-    GCSSettings,
+    GCSStorageProfile,
     GITHUB_REPO_SPEC,
-    GitHubRepoSettings,
+    GitHubRepoStorageProfile,
     HTTP_SPEC,
-    HTTPSettings,
+    HTTPStorageProfile,
     LOCAL_SPEC,
-    LocalSettings,
+    LocalStorageProfile,
     S3_SPEC,
-    S3Settings,
+    S3StorageProfile,
     SMB_SPEC,
-    SMBSettings,
+    SMBStorageProfile,
     SSH_SPEC,
-    SSHSettings,
+    SSHStorageProfile,
 )
 from mountainash_utils_files.settings.registry import (
     STORAGE_REGISTRY,
@@ -39,6 +39,14 @@ from mountainash_utils_files.settings.registry import (
     get_settings_class,
     register,
 )
+
+from mountainash_utils_files.settings.profile_spec import (
+    ParameterSpec,
+    StorageProfileSpec,
+)
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
+from mountainash_auth_client import CONST_AUTH_MODE
+
 
 
 EXPECTED_PROVIDERS = {
@@ -92,14 +100,14 @@ class TestStorageRegistry:
     @pytest.mark.parametrize(
         "name,expected_class",
         [
-            ("s3", S3Settings),
-            ("gcs", GCSSettings),
-            ("azure_storage", AzureStorageSettings),
-            ("ssh", SSHSettings),
-            ("ftp", FTPSettings),
-            ("smb", SMBSettings),
-            ("local", LocalSettings),
-            ("github_repo", GitHubRepoSettings),
+            ("s3", S3StorageProfile),
+            ("gcs", GCSStorageProfile),
+            ("azure_storage", AzureStorageProfile),
+            ("ssh", SSHStorageProfile),
+            ("ftp", FTPStorageProfile),
+            ("smb", SMBStorageProfile),
+            ("local", LocalStorageProfile),
+            ("github_repo", GitHubRepoStorageProfile),
         ],
     )
     def test_get_settings_class_returns_registered_class(
@@ -115,14 +123,8 @@ class TestStorageRegistry:
 
     def test_register_is_bound_to_storage_registry(self):
         """The exported ``register`` decorator targets STORAGE_REGISTRY."""
-        from mountainash_utils_files.settings.descriptor import (
-            ParameterSpec,
-            StorageDescriptor,
-        )
-        from mountainash_utils_files.settings.profile import StorageProfile
-        from mountainash_auth_client import CONST_AUTH_MODE
 
-        dummy_spec = StorageDescriptor(
+        dummy_spec = StorageProfileSpec(
             name="_test_registry_binding",
             provider_type="_test",
             parameters=[
@@ -134,25 +136,19 @@ class TestStorageRegistry:
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         try:
             @register
-            class _DummySettings(StorageProfile):
+            class _DummyStorageProfile(StorageProfileProtocol):
                 __spec__ = dummy_spec
 
             assert "_test_registry_binding" in STORAGE_REGISTRY.descriptors
-            assert get_settings_class("_test_registry_binding") is _DummySettings
+            assert get_settings_class("_test_registry_binding") is _DummyStorageProfile
         finally:
             STORAGE_REGISTRY._reset_for_tests(*snapshot)
 
     def test_reset_for_tests_restores_snapshot(self):
         """_reset_for_tests rolls back to the snapshot state."""
-        from mountainash_utils_files.settings.descriptor import (
-            ParameterSpec,
-            StorageDescriptor,
-        )
-        from mountainash_utils_files.settings.profile import StorageProfile
-        from mountainash_auth_client import CONST_AUTH_MODE
 
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
-        tmp_spec = StorageDescriptor(
+        tmp_spec = StorageProfileSpec(
             name="_snapshot_dummy",
             provider_type="_test",
             parameters=[
@@ -163,7 +159,7 @@ class TestStorageRegistry:
         )
 
         @register
-        class _TmpSettings(StorageProfile):
+        class _TmpStorageProfile(StorageProfileProtocol):
             __spec__ = tmp_spec
 
         assert "_snapshot_dummy" in STORAGE_REGISTRY.descriptors

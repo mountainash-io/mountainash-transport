@@ -5,9 +5,10 @@ from __future__ import annotations
 from mountainash_utils_files.dataclasses.file_metadata import FileMetadata
 
 from .s3_path import parse_s3_path
+from mountainash_utils_files.storage_protocols import StorageListProtocol
 
 
-class S3ListMixin:
+class S3ListMixin(StorageListProtocol):
     """List mixin for AWS S3."""
 
     def list_files(self, prefix: str) -> list[FileMetadata]:

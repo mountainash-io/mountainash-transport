@@ -5,19 +5,19 @@ Suffix-driven transform inference delegates to the facade's read() method.
 """
 from __future__ import annotations
 
-import typing
 
-from mountainash_auth_client import AuthMode
+from mountainash_auth_client import AuthProfile
 
 from mountainash_utils_files.storage_facade.facade import StorageFacade
 from mountainash_utils_files.storage_transforms import GPG, Gzip
+from mountainash_utils_files.settings.profile_protocol import StorageProfileProtocol
 
 
 def read_bytes(
     path: str,
     *,
-    profile: typing.Any = None,
-    auth: AuthMode | None = None,
+    storage_profile: StorageProfileProtocol | None= None,
+    auth_profile: AuthProfile | None = None,
     infer: bool = False,
     gpg: GPG | None = None,
     gzip: Gzip | None = None,
@@ -31,7 +31,7 @@ def read_bytes(
     Args:
         path: Path or URL.
         profile: Optional storage profile forwarded to the storage facade.
-        auth: Optional direct AuthMode instance (e.g. TokenAuth, PasswordAuth).
+        auth_profile: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
             When provided, overrides any Authorization header set by *profile*.
         infer: When True, inspect *path*'s suffix chain and auto-apply a
             read-side ``Pipeline`` for known suffixes (``.gz``, ``.gzip``,
@@ -51,5 +51,5 @@ def read_bytes(
             is not registered, or *infer* is True and a gpg-family suffix
             was seen without a *gpg* instance.
     """
-    facade = StorageFacade.from_path(path, profile, auth=auth)
+    facade = StorageFacade.from_path(path, storage_profile, auth_profile=auth_profile)
     return facade.read(path, infer=infer, gpg=gpg, gzip=gzip)

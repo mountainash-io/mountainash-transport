@@ -1,4 +1,4 @@
-"""Tests for SMBSettings — SMB / CIFS settings."""
+"""Tests for SMBStorageProfile — SMB / CIFS settings."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from mountainash_auth_client import KerberosAuth, PasswordAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.smb_settings import (
+from mountainash_utils_files.settings.profiles import (
     SMB_SPEC,
-    SMBSettings,
+    SMBStorageProfile,
 )
 
 
@@ -20,7 +20,7 @@ def _make(*, server: str = "file.example", **extra):
         "SERVER": server,
     }
     kwargs.update(extra)
-    return SMBSettings(**kwargs)
+    return SMBStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -43,7 +43,7 @@ class TestSMBFakeFieldsAbsent:
         ],
     )
     def test_fake_field_absent(self, field):
-        assert field not in SMBSettings.model_fields
+        assert field not in SMBStorageProfile.model_fields
 
 
 @pytest.mark.unit
@@ -51,7 +51,7 @@ class TestSMBPasswordAuthDomainEncoding:
     def test_domain_encoded_on_username(self):
         auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
         s = _make(USERNAME="alice", DOMAIN="CORP")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["username"] == "CORP\\alice"
         assert kw["auth_protocol"] == "negotiate"
         assert kw["password"] == "pw"
@@ -59,7 +59,7 @@ class TestSMBPasswordAuthDomainEncoding:
     def test_no_domain_plain_username(self):
         auth = PasswordAuth(USERNAME="alice", PASSWORD=SecretStr("pw"))
         s = _make(USERNAME="alice")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["username"] == "alice"
         assert kw["auth_protocol"] == "negotiate"
 
@@ -69,13 +69,13 @@ class TestSMBKerberosAuth:
     def test_kerberos_sets_protocol(self):
         auth = KerberosAuth(PRINCIPAL="alice@CORP")
         s = _make(USERNAME="alice", DOMAIN="CORP")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["auth_protocol"] == "kerberos"
 
     def test_kerberos_principal_becomes_username(self):
         auth = KerberosAuth(PRINCIPAL="alice")
         s = _make(DOMAIN="CORP")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["username"] == "CORP\\alice"
 
 
@@ -84,30 +84,30 @@ class TestSMBConnectionKwargs:
     def test_server_and_port_defaults(self):
         auth = PasswordAuth(USERNAME="u", PASSWORD=SecretStr("p"))
         s = _make(USERNAME="u")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["server"] == "file.example"
         assert kw["port"] == 445
 
     def test_encrypt_default_false(self):
         auth = PasswordAuth(USERNAME="u", PASSWORD=SecretStr("p"))
         s = _make(USERNAME="u")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["encrypt"] is False
 
     def test_encrypt_true_opt_in(self):
         auth = PasswordAuth(USERNAME="u", PASSWORD=SecretStr("p"))
         s = _make(USERNAME="u", ENCRYPT=True)
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["encrypt"] is True
 
     def test_connection_timeout_default_and_override(self):
         auth = PasswordAuth(USERNAME="u", PASSWORD=SecretStr("p"))
         s = _make(USERNAME="u")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["connection_timeout"] == 60
 
         s2 = _make(USERNAME="u", CONNECTION_TIMEOUT=15)
-        kw2 = s2.to_handler_kwargs(auth=auth)
+        kw2 = s2.to_handler_kwargs(auth_profile=auth)
         assert kw2["connection_timeout"] == 15
 
 

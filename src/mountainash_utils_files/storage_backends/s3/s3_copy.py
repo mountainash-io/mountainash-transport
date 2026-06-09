@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from .s3_path import parse_s3_path
 
+from mountainash_utils_files.storage_protocols import StorageCopyProtocol
 
-class S3CopyMixin:
+class S3CopyMixin(StorageCopyProtocol):
     """Copy mixin for AWS S3 using server-side copy."""
 
     def copy(self, source: str, destination: str) -> None:

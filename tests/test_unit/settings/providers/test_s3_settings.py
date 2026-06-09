@@ -1,4 +1,4 @@
-"""Tests for S3Settings — consolidated S3-family settings.
+"""Tests for S3StorageProfile — consolidated S3-family settings.
 
 Covers the flavor discriminator matrix (aws / express / r2 / minio / b2),
 the adapter-produced boto3 kwargs, ROLE_ARN nested-envelope path, and
@@ -13,9 +13,9 @@ from mountainash_auth_client import IAMAuth, NoAuth
 from pydantic import SecretStr
 
 from mountainash_utils_files.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_utils_files.settings.providers.s3_settings import (
+from mountainash_utils_files.settings.profiles import (
     S3_SPEC,
-    S3Settings,
+    S3StorageProfile,
     validate_flavor,
 )
 
@@ -37,7 +37,7 @@ def _make(
     region: str = "us-east-1",
     **extra,
 ):
-    """Return an S3Settings for ``flavor`` with minimal required fields."""
+    """Return an S3StorageProfile for ``flavor`` with minimal required fields."""
     kwargs = {
         "PROVIDER_TYPE": _PROVIDER_TYPE_BY_FLAVOR[flavor],
         "FLAVOR": flavor,
@@ -45,7 +45,7 @@ def _make(
         "auth": auth if auth is not None else NoAuth(),
     }
     kwargs.update(extra)
-    return S3Settings(**kwargs)
+    return S3StorageProfile(**kwargs)
 
 
 @pytest.mark.unit
@@ -65,7 +65,7 @@ class TestFlavorValidator:
 
 
 @pytest.mark.unit
-class TestS3SettingsConstruction:
+class TestS3StorageProfileConstruction:
     @pytest.mark.parametrize(
         "flavor", ["aws", "express", "r2", "minio", "b2"]
     )
@@ -87,8 +87,8 @@ class TestS3SettingsConstruction:
 
     def test_path_style_field_removed(self):
         """PATH_STYLE was retired in favour of ADDRESSING_STYLE."""
-        assert "PATH_STYLE" not in S3Settings.model_fields
-        assert "ADDRESSING_STYLE" in S3Settings.model_fields
+        assert "PATH_STYLE" not in S3StorageProfile.model_fields
+        assert "ADDRESSING_STYLE" in S3StorageProfile.model_fields
 
 
 @pytest.mark.unit
@@ -161,7 +161,7 @@ class TestS3AuthIntegration:
             SECRET_ACCESS_KEY=SecretStr("secret"),
         )
         s = _make("aws")
-        kw = s.to_handler_kwargs(auth=auth)
+        kw = s.to_handler_kwargs(auth_profile=auth)
         assert kw["aws_access_key_id"] == "AKID"
         assert kw["aws_secret_access_key"] == "secret"
 

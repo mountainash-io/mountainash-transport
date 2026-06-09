@@ -2,7 +2,7 @@
 
 Collapses the legacy ``AzureBlobStorageAuthSettings`` and
 ``AzureFilesStorageAuthSettings`` classes into a single
-:class:`AzureStorageSettings` class discriminated by a ``SERVICE_TYPE``
+:class:`AzureStorageProfile` class discriminated by a ``SERVICE_TYPE``
 field (``"blob"`` or ``"files"``). Both services share the same
 authentication surface (shared-key, SAS, AAD, connection string) and
 differ only in the hostname suffix (``.blob.`` vs ``.file.``) and a
@@ -21,15 +21,18 @@ import re
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import AuthProfile, AzureADAuth, NoAuth, PasswordAuth, TokenAuth
 
-from ..descriptor import MISSING, ParameterSpec, StorageDescriptor
-from ..profile import StorageProfile
+from ..profile_spec import MISSING, ParameterSpec, StorageProfileSpec
+from mountainash_settings.profiles import Profile
 from ..registry import register
 from ...constants import CONST_STORAGE_PROVIDER_TYPE
 
+from ..utils.secrets import _unwrap_secret
+
 __all__ = [
     "AZURE_STORAGE_SPEC",
-    "AzureStorageSettings",
+    "AzureStorageProfile",
     "validate_service_type",
 ]
 
@@ -43,6 +46,11 @@ _CONTAINER_OR_SHARE_RE = re.compile(r"^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$"
 # The SERVICE_TYPE discriminator is plural ("blob" | "files") at the API
 # layer for clarity; map it to the hostname token here.
 _SERVICE_URL_TOKEN: dict[str, str] = {"blob": "blob", "files": "file"}
+
+_SERVICE_CLASS_PATHS: dict[str, str] = {
+    "blob": "azure.storage.blob.BlobServiceClient",
+    "files": "azure.storage.fileshare.ShareServiceClient",
+}
 
 
 def validate_service_type(v: str) -> str:
@@ -78,7 +86,7 @@ def _validate_container_or_share(v: t.Optional[str]) -> t.Optional[str]:
     return v
 
 
-AZURE_STORAGE_SPEC = StorageDescriptor(
+AZURE_STORAGE_SPEC = StorageProfileSpec(
     name="azure_storage",
     # Canonical provider_type is AZURE_BLOB; the AZURE_FILES type is
     # handled by the same settings class with SERVICE_TYPE='files'.
@@ -190,14 +198,14 @@ AZURE_STORAGE_SPEC = StorageDescriptor(
 
 # Adapter is imported lazily to avoid a circular import with the
 # adapters package which depends on StorageProfile.
-def _adapter(profile: "AzureStorageSettings", auth=None) -> dict[str, t.Any]:
-    from ..adapters.azure import build_handler_kwargs
+# def _adapter(profile: "AzureStorageProfile", auth=None) -> dict[str, t.Any]:
+#     from ..adapters.azure import build_handler_kwargs
 
-    return build_handler_kwargs(profile, auth)
+#     return build_handler_kwargs(profile, auth)
 
 
 @register
-class AzureStorageSettings(StorageProfile):
+class AzureStorageProfile(Profile):
     """Unified Azure Storage settings for both Blob and Files services.
 
     Fields are installed from :data:`AZURE_STORAGE_SPEC` by the
@@ -217,7 +225,7 @@ class AzureStorageSettings(StorageProfile):
     """
 
     __spec__ = AZURE_STORAGE_SPEC
-    __adapter__ = staticmethod(_adapter)
+    # __adapter__ = staticmethod(_adapter)
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -234,3 +242,145 @@ class AzureStorageSettings(StorageProfile):
         if container_or_share:
             return f"{base}/{container_or_share}"
         return base
+
+
+
+
+
+
+
+    def to_handler_kwargs(self, auth_profile: AuthProfile | None = None) -> dict[str, t.Any]:
+        """Build ``BlobServiceClient`` / ``ShareServiceClient`` kwargs from profile.
+
+        Signature widened to ``StorageProfile`` to satisfy the upstream
+        ``__adapter__: Callable[[Profile], dict[str, Any]]``
+        contract; callers always pass an :class:`AzureStorageSettings`
+        instance in practice.
+
+        Returns a dict with SDK kwargs plus ``service_type`` and
+        ``service_class_path`` metadata the handler uses to dispatch to the
+        correct concrete client class.
+        """
+        service_type = getattr(self, "SERVICE_TYPE", "blob") or "blob"
+        account_name = getattr(self, "ACCOUNT_NAME", None)
+        account_url = getattr(self, "ACCOUNT_URL", None)
+        endpoint_suffix = (
+            getattr(self, "ENDPOINT_SUFFIX", None) or "core.windows.net"
+        )
+        token_intent = getattr(self, "TOKEN_INTENT", None)
+        api_version = getattr(self, "API_VERSION", None)
+        secondary_hostname = getattr(self, "SECONDARY_HOSTNAME", None)
+        max_block_size = getattr(self, "MAX_BLOCK_SIZE", None)
+
+        resolved_url = self._resolve_account_url(
+            account_url=account_url,
+            account_name=account_name,
+            service_type=service_type,
+            endpoint_suffix=endpoint_suffix,
+        )
+
+        credential = self._resolve_credential(auth_profile, account_name)
+
+        kwargs: dict[str, t.Any] = {
+            "account_url": resolved_url,
+            "credential": credential,
+            # Metadata the handler uses to pick the concrete SDK client class.
+            "service_type": service_type,
+            "service_class_path": _SERVICE_CLASS_PATHS.get(service_type),
+        }
+
+        # Files + AAD requires token_intent="backup" (SDK raises otherwise).
+        if service_type == "files":
+            if token_intent:
+                kwargs["token_intent"] = token_intent
+            elif isinstance(auth_profile, AzureADAuth):
+                kwargs["token_intent"] = "backup"
+
+        if api_version:
+            kwargs["api_version"] = api_version
+        if secondary_hostname:
+            kwargs["secondary_hostname"] = secondary_hostname
+        if max_block_size is not None and service_type == "blob":
+            kwargs["max_block_size"] = max_block_size
+
+        return kwargs
+
+
+    def _resolve_account_url(self,
+        account_url: t.Optional[str],
+        account_name: t.Optional[str],
+        service_type: str,
+        endpoint_suffix: str,
+    ) -> t.Optional[str]:
+        if account_url:
+            return str(account_url)
+        if account_name:
+            host_token = _SERVICE_URL_TOKEN.get(service_type, service_type)
+            return f"https://{account_name}.{host_token}.{endpoint_suffix}"
+        return None
+
+
+    def _resolve_credential(self, auth_profile: AuthProfile | None, account_name: t.Optional[str]) -> t.Any:
+        """Resolve an Azure credential object from the discriminated auth union.
+
+        - ``AzureADAuth`` (managed_identity=True) → ``ManagedIdentityCredential``
+        - ``AzureADAuth`` + tenant/client/secret  → ``ClientSecretCredential``
+        - ``AzureADAuth`` otherwise               → ``DefaultAzureCredential``
+        - ``TokenAuth``                           → ``AzureSasCredential``
+        - ``PasswordAuth``                        → ``AzureNamedKeyCredential``
+        (``name = username or ACCOUNT_NAME``; ``key = password``)
+        - ``NoAuth`` / missing                    → ``None``
+        """
+        if auth_profile is None:
+            return None
+
+        if isinstance(auth_profile, NoAuth):
+            return None
+
+        if isinstance(auth_profile, AzureADAuth):
+            from azure.identity import (  # type: ignore[import-untyped]
+                ClientSecretCredential,
+                DefaultAzureCredential,
+                ManagedIdentityCredential,
+            )
+
+            tenant_id = auth_profile.TENANT_ID
+            client_id = auth_profile.CLIENT_ID
+            client_secret = auth_profile.CLIENT_SECRET
+            managed_identity = auth_profile.MANAGED_IDENTITY
+
+            if managed_identity:
+                return ManagedIdentityCredential(
+                    client_id=client_id if client_id else None
+                )
+            if tenant_id and client_id and client_secret:
+                return ClientSecretCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    client_secret=_unwrap_secret(client_secret) or "",
+                )
+            return DefaultAzureCredential()
+
+        if isinstance(auth_profile, TokenAuth):
+            token = _unwrap_secret(auth_profile.TOKEN)
+            if not token:
+                return None
+            from azure.core.credentials import (  # type: ignore[import-untyped]
+                AzureSasCredential,
+            )
+
+            return AzureSasCredential(signature=token)
+
+        if isinstance(auth_profile, PasswordAuth):
+            username = auth_profile.USERNAME or account_name
+            password = _unwrap_secret(auth_profile.PASSWORD)
+            if not username or not password:
+                return None
+            from azure.core.credentials import (  # type: ignore[import-untyped]
+                AzureNamedKeyCredential,
+            )
+
+            return AzureNamedKeyCredential(name=username, key=password)
+
+        # Unknown auth type — let the caller fall back to ambient credentials.
+        return None
