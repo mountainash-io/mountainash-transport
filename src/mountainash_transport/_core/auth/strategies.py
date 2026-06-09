@@ -113,3 +113,100 @@ class OAuth1SignedStrategy:
             token_secret=self._oauth_token_secret,
         )
         return result
+
+
+# ---------------------------------------------------------------------------
+# SSH strategies
+# ---------------------------------------------------------------------------
+
+
+def _parse_private_key(
+    key_string: str,
+    passphrase: str | None,
+) -> t.Any:
+    """Parse a PEM/OpenSSH private key string into a paramiko PKey object.
+
+    Tries RSAKey, Ed25519Key, ECDSAKey, DSSKey in order.  Raises
+    ``ValueError`` if none of the concrete classes accept the key material.
+    """
+    try:
+        paramiko = importlib.import_module("paramiko")
+    except ImportError as exc:
+        raise ImportError(
+            "SSH key parsing requires paramiko: pip install mountainash-transport[sftp]"
+        ) from exc
+
+    import io
+
+    key_classes = [
+        paramiko.RSAKey,
+        paramiko.Ed25519Key,
+        paramiko.ECDSAKey,
+        paramiko.DSSKey,
+    ]
+    for cls in key_classes:
+        try:
+            return cls.from_private_key(io.StringIO(key_string), password=passphrase)
+        except paramiko.SSHException:
+            continue
+
+    raise ValueError("Could not parse private key: no supported key type matched.")
+
+
+class SSHPasswordStrategy:
+    """Inject a plaintext password into paramiko connect kwargs."""
+
+    def __init__(self, password: str) -> None:
+        self._password = password
+
+    def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        result = {**kwargs}
+        result["password"] = self._password
+        return result
+
+
+class SSHKeyStrategy:
+    """Inject a private key (file path or raw PEM string) into paramiko connect kwargs."""
+
+    def __init__(
+        self,
+        key_path: str | None = None,
+        key_string: str | None = None,
+        passphrase: str | None = None,
+    ) -> None:
+        if key_path is None and key_string is None:
+            raise ValueError("SSHKeyStrategy requires either key_path or key_string.")
+        self._key_path = key_path
+        self._key_string = key_string
+        self._passphrase = passphrase
+
+    def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        result = {**kwargs}
+        if self._key_path is not None:
+            result["key_filename"] = self._key_path
+            if self._passphrase is not None:
+                result["passphrase"] = self._passphrase
+        else:
+            result["pkey"] = _parse_private_key(self._key_string, self._passphrase)  # type: ignore[arg-type]
+        return result
+
+
+class SSHKerberosStrategy:
+    """Inject GSS/Kerberos auth flags into paramiko connect kwargs."""
+
+    def __init__(
+        self,
+        gss_kex: bool = False,
+        gss_host: str | None = None,
+    ) -> None:
+        self._gss_kex = gss_kex
+        self._gss_host = gss_host
+
+    def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        result = {**kwargs}
+        result["gss_auth"] = True
+        if self._gss_kex:
+            result["gss_kex"] = True
+        if self._gss_host is not None:
+            result["gss_host"] = self._gss_host
+        return result
