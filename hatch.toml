@@ -48,6 +48,7 @@ dependencies = [
     "pytest-cov==6.1.1",
 
     "python-gnupg>=0.5.2",
+    "paramiko==3.4.0",
 
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
     "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
