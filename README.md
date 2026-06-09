@@ -12,6 +12,8 @@ Unified file operations across multiple storage systems. Read, write, list, copy
 - **Stream transforms** — composable `Pipeline` of `Gzip` and `GPG` transforms for compression and encryption
 - **Suffix-aware inference** — `read_bytes("s3://bucket/data.parquet.gz", infer=True)` auto-decompresses based on file extensions
 - **Profile + auth separation** — storage configuration (profile) and authentication (auth profile) are independent concerns
+- **Three-layer connections** — auth strategies inject credentials, connections create SDK clients, backends are stateless operations
+- **SSH tunnelling** — `TunnelledConnection` routes any backend through an SSH bastion via local TCP forwarding
 
 ## Supported Storage Backends
 
@@ -22,7 +24,7 @@ Unified file operations across multiple storage systems. Read, write, list, copy
 | **HTTP/HTTPS** | `HTTP` | Read, Write, Metadata |
 | **Azure** | Blob, Files | Via profile (not yet backend-implemented) |
 | **GCS** | Google Cloud Storage | Via profile (not yet backend-implemented) |
-| **SSH/SFTP** | SSH | Via profile (not yet backend-implemented) |
+| **SSH/SFTP** | `SSH` | Read, Write, List, Delete, Metadata |
 | **FTP** | FTP, FTPS | Via profile (not yet backend-implemented) |
 | **SMB** | SMB | Via profile (not yet backend-implemented) |
 | **GitHub** | GitHub repos (read-only) | Via profile (not yet backend-implemented) |
@@ -62,6 +64,14 @@ plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
 # Explicit pipeline
 from mountainash_transport import Pipeline, Gzip
 facade.write("s3://bucket/out.gz", data, pipeline=Pipeline(Gzip()))
+
+# SSH/SFTP connection
+from mountainash_transport import create_connection
+from mountainash_auth_client import PasswordAuth
+
+conn = create_connection(ssh_profile, auth_profile=PasswordAuth(USERNAME="user", PASSWORD="pass"))
+conn.connect()
+# conn.client is a paramiko.SFTPClient — ready for file operations
 ```
 
 ## Development
