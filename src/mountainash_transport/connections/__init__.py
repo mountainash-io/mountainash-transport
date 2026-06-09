@@ -4,6 +4,7 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_transport._core.auth.resolver import resolve_auth_strategy
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
 # --- Legacy/existing public API (kept for backward compat) -------------------
@@ -26,10 +27,23 @@ from .null import NullConnection
 from .s3 import S3Connection
 from .oauth2.connection import OAuth2Connection
 from .oauth1.connection import OAuth1Connection
+from .ssh import SSHConnection
+from .sftp import SFTPConnection
+from .tunnel import TunnelledConnection, _PatchedEndpointProfile
 
 if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
     from mountainash_transport._core.protocols import ConnectionProtocol
+
+
+def _provider_type_from_profile(profile: StorageProfileProtocol) -> CONST_STORAGE_PROVIDER_TYPE | None:
+    """Extract the CONST_STORAGE_PROVIDER_TYPE enum from a profile, or None."""
+    provider = getattr(getattr(profile, "__spec__", None), "provider_type", None)
+    if isinstance(provider, CONST_STORAGE_PROVIDER_TYPE):
+        return provider
+    if provider is not None:
+        return CONST_STORAGE_PROVIDER_TYPE.find_member(str(provider))
+    return None
 
 
 # --- Provider → leaf connection map ------------------------------------------
@@ -71,11 +85,40 @@ def create_connection(
     except ImportError:
         pass
 
-    strategy = resolve_auth_strategy(auth_profile)
+    provider_type = _provider_type_from_profile(profile)
+
+    # SSH: two-layer composition (SSHConnection → SFTPConnection)
+    if provider_type == CONST_STORAGE_PROVIDER_TYPE.SSH:
+        strategy = resolve_auth_strategy(auth_profile, provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH)
+        ssh_conn = SSHConnection(profile, strategy)
+        return SFTPConnection(ssh_conn)
+
+    strategy = resolve_auth_strategy(auth_profile, provider_type=provider_type)
     leaf_cls = _connection_for_provider(profile)
     if leaf_cls is NullConnection:
         return NullConnection()
     return leaf_cls(profile, strategy)
+
+
+def create_tunnelled_connection(
+    bastion_profile: StorageProfileProtocol,
+    bastion_auth: AuthProfile | None,
+    target_profile: StorageProfileProtocol,
+    target_auth: AuthProfile | None,
+    remote_host: str,
+    remote_port: int,
+) -> TunnelledConnection:
+    """Create a tunnelled connection through an SSH bastion host."""
+    ssh_conn = SSHConnection(
+        bastion_profile,
+        resolve_auth_strategy(bastion_auth, provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH),
+    )
+
+    def inner_factory(local_port: int) -> ConnectionProtocol:
+        patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)
+        return create_connection(patched, target_auth)
+
+    return TunnelledConnection(ssh_conn, inner_factory, remote_host, remote_port)
 
 
 __all__ = [
@@ -89,5 +132,6 @@ __all__ = [
     "LocalCallbackServer", "extract_code_from_input", "prompt_for_code",
     # New
     "HTTPConnection", "NullConnection", "S3Connection", "OAuth2Connection", "OAuth1Connection",
-    "create_connection",
+    "SSHConnection", "SFTPConnection", "TunnelledConnection",
+    "create_connection", "create_tunnelled_connection",
 ]
