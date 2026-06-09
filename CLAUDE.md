@@ -177,27 +177,18 @@ tests/
 ## Dependencies
 
 ### Core Dependencies
-- **pandas>=2.2.0**: Data manipulation and analysis
-- **polars>=1.35.1**: Fast DataFrame library for data processing
 - **pydantic==2.9.2**: Data validation and settings management
 - **pydantic-settings==2.6.1**: Settings management with Pydantic
 - **universal_pathlib==0.2.2**: Universal path library for different storage systems
-- **pyarrow==17.0.0**: Apache Arrow columnar data format
-- **boltons==24.0.0**: Collection of over 230 BSD-licensed utilities
-- **minio==7.2.7**: High-performance object storage SDK
 - **boto3>=1.29.4,<=1.34.113**: AWS SDK for Python (upper-bounded for Taipy compat)
-- **smart-open[all]==7.0.4**: Utils for streaming large files
-- **lazy_loader>=0.4**: Lazy module loading
-- **lxml>=4.5.0**: XML and HTML processing library
-- **xsdata[lxml]>=24.4**: XML data binding library
 - **httpx>=0.27**: HTTP client for HTTP/HTTPS storage backend
 
 ### Optional Dependencies
-- **S3**: boto3, s3fs, minio
-- **GCS**: google-cloud-storage, gcsfs
-- **Azure**: azure-storage-blob, adlfs
-- **SFTP**: paramiko, smart-open[ssh]
-- **Encryption**: python-gnupg
+- **S3** `[s3]`: s3fs, minio
+- **GCS** `[gcs]`: google-cloud-storage, gcsfs
+- **Azure** `[azure]`: azure-storage-blob, adlfs
+- **SFTP** `[sftp]`: paramiko, smart-open[ssh]
+- **Encryption** `[encryption]`: python-gnupg
 
 ### Internal Mountain Ash Dependencies
 - **mountainash-settings**: Profile and registry infrastructure

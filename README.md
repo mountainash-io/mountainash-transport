@@ -33,7 +33,7 @@ Unified file operations across multiple storage systems. Read, write, list, copy
 pip install mountainash-utils-files
 
 # With optional extras
-pip install mountainash-utils-files[s3]        # boto3, s3fs, minio
+pip install mountainash-utils-files[s3]        # s3fs, minio
 pip install mountainash-utils-files[gcs]       # google-cloud-storage, gcsfs
 pip install mountainash-utils-files[azure]     # azure-storage-blob, adlfs
 pip install mountainash-utils-files[sftp]      # paramiko, smart-open[ssh]
