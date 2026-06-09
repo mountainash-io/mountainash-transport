@@ -9,8 +9,9 @@ from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import TransportConnectionError
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
+from .._core.protocols import ConnectionProtocol
 
-class S3Connection:
+class S3Connection(ConnectionProtocol):
     """Creates an authenticated boto3 S3 client from profile config + auth strategy."""
 
     def __init__(

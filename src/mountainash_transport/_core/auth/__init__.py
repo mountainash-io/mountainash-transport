@@ -8,6 +8,9 @@ from .strategies import (
     IAMCredentialStrategy,
     NoAuthStrategy,
     OAuth1SignedStrategy,
+    SSHKeyStrategy,
+    SSHKerberosStrategy,
+    SSHPasswordStrategy,
 )
 from .resolver import resolve_auth_strategy
 
@@ -18,5 +21,8 @@ __all__ = [
     "IAMCredentialStrategy",
     "NoAuthStrategy",
     "OAuth1SignedStrategy",
+    "SSHKeyStrategy",
+    "SSHKerberosStrategy",
+    "SSHPasswordStrategy",
     "resolve_auth_strategy",
 ]

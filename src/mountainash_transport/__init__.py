@@ -20,6 +20,10 @@ from .storage.protocols import (
 )
 from ._core.protocols import ConnectionProtocol
 from .connections.errors import TransportConnectionError
+from .connections import (
+    SSHConnection, SFTPConnection, TunnelledConnection,
+    create_connection, create_tunnelled_connection,
+)
 
 # Constants
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -63,6 +67,8 @@ __all__ = [
     "StorageFacade", "copy_between", "read_bytes", "storage",
     "get_storage_backend", "detect_provider_from_path",
     "ConnectionProtocol", "TransportConnectionError",
+    "SSHConnection", "SFTPConnection", "TunnelledConnection",
+    "create_connection", "create_tunnelled_connection",
     "StorageReadProtocol", "StorageWriteProtocol",
     "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
     "StorageCopyProtocol", "StorageDirectoryProtocol",

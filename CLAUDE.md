@@ -20,7 +20,7 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 ### Settings Architecture (profile + auth separation)
 
 **Core types:**
-- `StorageProfileProtocol` — runtime-checkable Protocol requiring `to_handler_kwargs(auth_profile=...)` and `get_connection_url()`
+- `StorageProfileProtocol` — runtime-checkable Protocol requiring `to_handler_kwargs()` and `get_connection_url()`
 - `StorageProfileSpec(ProfileSpec)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`, `default_auth`, `supported_auth`)
 
 **Storage profile classes (in `settings/profiles/`):**
@@ -37,12 +37,47 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 | `GitHubStorageProfile` | GitHub (read-only, fsspec-backed) | — |
 | `HTTPStorageProfile` | HTTP/HTTPS (httpx-based) | — |
 
-**Auth separation:** Authentication is handled by `mountainash-auth-client` auth profiles (`IAMAuth`, `TokenAuth`, `PasswordAuth`, `NoAuth`, etc.). Auth profiles are passed to `to_handler_kwargs(auth_profile=...)` rather than being embedded in the storage profile. Backends accept `auth_profile` as a separate constructor parameter.
+**Auth separation:** Authentication is handled by `mountainash-auth-client` auth profiles (`IAMAuth`, `TokenAuth`, `PasswordAuth`, `CertificateAuth`, `KerberosAuth`, `NoAuth`, etc.). Auth profiles are resolved to auth strategies by `resolve_auth_strategy()`, which injects credentials into SDK kwargs. Profiles return SDK config only via `to_handler_kwargs()` — auth is never embedded in the profile.
 
 **Registry + factory:**
 - `STORAGE_REGISTRY = Registry("storage", spec_type=StorageProfileSpec, profile_type=StorageProfileProtocol)` — type-constrained registry
 - `register = STORAGE_REGISTRY.decorator()` — populates the registry; reads `cls.__spec__`
 - `get_spec(name)` / `get_settings_class(name)` lookups
+
+### Connection Architecture (Three Layers)
+
+**Layer 1 — Auth Strategies** (`_core/auth/`): Small objects that inject credentials into SDK client kwargs. One strategy per auth-mode x SDK family.
+
+| Strategy | Auth Profile | SDK family | Injects |
+|----------|-------------|------------|---------|
+| `NoAuthStrategy` | `NoAuth` / None | Any | passthrough |
+| `BearerTokenStrategy` | `TokenAuth`, `JWTAuth`, `OAuth2Auth` | HTTP | `Authorization: Bearer ...` header |
+| `BasicAuthStrategy` | `PasswordAuth` | HTTP | `Authorization: Basic ...` header |
+| `IAMCredentialStrategy` | `IAMAuth` | AWS | `aws_access_key_id`, `aws_secret_access_key` |
+| `OAuth1SignedStrategy` | `OAuth1Auth` | HTTP | authlib `auth=` parameter |
+| `SSHPasswordStrategy` | `PasswordAuth` | SSH | `password` kwarg |
+| `SSHKeyStrategy` | `CertificateAuth` | SSH | `key_filename` or `pkey` + `passphrase` |
+| `SSHKerberosStrategy` | `KerberosAuth` | SSH | `gss_auth`, `gss_kex`, `gss_host` |
+
+`resolve_auth_strategy(auth_profile, provider_type=None)` maps auth profiles to strategies. The `provider_type` parameter (a `CONST_STORAGE_PROVIDER_TYPE` enum) determines which SDK family is targeted — e.g., `PasswordAuth` resolves to `BasicAuthStrategy` for HTTP but `SSHPasswordStrategy` for SSH.
+
+**Layer 2 — Connections** (`connections/`): Create authenticated SDK clients from profile config + auth strategy.
+
+| Connection | Type | Client | Notes |
+|-----------|------|--------|-------|
+| `HTTPConnection` | leaf | `httpx.Client` | |
+| `S3Connection` | leaf | `boto3.client("s3")` | lazy boto3 import |
+| `SSHConnection` | leaf | `paramiko.SSHClient` | general-purpose SSH, lazy paramiko import |
+| `NullConnection` | leaf | `None` | for local filesystem |
+| `SFTPConnection` | decorator | `paramiko.SFTPClient` | wraps SSHConnection |
+| `TunnelledConnection` | decorator | inner connection's client | local TCP listener through SSH bastion |
+| `OAuth2Connection` | decorator | `httpx.Client` | token lifecycle + HTTPConnection |
+| `OAuth1Connection` | decorator | `httpx.Client` | OAuth1 signing + HTTPConnection |
+
+- `create_connection(profile, auth_profile)` — factory that builds the right connection chain
+- `create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, target_auth, remote_host, remote_port)` — SSH tunnel factory
+
+**Layer 3 — Backends** (`storage/backends/`): Stateless operation handlers that receive a connected client via a connection object.
 
 ### Stream Transforms
 
@@ -88,16 +123,30 @@ inference is intentionally not provided — writes take an explicit
 
 ```
 src/mountainash_transport/
-├── __init__.py                    # Public API re-exports (27 items)
+├── __init__.py                    # Public API re-exports
 ├── __version__.py
 ├── _core/                         # Shared foundation (no upward imports)
 │   ├── constants.py               # CONST_STORAGE_PROVIDER_TYPE + other enums
 │   ├── exceptions.py              # StorageError hierarchy
 │   ├── dataclasses/               # FileMetadata
-│   ├── protocols.py               # Stub — future ConnectionProtocol, BatchSource/BatchSink
+│   ├── protocols.py               # ConnectionProtocol[C] (generic, runtime-checkable)
+│   ├── auth/                      # Auth strategies + resolver
+│   │   ├── strategies.py          # AuthStrategy protocol + 8 concrete strategies
+│   │   └── resolver.py            # resolve_auth_strategy(auth_profile, provider_type)
 │   ├── http.py                    # Stub — future shared httpx client factory
 │   └── transforms/                # Stream transforms (Pipeline, Gzip, GPG, materialize)
-├── connections/                   # Stub — future home of OAuth flows from auth-client
+├── connections/                   # Connection infrastructure
+│   ├── __init__.py                # create_connection(), create_tunnelled_connection()
+│   ├── http.py                    # HTTPConnection (httpx.Client)
+│   ├── s3.py                      # S3Connection (boto3.client)
+│   ├── ssh.py                     # SSHConnection (paramiko.SSHClient)
+│   ├── sftp.py                    # SFTPConnection decorator (paramiko.SFTPClient)
+│   ├── tunnel.py                  # TunnelledConnection + _PatchedEndpointProfile
+│   ├── null.py                    # NullConnection (local filesystem)
+│   ├── errors.py                  # TransportConnectionError hierarchy
+│   ├── oauth2/                    # OAuth2Connection + OAuthFlow
+│   ├── oauth1/                    # OAuth1Connection + OAuth1Flow
+│   └── server/                    # LocalCallbackServer, manual code entry
 ├── settings/                      # Profile infrastructure (shared between families)
 │   ├── profile_protocol.py        # StorageProfileProtocol (runtime-checkable)
 │   ├── profile_spec.py            # StorageProfileSpec(ProfileSpec)
@@ -112,10 +161,11 @@ src/mountainash_transport/
 │   └── messaging/                 # Stub — future messaging profiles
 └── storage/                       # Request/response family
     ├── protocols/                 # 8 granular protocols (prtcl_*.py)
-    ├── backends/                  # S3, Local, HTTP backend implementations
+    ├── backends/                  # Per-provider backend implementations
     │   ├── http/                  # HTTPStorageBackend (httpx — read/write/metadata)
     │   ├── local/                 # LocalStorageBackend (all 8 protocols)
-    │   └── s3/                    # S3StorageBackend (flavor-dispatched)
+    │   ├── s3/                    # S3StorageBackend (flavor-dispatched)
+    │   └── ssh/                   # SFTPStorageBackend (read/write/list/delete/metadata)
     ├── facade/                    # StorageFacade, from_path(), cross_backend, read_bytes
     ├── path_helpers/              # StoragePath, SchemeSpec, suffixes, S3 helpers
     └── registry/                  # get_storage_backend, detect_provider_from_path
@@ -128,14 +178,34 @@ tests/
 ├── conftest.py
 ├── test_public_api.py                          # Public API surface tests
 ├── _core/
-│   └── test_constants_and_exceptions.py        # Constants + exception hierarchy
+│   ├── test_constants_and_exceptions.py        # Constants + exception hierarchy
+│   ├── test_connection_protocol.py             # ConnectionProtocol conformance
+│   └── auth/                                   # Auth strategy + resolver tests
+│       ├── test_auth_strategies.py             # HTTP/S3 strategies
+│       ├── test_ssh_strategies.py              # SSH strategies (Password, Key, Kerberos)
+│       ├── test_auth_resolver.py               # Resolver (HTTP/S3 dispatch)
+│       ├── test_resolver_ssh.py                # Resolver (SSH-family dispatch)
+│       └── test_iam_strategy.py                # IAMCredentialStrategy
+├── connections/                                # Connection lifecycle tests
+│   ├── test_http_connection.py                 # HTTPConnection
+│   ├── test_s3_connection.py                   # S3Connection
+│   ├── test_ssh_connection.py                  # SSHConnection
+│   ├── test_sftp_connection.py                 # SFTPConnection decorator
+│   ├── test_tunnel_connection.py               # TunnelledConnection + _PatchedEndpointProfile
+│   ├── test_null_connection.py                 # NullConnection
+│   ├── test_factory.py                         # create_connection() + create_tunnelled_connection()
+│   └── oauth2/, oauth1/                        # OAuth connection tests
 ├── cross_backend/                              # Cross-backend integration tests
 ├── path_helpers/                               # StoragePath, SchemeSpec, suffixes, S3 path
 ├── settings/
 │   ├── test_profile_protocol.py
 │   ├── test_profile_spec.py
 │   └── profiles/                               # Per-provider profile tests (9 files)
-├── storage_backends/                           # Per-backend unit tests (http, local, s3)
+├── storage/backends/                           # Per-backend unit tests
+│   ├── test_http.py                            # HTTPStorageBackend
+│   ├── test_local.py                           # LocalStorageBackend
+│   ├── test_s3.py                              # S3StorageBackend
+│   └── test_sftp.py                            # SFTPStorageBackend
 ├── storage_facade/                             # Facade, from_path, read_bytes, infer
 ├── storage_protocols/                          # Protocol conformance + shapes + registry completeness
 ├── storage_registry/                           # Registry + backend detection
@@ -234,7 +304,7 @@ tests/
 - **Cloudflare R2**: R2-specific optimizations
 - **Google Cloud Storage**: Native GCS operations
 - **Azure Blob Storage**: Azure-specific implementations
-- **SFTP/SSH**: Secure file transfer protocols
+- **SFTP/SSH**: SFTPStorageBackend via paramiko — read, write, list, delete, metadata. SSHConnection as general-purpose leaf, SFTPConnection decorator, TunnelledConnection for SSH port forwarding
 - **HTTP/HTTPS**: Read, write (PUT), and metadata via httpx — supports Bearer and Basic auth
 
 ### Advanced Capabilities
@@ -251,18 +321,44 @@ tests/
 ```python
 from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 from mountainash_transport.settings.storage.profiles.local_storage_profile import LocalStorageProfile
-from mountainash_auth_client import IAMAuth, TokenAuth, NoAuth
+from mountainash_auth_client import IAMAuth, NoAuth
 
-# S3-family: single class discriminated by FLAVOR
+# Profiles return SDK config only — no auth embedded
 s3_profile = S3StorageProfile(FLAVOR="aws", REGION="us-east-1", BUCKET="mybucket")
-auth = IAMAuth(ACCESS_KEY_ID="AKIA...", SECRET_ACCESS_KEY="...")
-kwargs = s3_profile.to_handler_kwargs(auth_profile=auth)  # → dict ready for boto3.client("s3", **kwargs)
+kwargs = s3_profile.to_handler_kwargs()  # → {"region_name": "us-east-1", ...}
 
 # R2: endpoint auto-derived from ACCOUNT_ID
 r2_profile = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="abc123")
 
 # Local filesystem
 local_profile = LocalStorageProfile(ROOT_PATH="/data")
+```
+
+### Connection-driven workflow
+
+```python
+from mountainash_transport import (
+    create_connection, create_tunnelled_connection,
+    SSHConnection, SFTPConnection, TunnelledConnection,
+)
+from mountainash_auth_client import PasswordAuth, CertificateAuth, IAMAuth
+
+# SSH/SFTP: create_connection() builds SSHConnection → SFTPConnection chain
+conn = create_connection(ssh_profile, auth_profile=PasswordAuth(USERNAME="u", PASSWORD="p"))
+conn.connect()
+sftp_client = conn.client  # → paramiko.SFTPClient
+
+# SSH tunnel to an internal HTTP API via bastion
+tunnel = create_tunnelled_connection(
+    bastion_profile=bastion_ssh_profile,
+    bastion_auth=CertificateAuth(PRIVATE_KEY_PATH="/path/to/key"),
+    target_profile=http_profile,
+    target_auth=None,
+    remote_host="internal-api",
+    remote_port=8080,
+)
+tunnel.connect()
+httpx_client = tunnel.client  # → httpx.Client routed through SSH tunnel
 ```
 
 ### Storage facade and read_bytes
@@ -284,17 +380,6 @@ facade = StorageFacade.from_path(
 payload = read_bytes("s3://bucket/data.parquet")
 html = read_bytes("https://example.com/page.html")
 local = read_bytes("/tmp/local-file")
-```
-
-### Storage backend registry
-
-```python
-from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage.registry import get_storage_backend
-from mountainash_auth_client import IAMAuth
-
-auth = IAMAuth(ACCESS_KEY_ID="...", SECRET_ACCESS_KEY="...")
-backend = get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.S3, profile, auth_profile=auth)
 ```
 
 ## Versioning Strategy

@@ -1,7 +1,7 @@
 """Tests for create_connection() factory."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -66,3 +66,56 @@ class TestCreateConnection:
         )
         conn = create_connection(FakeHTTPProfile(), auth_profile=auth)
         assert isinstance(conn, OAuth2Connection)
+
+
+from mountainash_transport.connections.sftp import SFTPConnection
+from mountainash_transport.connections.tunnel import TunnelledConnection
+
+
+class FakeSSHProfile:
+    class __spec__:
+        provider_type = "ssh"
+
+    def to_handler_kwargs(self) -> dict:
+        return {
+            "hostname": "example.com",
+            "port": 22,
+            "username": "user",
+            "_post_connect": {"host_key_policy": "auto_add"},
+        }
+
+    def get_connection_url(self) -> str:
+        return "ssh://user@example.com:22"
+
+
+class TestCreateConnectionSSH:
+    def test_ssh_profile_returns_sftp_connection(self):
+        from mountainash_auth_client import PasswordAuth
+        conn = create_connection(
+            FakeSSHProfile(), auth_profile=PasswordAuth(USERNAME="u", PASSWORD="p")
+        )
+        assert isinstance(conn, SFTPConnection)
+
+    def test_ssh_profile_no_auth_returns_sftp_connection(self):
+        conn = create_connection(FakeSSHProfile())
+        assert isinstance(conn, SFTPConnection)
+
+
+class TestCreateTunnelledConnection:
+    @patch("mountainash_transport.connections.tunnel._start_forwarder")
+    def test_factory_creates_tunnelled_connection(self, mock_forwarder):
+        from mountainash_transport.connections import create_tunnelled_connection
+
+        mock_server = MagicMock()
+        mock_server.server_address = ("127.0.0.1", 54321)
+        mock_forwarder.return_value = mock_server
+
+        conn = create_tunnelled_connection(
+            bastion_profile=FakeSSHProfile(),
+            bastion_auth=None,
+            target_profile=FakeHTTPProfile(),
+            target_auth=None,
+            remote_host="internal.api",
+            remote_port=8080,
+        )
+        assert isinstance(conn, TunnelledConnection)
