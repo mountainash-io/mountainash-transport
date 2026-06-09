@@ -3,7 +3,7 @@ name: Radon Complexity Checks
 on:
   pull_request:
     paths:
-      - "src/mountainash_transport/**"
+      - "src/**"
   workflow_dispatch:
 
 permissions:
