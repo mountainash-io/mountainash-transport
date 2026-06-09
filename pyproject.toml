@@ -63,9 +63,9 @@ all = [
 
 
 [project.urls]
-Documentation = "https://github.com/mountainash-io/mountainash-utils-files#readme"
-Issues = "https://github.com/mountainash-io/mountainash-utils-files/issues"
-Source = "https://github.com/mountainash-io/mountainash-utils-files"
+Documentation = "https://github.com/mountainash-io/mountainash-transport#readme"
+Issues = "https://github.com/mountainash-io/mountainash-transport/issues"
+Source = "https://github.com/mountainash-io/mountainash-transport"
 
 #================
 # Tool: Coverage
@@ -79,9 +79,9 @@ omit = ["src/mountainash_transport/__version__.py"]
 [tool.coverage.paths]
 mountainash_transport = [
     "src/mountainash_transport",
-    "*/mountainash-utils-files/src/mountainash_transport",
+    "*/mountainash-transport/src/mountainash_transport",
 ]
-tests = ["tests", "*/mountainash-utils-files/tests"]
+tests = ["tests", "*/mountainash-transport/tests"]
 
 [tool.coverage.report]
 exclude_lines = ["no cov", "if __name__ == .__main__:", "if TYPE_CHECKING:"]
