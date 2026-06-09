@@ -1,55 +1,55 @@
-# """Top-level read helper that dispatches by URL scheme.
+"""Top-level read helper that dispatches by URL scheme.
 
-# All schemes — including http/https — route through StorageFacade.from_path().
-# Suffix-driven transform inference delegates to the facade's read() method.
-# """
-# from __future__ import annotations
-
-
-# from mountainash_auth_client import AuthProfile
-
-# from mountainash_transport.storage.facade.facade import StorageFacade
-# from mountainash_transport._core.transforms import GPG, Gzip
-# from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+All schemes — including http/https — route through StorageFacade.from_path().
+Suffix-driven transform inference delegates to the facade's read() method.
+"""
+from __future__ import annotations
 
 
-# def read_bytes(
-#     path: str,
-#     *,
-#     storage_profile: StorageProfileProtocol | None= None,
-#     auth_profile: AuthProfile | None = None,
-#     infer: bool = False,
-#     gpg: GPG | None = None,
-#     gzip: Gzip | None = None,
-# ) -> bytes:
-#     """Read the full contents of *path* as bytes, dispatching by URL scheme.
+from mountainash_auth_client import AuthProfile
 
-#     All recognised schemes route through :meth:`StorageFacade.from_path`.
-#     When *infer* is True, the facade applies suffix-driven transform
-#     inference via :func:`infer_pipeline`.
+from mountainash_transport.storage.facade.facade import StorageFacade
+from mountainash_transport._core.transforms import GPG, Gzip
+from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
-#     Args:
-#         path: Path or URL.
-#         profile: Optional storage profile forwarded to the storage facade.
-#         auth_profile: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
-#             When provided, overrides any Authorization header set by *profile*.
-#         infer: When True, inspect *path*'s suffix chain and auto-apply a
-#             read-side ``Pipeline`` for known suffixes (``.gz``, ``.gzip``,
-#             ``.gpg``, ``.asc``, ``.pgp``). Default False preserves
-#             byte-for-byte current behaviour.
-#         gpg: Required when *infer* is True and the suffix chain contains a
-#             gpg-family suffix. Supplies key material. Ignored when *infer*
-#             is False.
-#         gzip: Optional; defaults to ``Gzip()`` when a gzip suffix is seen.
-#             Ignored when *infer* is False.
 
-#     Returns:
-#         The full content of *path* as ``bytes``, optionally transform-decoded.
+def read_bytes(
+    path: str,
+    *,
+    storage_profile: StorageProfileProtocol | None= None,
+    auth_profile: AuthProfile | None = None,
+    infer: bool = False,
+    gpg: GPG | None = None,
+    gzip: Gzip | None = None,
+) -> bytes:
+    """Read the full contents of *path* as bytes, dispatching by URL scheme.
 
-#     Raises:
-#         ValueError: If the scheme is unrecognised, describes a backend that
-#             is not registered, or *infer* is True and a gpg-family suffix
-#             was seen without a *gpg* instance.
-#     """
-#     facade = StorageFacade.from_path(path, storage_profile, auth_profile=auth_profile)
-#     return facade.read(path, infer=infer, gpg=gpg, gzip=gzip)
+    All recognised schemes route through :meth:`StorageFacade.from_path`.
+    When *infer* is True, the facade applies suffix-driven transform
+    inference via :func:`infer_pipeline`.
+
+    Args:
+        path: Path or URL.
+        profile: Optional storage profile forwarded to the storage facade.
+        auth_profile: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
+            When provided, overrides any Authorization header set by *profile*.
+        infer: When True, inspect *path*'s suffix chain and auto-apply a
+            read-side ``Pipeline`` for known suffixes (``.gz``, ``.gzip``,
+            ``.gpg``, ``.asc``, ``.pgp``). Default False preserves
+            byte-for-byte current behaviour.
+        gpg: Required when *infer* is True and the suffix chain contains a
+            gpg-family suffix. Supplies key material. Ignored when *infer*
+            is False.
+        gzip: Optional; defaults to ``Gzip()`` when a gzip suffix is seen.
+            Ignored when *infer* is False.
+
+    Returns:
+        The full content of *path* as ``bytes``, optionally transform-decoded.
+
+    Raises:
+        ValueError: If the scheme is unrecognised, describes a backend that
+            is not registered, or *infer* is True and a gpg-family suffix
+            was seen without a *gpg* instance.
+    """
+    facade = StorageFacade.from_path(path, storage_profile, auth_profile=auth_profile)
+    return facade.read(path, infer=infer, gpg=gpg, gzip=gzip)

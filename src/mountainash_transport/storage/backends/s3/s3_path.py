@@ -1,7 +1,9 @@
 """Shared S3 path parsing utility."""
 
 from __future__ import annotations
-from ...path_helpers.s3 import s3_bucket, s3_key
+
+
+#TECHDEBT: should use /home/nathanielramm/git/mountainash-io/mountainash/mountainash-transport/src/mountainash_transport/path_helpers/s3.py
 
 def parse_s3_path(path: str) -> tuple[str, str]:
     """Parse an S3 path into (bucket, key).
@@ -15,10 +17,9 @@ def parse_s3_path(path: str) -> tuple[str, str]:
         A tuple of (bucket, key).  *key* is an empty string when the path
         refers to the bucket root.
     """
-
-    bucket = s3_bucket(path)
-    key = s3_key(path)
-
-    if bucket is None or key is None:
-        raise ValueError(f"Invalid S3 path: {path}")
+    if path.startswith("s3://"):
+        path = path[5:]
+    parts = path.split("/", 1)
+    bucket = parts[0]
+    key = parts[1] if len(parts) > 1 else ""
     return bucket, key

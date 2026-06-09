@@ -2,6 +2,6 @@
 
 from mountainash_transport.storage.facade.cross_backend import copy_between
 from mountainash_transport.storage.facade.facade import StorageFacade
-# from mountainash_transport.storage.facade.read_bytes import read_bytes
+from mountainash_transport.storage.facade.read_bytes import read_bytes
 
-__all__ = ["StorageFacade", "copy_between"]
+__all__ = ["StorageFacade", "copy_between", "read_bytes"]
