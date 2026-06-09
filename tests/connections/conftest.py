@@ -94,6 +94,16 @@ def fake_oauth1_spec():
     return FakeOAuth1Spec()
 
 
+@pytest.fixture
+def fake_oauth2_auth():
+    return FakeOAuth2Auth()
+
+
+@pytest.fixture
+def fake_oauth1_auth():
+    return FakeOAuth1Auth()
+
+
 @pytest.fixture(autouse=True)
 def clean_secrets_registry():
     clear_secrets_registry()

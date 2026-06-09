@@ -11,6 +11,21 @@ from mountainash_transport.connections.errors import TokenExchangeError, TokenRe
 from mountainash_transport.connections.oauth2.flow import OAuthFlow
 
 
+class FakeOAuth2Spec:
+    """Duck-types ProfileSpec for OAuth2 flow tests."""
+    name = "testprovider"
+
+    def __init__(self, metadata=None):
+        self._metadata = metadata or {
+            "authorize_url": "https://auth.example.com/authorize",
+            "token_url": "https://auth.example.com/token",
+        }
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+
 class TestBuildAuthorizeUrl:
     def test_returns_url_with_client_id(self, fake_oauth2_spec):
         flow = OAuthFlow(fake_oauth2_spec)
@@ -39,7 +54,6 @@ class TestBuildAuthorizeUrl:
         assert "code_challenge" not in url
 
     def test_pkce_adds_code_challenge_and_s256(self):
-        from tests.connections.conftest import FakeOAuth2Spec
         spec = FakeOAuth2Spec(metadata={
             "authorize_url": "https://auth.example.com/authorize",
             "token_url": "https://auth.example.com/token",
@@ -165,7 +179,6 @@ class TestCsrfStateValidation:
 
 class TestPkceVerifierByState:
     def test_sequential_authorize_exchange(self):
-        from tests.connections.conftest import FakeOAuth2Spec
         spec = FakeOAuth2Spec(metadata={
             "authorize_url": "https://auth.example.com/authorize",
             "token_url": "https://auth.example.com/token",
@@ -176,7 +189,6 @@ class TestPkceVerifierByState:
         assert flow._pending_verifiers.get(state1) is not None
 
     def test_concurrent_authorize_urls_have_independent_verifiers(self):
-        from tests.connections.conftest import FakeOAuth2Spec
         spec = FakeOAuth2Spec(metadata={
             "authorize_url": "https://auth.example.com/authorize",
             "token_url": "https://auth.example.com/token",

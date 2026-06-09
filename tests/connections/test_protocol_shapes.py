@@ -11,6 +11,37 @@ from mountainash_transport.connections.protocols import (
 )
 
 
+class FakeOAuth2Spec:
+    """Duck-types ProfileSpec for OAuth2 flow tests."""
+    name = "testprovider"
+
+    def __init__(self, metadata=None):
+        self._metadata = metadata or {
+            "authorize_url": "https://auth.example.com/authorize",
+            "token_url": "https://auth.example.com/token",
+        }
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+
+class FakeOAuth1Spec:
+    """Duck-types ProfileSpec for OAuth1 flow tests."""
+    name = "testprovider_oauth1"
+
+    def __init__(self, metadata=None):
+        self._metadata = metadata or {
+            "request_token_url": "https://auth.example.com/oauth/request_token",
+            "authorize_url": "https://auth.example.com/oauth/authorize",
+            "access_token_url": "https://auth.example.com/oauth/access_token",
+        }
+
+    @property
+    def metadata(self):
+        return self._metadata
+
+
 # ---------------------------------------------------------------------------
 # OAuth2FlowProtocol
 # ---------------------------------------------------------------------------
@@ -40,7 +71,6 @@ class TestOAuth2FlowProtocol:
 
     def test_real_implementation_conforms(self):
         from mountainash_transport.connections.oauth2.flow import OAuthFlow
-        from tests.connections.conftest import FakeOAuth2Spec
         assert isinstance(OAuthFlow(FakeOAuth2Spec()), OAuth2FlowProtocol)
 
 
@@ -71,7 +101,6 @@ class TestOAuth1FlowProtocol:
 
     def test_real_implementation_conforms(self):
         from mountainash_transport.connections.oauth1.flow import OAuth1Flow
-        from tests.connections.conftest import FakeOAuth1Spec
         assert isinstance(OAuth1Flow(FakeOAuth1Spec()), OAuth1FlowProtocol)
 
 

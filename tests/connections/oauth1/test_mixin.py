@@ -21,11 +21,10 @@ class FakeOAuth1Provider(OAuth1ConnectionMixin):
 
 
 class TestOAuth1MixinNoToken:
-    def test_raises_authorization_required_when_no_token(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth1Auth
+    def test_raises_authorization_required_when_no_token(self, memory_backend, fake_oauth1_auth):
         provider = FakeOAuth1Provider()
         with pytest.raises(AuthorizationRequired) as exc_info:
-            provider.connect(FakeOAuth1Auth())
+            provider.connect(fake_oauth1_auth)
         assert exc_info.value.provider == "testprovider_oauth1"
 
 
@@ -54,7 +53,7 @@ class TestOAuth1MixinDisconnect:
 
 
 class TestOAuth1MixinAuthlibRequired:
-    def test_build_client_requires_authlib(self, monkeypatch):
+    def test_build_client_requires_authlib(self, monkeypatch, fake_oauth1_auth):
         import builtins
         real_import = builtins.__import__
 
@@ -64,10 +63,9 @@ class TestOAuth1MixinAuthlibRequired:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, "__import__", mock_import)
-        from tests.connections.conftest import FakeOAuth1Auth
         provider = FakeOAuth1Provider()
         with pytest.raises(ImportError, match="authlib"):
             provider._build_client(
                 {"oauth_token": "tok", "oauth_token_secret": "sec"},
-                FakeOAuth1Auth(),
+                fake_oauth1_auth,
             )

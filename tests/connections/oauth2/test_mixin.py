@@ -22,56 +22,51 @@ class FakeProvider(OAuth2ConnectionMixin):
 
 
 class TestOAuth2MixinNoToken:
-    def test_raises_authorization_required_when_no_token(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_raises_authorization_required_when_no_token(self, memory_backend, fake_oauth2_auth):
         provider = FakeProvider()
         with pytest.raises(AuthorizationRequired) as exc_info:
-            provider.connect(FakeOAuth2Auth())
+            provider.connect(fake_oauth2_auth)
         assert exc_info.value.provider == "testprovider"
 
 
 class TestOAuth2MixinWithToken:
-    def test_connects_with_valid_stored_token(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_connects_with_valid_stored_token(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "tok_abc",
             "refresh_token": "refresh_xyz",
             "token_expires_at": int(time.time()) + 3600,
         })
         provider = FakeProvider()
-        result = provider.connect(FakeOAuth2Auth())
+        result = provider.connect(fake_oauth2_auth)
         assert result is provider
         provider.disconnect()
 
-    def test_client_is_set_after_connect(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_client_is_set_after_connect(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "tok_abc",
             "refresh_token": "refresh_xyz",
             "token_expires_at": int(time.time()) + 3600,
         })
         provider = FakeProvider()
-        provider.connect(FakeOAuth2Auth())
+        provider.connect(fake_oauth2_auth)
         assert provider.client is not None
         provider.disconnect()
 
-    def test_client_has_bearer_auth_header(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_client_has_bearer_auth_header(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "tok_abc",
             "refresh_token": "refresh_xyz",
             "token_expires_at": int(time.time()) + 3600,
         })
         provider = FakeProvider()
-        provider.connect(FakeOAuth2Auth())
+        provider.connect(fake_oauth2_auth)
         auth_header = provider.client.headers.get("authorization", "")
         assert "Bearer tok_abc" in auth_header
         provider.disconnect()
 
 
 class TestOAuth2MixinExpiredToken:
-    def test_raises_when_expired_no_refresh(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_raises_when_expired_no_refresh(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "old_tok",
             "refresh_token": None,
@@ -79,32 +74,30 @@ class TestOAuth2MixinExpiredToken:
         })
         provider = FakeProvider()
         with pytest.raises(AuthorizationRequired):
-            provider.connect(FakeOAuth2Auth())
+            provider.connect(fake_oauth2_auth)
 
 
 class TestOAuth2MixinDisconnect:
-    def test_disconnect_sets_client_to_none(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_disconnect_sets_client_to_none(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "tok",
             "refresh_token": "ref",
             "token_expires_at": int(time.time()) + 3600,
         })
         provider = FakeProvider()
-        provider.connect(FakeOAuth2Auth())
+        provider.connect(fake_oauth2_auth)
         assert provider.client is not None
         provider.disconnect()
         assert provider.client is None
 
-    def test_context_manager_calls_disconnect(self, memory_backend):
-        from tests.connections.conftest import FakeOAuth2Auth
+    def test_context_manager_calls_disconnect(self, memory_backend, fake_oauth2_auth):
         memory_backend.set("test.oauth2", {
             "access_token": "tok",
             "refresh_token": "ref",
             "token_expires_at": int(time.time()) + 3600,
         })
         provider = FakeProvider()
-        provider.connect(FakeOAuth2Auth())
+        provider.connect(fake_oauth2_auth)
         provider.__enter__()
         provider.__exit__(None, None, None)
         assert provider.client is None
