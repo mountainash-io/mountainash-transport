@@ -12,12 +12,12 @@ from .storage.registry import get_storage_backend, detect_provider_from_path
 from .storage.protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
+    StorageEnumerateProtocol,
     StorageDeleteProtocol,
     StorageMetadataProtocol,
     StorageCopyProtocol,
     StorageDirectoryProtocol,
 )
-from .storage.protocols.prtcl_list import StorageListProtocol
 from ._core.protocols import ConnectionProtocol
 from .connections.errors import TransportConnectionError
 from .connections import (
@@ -29,7 +29,7 @@ from .connections import (
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 # Dataclasses
-from ._core.dataclasses.file_metadata import FileMetadata
+from ._core.dataclasses.storage_entry import EntryType, EnumerateResult, StorageEntry
 
 # Exceptions
 from ._core.exceptions import (
@@ -70,9 +70,9 @@ __all__ = [
     "SSHConnection", "SFTPConnection", "TunnelledConnection",
     "create_connection", "create_tunnelled_connection",
     "StorageReadProtocol", "StorageWriteProtocol",
-    "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
+    "StorageEnumerateProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
     "StorageCopyProtocol", "StorageDirectoryProtocol",
-    "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
+    "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
     "PathNotFoundError", "AuthenticationError", "TransformError",
     "StoragePath", "infer_pipeline",

@@ -12,10 +12,14 @@ class TestPublicAPI:
 
     def test_protocols_importable(self):
         from mountainash_transport import (
-            StorageReadProtocol, StorageWriteProtocol, StorageListProtocol,
+            StorageReadProtocol, StorageWriteProtocol, StorageEnumerateProtocol,
             StorageDeleteProtocol, StorageMetadataProtocol, StorageCopyProtocol,
             StorageDirectoryProtocol, ConnectionProtocol, TransportConnectionError,
         )
+
+    def test_dataclasses_importable(self):
+        from mountainash_transport import StorageEntry, EntryType, EnumerateResult
+        assert EntryType.FILE == "file"
 
     def test_registry_importable(self):
         from mountainash_transport import get_storage_backend, detect_provider_from_path
