@@ -29,3 +29,7 @@ class AuthenticationError(StorageError):
 
 class TransformError(StorageError):
     """Raised when a stream transform fails to encode or decode."""
+
+
+class BackendNotImplementedError(StorageError):
+    """Raised when a storage provider has no backend implementation yet."""

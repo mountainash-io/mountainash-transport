@@ -1,4 +1,4 @@
-"""Tests for SSHStorageProfile — unified SSH + SFTP settings."""
+"""Tests for SFTPStorageProfile — SFTP storage settings."""
 
 from __future__ import annotations
 
@@ -8,23 +8,23 @@ from mountainash_auth_client import NoAuth
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
-    SSH_SPEC,
-    SSHStorageProfile,
+    SFTP_SPEC,
+    SFTPStorageProfile,
 )
 
 
 def _make(*, host: str = "server.example", username: str = "alice", **extra):
     kwargs = {
-        "PROVIDER_TYPE": CONST_STORAGE_PROVIDER_TYPE.SSH,
+        "PROVIDER_TYPE": CONST_STORAGE_PROVIDER_TYPE.SFTP,
         "HOST": host,
         "USERNAME": username,
     }
     kwargs.update(extra)
-    return SSHStorageProfile(**kwargs)
+    return SFTPStorageProfile(**kwargs)
 
 
 @pytest.mark.unit
-class TestSSHConstruction:
+class TestSFTPConstruction:
     def test_instantiates_with_password_auth(self):
         s = _make()
         assert s.HOST == "server.example"
@@ -32,8 +32,8 @@ class TestSSHConstruction:
 
     def test_username_required(self):
         with pytest.raises(Exception):
-            SSHStorageProfile(
-                PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.SSH,
+            SFTPStorageProfile(
+                PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.SFTP,
                 HOST="h",
                 USERNAME="",
             )
@@ -59,7 +59,7 @@ class TestSSHConstruction:
 
 
 @pytest.mark.unit
-class TestSSHFakeFieldsAbsent:
+class TestSFTPFakeFieldsAbsent:
     """Regression: fake SSH fields removed by T5."""
 
     @pytest.mark.parametrize(
@@ -73,7 +73,7 @@ class TestSSHFakeFieldsAbsent:
         ],
     )
     def test_fake_ssh_field_absent(self, field):
-        assert field not in SSHStorageProfile.model_fields
+        assert field not in SFTPStorageProfile.model_fields
 
     def test_extras_silently_ignored(self):
         """Profile inherits extra='ignore' -- unknown kwargs drop."""
@@ -86,7 +86,7 @@ class TestSSHFakeFieldsAbsent:
 
 
 @pytest.mark.unit
-class TestSSHHandlerKwargs:
+class TestSFTPHandlerKwargs:
     """to_handler_kwargs returns SDK-level config only (no auth)."""
 
     def test_canonical_keys_present(self):
@@ -111,7 +111,7 @@ class TestSSHHandlerKwargs:
 
 
 @pytest.mark.unit
-class TestSSHPostConnectEnvelope:
+class TestSFTPPostConnectEnvelope:
     def test_host_key_policy_surfaced_in_post_connect(self):
         s = _make(HOST_KEY_POLICY="auto_add")
         kw = s.to_handler_kwargs()
@@ -124,15 +124,15 @@ class TestSSHPostConnectEnvelope:
 
 
 @pytest.mark.unit
-class TestSSHDescriptor:
+class TestSFTPDescriptor:
     def test_descriptor_name(self):
-        assert SSH_SPEC.name == "ssh"
+        assert SFTP_SPEC.name == "sftp"
 
     def test_descriptor_sdk_package(self):
-        assert SSH_SPEC.sdk_package == "paramiko"
+        assert SFTP_SPEC.sdk_package == "paramiko"
 
     def test_descriptor_not_read_only(self):
-        assert SSH_SPEC.read_only is False
+        assert SFTP_SPEC.read_only is False
 
     def test_descriptor_does_not_support_multipart(self):
-        assert SSH_SPEC.supports_multipart is False
+        assert SFTP_SPEC.supports_multipart is False

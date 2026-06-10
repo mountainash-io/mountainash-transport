@@ -65,7 +65,7 @@ def resolve_auth_strategy(
     if isinstance(auth_profile, NoAuth):
         return NoAuthStrategy()
 
-    if provider_type == CONST_STORAGE_PROVIDER_TYPE.SSH:
+    if provider_type in (CONST_STORAGE_PROVIDER_TYPE.SSH, CONST_STORAGE_PROVIDER_TYPE.SFTP):
         ssh_strategy = _resolve_ssh_strategy(auth_profile)
         if ssh_strategy is not None:
             return ssh_strategy

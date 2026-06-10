@@ -68,3 +68,46 @@ class TestStorageProfile:
             auth=NoAuth(),
         )
         assert isinstance(p, StorageProfileProtocol)
+
+
+@pytest.mark.unit
+class TestProfileProtocolHierarchy:
+    def test_minimal_profile_satisfies_profile_protocol(self):
+        """A class with only to_handler_kwargs() satisfies ProfileProtocol."""
+        from mountainash_transport.settings.profile_protocol import ProfileProtocol
+
+        class MinimalProfile:
+            def to_handler_kwargs(self) -> dict:
+                return {"host": "example.com"}
+
+        assert isinstance(MinimalProfile(), ProfileProtocol)
+
+    def test_minimal_profile_does_not_satisfy_storage_protocol(self):
+        """A ProfileProtocol-only class does NOT satisfy StorageProfileProtocol."""
+        from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+
+        class MinimalProfile:
+            def to_handler_kwargs(self) -> dict:
+                return {"host": "example.com"}
+
+        assert not isinstance(MinimalProfile(), StorageProfileProtocol)
+
+    def test_storage_profile_satisfies_both_protocols(self):
+        """StorageProfileProtocol implementations satisfy ProfileProtocol too."""
+        from mountainash_auth_client import NoAuth
+        from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+        from mountainash_transport.settings.storage.profiles import (
+            LocalStorageProfile,
+        )
+        from mountainash_transport.settings.profile_protocol import (
+            ProfileProtocol,
+            StorageProfileProtocol,
+        )
+
+        p = LocalStorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            ROOT_PATH="/tmp/files",
+            auth=NoAuth(),
+        )
+        assert isinstance(p, ProfileProtocol)
+        assert isinstance(p, StorageProfileProtocol)

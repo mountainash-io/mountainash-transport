@@ -99,6 +99,8 @@ class _PatchedEndpointProfile:
         return kwargs
 
     def get_connection_url(self) -> str:
+        if hasattr(self._inner, "get_connection_url"):
+            return f"tunnel://{self._host}:{self._port}"
         return f"tunnel://{self._host}:{self._port}"
 
     def __getattr__(self, name: str) -> t.Any:

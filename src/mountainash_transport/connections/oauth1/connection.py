@@ -36,7 +36,7 @@ class OAuth1Connection:
 
     def connect(self) -> Self:
         strategy = self._resolve_strategy()
-        self._inner = HTTPConnection(self._profile, strategy)
+        self._inner = HTTPConnection(self._profile.to_handler_kwargs(), strategy)
         self._inner.connect()
         return self
 

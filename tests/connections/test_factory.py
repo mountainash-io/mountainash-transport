@@ -72,9 +72,9 @@ from mountainash_transport.connections.sftp import SFTPConnection
 from mountainash_transport.connections.tunnel import TunnelledConnection
 
 
-class FakeSSHProfile:
+class FakeSFTPProfile:
     class __spec__:
-        provider_type = "ssh"
+        provider_type = "sftp"
 
     def to_handler_kwargs(self) -> dict:
         return {
@@ -85,19 +85,19 @@ class FakeSSHProfile:
         }
 
     def get_connection_url(self) -> str:
-        return "ssh://user@example.com:22"
+        return "sftp://user@example.com:22"
 
 
-class TestCreateConnectionSSH:
-    def test_ssh_profile_returns_sftp_connection(self):
+class TestCreateConnectionSFTP:
+    def test_sftp_profile_returns_sftp_connection(self):
         from mountainash_auth_client import PasswordAuth
         conn = create_connection(
-            FakeSSHProfile(), auth_profile=PasswordAuth(USERNAME="u", PASSWORD="p")
+            FakeSFTPProfile(), auth_profile=PasswordAuth(USERNAME="u", PASSWORD="p")
         )
         assert isinstance(conn, SFTPConnection)
 
-    def test_ssh_profile_no_auth_returns_sftp_connection(self):
-        conn = create_connection(FakeSSHProfile())
+    def test_sftp_profile_no_auth_returns_sftp_connection(self):
+        conn = create_connection(FakeSFTPProfile())
         assert isinstance(conn, SFTPConnection)
 
 
@@ -111,7 +111,7 @@ class TestCreateTunnelledConnection:
         mock_forwarder.return_value = mock_server
 
         conn = create_tunnelled_connection(
-            bastion_profile=FakeSSHProfile(),
+            bastion_profile=FakeSFTPProfile(),
             bastion_auth=None,
             target_profile=FakeHTTPProfile(),
             target_auth=None,

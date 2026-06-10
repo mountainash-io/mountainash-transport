@@ -16,7 +16,7 @@ from .sftp_read import SFTPReadMixin
 from .sftp_write import SFTPWriteMixin
 
 
-@register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SSH)
+@register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SFTP)
 class SFTPStorageBackend(
     SFTPReadMixin,
     SFTPWriteMixin,

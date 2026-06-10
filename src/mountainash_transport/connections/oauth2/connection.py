@@ -38,7 +38,7 @@ class OAuth2Connection:
     def connect(self) -> Self:
         access_token = self._resolve_token()
         strategy = BearerTokenStrategy(access_token)
-        self._inner = HTTPConnection(self._profile, strategy)
+        self._inner = HTTPConnection(self._profile.to_handler_kwargs(), strategy)
         self._inner.connect()
         return self
 

@@ -100,6 +100,7 @@ SMB_SPEC = StorageProfileSpec(
     ],
     default_auth=CONST_AUTH_MODE.PASSWORD,
     supported_auth=frozenset({CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.KERBEROS}),
+    implemented=False,
 )
 
 

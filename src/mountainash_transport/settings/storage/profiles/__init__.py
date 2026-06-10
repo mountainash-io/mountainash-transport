@@ -8,8 +8,7 @@ settings classes, plus HTTP/HTTPS:
 * Azure Blob + Azure Files → :class:`AzureStorageSettings`
   (discriminated by ``SERVICE_TYPE``)
 * GCS → :class:`GCSSettings`
-* SSH + SFTP → :class:`SSHSettings` (no kwarg difference — SFTP is just
-  the subsystem opened after connecting)
+* SFTP → :class:`SFTPStorageProfile` (paramiko SFTP subsystem)
 * FTP / FTPS → :class:`FTPSettings` (discriminated by ``USE_TLS``)
 * SMB / CIFS → :class:`SMBSettings`
 * Local + NFS + CIFS mounts → :class:`LocalSettings` (NFS / CIFS drive
@@ -27,8 +26,8 @@ from .github_storage_profile import GITHUB_REPO_SPEC, GitHubRepoStorageProfile
 from .http_storage_profile import HTTP_SPEC, HTTPStorageProfile
 from .local_storage_profile import LOCAL_SPEC, LocalStorageProfile
 from .s3_storage_profile import S3_SPEC, S3StorageProfile, validate_flavor
+from .sftp_storage_profile import SFTP_SPEC, SFTPStorageProfile
 from .smb_storage_profile import SMB_SPEC, SMBStorageProfile
-from .ssh_storage_profile import SSH_SPEC, SSHStorageProfile
 
 
 
@@ -48,10 +47,10 @@ __all__ = [
     "LocalStorageProfile",
     "S3_SPEC",
     "S3StorageProfile",
+    "SFTP_SPEC",
+    "SFTPStorageProfile",
     "SMB_SPEC",
     "SMBStorageProfile",
-    "SSH_SPEC",
-    "SSHStorageProfile",
     "validate_flavor",
     "validate_service_type"
 ]

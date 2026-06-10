@@ -35,7 +35,7 @@ EXPECTED_PROTOCOLS = {
         StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
-    CONST_STORAGE_PROVIDER_TYPE.SSH: {
+    CONST_STORAGE_PROVIDER_TYPE.SFTP: {
         StorageReadProtocol, StorageWriteProtocol,
         StorageDeleteProtocol, StorageMetadataProtocol,
         StorageDirectoryProtocol,
@@ -50,7 +50,7 @@ EXCLUDED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.R2: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {StorageDirectoryProtocol},
-    CONST_STORAGE_PROVIDER_TYPE.SSH: {StorageEnumerateProtocol, StorageCopyProtocol},
+    CONST_STORAGE_PROVIDER_TYPE.SFTP: {StorageEnumerateProtocol, StorageCopyProtocol},
     CONST_STORAGE_PROVIDER_TYPE.HTTP: {
         StorageEnumerateProtocol,
         StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol,

@@ -7,19 +7,18 @@ from typing_extensions import Self
 
 from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import TransportConnectionError
-from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
 from .._core.protocols import ConnectionProtocol
 
 class S3Connection(ConnectionProtocol):
-    """Creates an authenticated boto3 S3 client from profile config + auth strategy."""
+    """Creates an authenticated boto3 S3 client from connect kwargs + auth strategy."""
 
     def __init__(
         self,
-        profile: StorageProfileProtocol,
+        connect_kwargs: dict[str, t.Any],
         auth_strategy: AuthStrategy,
     ) -> None:
-        self._profile = profile
+        self._connect_kwargs = connect_kwargs
         self._auth_strategy = auth_strategy
         self._client: t.Any = None
 
@@ -31,7 +30,7 @@ class S3Connection(ConnectionProtocol):
                 "boto3 is required for S3 connections"
             ) from exc
 
-        kwargs = self._profile.to_handler_kwargs()
+        kwargs = dict(self._connect_kwargs)
         kwargs = self._auth_strategy.apply(kwargs)
 
         # Strip the profile's service_name (boto3.client takes it positionally).

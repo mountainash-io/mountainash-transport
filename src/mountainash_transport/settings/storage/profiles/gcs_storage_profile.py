@@ -126,6 +126,7 @@ GCS_SPEC = StorageProfileSpec(
     ],
     default_auth=CONST_AUTH_MODE.SERVICE_ACCOUNT,
     supported_auth=frozenset({CONST_AUTH_MODE.SERVICE_ACCOUNT, CONST_AUTH_MODE.IAM, CONST_AUTH_MODE.OAUTH2, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.NONE}),
+    implemented=False,
 )
 
 

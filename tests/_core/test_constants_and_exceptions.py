@@ -168,3 +168,10 @@ def test_transform_error_inherits_storage_error():
     err = TransformError("boom")
     assert isinstance(err, StorageError)
     assert str(err) == "boom"
+
+
+def test_backend_not_implemented_error_is_storage_error():
+    from mountainash_transport._core.exceptions import BackendNotImplementedError, StorageError
+    exc = BackendNotImplementedError("GCS backend not yet implemented")
+    assert isinstance(exc, StorageError)
+    assert "GCS" in str(exc)

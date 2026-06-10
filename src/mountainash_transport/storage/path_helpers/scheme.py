@@ -20,9 +20,8 @@ class SchemeSpec:
             (e.g. "gcs" is an alias of "gs").
         strict: If True (default), mixed-case scheme input is rejected by
             `StoragePath.normalize`. Only the bare-local entry uses strict=False.
-        provider: The storage provider enum this scheme routes to, or None for
-            schemes described for registry completeness but with no registered
-            backend (e.g. hdfs, dbfs, sharepoint).
+        provider: The storage provider enum this scheme routes to, or None if
+            the scheme is recognised but has no provider mapping.
     """
 
     scheme: str
@@ -35,7 +34,6 @@ SCHEMES: dict[str, SchemeSpec] = {
     "":           SchemeSpec(scheme="",          strict=False, provider=CONST_STORAGE_PROVIDER_TYPE.LOCAL),
     "file":       SchemeSpec(scheme="file",      provider=CONST_STORAGE_PROVIDER_TYPE.LOCAL),
     "s3":         SchemeSpec(scheme="s3",        provider=CONST_STORAGE_PROVIDER_TYPE.S3),
-    "s3u":        SchemeSpec(scheme="s3u"),
     "s3express":  SchemeSpec(scheme="s3express", provider=CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS),
     "gs":         SchemeSpec(scheme="gs",        aliases=("gcs",), provider=CONST_STORAGE_PROVIDER_TYPE.GCS),
     "azure":      SchemeSpec(scheme="azure",     aliases=("az",),  provider=CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB),
@@ -49,15 +47,6 @@ SCHEMES: dict[str, SchemeSpec] = {
     "github":     SchemeSpec(scheme="github",    provider=CONST_STORAGE_PROVIDER_TYPE.GITHUB),
     "http":       SchemeSpec(scheme="http",  provider=CONST_STORAGE_PROVIDER_TYPE.HTTP),
     "https":      SchemeSpec(scheme="https", provider=CONST_STORAGE_PROVIDER_TYPE.HTTP),
-    "dbfs":       SchemeSpec(scheme="dbfs"),
-    "hdfs":       SchemeSpec(scheme="hdfs"),
-    "webhdfs":    SchemeSpec(scheme="webhdfs"),
-    "spark":      SchemeSpec(scheme="spark"),
-    "trino":      SchemeSpec(scheme="trino"),
-    "gdrive":     SchemeSpec(scheme="gdrive"),
-    "dropbox":    SchemeSpec(scheme="dropbox"),
-    "onedrive":   SchemeSpec(scheme="onedrive"),
-    "sharepoint": SchemeSpec(scheme="sharepoint"),
 }
 
 _ALIAS_TO_CANONICAL: dict[str, str] = {

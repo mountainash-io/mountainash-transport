@@ -20,8 +20,9 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 ### Settings Architecture (profile + auth separation)
 
 **Core types:**
-- `StorageProfileProtocol` — runtime-checkable Protocol requiring `to_handler_kwargs()` and `get_connection_url()`
-- `StorageProfileSpec(ProfileSpec)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`, `default_auth`, `supported_auth`)
+- `ProfileProtocol` — runtime-checkable base Protocol requiring `to_handler_kwargs()` (universal contract for all profile families)
+- `StorageProfileProtocol(ProfileProtocol)` — storage refinement adding `get_connection_url()` for diagnostics
+- `StorageProfileSpec(ProfileSpec)` — typed metadata (`sdk_package`, `handler_module`, `handler_class`, `supports_streaming`, `supports_multipart`, `read_only`, `default_auth`, `supported_auth`, `implemented`)
 
 **Storage profile classes (in `settings/profiles/`):**
 
@@ -30,7 +31,7 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 | `S3StorageProfile` | AWS S3, S3 Express, R2, MinIO, B2 | `FLAVOR: Literal["aws","express","r2","minio","b2"]` |
 | `GCSStorageProfile` | Google Cloud Storage | — |
 | `AzureStorageProfile` | Azure Blob + Azure Files | `SERVICE_TYPE: Literal["blob","files"]` |
-| `SSHStorageProfile` | SSH + SFTP (paramiko) | — |
+| `SFTPStorageProfile` | SFTP (paramiko SFTP subsystem) | — |
 | `FTPStorageProfile` | FTP + FTPS | `USE_TLS: bool` |
 | `SMBStorageProfile` | SMB | — |
 | `LocalStorageProfile` | Local filesystem + NFS/CIFS (pre-mount) | `MOUNT_SPEC: Optional[dict]` |
@@ -59,22 +60,22 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 | `SSHKeyStrategy` | `CertificateAuth` | SSH | `key_filename` or `pkey` + `passphrase` |
 | `SSHKerberosStrategy` | `KerberosAuth` | SSH | `gss_auth`, `gss_kex`, `gss_host` |
 
-`resolve_auth_strategy(auth_profile, provider_type=None)` maps auth profiles to strategies. The `provider_type` parameter (a `CONST_STORAGE_PROVIDER_TYPE` enum) determines which SDK family is targeted — e.g., `PasswordAuth` resolves to `BasicAuthStrategy` for HTTP but `SSHPasswordStrategy` for SSH.
+`resolve_auth_strategy(auth_profile, provider_type=None)` maps auth profiles to strategies. The `provider_type` parameter (a `CONST_STORAGE_PROVIDER_TYPE` enum) determines which SDK family is targeted — e.g., `PasswordAuth` resolves to `BasicAuthStrategy` for HTTP but `SSHPasswordStrategy` for SSH/SFTP.
 
-**Layer 2 — Connections** (`connections/`): Create authenticated SDK clients from profile config + auth strategy.
+**Layer 2 — Connections** (`connections/`): Create authenticated SDK clients from `connect_kwargs: dict` + auth strategy. Leaf connections are decoupled from profiles — the factory extracts kwargs via `profile.to_handler_kwargs()`.
 
 | Connection | Type | Client | Notes |
 |-----------|------|--------|-------|
-| `HTTPConnection` | leaf | `httpx.Client` | |
-| `S3Connection` | leaf | `boto3.client("s3")` | lazy boto3 import |
-| `SSHConnection` | leaf | `paramiko.SSHClient` | general-purpose SSH, lazy paramiko import |
+| `HTTPConnection` | leaf | `httpx.Client` | accepts `connect_kwargs: dict` |
+| `S3Connection` | leaf | `boto3.client("s3")` | accepts `connect_kwargs: dict`, lazy boto3 import |
+| `SSHConnection` | leaf | `paramiko.SSHClient` | accepts `connect_kwargs: dict`, lazy paramiko import |
 | `NullConnection` | leaf | `None` | for local filesystem |
 | `SFTPConnection` | decorator | `paramiko.SFTPClient` | wraps SSHConnection |
 | `TunnelledConnection` | decorator | inner connection's client | local TCP listener through SSH bastion |
 | `OAuth2Connection` | decorator | `httpx.Client` | token lifecycle + HTTPConnection |
 | `OAuth1Connection` | decorator | `httpx.Client` | OAuth1 signing + HTTPConnection |
 
-- `create_connection(profile, auth_profile)` — factory that builds the right connection chain
+- `create_connection(profile, auth_profile)` — factory that accepts `ProfileProtocol`, extracts kwargs, builds the right connection chain
 - `create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, target_auth, remote_host, remote_port)` — SSH tunnel factory
 
 **Layer 3 — Backends** (`storage/backends/`): Stateless operation handlers that receive a connected client via a connection object.
@@ -127,7 +128,7 @@ src/mountainash_transport/
 ├── __version__.py
 ├── _core/                         # Shared foundation (no upward imports)
 │   ├── constants.py               # CONST_STORAGE_PROVIDER_TYPE + other enums
-│   ├── exceptions.py              # StorageError hierarchy
+│   ├── exceptions.py              # StorageError hierarchy (incl. BackendNotImplementedError)
 │   ├── dataclasses/               # FileMetadata
 │   ├── protocols.py               # ConnectionProtocol[C] (generic, runtime-checkable)
 │   ├── auth/                      # Auth strategies + resolver
@@ -148,7 +149,7 @@ src/mountainash_transport/
 │   ├── oauth1/                    # OAuth1Connection + OAuth1Flow
 │   └── server/                    # LocalCallbackServer, manual code entry
 ├── settings/                      # Profile infrastructure (shared between families)
-│   ├── profile_protocol.py        # StorageProfileProtocol (runtime-checkable)
+│   ├── profile_protocol.py        # ProfileProtocol + StorageProfileProtocol (runtime-checkable)
 │   ├── profile_spec.py            # StorageProfileSpec(ProfileSpec)
 │   ├── exceptions.py              # Settings-specific exceptions
 │   ├── types.py                   # Type aliases
@@ -165,10 +166,10 @@ src/mountainash_transport/
     │   ├── http/                  # HTTPStorageBackend (httpx — read/write/metadata)
     │   ├── local/                 # LocalStorageBackend (all 8 protocols)
     │   ├── s3/                    # S3StorageBackend (flavor-dispatched)
-    │   └── ssh/                   # SFTPStorageBackend (read/write/list/delete/metadata)
+    │   └── sftp/                  # SFTPStorageBackend (read/write/list/delete/metadata)
     ├── facade/                    # StorageFacade, from_path(), cross_backend, read_bytes
     ├── path_helpers/              # StoragePath, SchemeSpec, suffixes, S3 helpers
-    └── registry/                  # get_storage_backend, detect_provider_from_path
+    └── registry/                  # get_storage_backend, get_registered_backends, detect_provider_from_path
 ```
 
 ### Test Structure

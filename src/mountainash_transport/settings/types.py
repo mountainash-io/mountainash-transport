@@ -11,8 +11,8 @@ GitHubRepoStorageProfile,
 HTTPStorageProfile,
 LocalStorageProfile,
 S3StorageProfile,
-SMBStorageProfile,
-SSHStorageProfile)
+SFTPStorageProfile,
+SMBStorageProfile)
 
 if TYPE_CHECKING:
 
@@ -28,8 +28,8 @@ if TYPE_CHECKING:
         HTTPStorageProfile,
         LocalStorageProfile,
         S3StorageProfile,
+        SFTPStorageProfile,
         SMBStorageProfile,
-        SSHStorageProfile,
     ]
 
 # ============================================================================
