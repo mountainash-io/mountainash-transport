@@ -5,7 +5,7 @@ import typing as t
 
 from mountainash_transport._core.auth.resolver import resolve_auth_strategy
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
 # --- Legacy/existing public API (kept for backward compat) -------------------
 from .protocols import (
@@ -36,7 +36,7 @@ if t.TYPE_CHECKING:
     from mountainash_transport._core.protocols import ConnectionProtocol
 
 
-def _provider_type_from_profile(profile: StorageProfileProtocol) -> CONST_STORAGE_PROVIDER_TYPE | None:
+def _provider_type_from_profile(profile: ProfileProtocol) -> CONST_STORAGE_PROVIDER_TYPE | None:
     """Extract the CONST_STORAGE_PROVIDER_TYPE enum from a profile, or None."""
     provider = getattr(getattr(profile, "__spec__", None), "provider_type", None)
     if isinstance(provider, CONST_STORAGE_PROVIDER_TYPE):
@@ -59,7 +59,7 @@ _PROVIDER_CONNECTION_MAP: dict[str, type] = {
 }
 
 
-def _connection_for_provider(profile: StorageProfileProtocol) -> type:
+def _connection_for_provider(profile: ProfileProtocol) -> type:
     """Map profile's provider_type to a leaf connection class."""
     provider = getattr(getattr(profile, "__spec__", None), "provider_type", None)
     provider_str = str(provider.value) if hasattr(provider, "value") else str(provider)
@@ -67,7 +67,7 @@ def _connection_for_provider(profile: StorageProfileProtocol) -> type:
 
 
 def create_connection(
-    profile: StorageProfileProtocol,
+    profile: ProfileProtocol,
     auth_profile: AuthProfile | None = None,
     *,
     auto_authorize: bool = False,
@@ -101,9 +101,9 @@ def create_connection(
 
 
 def create_tunnelled_connection(
-    bastion_profile: StorageProfileProtocol,
+    bastion_profile: ProfileProtocol,
     bastion_auth: AuthProfile | None,
-    target_profile: StorageProfileProtocol,
+    target_profile: ProfileProtocol,
     target_auth: AuthProfile | None,
     remote_host: str,
     remote_port: int,
