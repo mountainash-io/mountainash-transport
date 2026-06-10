@@ -9,7 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import (
+    EntryType,
+    EnumerateResult,
+    StorageEntry,
+)
 from mountainash_transport._core.exceptions import StorageConnectionError
 from mountainash_transport.storage.registry import get_registered_backends
 
@@ -160,11 +164,11 @@ class TestWrite:
 
 
 # ---------------------------------------------------------------------------
-# List
+# Enumerate (replaces List)
 # ---------------------------------------------------------------------------
 
-class TestList:
-    def test_list_files_returns_file_metadata(self):
+class TestEnumerate:
+    def test_list_objects_returns_enumerate_result(self):
         ts = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         mock_client = MagicMock()
         mock_client.get_paginator.return_value = _paginator_for([
@@ -182,35 +186,43 @@ class TestList:
         ])
         backend = _make_backend(mock_client)
 
-        results = backend.list_files("s3://my-bucket/prefix/")
+        result = backend.list_objects("s3://my-bucket/prefix/")
 
-        assert len(results) == 1
-        meta = results[0]
-        assert isinstance(meta, FileMetadata)
-        assert meta.filename == "file1.txt"
-        assert meta.size == 100
-        assert meta.last_modified == ts
-        assert meta.etag == "abc123"
-        assert meta.source == "s3"
-        assert meta.full_path == "s3://my-bucket/prefix/file1.txt"
+        assert isinstance(result, EnumerateResult)
+        assert len(result.objects) == 1
+        entry = result.objects[0]
+        assert isinstance(entry, StorageEntry)
+        assert entry.name == "file1.txt"
+        assert entry.size == 100
+        assert entry.last_modified == ts
+        assert entry.etag == "abc123"
+        assert entry.source == "s3"
+        assert entry.path == "s3://my-bucket/prefix/file1.txt"
+        assert entry.storage_class == "STANDARD"
+        assert entry.entry_type == EntryType.FILE
+        assert result.common_prefixes == ()
 
-    def test_list_files_empty(self):
+    def test_list_objects_empty_returns_empty_enumerate_result(self):
         mock_client = MagicMock()
         mock_client.get_paginator.return_value = _paginator_for([{"Contents": []}])
         backend = _make_backend(mock_client)
 
-        results = backend.list_files("s3://bucket/empty/")
-        assert results == []
+        result = backend.list_objects("s3://bucket/empty/")
 
-    def test_list_files_no_contents_key(self):
+        assert isinstance(result, EnumerateResult)
+        assert result.objects == ()
+        assert result.common_prefixes == ()
+
+    def test_list_objects_no_contents_key(self):
         mock_client = MagicMock()
         mock_client.get_paginator.return_value = _paginator_for([{}])
         backend = _make_backend(mock_client)
 
-        results = backend.list_files("s3://bucket/prefix/")
-        assert results == []
+        result = backend.list_objects("s3://bucket/prefix/")
+        assert result.objects == ()
+        assert result.common_prefixes == ()
 
-    def test_list_directories(self):
+    def test_list_objects_with_delimiter_returns_common_prefixes(self):
         mock_client = MagicMock()
         mock_client.get_paginator.return_value = _paginator_for([
             {
@@ -222,23 +234,76 @@ class TestList:
         ])
         backend = _make_backend(mock_client)
 
-        results = backend.list_directories("s3://bucket/top/")
+        result = backend.list_objects("s3://bucket/top/", delimiter="/")
 
-        assert "s3://bucket/top/subdir1/" in results
-        assert "s3://bucket/top/subdir2/" in results
+        assert isinstance(result, EnumerateResult)
+        assert len(result.common_prefixes) == 2
+        paths = {e.path for e in result.common_prefixes}
+        assert "s3://bucket/top/subdir1/" in paths
+        assert "s3://bucket/top/subdir2/" in paths
+        for entry in result.common_prefixes:
+            assert entry.entry_type == EntryType.PREFIX
+            assert entry.source == "s3"
 
-    def test_list_directories_uses_delimiter(self):
+    def test_list_objects_delimiter_passes_to_paginator(self):
         mock_client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = iter([{"CommonPrefixes": []}])
         mock_client.get_paginator.return_value = paginator
         backend = _make_backend(mock_client)
 
-        backend.list_directories("s3://bucket/prefix/")
+        backend.list_objects("s3://bucket/prefix/", delimiter="/")
 
         paginator.paginate.assert_called_once_with(
             Bucket="bucket", Prefix="prefix", Delimiter="/"
         )
+
+    def test_list_objects_no_delimiter_omits_param(self):
+        mock_client = MagicMock()
+        paginator = MagicMock()
+        paginator.paginate.return_value = iter([{}])
+        mock_client.get_paginator.return_value = paginator
+        backend = _make_backend(mock_client)
+
+        backend.list_objects("s3://bucket/prefix/")
+
+        call_kwargs = paginator.paginate.call_args[1]
+        assert "Delimiter" not in call_kwargs
+        call_args = paginator.paginate.call_args[0]
+        # Also verify no positional Delimiter
+        assert len(call_args) == 0 or "Delimiter" not in str(call_args)
+
+    def test_list_objects_max_results_caps(self):
+        mock_client = MagicMock()
+        mock_client.get_paginator.return_value = _paginator_for([
+            {
+                "Contents": [
+                    {"Key": f"prefix/file{i}.txt", "Size": i, "ETag": f'"{i}"'}
+                    for i in range(5)
+                ]
+            }
+        ])
+        backend = _make_backend(mock_client)
+
+        result = backend.list_objects("s3://bucket/prefix/", max_results=3)
+
+        assert len(result.objects) <= 3
+
+    def test_list_objects_common_prefix_entry_type_is_prefix(self):
+        mock_client = MagicMock()
+        mock_client.get_paginator.return_value = _paginator_for([
+            {
+                "CommonPrefixes": [{"Prefix": "dir/subdir/"}],
+            }
+        ])
+        backend = _make_backend(mock_client)
+
+        result = backend.list_objects("s3://bucket/dir/", delimiter="/")
+
+        assert len(result.common_prefixes) == 1
+        entry = result.common_prefixes[0]
+        assert entry.entry_type == EntryType.PREFIX
+        assert entry.name == "subdir"
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +311,7 @@ class TestList:
 # ---------------------------------------------------------------------------
 
 class TestMetadata:
-    def test_get_metadata(self):
+    def test_get_metadata_returns_storage_entry(self):
         ts = datetime(2024, 6, 1, 0, 0, 0, tzinfo=timezone.utc)
         mock_client = MagicMock()
         mock_client.head_object.return_value = {
@@ -254,19 +319,86 @@ class TestMetadata:
             "LastModified": ts,
             "ETag": '"deadbeef"',
             "StorageClass": "STANDARD",
+            "ContentType": "text/csv",
         }
         backend = _make_backend(mock_client)
 
         meta = backend.get_metadata("s3://bucket/folder/file.csv")
 
         mock_client.head_object.assert_called_once_with(Bucket="bucket", Key="folder/file.csv")
-        assert isinstance(meta, FileMetadata)
-        assert meta.filename == "file.csv"
+        assert isinstance(meta, StorageEntry)
+        assert meta.name == "file.csv"
         assert meta.size == 512
         assert meta.last_modified == ts
         assert meta.etag == "deadbeef"
         assert meta.source == "s3"
-        assert meta.full_path == "s3://bucket/folder/file.csv"
+        assert meta.path == "s3://bucket/folder/file.csv"
+        assert meta.content_type == "text/csv"
+        assert meta.storage_class == "STANDARD"
+
+    def test_get_metadata_version_id_from_head_object(self):
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {
+            "ContentLength": 100,
+            "ETag": '"etag"',
+            "VersionId": "v1-abc",
+        }
+        backend = _make_backend(mock_client)
+
+        meta = backend.get_metadata("s3://bucket/versioned.txt")
+        assert meta.version_id == "v1-abc"
+
+    def test_get_metadata_version_id_empty_when_absent(self):
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {
+            "ContentLength": 50,
+            "ETag": '"etag"',
+        }
+        backend = _make_backend(mock_client)
+
+        meta = backend.get_metadata("s3://bucket/plain.txt")
+        assert meta.version_id == ""
+
+    def test_get_metadata_checksum_sha256(self):
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {
+            "ContentLength": 256,
+            "ETag": '"etag"',
+            "ChecksumSHA256": "abc123sha",
+        }
+        backend = _make_backend(mock_client)
+
+        meta = backend.get_metadata("s3://bucket/checksummed.bin")
+        assert meta.checksum == "abc123sha"
+        assert meta.checksum_algorithm == "SHA256"
+
+    def test_get_metadata_checksum_preference_order(self):
+        """SHA256 takes precedence over CRC32C, CRC32, SHA1."""
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {
+            "ContentLength": 100,
+            "ETag": '"etag"',
+            "ChecksumSHA1": "sha1val",
+            "ChecksumCRC32": "crc32val",
+            "ChecksumSHA256": "sha256val",
+        }
+        backend = _make_backend(mock_client)
+
+        meta = backend.get_metadata("s3://bucket/multi.bin")
+        assert meta.checksum == "sha256val"
+        assert meta.checksum_algorithm == "SHA256"
+
+    def test_get_metadata_checksum_empty_when_absent(self):
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {
+            "ContentLength": 10,
+            "ETag": '"etag"',
+        }
+        backend = _make_backend(mock_client)
+
+        meta = backend.get_metadata("s3://bucket/plain.txt")
+        assert meta.checksum == ""
+        assert meta.checksum_algorithm == ""
 
     def test_path_exists_true(self):
         mock_client = MagicMock()
@@ -294,6 +426,15 @@ class TestMetadata:
 
         size = backend.get_size("s3://bucket/big-file.bin")
         assert size == 1024
+
+    def test_get_size_returns_int(self):
+        mock_client = MagicMock()
+        mock_client.head_object.return_value = {"ContentLength": 42}
+        backend = _make_backend(mock_client)
+
+        size = backend.get_size("s3://bucket/file.bin")
+        assert isinstance(size, int)
+        assert size == 42
 
 
 # ---------------------------------------------------------------------------
