@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import TransportConnectionError
-from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
 from .._core.protocols import ConnectionProtocol
 
@@ -16,7 +16,7 @@ class S3Connection(ConnectionProtocol):
 
     def __init__(
         self,
-        profile: StorageProfileProtocol,
+        profile: ProfileProtocol,
         auth_strategy: AuthStrategy,
     ) -> None:
         self._profile = profile

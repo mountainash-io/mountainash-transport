@@ -12,7 +12,7 @@ from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
 )
-from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.settings.profile_protocol import ProfileProtocol
 from .._core.protocols import ConnectionProtocol
 
 class HTTPConnection(ConnectionProtocol):
@@ -20,7 +20,7 @@ class HTTPConnection(ConnectionProtocol):
 
     def __init__(
         self,
-        profile: StorageProfileProtocol,
+        profile: ProfileProtocol,
         auth_strategy: AuthStrategy,
     ) -> None:
         self._profile = profile
