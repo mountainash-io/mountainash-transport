@@ -33,7 +33,7 @@ def _make_backend(sftp_client=None):
     if sftp_client is None:
         sftp_client = MagicMock()
     import mountainash_transport.storage.backends  # noqa: F401
-    from mountainash_transport.storage.backends.ssh import SFTPStorageBackend
+    from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
     conn = _FakeConnection(sftp_client)
     return SFTPStorageBackend(None, connection=conn), sftp_client
 
@@ -271,21 +271,21 @@ class TestRmdir:
 class TestNoConnection:
     def test_raises_storage_connection_error_when_no_connection(self):
         import mountainash_transport.storage.backends  # noqa: F401
-        from mountainash_transport.storage.backends.ssh import SFTPStorageBackend
+        from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
         backend = SFTPStorageBackend(None)
         with pytest.raises(StorageConnectionError, match="requires a connection"):
             backend._get_client()
 
     def test_raises_on_read_without_connection(self):
         import mountainash_transport.storage.backends  # noqa: F401
-        from mountainash_transport.storage.backends.ssh import SFTPStorageBackend
+        from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
         backend = SFTPStorageBackend(None)
         with pytest.raises(StorageConnectionError):
             backend.read_to_bytes("/remote/file.txt")
 
     def test_raises_when_connection_client_is_none(self):
         import mountainash_transport.storage.backends  # noqa: F401
-        from mountainash_transport.storage.backends.ssh import SFTPStorageBackend
+        from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
         conn = _FakeConnection(None)
         backend = SFTPStorageBackend(None, connection=conn)
         with pytest.raises(StorageConnectionError):

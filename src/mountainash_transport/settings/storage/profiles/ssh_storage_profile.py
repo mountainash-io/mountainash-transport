@@ -73,7 +73,7 @@ SSH_SPEC = StorageProfileSpec(
     # alias pointing at the same class (see providers/__init__.py).
     provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH,
     sdk_package="paramiko",
-    handler_module="mountainash_transport.storage.backends.ssh",
+    handler_module="mountainash_transport.storage.backends.sftp",
     handler_class="SSHStorageBackend",
     supports_streaming=True,
     supports_multipart=False,
