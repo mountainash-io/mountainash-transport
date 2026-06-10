@@ -1,5 +1,4 @@
 """Cross-backend parametrized tests: directory listing."""
-
 from __future__ import annotations
 
 import os
@@ -8,7 +7,8 @@ import tempfile
 
 import pytest
 
-import mountainash_transport.storage.backends  # noqa: F401 - trigger registrations
+import mountainash_transport.storage.backends  # noqa: F401
+from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport.storage.facade import StorageFacade
 
 LOCAL_BACKENDS = ["local"]
@@ -28,16 +28,16 @@ def tmp_dir():
 
 
 @pytest.mark.parametrize("backend_name", LOCAL_BACKENDS)
-def test_list_returns_correct_count(backend_name: str, tmp_dir: str) -> None:
+def test_list_dir_returns_correct_count(backend_name: str, tmp_dir: str) -> None:
     facade = make_facade(backend_name)
     for i in range(3):
         facade.write(os.path.join(tmp_dir, f"file_{i}.txt"), b"data")
-    results = facade.list_files(tmp_dir)
+    results = facade.list_dir(tmp_dir)
     assert len(results) == 3
 
 
 @pytest.mark.parametrize("backend_name", LOCAL_BACKENDS)
-def test_list_empty_directory(backend_name: str, tmp_dir: str) -> None:
+def test_list_dir_empty(backend_name: str, tmp_dir: str) -> None:
     facade = make_facade(backend_name)
-    results = facade.list_files(tmp_dir)
+    results = facade.list_dir(tmp_dir)
     assert results == []

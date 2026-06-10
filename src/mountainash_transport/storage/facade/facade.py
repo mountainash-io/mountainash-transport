@@ -8,17 +8,17 @@ import io
 from typing import BinaryIO
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport._core.exceptions import UnsupportedOperationError
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
+    StorageEnumerateProtocol,
     StorageMetadataProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
 )
-from mountainash_transport.storage.protocols.prtcl_list import StorageListProtocol
 from mountainash_auth_client import AuthProfile
 from mountainash_transport.storage.registry import (
     detect_provider_from_path,
@@ -262,18 +262,19 @@ class StorageFacade:
         self._backend.write_from_stream(path, encoded)
 
     # ------------------------------------------------------------------
-    # List operations (StorageListProtocol)
+    # Enumerate operations (StorageEnumerateProtocol)
     # ------------------------------------------------------------------
 
-    def list_files(self, prefix: str) -> list[FileMetadata]:
-        """List all files under *prefix*."""
-        self._require(StorageListProtocol, "list_files")
-        return self._backend.list_files(prefix)
-
-    def list_directories(self, prefix: str) -> list[str]:
-        """List all directories under *prefix*."""
-        self._require(StorageListProtocol, "list_directories")
-        return self._backend.list_directories(prefix)
+    def list_objects(
+        self,
+        prefix: str,
+        *,
+        delimiter: str | None = "/",
+        max_results: int | None = None,
+    ) -> EnumerateResult:
+        """Bucket-store listing. Requires StorageEnumerateProtocol."""
+        self._require(StorageEnumerateProtocol, "list_objects")
+        return self._backend.list_objects(prefix, delimiter=delimiter, max_results=max_results)
 
     # ------------------------------------------------------------------
     # Delete operations (StorageDeleteProtocol)
@@ -293,13 +294,13 @@ class StorageFacade:
         self._require(StorageMetadataProtocol, "exists")
         return self._backend.path_exists(path)
 
-    def metadata(self, path: str) -> FileMetadata:
-        """Return metadata for the file at *path*."""
+    def metadata(self, path: str) -> StorageEntry:
+        """Return metadata for the resource at *path*."""
         self._require(StorageMetadataProtocol, "metadata")
         return self._backend.get_metadata(path)
 
-    def get_size(self, path: str) -> int:
-        """Return the size in bytes of the file at *path*."""
+    def get_size(self, path: str) -> int | None:
+        """Return the size in bytes of the file at *path*, or None if unknown."""
         self._require(StorageMetadataProtocol, "get_size")
         return self._backend.get_size(path)
 
@@ -315,6 +316,11 @@ class StorageFacade:
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)
     # ------------------------------------------------------------------
+
+    def list_dir(self, path: str) -> list[StorageEntry]:
+        """Filesystem listing. Requires StorageDirectoryProtocol."""
+        self._require(StorageDirectoryProtocol, "list_dir")
+        return self._backend.list_dir(path)
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         """Create a directory at *path*, optionally creating parent directories."""
