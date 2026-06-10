@@ -1,36 +1,54 @@
-"""Verify every expected provider type has a registered backend."""
+"""Registry honesty — drift test and scheme conformance.
+
+The implemented flag on StorageProfileSpec is the single source of truth.
+These tests pin it against the backend registry and scheme table.
+"""
 
 import pytest
+
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage.registry import get_registered_backends
-import mountainash_transport.storage.backends  # trigger registrations
+from mountainash_transport._core.exceptions import BackendNotImplementedError
+from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY
+from mountainash_transport.storage.registry import get_registered_backends, get_storage_backend
+from mountainash_transport.storage.path_helpers.scheme import SCHEMES
+import mountainash_transport.storage.backends  # noqa: F401 — trigger registrations
 
-REQUIRED_BACKENDS = {
-    CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-    CONST_STORAGE_PROVIDER_TYPE.S3,
-    CONST_STORAGE_PROVIDER_TYPE.R2,
-    CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS,
-    CONST_STORAGE_PROVIDER_TYPE.MINIO,
-}
 
-ASPIRATIONAL_BACKENDS = {
-    CONST_STORAGE_PROVIDER_TYPE.GCS,
-    CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB,
-    CONST_STORAGE_PROVIDER_TYPE.SFTP,
-    CONST_STORAGE_PROVIDER_TYPE.SSH,
-    CONST_STORAGE_PROVIDER_TYPE.B2,
-}
+class TestImplementedFlagDrift:
+    """spec.implemented must be True iff a backend is registered."""
 
-class TestRegistryCompleteness:
-    def test_all_required_backends_registered(self):
+    @pytest.mark.parametrize(
+        "name",
+        list(STORAGE_REGISTRY.descriptors.keys()),
+    )
+    def test_implemented_matches_backend_registry(self, name):
+        spec = STORAGE_REGISTRY.descriptors[name]
         backends = get_registered_backends()
-        for provider in REQUIRED_BACKENDS:
-            assert provider in backends, f"Missing backend for {provider}"
+        has_backend = spec.provider_type in backends
+        assert spec.implemented == has_backend, (
+            f"Profile '{name}' has implemented={spec.implemented} "
+            f"but backend registered={has_backend}"
+        )
 
-    @pytest.mark.parametrize("provider", list(ASPIRATIONAL_BACKENDS))
-    def test_aspirational_backends_tracked(self, provider):
+
+class TestSchemeConformance:
+    """Every scheme with a provider either resolves to a backend or raises
+    BackendNotImplementedError — never an opaque ValueError."""
+
+    @pytest.mark.parametrize(
+        "scheme_key,spec",
+        [
+            (k, v) for k, v in SCHEMES.items() if v.provider is not None
+        ],
+    )
+    def test_scheme_provider_is_honest(self, scheme_key, spec):
         backends = get_registered_backends()
-        if provider in backends:
-            pytest.skip(f"{provider} implemented — move to REQUIRED_BACKENDS")
+        if spec.provider in backends:
+            backend = get_storage_backend(spec.provider, None)
+            assert backend is not None, (
+                f"Scheme '{scheme_key}' -> {spec.provider} is implemented but "
+                f"get_storage_backend returned None"
+            )
         else:
-            pytest.skip(f"{provider} not yet implemented — aspirational")
+            with pytest.raises(BackendNotImplementedError):
+                get_storage_backend(spec.provider, None)
