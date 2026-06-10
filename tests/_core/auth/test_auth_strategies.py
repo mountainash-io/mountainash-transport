@@ -105,3 +105,70 @@ class TestBasicAuthStrategy:
         original = {"headers": original_headers}
         BasicAuthStrategy("u", "p").apply(original)
         assert "Authorization" not in original_headers
+
+
+from mountainash_transport._core.auth.strategies import RefreshableAuthStrategy
+
+
+class _ConcreteRefreshable:
+    """Minimal concrete class satisfying the RefreshableAuthStrategy protocol."""
+
+    def __init__(self, token: str) -> None:
+        self._token = token
+
+    def apply(self, kwargs: dict) -> dict:
+        result = {**kwargs}
+        result.setdefault("headers", {})["Authorization"] = f"Bearer {self._token}"
+        return result
+
+    def get_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self._token}"}
+
+    def refresh(self) -> bool:
+        self._token = "refreshed-token"
+        return True
+
+
+class TestRefreshableAuthStrategy:
+    def test_regular_strategy_is_not_refreshable(self):
+        # BearerTokenStrategy only has apply(); it should NOT satisfy RefreshableAuthStrategy
+        assert not isinstance(BearerTokenStrategy("tok"), RefreshableAuthStrategy)
+
+    def test_concrete_refreshable_detected(self):
+        # A class implementing apply(), get_headers(), refresh() IS detected
+        obj = _ConcreteRefreshable("initial")
+        assert isinstance(obj, RefreshableAuthStrategy)
+
+    def test_get_headers_contract(self):
+        # After refresh(), get_headers() must reflect the new credentials
+        obj = _ConcreteRefreshable("initial")
+        assert obj.get_headers()["Authorization"] == "Bearer initial"
+        refreshed = obj.refresh()
+        assert refreshed is True
+        assert obj.get_headers()["Authorization"] == "Bearer refreshed-token"
+
+    def test_is_also_auth_strategy(self):
+        # RefreshableAuthStrategy extends AuthStrategy — instances satisfy both
+        obj = _ConcreteRefreshable("tok")
+        assert isinstance(obj, AuthStrategy)
+        assert isinstance(obj, RefreshableAuthStrategy)
+
+    def test_missing_get_headers_is_not_refreshable(self):
+        class _NoGetHeaders:
+            def apply(self, kwargs: dict) -> dict:
+                return kwargs
+
+            def refresh(self) -> bool:
+                return True
+
+        assert not isinstance(_NoGetHeaders(), RefreshableAuthStrategy)
+
+    def test_missing_refresh_is_not_refreshable(self):
+        class _NoRefresh:
+            def apply(self, kwargs: dict) -> dict:
+                return kwargs
+
+            def get_headers(self) -> dict[str, str]:
+                return {}
+
+        assert not isinstance(_NoRefresh(), RefreshableAuthStrategy)

@@ -4,13 +4,19 @@ from __future__ import annotations
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
-import httpx
-
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
-from mountainash_transport._core.exceptions import StorageConnectionError
+from mountainash_transport._core.exceptions import (
+    AuthenticationError,
+    PathNotFoundError,
+    StorageError,
+)
+from mountainash_transport._core.http.errors import (
+    HttpAuthenticationError,
+    HttpForbiddenError,
+    HttpNotFoundError,
+    HttpTransportError,
+)
 from mountainash_transport.storage.protocols import StorageMetadataProtocol
-
-from ._helpers import _raise_for_status
 
 
 def _filename_from_url(url: str) -> str:
@@ -32,19 +38,16 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
         Returns:
             True if the server responds with a 2xx status.
         """
-        client = self._get_client()  # type: ignore[attr-defined]
+        engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            response = client.head(path)
-        except httpx.TimeoutException as exc:
-            raise StorageConnectionError(f"Timeout checking {path}") from exc
-        except httpx.ConnectError as exc:
-            raise StorageConnectionError(f"Connection failed for {path}") from exc
-        if response.status_code == 404:
-            return False
-        if 200 <= response.status_code < 300:
+            engine.request("HEAD", path)
             return True
-        _raise_for_status(response, path)
-        return False
+        except HttpNotFoundError:
+            return False
+        except (HttpAuthenticationError, HttpForbiddenError) as exc:
+            raise AuthenticationError(path) from exc
+        except HttpTransportError as exc:
+            raise StorageError(str(exc)) from exc
 
     def get_metadata(self, path: str) -> StorageEntry:
         """Retrieve metadata for a resource via HTTP HEAD.
@@ -55,14 +58,15 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
         Returns:
             A :class:`StorageEntry` populated from response headers.
         """
-        client = self._get_client()  # type: ignore[attr-defined]
+        engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            response = client.head(path)
-        except httpx.TimeoutException as exc:
-            raise StorageConnectionError(f"Timeout for {path}") from exc
-        except httpx.ConnectError as exc:
-            raise StorageConnectionError(f"Connection failed for {path}") from exc
-        _raise_for_status(response, path)
+            response = engine.request("HEAD", path)
+        except HttpNotFoundError as exc:
+            raise PathNotFoundError(path) from exc
+        except (HttpAuthenticationError, HttpForbiddenError) as exc:
+            raise AuthenticationError(path) from exc
+        except HttpTransportError as exc:
+            raise StorageError(str(exc)) from exc
 
         headers = response.headers
         size_str = headers.get("content-length")
@@ -100,13 +104,14 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
         Returns:
             File size in bytes, or None if the header is absent.
         """
-        client = self._get_client()  # type: ignore[attr-defined]
+        engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            response = client.head(path)
-        except httpx.TimeoutException as exc:
-            raise StorageConnectionError(f"Timeout for {path}") from exc
-        except httpx.ConnectError as exc:
-            raise StorageConnectionError(f"Connection failed for {path}") from exc
-        _raise_for_status(response, path)
+            response = engine.request("HEAD", path)
+        except HttpNotFoundError as exc:
+            raise PathNotFoundError(path) from exc
+        except (HttpAuthenticationError, HttpForbiddenError) as exc:
+            raise AuthenticationError(path) from exc
+        except HttpTransportError as exc:
+            raise StorageError(str(exc)) from exc
         size_str = response.headers.get("content-length")
         return int(size_str) if size_str else None

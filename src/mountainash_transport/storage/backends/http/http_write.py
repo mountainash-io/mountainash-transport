@@ -3,12 +3,18 @@ from __future__ import annotations
 
 import typing as t
 
-import httpx
-
-from mountainash_transport._core.exceptions import StorageConnectionError
+from mountainash_transport._core.exceptions import (
+    AuthenticationError,
+    PathNotFoundError,
+    StorageError,
+)
+from mountainash_transport._core.http.errors import (
+    HttpAuthenticationError,
+    HttpForbiddenError,
+    HttpNotFoundError,
+    HttpTransportError,
+)
 from mountainash_transport.storage.protocols import StorageWriteProtocol
-
-from ._helpers import _raise_for_status
 
 
 class HTTPWriteMixin(StorageWriteProtocol):
@@ -21,14 +27,15 @@ class HTTPWriteMixin(StorageWriteProtocol):
             path: Full HTTP/HTTPS URL of the target resource.
             data: Bytes to upload.
         """
-        client = self._get_client()  # type: ignore[attr-defined]
+        engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            response = client.put(path, content=data)
-        except httpx.TimeoutException as exc:
-            raise StorageConnectionError(f"Timeout writing {path}") from exc
-        except httpx.ConnectError as exc:
-            raise StorageConnectionError(f"Connection failed for {path}") from exc
-        _raise_for_status(response, path)
+            engine.request("PUT", path, content=data)
+        except HttpNotFoundError as exc:
+            raise PathNotFoundError(path) from exc
+        except (HttpAuthenticationError, HttpForbiddenError) as exc:
+            raise AuthenticationError(path) from exc
+        except HttpTransportError as exc:
+            raise StorageError(str(exc)) from exc
 
     def write_from_stream(self, path: str, stream: t.BinaryIO) -> None:
         """Upload a binary stream to a resource via HTTP PUT.
@@ -37,11 +44,12 @@ class HTTPWriteMixin(StorageWriteProtocol):
             path: Full HTTP/HTTPS URL of the target resource.
             stream: Binary stream to read and upload.
         """
-        client = self._get_client()  # type: ignore[attr-defined]
+        engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            response = client.put(path, content=stream.read())
-        except httpx.TimeoutException as exc:
-            raise StorageConnectionError(f"Timeout writing {path}") from exc
-        except httpx.ConnectError as exc:
-            raise StorageConnectionError(f"Connection failed for {path}") from exc
-        _raise_for_status(response, path)
+            engine.request("PUT", path, stream=stream)
+        except HttpNotFoundError as exc:
+            raise PathNotFoundError(path) from exc
+        except (HttpAuthenticationError, HttpForbiddenError) as exc:
+            raise AuthenticationError(path) from exc
+        except HttpTransportError as exc:
+            raise StorageError(str(exc)) from exc
