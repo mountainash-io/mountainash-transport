@@ -18,6 +18,22 @@ class AuthStrategy(Protocol):
     def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]: ...
 
 
+@runtime_checkable
+class RefreshableAuthStrategy(AuthStrategy, Protocol):
+    """Auth strategy that supports credential refresh.
+
+    After a successful refresh(), subsequent get_headers() calls must
+    return headers reflecting the new credentials.
+
+    Implementations must be internally synchronized — concurrent
+    refresh() calls must not corrupt state.
+    """
+
+    def refresh(self) -> bool: ...
+
+    def get_headers(self) -> dict[str, str]: ...
+
+
 class NoAuthStrategy:
     """Passthrough — no credentials injected."""
 
