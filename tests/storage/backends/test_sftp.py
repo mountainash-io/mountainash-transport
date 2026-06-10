@@ -133,7 +133,7 @@ class TestPathExists:
 
 
 class TestGetMetadata:
-    def test_builds_file_metadata(self):
+    def test_get_metadata_returns_storage_entry(self):
         mock_sftp = MagicMock()
         stat = MagicMock()
         stat.st_size = 1024

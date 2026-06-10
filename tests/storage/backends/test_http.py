@@ -140,7 +140,7 @@ class TestPathExists:
 
 
 class TestGetMetadata:
-    def test_builds_file_metadata_from_headers(self):
+    def test_get_metadata_returns_storage_entry(self):
         from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 
         def _handler(request: httpx.Request) -> httpx.Response:
