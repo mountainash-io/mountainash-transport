@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import io
-import typing
-from datetime import datetime
 from typing import BinaryIO
 
-import pytest
-
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
-    StorageListProtocol,
+    StorageEnumerateProtocol,
     StorageMetadataProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
@@ -23,14 +19,12 @@ from mountainash_transport.storage.protocols import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_metadata(path: str = "file.txt") -> FileMetadata:
-    return FileMetadata(
-        filename="file.txt",
-        directory="/tmp",
-        full_path=f"/tmp/{path}",
-        size=0,
-        source="local",
-    )
+def _make_entry(path: str = "/tmp/file.txt") -> StorageEntry:
+    return StorageEntry(path=path, name="file.txt", size=0)
+
+
+def _make_enumerate_result() -> EnumerateResult:
+    return EnumerateResult(objects=(), common_prefixes=())
 
 
 # ---------------------------------------------------------------------------
@@ -90,31 +84,37 @@ class TestStorageWriteProtocol:
 
 
 # ---------------------------------------------------------------------------
-# StorageListProtocol
+# StorageEnumerateProtocol
 # ---------------------------------------------------------------------------
 
-class GoodList:
-    def list_files(self, prefix: str) -> list[FileMetadata]: return []
-    def list_directories(self, prefix: str) -> list[str]: return []
+class GoodEnumerate:
+    def list_objects(
+        self,
+        prefix: str,
+        *,
+        delimiter: str | None = None,
+        max_results: int | None = None,
+    ) -> EnumerateResult:
+        return _make_enumerate_result()
 
 
-class BadList:
-    def list_files(self, prefix: str) -> list[FileMetadata]: return []
-    # missing list_directories
+class BadEnumerate:
+    # wrong method name
+    def list_files(self, prefix: str) -> list[StorageEntry]: return []
 
 
-class TestStorageListProtocol:
+class TestStorageEnumerateProtocol:
     def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodList(), StorageListProtocol)
+        assert isinstance(GoodEnumerate(), StorageEnumerateProtocol)
 
     def test_positive_conformance(self) -> None:
-        assert isinstance(GoodList(), StorageListProtocol)
+        assert isinstance(GoodEnumerate(), StorageEnumerateProtocol)
 
-    def test_negative_conformance_missing_method(self) -> None:
-        assert not isinstance(BadList(), StorageListProtocol)
+    def test_negative_conformance_wrong_method(self) -> None:
+        assert not isinstance(BadEnumerate(), StorageEnumerateProtocol)
 
     def test_empty_class_does_not_conform(self) -> None:
-        assert not isinstance(object(), StorageListProtocol)
+        assert not isinstance(object(), StorageEnumerateProtocol)
 
 
 # ---------------------------------------------------------------------------
@@ -148,13 +148,13 @@ class TestStorageDeleteProtocol:
 # ---------------------------------------------------------------------------
 
 class GoodMetadata:
-    def get_metadata(self, path: str) -> FileMetadata: return _make_metadata(path)
+    def get_metadata(self, path: str) -> StorageEntry: return _make_entry(path)
     def path_exists(self, path: str) -> bool: return False
-    def get_size(self, path: str) -> int: return 0
+    def get_size(self, path: str) -> int | None: return 0
 
 
 class BadMetadata:
-    def get_metadata(self, path: str) -> FileMetadata: return _make_metadata(path)
+    def get_metadata(self, path: str) -> StorageEntry: return _make_entry(path)
     def path_exists(self, path: str) -> bool: return False
     # missing get_size
 
@@ -204,13 +204,15 @@ class TestStorageCopyProtocol:
 # ---------------------------------------------------------------------------
 
 class GoodDirectory:
-    def mkdir(self, path: str, parents: bool = True) -> None: ...
+    def list_dir(self, path: str) -> list[StorageEntry]: return []
+    def mkdir(self, path: str, *, parents: bool = True) -> None: ...
     def rmdir(self, path: str) -> None: ...
 
 
 class BadDirectory:
-    def mkdir(self, path: str, parents: bool = True) -> None: ...
-    # missing rmdir
+    # has mkdir + rmdir but no list_dir
+    def mkdir(self, path: str, *, parents: bool = True) -> None: ...
+    def rmdir(self, path: str) -> None: ...
 
 
 class TestStorageDirectoryProtocol:
@@ -232,29 +234,32 @@ class TestStorageDirectoryProtocol:
 # ---------------------------------------------------------------------------
 
 class FullBackend:
-    # connection
-    def connect(self) -> None: ...
-    def disconnect(self) -> None: ...
-    def is_connected(self) -> bool: return True
     # read
     def read_to_bytes(self, path: str) -> bytes: return b""
     def read_to_stream(self, path: str) -> BinaryIO: return io.BytesIO(b"")
     # write
     def write_from_bytes(self, path: str, data: bytes) -> None: ...
     def write_from_stream(self, path: str, stream: BinaryIO) -> None: ...
-    # list
-    def list_files(self, prefix: str) -> list[FileMetadata]: return []
-    def list_directories(self, prefix: str) -> list[str]: return []
+    # enumerate
+    def list_objects(
+        self,
+        prefix: str,
+        *,
+        delimiter: str | None = None,
+        max_results: int | None = None,
+    ) -> EnumerateResult:
+        return _make_enumerate_result()
     # delete
     def delete_file(self, path: str) -> None: ...
     # metadata
-    def get_metadata(self, path: str) -> FileMetadata: return _make_metadata(path)
+    def get_metadata(self, path: str) -> StorageEntry: return _make_entry(path)
     def path_exists(self, path: str) -> bool: return False
-    def get_size(self, path: str) -> int: return 0
+    def get_size(self, path: str) -> int | None: return 0
     # copy
     def copy(self, source: str, destination: str) -> None: ...
     # directory
-    def mkdir(self, path: str, parents: bool = True) -> None: ...
+    def list_dir(self, path: str) -> list[StorageEntry]: return []
+    def mkdir(self, path: str, *, parents: bool = True) -> None: ...
     def rmdir(self, path: str) -> None: ...
 
 
@@ -263,7 +268,7 @@ class TestFullBackendConformance:
         backend = FullBackend()
         assert isinstance(backend, StorageReadProtocol)
         assert isinstance(backend, StorageWriteProtocol)
-        assert isinstance(backend, StorageListProtocol)
+        assert isinstance(backend, StorageEnumerateProtocol)
         assert isinstance(backend, StorageDeleteProtocol)
         assert isinstance(backend, StorageMetadataProtocol)
         assert isinstance(backend, StorageCopyProtocol)

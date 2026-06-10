@@ -14,11 +14,11 @@ from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
-    StorageListProtocol,
     StorageMetadataProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
 )
+from mountainash_transport.storage.protocols.prtcl_list import StorageListProtocol
 from mountainash_auth_client import AuthProfile
 from mountainash_transport.storage.registry import (
     detect_provider_from_path,

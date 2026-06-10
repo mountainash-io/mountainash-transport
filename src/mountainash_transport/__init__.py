@@ -12,12 +12,12 @@ from .storage.registry import get_storage_backend, detect_provider_from_path
 from .storage.protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
-    StorageListProtocol,
     StorageDeleteProtocol,
     StorageMetadataProtocol,
     StorageCopyProtocol,
     StorageDirectoryProtocol,
 )
+from .storage.protocols.prtcl_list import StorageListProtocol
 from ._core.protocols import ConnectionProtocol
 from .connections.errors import TransportConnectionError
 from .connections import (

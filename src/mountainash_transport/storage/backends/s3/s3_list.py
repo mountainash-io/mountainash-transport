@@ -5,7 +5,7 @@ from __future__ import annotations
 from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
 
 from .s3_path import parse_s3_path
-from mountainash_transport.storage.protocols import StorageListProtocol
+from mountainash_transport.storage.protocols.prtcl_list import StorageListProtocol
 
 
 class S3ListMixin(StorageListProtocol):
