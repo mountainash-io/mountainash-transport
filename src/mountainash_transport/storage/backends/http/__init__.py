@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 import httpx
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport._core.exceptions import (
     AuthenticationError,
     PathNotFoundError,
@@ -42,14 +42,6 @@ def _filename_from_url(url: str) -> str:
     path = parsed.path.rstrip("/")
     return path.rsplit("/", 1)[-1] if "/" in path else path
 
-
-def _directory_from_url(url: str) -> str:
-    """Extract directory from a URL path."""
-    parsed = urlparse(url)
-    path = parsed.path.rstrip("/")
-    if "/" in path:
-        return path.rsplit("/", 1)[0]
-    return "/"
 
 
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.HTTP)
@@ -139,7 +131,7 @@ class HTTPStorageBackend:
         _raise_for_status(response, path)
         return False
 
-    def get_metadata(self, path: str) -> FileMetadata:
+    def get_metadata(self, path: str) -> StorageEntry:
         client = self._get_client()
         try:
             response = client.head(path)
@@ -150,8 +142,12 @@ class HTTPStorageBackend:
         _raise_for_status(response, path)
 
         headers = response.headers
-        size = int(headers.get("content-length", "0"))
+        size_str = headers.get("content-length")
+        size = int(size_str) if size_str else None
         etag = headers.get("etag", "")
+        content_type = headers.get("content-type", "")
+        content_md5 = headers.get("content-md5", "")
+
         last_modified = None
         lm_header = headers.get("last-modified")
         if lm_header:
@@ -160,17 +156,19 @@ class HTTPStorageBackend:
             except (ValueError, TypeError):
                 pass
 
-        return FileMetadata(
-            filename=_filename_from_url(path),
-            directory=_directory_from_url(path),
-            full_path=path,
+        return StorageEntry(
+            path=path,
+            name=_filename_from_url(path),
             size=size,
             last_modified=last_modified,
             etag=etag,
+            content_type=content_type,
             source="http",
+            checksum=content_md5,
+            checksum_algorithm="MD5" if content_md5 else "",
         )
 
-    def get_size(self, path: str) -> int:
+    def get_size(self, path: str) -> int | None:
         client = self._get_client()
         try:
             response = client.head(path)
@@ -179,7 +177,8 @@ class HTTPStorageBackend:
         except httpx.ConnectError as exc:
             raise StorageConnectionError(f"Connection failed for {path}") from exc
         _raise_for_status(response, path)
-        return int(response.headers.get("content-length", "0"))
+        size_str = response.headers.get("content-length")
+        return int(size_str) if size_str else None
 
 
 __all__ = ["HTTPStorageBackend"]
