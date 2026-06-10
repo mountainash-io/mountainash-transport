@@ -21,8 +21,19 @@ import mountainash_transport.settings.storage.profiles  # noqa: F401
 
 from mountainash_settings.profiles import spec_invariants_for
 from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY
+from mountainash_transport.settings.profile_spec import StorageProfileSpec
 
 
 # Instantiating this at module import time generates one parametric test
 # class per invariant — pytest picks them up via the module-level name.
 TestStorageInvariants = spec_invariants_for(STORAGE_REGISTRY)
+
+
+def test_implemented_defaults_to_true():
+    spec = StorageProfileSpec(name="test", provider_type="test", parameters=[])
+    assert spec.implemented is True
+
+
+def test_implemented_can_be_false():
+    spec = StorageProfileSpec(name="test", provider_type="test", parameters=[], implemented=False)
+    assert spec.implemented is False

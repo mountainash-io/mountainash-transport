@@ -184,6 +184,7 @@ AZURE_STORAGE_SPEC = StorageProfileSpec(
     ],
     default_auth=CONST_AUTH_MODE.AZURE_AD,
     supported_auth=frozenset({CONST_AUTH_MODE.AZURE_AD, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.NONE}),
+    implemented=False,
     metadata={
         "service_class_paths": {
             "blob": "azure.storage.blob.BlobServiceClient",

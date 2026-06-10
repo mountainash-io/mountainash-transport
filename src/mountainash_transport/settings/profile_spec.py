@@ -57,3 +57,4 @@ class StorageProfileSpec(ProfileSpec):
     supported_auth: frozenset[CONST_AUTH_MODE] = field(
         default_factory=lambda: frozenset({CONST_AUTH_MODE.NONE})
     )
+    implemented: bool = True
