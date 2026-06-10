@@ -37,6 +37,7 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
     ) -> None:
         self._connection = connection
         self.storage_profile = storage_profile
+        self._engine: HttpRequestEngine | None = None
 
         if engine is not None:
             self._engine = engine
@@ -51,8 +52,6 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
                 auth_strategy=auth_strategy,
                 policy=policy or RequestPolicy(),
             )
-        else:
-            self._engine: HttpRequestEngine | None = None  # type: ignore[no-redef]
 
     def _get_engine(self) -> HttpRequestEngine:
         if self._engine is None:
