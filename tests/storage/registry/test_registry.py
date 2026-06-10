@@ -3,6 +3,7 @@
 import pytest
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.exceptions import BackendNotImplementedError
 from mountainash_transport.storage.registry import (
     clear_registry,
     detect_provider_from_path,
@@ -123,12 +124,12 @@ class TestRegisterAndGetBackend:
         assert isinstance(instance, LocalBackend)
         assert instance.storage_profile is storage_profile
 
-    def test_unregistered_provider_raises_value_error(self):
-        with pytest.raises(ValueError, match="No backend registered"):
+    def test_unregistered_provider_raises_backend_not_implemented(self):
+        with pytest.raises(BackendNotImplementedError):
             get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS, None)
 
     def test_unregistered_error_mentions_provider(self):
-        with pytest.raises(ValueError, match="gcs"):
+        with pytest.raises(BackendNotImplementedError, match="gcs"):
             get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS, None)
 
     def test_duplicate_registration_overwrites(self):

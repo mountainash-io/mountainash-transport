@@ -86,7 +86,7 @@ class StorageFacade:
 
         self._backend = get_storage_backend(
             provider_type, storage_profile,
-            auth_profile=auth_profile, connection=connection,
+            connection=connection,
         )
 
     # ------------------------------------------------------------------
