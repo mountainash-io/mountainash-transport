@@ -49,6 +49,21 @@ from ._core.transforms import (
     GPG,
 )
 
+# HTTP transport foundation
+from ._core.http import (
+    HttpRequestEngine,
+    RequestPolicy, RetryPolicy, TimeoutPolicy, RedirectPolicy,
+    HttpResponse, HttpStreamResponse,
+    SAFE_METHODS, IDEMPOTENT_METHODS,
+    HttpTransportError, HttpResponseError,
+    HttpClientError, HttpServerError,
+    HttpNotFoundError, HttpAuthenticationError, HttpForbiddenError,
+    HttpRateLimitError, HttpConflictError,
+    HttpBadGatewayError, HttpServiceUnavailableError, HttpGatewayTimeoutError,
+    HttpConnectionError, HttpTimeoutError,
+    HttpRedirectError, HttpProtocolError, HttpRequestError, HttpDecodeError,
+)
+
 # Path utilities
 from .storage.path_helpers import StoragePath, infer_pipeline
 
@@ -77,4 +92,16 @@ __all__ = [
     "PathNotFoundError", "AuthenticationError", "TransformError",
     "StoragePath", "infer_pipeline",
     "Pipeline", "StreamTransform", "Gzip", "GPG",
+    # HTTP transport foundation
+    "HttpRequestEngine",
+    "RequestPolicy", "RetryPolicy", "TimeoutPolicy", "RedirectPolicy",
+    "HttpResponse", "HttpStreamResponse",
+    "SAFE_METHODS", "IDEMPOTENT_METHODS",
+    "HttpTransportError", "HttpResponseError",
+    "HttpClientError", "HttpServerError",
+    "HttpNotFoundError", "HttpAuthenticationError", "HttpForbiddenError",
+    "HttpRateLimitError", "HttpConflictError",
+    "HttpBadGatewayError", "HttpServiceUnavailableError", "HttpGatewayTimeoutError",
+    "HttpConnectionError", "HttpTimeoutError",
+    "HttpRedirectError", "HttpProtocolError", "HttpRequestError", "HttpDecodeError",
 ]
