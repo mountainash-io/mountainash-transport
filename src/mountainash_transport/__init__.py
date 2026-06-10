@@ -40,6 +40,7 @@ from ._core.exceptions import (
     PathNotFoundError,
     AuthenticationError,
     TransformError,
+    BackendNotImplementedError,
 )
 
 # Stream transforms
@@ -91,7 +92,7 @@ __all__ = [
     "ProfileProtocol", "StorageProfileProtocol",
     "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
-    "PathNotFoundError", "AuthenticationError", "TransformError",
+    "PathNotFoundError", "AuthenticationError", "TransformError", "BackendNotImplementedError",
     "StoragePath", "infer_pipeline",
     "Pipeline", "StreamTransform", "Gzip", "GPG",
     # HTTP transport foundation
