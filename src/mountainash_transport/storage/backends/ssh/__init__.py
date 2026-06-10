@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import errno
 import io
+import stat as stat_module
 import typing as t
 from datetime import datetime
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import (
+    EntryType,
+    StorageEntry,
+)
 from mountainash_transport._core.exceptions import (
     PathNotFoundError,
     StorageConnectionError,
@@ -82,15 +86,37 @@ class SFTPStorageBackend:
     def write_from_stream(self, path: str, stream: t.BinaryIO) -> None:
         self.write_from_bytes(path, stream.read())
 
-    def list_paths(self, path: str) -> list[str]:
+    def list_dir(self, path: str) -> list[StorageEntry]:
         sftp = self._get_client()
         try:
             entries = sftp.listdir_attr(path)
-            return [entry.filename for entry in entries]
         except (FileNotFoundError, IOError, PermissionError) as exc:
             raise _wrap_sftp_error(exc, path) from exc
 
-    def delete_path(self, path: str) -> None:
+        results: list[StorageEntry] = []
+        for attr in entries:
+            is_dir = stat_module.S_ISDIR(attr.st_mode) if attr.st_mode is not None else False
+            mtime = getattr(attr, "st_mtime", None)
+            last_modified = None
+            if mtime is not None:
+                try:
+                    last_modified = datetime.fromtimestamp(mtime)
+                except (ValueError, OSError):
+                    pass
+            child_path = f"{path.rstrip('/')}/{attr.filename}"
+            results.append(
+                StorageEntry(
+                    path=child_path,
+                    name=attr.filename,
+                    size=getattr(attr, "st_size", None) if not is_dir else None,
+                    last_modified=last_modified,
+                    entry_type=EntryType.DIRECTORY if is_dir else EntryType.FILE,
+                    source="sftp",
+                )
+            )
+        return results
+
+    def delete_file(self, path: str) -> None:
         sftp = self._get_client()
         try:
             sftp.remove(path)
@@ -105,16 +131,14 @@ class SFTPStorageBackend:
         except (FileNotFoundError, IOError):
             return False
 
-    def get_metadata(self, path: str) -> FileMetadata:
+    def get_metadata(self, path: str) -> StorageEntry:
         sftp = self._get_client()
         try:
             stat = sftp.stat(path)
         except (FileNotFoundError, IOError, PermissionError) as exc:
             raise _wrap_sftp_error(exc, path) from exc
 
-        filename = path.rsplit("/", 1)[-1] if "/" in path else path
-        directory = path.rsplit("/", 1)[0] if "/" in path else "/"
-
+        name = path.rsplit("/", 1)[-1] if "/" in path else path
         last_modified = None
         mtime = getattr(stat, "st_mtime", None)
         if mtime is not None:
@@ -123,20 +147,33 @@ class SFTPStorageBackend:
             except (ValueError, OSError):
                 pass
 
-        return FileMetadata(
-            filename=filename,
-            directory=directory,
-            full_path=path,
-            size=getattr(stat, "st_size", 0) or 0,
+        return StorageEntry(
+            path=path,
+            name=name,
+            size=getattr(stat, "st_size", None),
             last_modified=last_modified,
             source="sftp",
         )
 
-    def get_size(self, path: str) -> int:
+    def get_size(self, path: str) -> int | None:
         sftp = self._get_client()
         try:
             stat = sftp.stat(path)
-            return getattr(stat, "st_size", 0) or 0
+            return getattr(stat, "st_size", None)
+        except (FileNotFoundError, IOError, PermissionError) as exc:
+            raise _wrap_sftp_error(exc, path) from exc
+
+    def mkdir(self, path: str, *, parents: bool = True) -> None:
+        sftp = self._get_client()
+        try:
+            sftp.mkdir(path)
+        except (FileNotFoundError, IOError, PermissionError) as exc:
+            raise _wrap_sftp_error(exc, path) from exc
+
+    def rmdir(self, path: str) -> None:
+        sftp = self._get_client()
+        try:
+            sftp.rmdir(path)
         except (FileNotFoundError, IOError, PermissionError) as exc:
             raise _wrap_sftp_error(exc, path) from exc
 
