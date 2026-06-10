@@ -8,7 +8,7 @@ from mountainash_transport._core.exceptions import StorageConnectionError
 from mountainash_transport.storage.registry import register_storage_backend
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
-from ._helpers import _raise_for_status
+# from ._helpers import _raise_for_status
 from .http_metadata import HTTPMetadataMixin
 from .http_read import HTTPReadMixin
 from .http_write import HTTPWriteMixin
