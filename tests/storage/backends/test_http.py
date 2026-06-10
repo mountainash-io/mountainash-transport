@@ -13,6 +13,10 @@ from mountainash_transport._core.exceptions import (
     StorageConnectionError,
     StorageError,
 )
+from mountainash_transport._core.http.engine import HttpRequestEngine
+from mountainash_transport._core.http.policy import RequestPolicy, RetryPolicy
+
+
 def _transport(handler):
     return httpx.MockTransport(handler)
 
@@ -43,7 +47,8 @@ def _make_backend(transport: httpx.MockTransport):
     import mountainash_transport.storage.backends  # noqa: F401
     from mountainash_transport.storage.backends.http import HTTPStorageBackend
     conn = _FakeConnection(transport)
-    backend = HTTPStorageBackend(None, connection=conn)
+    policy = RequestPolicy(retry=RetryPolicy(max_attempts=1, retry_on_transport=False))
+    backend = HTTPStorageBackend(None, connection=conn, policy=policy)
     return backend
 
 
@@ -217,48 +222,39 @@ class TestRegistration:
 # Auth + profile integration
 # ---------------------------------------------------------------------------
 
-from unittest.mock import patch, MagicMock
-
-from mountainash_auth_client import NoAuth, TokenAuth, PasswordAuth
-from pydantic import SecretStr
+from unittest.mock import MagicMock
 
 from mountainash_transport.storage.backends.http import HTTPStorageBackend
 
 
-class TestHTTPBackendClientCreation:
-    def test_connection_client_used(self):
-        """_get_client returns the connection's client when a connection is provided."""
+class TestHTTPBackendEngineCreation:
+    def test_engine_created_from_connection(self):
+        """_engine is an HttpRequestEngine when connection is provided."""
         mock_client = MagicMock()
         conn = MagicMock()
         conn.client = mock_client
         backend = HTTPStorageBackend(None, connection=conn)
-        assert backend._get_client() is mock_client
-
-    def test_client_stable_across_calls(self):
-        """_get_client returns the same client on repeated calls."""
-        mock_client = MagicMock()
-        conn = MagicMock()
-        conn.client = mock_client
-        backend = HTTPStorageBackend(None, connection=conn)
-        c1 = backend._get_client()
-        c2 = backend._get_client()
-        assert c1 is c2
+        assert isinstance(backend._engine, HttpRequestEngine)
 
     def test_no_connection_raises(self):
-        """_get_client raises StorageConnectionError when no connection is provided."""
+        """_get_engine raises StorageConnectionError when no connection is provided."""
         backend = HTTPStorageBackend(None)
         with pytest.raises(StorageConnectionError, match="requires a connection"):
-            backend._get_client()
+            backend._get_engine()
+
+    def test_engine_injected_directly(self):
+        """An engine passed directly is used as-is."""
+        mock_engine = MagicMock(spec=HttpRequestEngine)
+        backend = HTTPStorageBackend(None, engine=mock_engine)
+        assert backend._get_engine() is mock_engine
 
 
 class TestHTTPBackendProfileKwargs:
-    def test_client_comes_from_connection(self):
-        """Backend delegates to the injected connection's client."""
+    def test_engine_comes_from_connection(self):
+        """Backend creates engine from the injected connection's client."""
         mock_client = MagicMock()
         conn = MagicMock()
         conn.client = mock_client
         profile = MagicMock()
         backend = HTTPStorageBackend(profile, connection=conn)
-        assert backend._get_client() is mock_client
-
-
+        assert isinstance(backend._engine, HttpRequestEngine)
