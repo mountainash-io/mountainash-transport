@@ -1,16 +1,13 @@
-"""Unified SSH + SFTP settings.
+"""SFTP storage profile.
 
-Collapses the legacy ``SSHStorageAuthSettings`` and ``SFTPStorageAuthSettings``
-into a single :class:`SSHStorageProfile` class. Both providers wrap paramiko's
-:class:`paramiko.SSHClient.connect` — the SFTP distinction is whether the
-caller opens the SFTP subsystem after connecting vs issuing ``exec_command``.
-There is no difference in connection kwargs, so one settings class covers
-both providers.
+Provides :class:`SFTPStorageProfile` — settings for the SFTP storage backend
+backed by paramiko. SSH is the connection-layer concern; this profile covers
+the storage provider that performs file operations via the SFTP subsystem.
 
 Mirrors the Phase 4 ``S3Settings`` / ``AzureStorageSettings`` pattern: the
-class is a two-line shell; all parameters live on :data:`SSH_SPEC`;
+class is a two-line shell; all parameters live on :data:`SFTP_SPEC`;
 the adapter
-(:func:`mountainash_transport.settings.adapters.ssh.build_handler_kwargs`)
+(:func:`mountainash_transport.settings.adapters.sftp.build_handler_kwargs`)
 produces kwargs for :meth:`paramiko.SSHClient.connect`.
 """
 
@@ -27,7 +24,7 @@ from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 
-__all__ = ["SSH_SPEC", "SSHStorageProfile"]
+__all__ = ["SFTP_SPEC", "SFTPStorageProfile"]
 
 
 _VALID_HOST_KEY_POLICIES: frozenset[str] = frozenset(
@@ -61,20 +58,18 @@ def _validate_host_key_policy(v: str) -> str:
 
 
 def _validate_username_required(v: t.Optional[str]) -> str:
-    """Require USERNAME on SSH (overrides the optional base-class default)."""
+    """Require USERNAME on SFTP (overrides the optional base-class default)."""
     if not v:
-        raise ValueError("USERNAME is required for SSH.")
+        raise ValueError("USERNAME is required for SFTP.")
     return v
 
 
-SSH_SPEC = StorageProfileSpec(
-    name="ssh",
-    # Canonical provider_type is SSH; SFTPStorageAuthSettings is a pure
-    # alias pointing at the same class (see providers/__init__.py).
-    provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH,
+SFTP_SPEC = StorageProfileSpec(
+    name="sftp",
+    provider_type=CONST_STORAGE_PROVIDER_TYPE.SFTP,
     sdk_package="paramiko",
     handler_module="mountainash_transport.storage.backends.sftp",
-    handler_class="SSHStorageBackend",
+    handler_class="SFTPStorageBackend",
     supports_streaming=True,
     supports_multipart=False,
     read_only=False,
@@ -102,7 +97,7 @@ SSH_SPEC = StorageProfileSpec(
             default=MISSING,
             driver_key="username",
             validator=_validate_username_required,
-            description="SSH username — required.",
+            description="SFTP username — required.",
         ),
         ParameterSpec(
             name="TIMEOUT",
@@ -179,22 +174,14 @@ SSH_SPEC = StorageProfileSpec(
 )
 
 
-# Adapter is imported lazily to avoid a circular import with the adapters
-# package which depends on StorageProfile.
-# def _adapter(profile: "SSHStorageProfile", auth=None) -> dict[str, t.Any]:
-#     from ..adapters.ssh import build_handler_kwargs
-
-#     return build_handler_kwargs(profile, auth)
-
-
 @register
-class SSHStorageProfile(Profile):
-    """Unified SSH / SFTP settings.
+class SFTPStorageProfile(Profile):
+    """SFTP storage settings backed by paramiko.
 
-    Fields are installed from :data:`SSH_SPEC` by the
+    Fields are installed from :data:`SFTP_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
-    :func:`~mountainash_transport.settings.adapters.ssh.build_handler_kwargs`.
+    :func:`~mountainash_transport.settings.adapters.sftp.build_handler_kwargs`.
 
     Auth maps onto paramiko ``SSHClient.connect`` kwargs as follows:
         - :class:`PasswordAuth`    → ``password``
@@ -204,7 +191,7 @@ class SSHStorageProfile(Profile):
           ``gss_kex=True``
     """
 
-    __spec__ = SSH_SPEC
+    __spec__ = SFTP_SPEC
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -213,7 +200,7 @@ class SSHStorageProfile(Profile):
         user = getattr(self, "USERNAME", None)
         root = getattr(self, "ROOT_PATH", None)
         user_part = f"{user}@" if user else ""
-        url = f"ssh://{user_part}{host}:{port}"
+        url = f"sftp://{user_part}{host}:{port}"
         if root:
             url = f"{url}{root}"
         return url
@@ -222,7 +209,7 @@ class SSHStorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build paramiko ``SSHClient.connect`` kwargs from an :class:`SSHSettings`.
+        """Build paramiko ``SSHClient.connect`` kwargs from an :class:`SFTPStorageProfile`.
 
         Returns SDK-level config only (hostname, port, timeout, agent/key
         discovery flags, post-connect envelope). Auth credentials (password,
