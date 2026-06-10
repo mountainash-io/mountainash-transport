@@ -14,14 +14,14 @@ import pytest
 import mountainash_transport.storage.backends  # noqa: F401
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport._core.exceptions import UnsupportedOperationError
 from mountainash_transport.storage.facade import StorageFacade, copy_between
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
-    StorageListProtocol,
+    StorageEnumerateProtocol,
     StorageMetadataProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
@@ -74,8 +74,8 @@ class TestSupports:
     def test_supports_write_protocol(self, local_facade):
         assert local_facade.supports(StorageWriteProtocol) is True
 
-    def test_supports_list_protocol(self, local_facade):
-        assert local_facade.supports(StorageListProtocol) is True
+    def test_supports_directory_protocol_local(self, local_facade):
+        assert local_facade.supports(StorageDirectoryProtocol) is True
 
     def test_supports_delete_protocol(self, local_facade):
         assert local_facade.supports(StorageDeleteProtocol) is True
@@ -133,14 +133,11 @@ class TestDelete:
 
 
 class TestMetadata:
-    def test_metadata_returns_file_metadata(self, local_facade, tmp_dir):
-        path = os.path.join(tmp_dir, "meta.txt")
-        data = b"metadata content"
-        local_facade.write(path, data)
+    def test_metadata_returns_storage_entry(self, local_facade, tmp_dir):
+        path = os.path.join(tmp_dir, "meta_test.txt")
+        local_facade.write(path, b"meta test data")
         meta = local_facade.metadata(path)
-        assert isinstance(meta, FileMetadata)
-        assert meta.filename == "meta.txt"
-        assert meta.size == len(data)
+        assert isinstance(meta, StorageEntry)
 
     def test_get_size_returns_byte_count(self, local_facade, tmp_dir):
         path = os.path.join(tmp_dir, "sized.bin")
@@ -149,20 +146,18 @@ class TestMetadata:
         assert local_facade.get_size(path) == len(data)
 
 
-class TestListFiles:
-    def test_list_files_returns_file_metadata_list(self, local_facade, tmp_dir):
-        path = os.path.join(tmp_dir, "file.txt")
-        local_facade.write(path, b"content")
-        results = local_facade.list_files(tmp_dir)
+class TestListDir:
+    def test_list_dir_returns_storage_entries(self, local_facade, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("hello")
+        results = local_facade.list_dir(tmp_dir)
         assert len(results) == 1
-        assert isinstance(results[0], FileMetadata)
-        assert results[0].filename == "file.txt"
+        assert isinstance(results[0], StorageEntry)
 
-    def test_list_directories_returns_directories(self, local_facade, tmp_dir):
-        sub = os.path.join(tmp_dir, "subdir")
-        os.mkdir(sub)
-        results = local_facade.list_directories(tmp_dir)
-        assert sub in results
+    def test_list_objects_raises_for_local(self, local_facade):
+        from mountainash_transport._core.exceptions import UnsupportedOperationError
+        with pytest.raises(UnsupportedOperationError):
+            local_facade.list_objects("some/prefix")
 
 
 class TestCopy:

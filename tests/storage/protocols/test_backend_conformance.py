@@ -1,59 +1,62 @@
-"""Enforce that every registered backend conforms to its declared protocols.
-CI enforcement mechanism — if a mixin is missing a method, this test fails."""
-
+"""Enforce that every registered backend conforms to its declared protocols."""
 import pytest
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.storage.protocols import (
     StorageReadProtocol, StorageWriteProtocol,
-    StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+    StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
     StorageCopyProtocol, StorageDirectoryProtocol,
 )
 from mountainash_transport.storage.registry import get_registered_backends
-import mountainash_transport.storage.backends  # trigger registrations
+import mountainash_transport.storage.backends  # noqa: F401
 
-# Single source of truth for what each backend MUST implement
 EXPECTED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.LOCAL: {
         StorageReadProtocol, StorageWriteProtocol,
-        StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol, StorageDirectoryProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.S3: {
         StorageReadProtocol, StorageWriteProtocol,
-        StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.R2: {
         StorageReadProtocol, StorageWriteProtocol,
-        StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {
         StorageReadProtocol, StorageWriteProtocol,
-        StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {
         StorageReadProtocol, StorageWriteProtocol,
-        StorageListProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol,
+    },
+    CONST_STORAGE_PROVIDER_TYPE.SSH: {
+        StorageReadProtocol, StorageWriteProtocol,
+        StorageDeleteProtocol, StorageMetadataProtocol,
+        StorageDirectoryProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.HTTP: {
         StorageReadProtocol, StorageWriteProtocol, StorageMetadataProtocol,
     },
 }
 
-# Protocols that backends must NOT implement
 EXCLUDED_PROTOCOLS = {
     CONST_STORAGE_PROVIDER_TYPE.S3: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.R2: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS: {StorageDirectoryProtocol},
     CONST_STORAGE_PROVIDER_TYPE.MINIO: {StorageDirectoryProtocol},
+    CONST_STORAGE_PROVIDER_TYPE.SSH: {StorageEnumerateProtocol, StorageCopyProtocol},
     CONST_STORAGE_PROVIDER_TYPE.HTTP: {
-        StorageListProtocol,
+        StorageEnumerateProtocol,
         StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol,
     },
 }
+
 
 class TestProtocolConformance:
     @pytest.mark.parametrize("provider_type", list(EXPECTED_PROTOCOLS.keys()))

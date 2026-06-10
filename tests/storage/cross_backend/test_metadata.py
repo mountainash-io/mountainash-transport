@@ -57,4 +57,4 @@ def test_metadata_returns_filename(backend_name: str, tmp_dir: str) -> None:
     path = os.path.join(tmp_dir, "named_file.txt")
     facade.write(path, b"content")
     meta = facade.metadata(path)
-    assert meta.filename == "named_file.txt"
+    assert meta.name == "named_file.txt"

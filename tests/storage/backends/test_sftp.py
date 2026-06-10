@@ -8,6 +8,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 from mountainash_transport._core.exceptions import (
     PathNotFoundError,
     StorageConnectionError,
@@ -132,7 +133,7 @@ class TestPathExists:
 
 
 class TestGetMetadata:
-    def test_builds_file_metadata(self):
+    def test_get_metadata_returns_storage_entry(self):
         mock_sftp = MagicMock()
         stat = MagicMock()
         stat.st_size = 1024
@@ -140,9 +141,9 @@ class TestGetMetadata:
         mock_sftp.stat.return_value = stat
         backend, _ = _make_backend(mock_sftp)
         meta = backend.get_metadata("/remote/dir/file.txt")
-        assert meta.filename == "file.txt"
-        assert meta.directory == "/remote/dir"
-        assert meta.full_path == "/remote/dir/file.txt"
+        assert isinstance(meta, StorageEntry)
+        assert meta.name == "file.txt"
+        assert meta.path == "/remote/dir/file.txt"
         assert meta.size == 1024
         assert meta.source == "sftp"
         assert meta.last_modified is not None
@@ -150,13 +151,13 @@ class TestGetMetadata:
     def test_path_without_slash(self):
         mock_sftp = MagicMock()
         stat = MagicMock()
-        stat.st_size = 0
+        stat.st_size = None
         stat.st_mtime = None
         mock_sftp.stat.return_value = stat
         backend, _ = _make_backend(mock_sftp)
         meta = backend.get_metadata("file.txt")
-        assert meta.filename == "file.txt"
-        assert meta.directory == "/"
+        assert meta.name == "file.txt"
+        assert meta.path == "file.txt"
 
     def test_not_found_raises_path_not_found(self):
         mock_sftp = MagicMock()
@@ -183,31 +184,50 @@ class TestGetSize:
             backend.get_size("/remote/missing.txt")
 
 
-class TestListPaths:
-    def test_returns_filename_list(self):
+class TestListDir:
+    def test_list_dir_returns_storage_entries(self):
         mock_sftp = MagicMock()
-        entry_a = MagicMock()
-        entry_a.filename = "alpha.txt"
-        entry_b = MagicMock()
-        entry_b.filename = "beta.txt"
-        mock_sftp.listdir_attr.return_value = [entry_a, entry_b]
-        backend, _ = _make_backend(mock_sftp)
-        result = backend.list_paths("/remote/dir")
-        assert result == ["alpha.txt", "beta.txt"]
+        attr_file = MagicMock()
+        attr_file.filename = "file.txt"
+        attr_file.st_size = 100
+        attr_file.st_mtime = 1700000000.0
+        attr_file.st_mode = 0o100644  # regular file
 
-    def test_not_found_raises_path_not_found(self):
+        attr_dir = MagicMock()
+        attr_dir.filename = "subdir"
+        attr_dir.st_size = 4096
+        attr_dir.st_mtime = 1700000000.0
+        attr_dir.st_mode = 0o040755  # directory
+
+        mock_sftp.listdir_attr.return_value = [attr_file, attr_dir]
+        backend, _ = _make_backend(mock_sftp)
+        results = backend.list_dir("/remote/path")
+        assert len(results) == 2
+        by_name = {e.name: e for e in results}
+        assert by_name["file.txt"].entry_type == EntryType.FILE
+        assert by_name["file.txt"].size == 100
+        assert by_name["subdir"].entry_type == EntryType.DIRECTORY
+
+    def test_list_dir_empty(self):
         mock_sftp = MagicMock()
-        mock_sftp.listdir_attr.side_effect = FileNotFoundError("no such directory")
+        mock_sftp.listdir_attr.return_value = []
+        backend, _ = _make_backend(mock_sftp)
+        results = backend.list_dir("/remote/empty")
+        assert results == []
+
+    def test_list_dir_path_not_found(self):
+        mock_sftp = MagicMock()
+        mock_sftp.listdir_attr.side_effect = FileNotFoundError("no such dir")
         backend, _ = _make_backend(mock_sftp)
         with pytest.raises(PathNotFoundError):
-            backend.list_paths("/remote/missing")
+            backend.list_dir("/remote/missing")
 
 
-class TestDeletePath:
+class TestDeleteFile:
     def test_removes_file(self):
         mock_sftp = MagicMock()
         backend, _ = _make_backend(mock_sftp)
-        backend.delete_path("/remote/file.txt")
+        backend.delete_file("/remote/file.txt")
         mock_sftp.remove.assert_called_once_with("/remote/file.txt")
 
     def test_not_found_raises_path_not_found(self):
@@ -215,7 +235,37 @@ class TestDeletePath:
         mock_sftp.remove.side_effect = FileNotFoundError("no such file")
         backend, _ = _make_backend(mock_sftp)
         with pytest.raises(PathNotFoundError):
-            backend.delete_path("/remote/missing.txt")
+            backend.delete_file("/remote/missing.txt")
+
+
+class TestMkdir:
+    def test_mkdir_calls_sftp_mkdir(self):
+        mock_sftp = MagicMock()
+        backend, _ = _make_backend(mock_sftp)
+        backend.mkdir("/remote/newdir")
+        mock_sftp.mkdir.assert_called_once_with("/remote/newdir")
+
+    def test_mkdir_not_found_raises(self):
+        mock_sftp = MagicMock()
+        mock_sftp.mkdir.side_effect = FileNotFoundError("parent missing")
+        backend, _ = _make_backend(mock_sftp)
+        with pytest.raises(PathNotFoundError):
+            backend.mkdir("/remote/deep/newdir")
+
+
+class TestRmdir:
+    def test_rmdir_calls_sftp_rmdir(self):
+        mock_sftp = MagicMock()
+        backend, _ = _make_backend(mock_sftp)
+        backend.rmdir("/remote/olddir")
+        mock_sftp.rmdir.assert_called_once_with("/remote/olddir")
+
+    def test_rmdir_not_found_raises(self):
+        mock_sftp = MagicMock()
+        mock_sftp.rmdir.side_effect = FileNotFoundError("no such dir")
+        backend, _ = _make_backend(mock_sftp)
+        with pytest.raises(PathNotFoundError):
+            backend.rmdir("/remote/missing")
 
 
 class TestNoConnection:

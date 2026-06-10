@@ -140,7 +140,9 @@ class TestPathExists:
 
 
 class TestGetMetadata:
-    def test_builds_file_metadata_from_headers(self):
+    def test_get_metadata_returns_storage_entry(self):
+        from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+
         def _handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(
                 200,
@@ -153,10 +155,40 @@ class TestGetMetadata:
             )
         backend = _make_backend(_transport(_handler))
         meta = backend.get_metadata("https://example.com/data.txt")
-        assert meta.filename == "data.txt"
+        assert isinstance(meta, StorageEntry)
+        assert meta.name == "data.txt"
+        assert meta.path == "https://example.com/data.txt"
         assert meta.size == 1234
         assert meta.etag == '"abc123"'
         assert meta.source == "http"
+        assert meta.content_type == "text/plain"
+
+    def test_get_metadata_with_content_md5(self):
+        from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+
+        def _handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                headers={
+                    "Content-Length": "512",
+                    "Content-MD5": "abc123==",
+                },
+            )
+        backend = _make_backend(_transport(_handler))
+        meta = backend.get_metadata("https://example.com/file.txt")
+        assert isinstance(meta, StorageEntry)
+        assert meta.checksum == "abc123=="
+        assert meta.checksum_algorithm == "MD5"
+
+    def test_get_metadata_size_none_without_content_length(self):
+        from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+
+        def _handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200)
+        backend = _make_backend(_transport(_handler))
+        meta = backend.get_metadata("https://example.com/file.txt")
+        assert isinstance(meta, StorageEntry)
+        assert meta.size is None
 
 
 class TestGetSize:
@@ -166,11 +198,11 @@ class TestGetSize:
         backend = _make_backend(_transport(_handler))
         assert backend.get_size("https://example.com/file") == 5678
 
-    def test_missing_content_length_returns_zero(self):
+    def test_missing_content_length_returns_none(self):
         def _handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200)
         backend = _make_backend(_transport(_handler))
-        assert backend.get_size("https://example.com/file") == 0
+        assert backend.get_size("https://example.com/file") is None
 
 
 class TestRegistration:

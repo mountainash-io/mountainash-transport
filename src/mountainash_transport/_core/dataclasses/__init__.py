@@ -1,6 +1,8 @@
-from .file_metadata import FileMetadata
+from .storage_entry import EntryType, EnumerateResult, StorageEntry
 
 
 __all__ = (
-    "FileMetadata",
+    "EntryType",
+    "EnumerateResult",
+    "StorageEntry",
 )

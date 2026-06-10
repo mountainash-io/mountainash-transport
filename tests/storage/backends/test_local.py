@@ -10,7 +10,7 @@ import tempfile
 import pytest
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 from mountainash_transport._core.exceptions import PathNotFoundError
 from mountainash_transport.storage.registry import get_registered_backends
 
@@ -103,44 +103,76 @@ class TestReadWriteRoundtrip:
 # List
 # ---------------------------------------------------------------------------
 
-class TestList:
-    def test_list_files_returns_file_metadata(self, backend, tmp_dir):
-        path = os.path.join(tmp_dir, "file.txt")
-        backend.write_from_bytes(path, b"content")
-        results = backend.list_files(tmp_dir)
-        assert len(results) == 1
-        meta = results[0]
-        assert isinstance(meta, FileMetadata)
-        assert meta.filename == "file.txt"
-        assert meta.source == "local"
+class TestListDir:
+    def test_list_dir_returns_storage_entries(self, backend, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("hello")
+        os.makedirs(os.path.join(tmp_dir, "subdir"))
+        results = backend.list_dir(tmp_dir)
+        assert len(results) == 2
+        names = {e.name for e in results}
+        assert names == {"a.txt", "subdir"}
 
-    def test_list_files_empty_dir(self, backend, tmp_dir):
-        assert backend.list_files(tmp_dir) == []
+    def test_list_dir_entry_types(self, backend, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("hello")
+        os.makedirs(os.path.join(tmp_dir, "subdir"))
+        results = backend.list_dir(tmp_dir)
+        by_name = {e.name: e for e in results}
+        assert by_name["a.txt"].entry_type == EntryType.FILE
+        assert by_name["subdir"].entry_type == EntryType.DIRECTORY
 
-    def test_list_files_excludes_directories(self, backend, tmp_dir):
-        os.mkdir(os.path.join(tmp_dir, "subdir"))
-        backend.write_from_bytes(os.path.join(tmp_dir, "file.txt"), b"x")
-        results = backend.list_files(tmp_dir)
-        filenames = [m.filename for m in results]
-        assert "subdir" not in filenames
-        assert "file.txt" in filenames
+    def test_list_dir_empty(self, backend, tmp_dir):
+        results = backend.list_dir(tmp_dir)
+        assert results == []
 
-    def test_list_directories(self, backend, tmp_dir):
-        sub = os.path.join(tmp_dir, "mysubdir")
-        os.mkdir(sub)
-        results = backend.list_directories(tmp_dir)
-        assert sub in results
+    def test_list_dir_file_has_size(self, backend, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("12345")
+        results = backend.list_dir(tmp_dir)
+        assert results[0].size == 5
 
-    def test_list_directories_excludes_files(self, backend, tmp_dir):
-        backend.write_from_bytes(os.path.join(tmp_dir, "f.txt"), b"")
-        os.mkdir(os.path.join(tmp_dir, "d"))
-        results = backend.list_directories(tmp_dir)
-        assert all(os.path.isdir(r) for r in results)
+    def test_list_dir_directory_has_none_size(self, backend, tmp_dir):
+        os.makedirs(os.path.join(tmp_dir, "subdir"))
+        results = backend.list_dir(tmp_dir)
+        assert results[0].size is None
 
-    def test_list_nonexistent_prefix_returns_empty(self, backend, tmp_dir):
-        missing = os.path.join(tmp_dir, "nonexistent")
-        assert backend.list_files(missing) == []
-        assert backend.list_directories(missing) == []
+    def test_list_dir_symlink_to_file(self, backend, tmp_dir):
+        target = os.path.join(tmp_dir, "real.txt")
+        link = os.path.join(tmp_dir, "link.txt")
+        with open(target, "w") as f:
+            f.write("data")
+        os.symlink(target, link)
+        results = backend.list_dir(tmp_dir)
+        by_name = {e.name: e for e in results}
+        assert by_name["link.txt"].entry_type == EntryType.FILE
+
+    def test_list_dir_symlink_to_dir(self, backend, tmp_dir):
+        target = os.path.join(tmp_dir, "realdir")
+        link = os.path.join(tmp_dir, "linkdir")
+        os.makedirs(target)
+        os.symlink(target, link)
+        results = backend.list_dir(tmp_dir)
+        by_name = {e.name: e for e in results}
+        assert by_name["linkdir"].entry_type == EntryType.DIRECTORY
+
+    def test_list_dir_broken_symlink_skipped(self, backend, tmp_dir):
+        link = os.path.join(tmp_dir, "broken")
+        os.symlink("/nonexistent/target", link)
+        results = backend.list_dir(tmp_dir)
+        assert len(results) == 0
+
+    def test_list_dir_source_is_local(self, backend, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("x")
+        results = backend.list_dir(tmp_dir)
+        assert results[0].source == "local"
+
+    def test_list_dir_path_is_absolute(self, backend, tmp_dir):
+        with open(os.path.join(tmp_dir, "a.txt"), "w") as f:
+            f.write("x")
+        results = backend.list_dir(tmp_dir)
+        assert os.path.isabs(results[0].path)
 
 
 # ---------------------------------------------------------------------------
@@ -162,12 +194,12 @@ class TestMetadata:
         backend.write_from_bytes(path, data)
         assert backend.get_size(path) == len(data)
 
-    def test_get_metadata_returns_file_metadata(self, backend, tmp_dir):
+    def test_get_metadata_returns_storage_entry(self, backend, tmp_dir):
         path = os.path.join(tmp_dir, "meta.txt")
         backend.write_from_bytes(path, b"metadata content")
         meta = backend.get_metadata(path)
-        assert isinstance(meta, FileMetadata)
-        assert meta.filename == "meta.txt"
+        assert isinstance(meta, StorageEntry)
+        assert meta.name == "meta.txt"
         assert meta.size == len(b"metadata content")
         assert meta.source == "local"
         assert meta.last_modified is not None

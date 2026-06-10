@@ -21,7 +21,7 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 
 from .s3_copy import S3CopyMixin
 from .s3_delete import S3DeleteMixin
-from .s3_list import S3ListMixin
+from .s3_enumerate import S3EnumerateMixin
 from .s3_metadata import S3MetadataMixin
 from .s3_read import S3ReadMixin
 from .s3_write import S3WriteMixin
@@ -35,7 +35,7 @@ from .s3_write import S3WriteMixin
 class S3StorageBackend(
     S3ReadMixin,
     S3WriteMixin,
-    S3ListMixin,
+    S3EnumerateMixin,
     S3DeleteMixin,
     S3MetadataMixin,
     S3CopyMixin,
@@ -94,7 +94,7 @@ __all__ = [
     "B2StorageBackend",
     "S3ReadMixin",
     "S3WriteMixin",
-    "S3ListMixin",
+    "S3EnumerateMixin",
     "S3DeleteMixin",
     "S3MetadataMixin",
     "S3CopyMixin",
