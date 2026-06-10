@@ -72,6 +72,6 @@ def test_from_path_raises_for_unrecognised_scheme():
         StorageFacade.from_path("gopher://example.com/")
 
 
-def test_from_path_raises_for_describe_only_scheme():
-    with pytest.raises(ValueError, match="has no registered backend"):
-        StorageFacade.from_path("hdfs://cluster/file")
+def test_from_path_raises_for_unknown_scheme():
+    with pytest.raises(ValueError):
+        StorageFacade.from_path("foobar://cluster/file")

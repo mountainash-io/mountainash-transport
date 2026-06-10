@@ -41,9 +41,8 @@ def test_alias_to_canonical_covers_every_alias():
 @pytest.mark.parametrize(
     "expected_key",
     [
-        "", "file", "s3", "s3u", "gs", "azure", "sftp", "ftp", "ssh", "smb",
-        "b2", "github", "dbfs", "hdfs", "webhdfs", "spark", "trino",
-        "gdrive", "dropbox", "onedrive", "sharepoint",
+        "", "file", "s3", "gs", "azure", "sftp", "ftp", "ssh", "smb",
+        "b2", "github", "s3express", "r2", "minio", "http", "https",
     ],
 )
 def test_expected_schemes_present(expected_key: str):
@@ -97,22 +96,11 @@ _EXPECTED_PROVIDERS: dict[str, CONST_STORAGE_PROVIDER_TYPE] = {
     "https":     CONST_STORAGE_PROVIDER_TYPE.HTTP,
 }
 
-_DESCRIBE_ONLY_SCHEMES: tuple[str, ...] = (
-    "s3u", "dbfs", "hdfs", "webhdfs", "spark", "trino",
-    "gdrive", "dropbox", "onedrive", "sharepoint",
-)
-
-
 @pytest.mark.parametrize("scheme,expected", list(_EXPECTED_PROVIDERS.items()))
 def test_known_schemes_map_to_expected_providers(
     scheme: str, expected: CONST_STORAGE_PROVIDER_TYPE
 ):
     assert SCHEMES[scheme].provider == expected
-
-
-@pytest.mark.parametrize("scheme", _DESCRIBE_ONLY_SCHEMES)
-def test_describe_only_schemes_have_none_provider(scheme: str):
-    assert SCHEMES[scheme].provider is None
 
 
 def test_every_spec_has_provider_attribute():

@@ -28,8 +28,6 @@ from mountainash_transport.storage.path_helpers.storage_path import StoragePath
         ("smb://host/share/p", "smb"),
         ("b2://bucket/key", "b2"),
         ("github://owner/repo/p", "github"),
-        ("dbfs:/some/path", "dbfs"),
-        ("hdfs://host/path", "hdfs"),
         ("file:///tmp/x", "file"),
         ("SSH://user@host/p", "ssh"),         # forgiving on case
         ("S3://bucket/object", "s3"),         # forgiving on case

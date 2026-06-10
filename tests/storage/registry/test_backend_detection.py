@@ -84,9 +84,9 @@ def test_github_scheme_resolves():
     )
 
 
-def test_describe_only_scheme_raises_no_backend():
-    with pytest.raises(ValueError, match="has no registered backend"):
-        detect_provider_from_path("hdfs://cluster/path")
+def test_unknown_scheme_raises_value_error():
+    with pytest.raises(ValueError, match="[Uu]nrecognised|[Uu]nknown|not"):
+        detect_provider_from_path("foobar://cluster/path")
 
 
 def test_http_scheme_resolves_to_http_provider():
