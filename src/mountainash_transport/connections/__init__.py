@@ -56,6 +56,7 @@ _PROVIDER_CONNECTION_MAP: dict[str, type] = {
     "r2": S3Connection,
     "minio": S3Connection,
     "b2": S3Connection,
+    "sftp": SSHConnection,
 }
 
 
@@ -87,9 +88,9 @@ def create_connection(
 
     provider_type = _provider_type_from_profile(profile)
 
-    # SSH: two-layer composition (SSHConnection → SFTPConnection)
-    if provider_type == CONST_STORAGE_PROVIDER_TYPE.SSH:
-        strategy = resolve_auth_strategy(auth_profile, provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH)
+    # SFTP: two-layer composition (SSHConnection → SFTPConnection)
+    if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
+        strategy = resolve_auth_strategy(auth_profile, provider_type=CONST_STORAGE_PROVIDER_TYPE.SFTP)
         ssh_conn = SSHConnection(profile, strategy)
         return SFTPConnection(ssh_conn)
 

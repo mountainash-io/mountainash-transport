@@ -293,8 +293,8 @@ class TestNoConnection:
 
 
 class TestRegistration:
-    def test_ssh_provider_registered_in_backends(self):
+    def test_sftp_provider_registered_in_backends(self):
         import mountainash_transport.storage.backends  # noqa: F401
         from mountainash_transport.storage.registry import get_registered_backends
         backends = get_registered_backends()
-        assert CONST_STORAGE_PROVIDER_TYPE.SSH in backends
+        assert CONST_STORAGE_PROVIDER_TYPE.SFTP in backends
