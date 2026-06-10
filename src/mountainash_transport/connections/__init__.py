@@ -60,10 +60,11 @@ _PROVIDER_CONNECTION_MAP: dict[str, type] = {
 }
 
 
-def _connection_for_provider(profile: ProfileProtocol) -> type:
-    """Map profile's provider_type to a leaf connection class."""
-    provider = getattr(getattr(profile, "__spec__", None), "provider_type", None)
-    provider_str = str(provider.value) if hasattr(provider, "value") else str(provider)
+def _connection_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) -> type:
+    """Map provider_type to a leaf connection class."""
+    if provider_type is None:
+        return HTTPConnection
+    provider_str = str(provider_type.value) if hasattr(provider_type, "value") else str(provider_type)
     return _PROVIDER_CONNECTION_MAP.get(provider_str, HTTPConnection)
 
 
@@ -87,18 +88,19 @@ def create_connection(
         pass
 
     provider_type = _provider_type_from_profile(profile)
+    kwargs = profile.to_handler_kwargs()
 
     # SFTP: two-layer composition (SSHConnection → SFTPConnection)
     if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
         strategy = resolve_auth_strategy(auth_profile, provider_type=CONST_STORAGE_PROVIDER_TYPE.SFTP)
-        ssh_conn = SSHConnection(profile, strategy)
+        ssh_conn = SSHConnection(kwargs, strategy)
         return SFTPConnection(ssh_conn)
 
     strategy = resolve_auth_strategy(auth_profile, provider_type=provider_type)
-    leaf_cls = _connection_for_provider(profile)
+    leaf_cls = _connection_for_provider(provider_type)
     if leaf_cls is NullConnection:
         return NullConnection()
-    return leaf_cls(profile, strategy)
+    return leaf_cls(kwargs, strategy)
 
 
 def create_tunnelled_connection(
@@ -110,8 +112,9 @@ def create_tunnelled_connection(
     remote_port: int,
 ) -> TunnelledConnection:
     """Create a tunnelled connection through an SSH bastion host."""
+    bastion_kwargs = bastion_profile.to_handler_kwargs()
     ssh_conn = SSHConnection(
-        bastion_profile,
+        bastion_kwargs,
         resolve_auth_strategy(bastion_auth, provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH),
     )
 

@@ -11,7 +11,6 @@ from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
 )
-from mountainash_transport.settings.profile_protocol import ProfileProtocol
 from .._core.protocols import ConnectionProtocol
 
 try:
@@ -28,14 +27,14 @@ _HOST_KEY_POLICIES: dict[str, str] = {
 
 
 class SSHConnection(ConnectionProtocol):
-    """Creates an authenticated paramiko.SSHClient from profile config + auth strategy."""
+    """Creates an authenticated paramiko.SSHClient from connect kwargs + auth strategy."""
 
     def __init__(
         self,
-        profile: ProfileProtocol,
+        connect_kwargs: dict[str, t.Any],
         auth_strategy: AuthStrategy,
     ) -> None:
-        self._profile = profile
+        self._connect_kwargs = connect_kwargs
         self._auth_strategy = auth_strategy
         self._client: t.Any = None
 
@@ -49,7 +48,7 @@ class SSHConnection(ConnectionProtocol):
         if self._client is not None:
             self.disconnect()
 
-        kwargs = self._profile.to_handler_kwargs()
+        kwargs = dict(self._connect_kwargs)
         kwargs = self._auth_strategy.apply(kwargs)
 
         post_connect = kwargs.pop("_post_connect", {})

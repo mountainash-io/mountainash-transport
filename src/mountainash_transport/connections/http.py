@@ -12,23 +12,22 @@ from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
 )
-from mountainash_transport.settings.profile_protocol import ProfileProtocol
 from .._core.protocols import ConnectionProtocol
 
 class HTTPConnection(ConnectionProtocol):
-    """Creates an authenticated httpx.Client from profile config + auth strategy."""
+    """Creates an authenticated httpx.Client from connect kwargs + auth strategy."""
 
     def __init__(
         self,
-        profile: ProfileProtocol,
+        connect_kwargs: dict[str, t.Any],
         auth_strategy: AuthStrategy,
     ) -> None:
-        self._profile = profile
+        self._connect_kwargs = connect_kwargs
         self._auth_strategy = auth_strategy
         self._client: httpx.Client | None = None
 
     def connect(self) -> Self:
-        kwargs = self._profile.to_handler_kwargs()
+        kwargs = dict(self._connect_kwargs)
         kwargs = self._auth_strategy.apply(kwargs)
         try:
             self._client = httpx.Client(**kwargs)

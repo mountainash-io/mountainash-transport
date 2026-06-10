@@ -11,40 +11,23 @@ from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport.connections.ssh import SSHConnection
 
 
-class FakeSSHProfile:
-    """Duck-types StorageProfileProtocol for SSHConnection tests."""
+FAKE_SSH_KWARGS: dict = {
+    "hostname": "example.com",
+    "port": 22,
+    "username": "user",
+}
 
-    def __init__(self, extra: dict | None = None) -> None:
-        self._extra = extra or {}
-
-    def to_handler_kwargs(self) -> dict:
-        return {"hostname": "example.com", "port": 22, "username": "user", **self._extra}
-
-    def get_connection_url(self) -> str:
-        return "ssh://user@example.com:22"
-
-
-class FakeSSHProfileWithPostConnect:
-    """Profile that includes _post_connect metadata."""
-
-    def __init__(self, post_connect: dict | None = None) -> None:
-        self._post_connect = post_connect or {}
-
-    def to_handler_kwargs(self) -> dict:
-        return {
-            "hostname": "example.com",
-            "port": 22,
-            "username": "user",
-            "_post_connect": self._post_connect,
-        }
-
-    def get_connection_url(self) -> str:
-        return "ssh://user@example.com:22"
+FAKE_SSH_KWARGS_WITH_POST_CONNECT: dict = {
+    "hostname": "example.com",
+    "port": 22,
+    "username": "user",
+    "_post_connect": {"host_key_policy": "auto_add"},
+}
 
 
 class TestSSHConnectionProtocol:
     def test_conforms_to_connection_protocol(self):
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         assert isinstance(conn, ConnectionProtocol)
 
 
@@ -55,7 +38,7 @@ class TestSSHConnectionLifecycle:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         result = conn.connect()
 
         mock_paramiko.SSHClient.assert_called_once()
@@ -70,7 +53,7 @@ class TestSSHConnectionLifecycle:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.connect()
         conn.disconnect()
 
@@ -79,13 +62,13 @@ class TestSSHConnectionLifecycle:
         assert conn.is_connected is False
 
     def test_not_connected_initially(self):
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         assert conn.client is None
         assert conn.is_connected is False
 
     @patch("mountainash_transport.connections.ssh.paramiko")
     def test_disconnect_when_not_connected_is_noop(self, mock_paramiko):
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.disconnect()  # should not raise
 
     @patch("mountainash_transport.connections.ssh.paramiko")
@@ -94,7 +77,7 @@ class TestSSHConnectionLifecycle:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with conn:
             conn.connect()
             assert conn.is_connected is True
@@ -109,7 +92,7 @@ class TestSSHConnectionLifecycle:
         mock_paramiko.SSHClient.side_effect = [mock_client1, mock_client2]
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.connect()
         assert conn.client is mock_client1
 
@@ -126,7 +109,7 @@ class TestSSHConnectionAuth:
         mock_paramiko.RejectPolicy = MagicMock
 
         strategy = SSHPasswordStrategy("s3cr3t")
-        conn = SSHConnection(FakeSSHProfile(), strategy)
+        conn = SSHConnection(FAKE_SSH_KWARGS, strategy)
         conn.connect()
 
         call_kwargs = mock_client.connect.call_args[1]
@@ -138,7 +121,7 @@ class TestSSHConnectionAuth:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.connect()
 
         call_kwargs = mock_client.connect.call_args[1]
@@ -153,8 +136,8 @@ class TestSSHConnectionHostKeyPolicy:
         mock_paramiko.AutoAddPolicy = MagicMock
         mock_paramiko.RejectPolicy = MagicMock
 
-        profile = FakeSSHProfileWithPostConnect({"host_key_policy": "auto_add"})
-        conn = SSHConnection(profile, NoAuthStrategy())
+        kwargs = {**FAKE_SSH_KWARGS, "_post_connect": {"host_key_policy": "auto_add"}}
+        conn = SSHConnection(kwargs, NoAuthStrategy())
         conn.connect()
 
         mock_client.set_missing_host_key_policy.assert_called_once()
@@ -168,7 +151,7 @@ class TestSSHConnectionHostKeyPolicy:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.connect()
 
         mock_client.set_missing_host_key_policy.assert_called_once()
@@ -181,8 +164,8 @@ class TestSSHConnectionHostKeyPolicy:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        profile = FakeSSHProfileWithPostConnect({"known_hosts_file": "/home/user/.ssh/known_hosts"})
-        conn = SSHConnection(profile, NoAuthStrategy())
+        kwargs = {**FAKE_SSH_KWARGS, "_post_connect": {"known_hosts_file": "/home/user/.ssh/known_hosts"}}
+        conn = SSHConnection(kwargs, NoAuthStrategy())
         conn.connect()
 
         mock_client.load_host_keys.assert_called_once_with("/home/user/.ssh/known_hosts")
@@ -193,7 +176,7 @@ class TestSSHConnectionHostKeyPolicy:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         conn.connect()
 
         mock_client.load_host_keys.assert_not_called()
@@ -211,7 +194,7 @@ class TestSSHConnectionErrorWrapping:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
@@ -225,7 +208,7 @@ class TestSSHConnectionErrorWrapping:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
@@ -238,7 +221,7 @@ class TestSSHConnectionErrorWrapping:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(ConnectionTimeoutError, match="SSH connection timed out"):
             conn.connect()
 
@@ -251,7 +234,7 @@ class TestSSHConnectionErrorWrapping:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(TransportConnectionError, match="SSH DNS resolution failed"):
             conn.connect()
 
@@ -264,7 +247,7 @@ class TestSSHConnectionErrorWrapping:
         mock_paramiko.SSHClient.return_value = mock_client
         mock_paramiko.RejectPolicy = MagicMock
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
@@ -272,6 +255,6 @@ class TestSSHConnectionErrorWrapping:
     def test_paramiko_none_raises_transport_connection_error(self):
         from mountainash_transport.connections.errors import TransportConnectionError
 
-        conn = SSHConnection(FakeSSHProfile(), NoAuthStrategy())
+        conn = SSHConnection(FAKE_SSH_KWARGS, NoAuthStrategy())
         with pytest.raises(TransportConnectionError, match="paramiko is required"):
             conn.connect()
