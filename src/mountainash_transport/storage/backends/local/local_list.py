@@ -1,45 +1,46 @@
-"""LocalListMixin — directory listing operations for local filesystem."""
-
+"""LocalListMixin — directory listing for local filesystem using StorageEntry."""
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 
-from mountainash_transport._core.dataclasses.file_metadata import FileMetadata
+from mountainash_transport._core.dataclasses.storage_entry import (
+    EntryType,
+    StorageEntry,
+)
 
 
 class LocalListMixin:
-    """List mixin for local filesystem."""
+    """List mixin for local filesystem — implements list_dir."""
 
-    def list_files(self, prefix: str) -> list[FileMetadata]:
-        """Return FileMetadata for every regular file directly under *prefix*.
+    def list_dir(self, path: str) -> list[StorageEntry]:
+        """Return StorageEntry for every immediate child of *path*.
 
-        Only the immediate contents of the directory are returned (non-recursive).
+        Symlinks are resolved via stat(). Broken symlinks are skipped.
         """
-        results: list[FileMetadata] = []
-        if not os.path.isdir(prefix):
+        results: list[StorageEntry] = []
+        if not os.path.isdir(path):
             return results
 
-        for entry in os.scandir(prefix):
-            if entry.is_file(follow_symlinks=False):
-                stat = entry.stat()
-                results.append(
-                    FileMetadata(
-                        filename=entry.name,
-                        directory=prefix,
-                        full_path=entry.path,
-                        size=stat.st_size,
-                        source="local",
-                    )
+        for entry in os.scandir(path):
+            try:
+                is_dir = entry.is_dir(follow_symlinks=True)
+                is_file = entry.is_file(follow_symlinks=True)
+            except OSError:
+                continue
+
+            if not is_dir and not is_file:
+                continue
+
+            stat = entry.stat(follow_symlinks=True)
+            results.append(
+                StorageEntry(
+                    path=os.path.abspath(entry.path),
+                    name=entry.name,
+                    size=stat.st_size if is_file else None,
+                    last_modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+                    entry_type=EntryType.DIRECTORY if is_dir else EntryType.FILE,
+                    source="local",
                 )
-        return results
-
-    def list_directories(self, prefix: str) -> list[str]:
-        """Return absolute paths of all sub-directories directly under *prefix*."""
-        results: list[str] = []
-        if not os.path.isdir(prefix):
-            return results
-
-        for entry in os.scandir(prefix):
-            if entry.is_dir(follow_symlinks=False):
-                results.append(entry.path)
+            )
         return results
