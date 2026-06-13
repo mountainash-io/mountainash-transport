@@ -18,9 +18,6 @@ class BareHTTPProfile:
     def to_handler_kwargs(self) -> dict:
         return {"timeout": 30}
 
-    def emit(self, target=None, *, base=None) -> dict:
-        return {**(base or {}), "timeout": 30}
-
 
 class BareLocalProfile:
     """ProfileProtocol-only — no get_connection_url()."""
@@ -38,8 +35,12 @@ class TestFactoryAcceptsProfileProtocol:
         assert isinstance(BareHTTPProfile(), ProfileProtocol)
 
     def test_bare_http_profile_creates_http_connection(self):
+        # A ProfileProtocol-only profile (no emit()) must still work through the
+        # factory: _emit_kwargs falls back to to_handler_kwargs(). Guards the
+        # Phase-4 regression where the factory required emit() unconditionally.
         conn = create_connection(BareHTTPProfile())
         assert isinstance(conn, HTTPConnection)
+        assert conn._connect_kwargs == {"timeout": 30}
 
     def test_bare_local_profile_creates_null_connection(self):
         conn = create_connection(BareLocalProfile())

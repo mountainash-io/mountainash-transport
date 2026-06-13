@@ -102,10 +102,12 @@ def _emit_kwargs(
     if family is None:
         return profile.to_handler_kwargs()
 
-    # ProfileProtocol's base contract is to_handler_kwargs-only (by design — see
-    # test_profile_protocol); every profile reaching this non-None-family branch
-    # is a concrete Profile, which provides emit().
-    base = profile.emit(family)  # type: ignore[attr-defined]
+    # Profiles emit SDK config via emit(family). ProfileProtocol's base contract
+    # is to_handler_kwargs-only (by design — see test_profile_protocol), so a
+    # bare protocol implementer without emit() falls back to to_handler_kwargs,
+    # preserving the factory's pre-Phase-4 tolerance for any ProfileProtocol.
+    emit = getattr(profile, "emit", None)
+    base = emit(family) if callable(emit) else profile.to_handler_kwargs()
     if auth_profile is None or isinstance(auth_profile, NoAuthProfile):
         return base
     if "base_kwargs" in base:
