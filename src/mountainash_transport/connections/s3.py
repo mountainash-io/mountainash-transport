@@ -5,7 +5,6 @@ import typing as t
 
 from typing_extensions import Self
 
-from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import TransportConnectionError
 
 from .._core.protocols import ConnectionProtocol
@@ -13,13 +12,8 @@ from .._core.protocols import ConnectionProtocol
 class S3Connection(ConnectionProtocol):
     """Creates an authenticated boto3 S3 client from connect kwargs + auth strategy."""
 
-    def __init__(
-        self,
-        connect_kwargs: dict[str, t.Any],
-        auth_strategy: AuthStrategy,
-    ) -> None:
+    def __init__(self, connect_kwargs: dict[str, t.Any]) -> None:
         self._connect_kwargs = connect_kwargs
-        self._auth_strategy = auth_strategy
         self._client: t.Any = None
 
     def connect(self) -> Self:
@@ -31,7 +25,6 @@ class S3Connection(ConnectionProtocol):
             ) from exc
 
         kwargs = dict(self._connect_kwargs)
-        kwargs = self._auth_strategy.apply(kwargs)
 
         # Strip the profile's service_name (boto3.client takes it positionally).
         kwargs.pop("service_name", None)

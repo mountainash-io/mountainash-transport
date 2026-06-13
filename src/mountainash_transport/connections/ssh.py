@@ -6,7 +6,6 @@ import typing as t
 
 from typing_extensions import Self
 
-from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
@@ -29,13 +28,8 @@ _HOST_KEY_POLICIES: dict[str, str] = {
 class SSHConnection(ConnectionProtocol):
     """Creates an authenticated paramiko.SSHClient from connect kwargs + auth strategy."""
 
-    def __init__(
-        self,
-        connect_kwargs: dict[str, t.Any],
-        auth_strategy: AuthStrategy,
-    ) -> None:
+    def __init__(self, connect_kwargs: dict[str, t.Any]) -> None:
         self._connect_kwargs = connect_kwargs
-        self._auth_strategy = auth_strategy
         self._client: t.Any = None
 
     def connect(self) -> Self:
@@ -49,7 +43,6 @@ class SSHConnection(ConnectionProtocol):
             self.disconnect()
 
         kwargs = dict(self._connect_kwargs)
-        kwargs = self._auth_strategy.apply(kwargs)
 
         post_connect = kwargs.pop("_post_connect", {})
 
