@@ -10,7 +10,7 @@ import pytest
 from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport.connections.errors import AuthorizationRequired
 from mountainash_transport.connections.oauth2.connection import OAuth2Connection
-from mountainash_transport.connections.oauth2.flow import OAuthFlow
+from mountainash_auth_client.connections.oauth2.flow import OAuthFlow
 
 from mountainash_settings.secrets.registry import (
     clear_secrets_registry,
@@ -188,3 +188,32 @@ class TestOAuth2ConnectionLifecycle:
             conn.connect()
             assert conn.is_connected is True
         mock_client.close.assert_called_once()
+
+
+class TestOAuth2StorageConfigParity:
+    """The resolved token must bind onto the storage profile's full httpx
+    config — granular settings (verify/timeout) survive into the inner client."""
+
+    def test_storage_config_survives_token_binding(self, memory_backend):
+        memory_backend.set("test.oauth2", {
+            "access_token": "PARITYTOK",
+            "token_expires_at": 9999999999,
+        })
+
+        class RichProfile:
+            __spec__ = FakeOAuth2Spec()
+
+            def to_handler_kwargs(self, auth_profile=None) -> dict:
+                return {"timeout": 30, "verify": False, "follow_redirects": True}
+
+            def get_connection_url(self) -> str:
+                return "https://api.example.com"
+
+        conn = OAuth2Connection(RichProfile(), FakeOAuth2Auth())
+        with patch("mountainash_transport.connections.http.httpx.Client"):
+            conn.connect()
+        kw = conn._inner._connect_kwargs
+        assert kw["headers"]["Authorization"] == "Bearer PARITYTOK"
+        assert kw["verify"] is False
+        assert kw["follow_redirects"] is True
+        assert kw["timeout"] == 30
