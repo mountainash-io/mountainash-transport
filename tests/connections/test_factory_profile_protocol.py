@@ -18,6 +18,9 @@ class BareHTTPProfile:
     def to_handler_kwargs(self) -> dict:
         return {"timeout": 30}
 
+    def emit(self, target=None, *, base=None) -> dict:
+        return {**(base or {}), "timeout": 30}
+
 
 class BareLocalProfile:
     """ProfileProtocol-only — no get_connection_url()."""

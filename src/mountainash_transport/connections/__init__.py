@@ -90,20 +90,23 @@ def _emit_kwargs(
     auth_profile: AuthProfile | None,
     family: TargetFamily | None,
 ) -> dict[str, t.Any]:
-    """Merge handler kwargs with auth credentials via emit().
+    """Assemble connection kwargs: storage config via emit(family), then auth
+    credentials layered on the same family.
 
-    NoAuthProfile / None / no-family → kwargs pass through unchanged. For the S3
-    assume-role envelope (nested base_kwargs), credentials emit onto the inner
-    base_kwargs, leaving role_arn/session_name untouched.
+    family is None (Local / unmapped) → no SDK emission; fall back to
+    to_handler_kwargs (Local keeps its real method). For the S3 assume-role
+    envelope (nested base_kwargs), credentials emit onto the inner base_kwargs.
     """
     from mountainash_auth_client import NoAuthProfile
 
-    base = profile.to_handler_kwargs()
-    if auth_profile is None or isinstance(auth_profile, NoAuthProfile) or family is None:
+    if family is None:
+        return profile.to_handler_kwargs()
+
+    base = profile.emit(family)
+    if auth_profile is None or isinstance(auth_profile, NoAuthProfile):
         return base
     if "base_kwargs" in base:
-        inner = auth_profile.emit(family, base=base["base_kwargs"])
-        return {**base, "base_kwargs": inner}
+        return {**base, "base_kwargs": auth_profile.emit(family, base=base["base_kwargs"])}
     return auth_profile.emit(family, base=base)
 
 
