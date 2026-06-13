@@ -247,3 +247,29 @@ class TestPatchedEndpointProfile:
         inner = self._make_inner({})
         profile = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
         assert profile.get_connection_url() == "tunnel://127.0.0.1:54321"
+
+
+# ---------------------------------------------------------------------------
+# _PatchedEndpointProfile.emit() override
+# ---------------------------------------------------------------------------
+
+
+class TestPatchedEndpointEmit:
+    def test_emit_patches_hostname_and_port(self):
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.sftp_storage_profile import SFTPStorageProfile
+
+        inner = SFTPStorageProfile(HOST="real-remote", USERNAME="u", PORT=22)
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
+        out = patched.emit(TargetFamily.PARAMIKO)
+        assert out["hostname"] == "127.0.0.1"
+        assert out["port"] == 54321
+
+    def test_emit_patches_endpoint_url(self):
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+        inner = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="http://real:9000", REGION="us-east-1")
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        out = patched.emit(TargetFamily.BOTO)
+        assert out["endpoint_url"] == "http://127.0.0.1:7777"

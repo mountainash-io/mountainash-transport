@@ -88,8 +88,7 @@ class _PatchedEndpointProfile:
         self._host = host
         self._port = port
 
-    def to_handler_kwargs(self) -> dict[str, t.Any]:
-        kwargs = self._inner.to_handler_kwargs()
+    def _patch_endpoint(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
         if "hostname" in kwargs:
             kwargs["hostname"] = self._host
             kwargs["port"] = self._port
@@ -97,6 +96,15 @@ class _PatchedEndpointProfile:
             if key in kwargs:
                 kwargs[key] = f"http://{self._host}:{self._port}"
         return kwargs
+
+    def to_handler_kwargs(self) -> dict[str, t.Any]:
+        return self._patch_endpoint(self._inner.to_handler_kwargs())
+
+    def emit(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        # MUST override (not delegate via __getattr__) so the tunnel's local
+        # endpoint is injected — otherwise the inner profile's emit returns the
+        # real remote host/port and the tunnel is silently bypassed.
+        return self._patch_endpoint(self._inner.emit(*args, **kwargs))
 
     def get_connection_url(self) -> str:
         if hasattr(self._inner, "get_connection_url"):
