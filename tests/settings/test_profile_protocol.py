@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth
+from mountainash_auth_client import NoAuthProfile
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
@@ -29,7 +29,7 @@ class TestStorageProfile:
         p = LocalStorageProfile(
             PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
             ROOT_PATH="/tmp/files",
-            auth=NoAuth(),
+            auth=NoAuthProfile(),
         )
         assert isinstance(p, StorageProfileProtocol)
 
@@ -38,7 +38,7 @@ class TestStorageProfile:
         p = LocalStorageProfile(
             PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
             ROOT_PATH="/tmp/files",
-            auth=NoAuth(),
+            auth=NoAuthProfile(),
         )
         kwargs = p.to_handler_kwargs()
         assert isinstance(kwargs, dict)
@@ -48,7 +48,7 @@ class TestStorageProfile:
         p = LocalStorageProfile(
             PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
             ROOT_PATH="/tmp/files",
-            auth=NoAuth(),
+            auth=NoAuthProfile(),
         )
         url = p.get_connection_url()
         assert isinstance(url, str)
@@ -65,7 +65,7 @@ class TestStorageProfile:
             PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.S3,
             FLAVOR="aws",
             REGION="us-east-1",
-            auth=NoAuth(),
+            auth=NoAuthProfile(),
         )
         assert isinstance(p, StorageProfileProtocol)
 
@@ -94,7 +94,7 @@ class TestProfileProtocolHierarchy:
 
     def test_storage_profile_satisfies_both_protocols(self):
         """StorageProfileProtocol implementations satisfy ProfileProtocol too."""
-        from mountainash_auth_client import NoAuth
+        from mountainash_auth_client import NoAuthProfile
         from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
         from mountainash_transport.settings.storage.profiles import (
             LocalStorageProfile,
@@ -107,7 +107,7 @@ class TestProfileProtocolHierarchy:
         p = LocalStorageProfile(
             PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
             ROOT_PATH="/tmp/files",
-            auth=NoAuth(),
+            auth=NoAuthProfile(),
         )
         assert isinstance(p, ProfileProtocol)
         assert isinstance(p, StorageProfileProtocol)

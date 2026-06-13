@@ -45,7 +45,7 @@ from mountainash_transport.settings.profile_spec import (
     StorageProfileSpec,
 )
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 
 
@@ -130,8 +130,8 @@ class TestStorageRegistry:
             parameters=[
                 ParameterSpec(name="FOO", type=str, tier="core", default=None)
             ],
-            default_auth=CONST_AUTH_MODE.NONE,
-            supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
+            default_auth=CONST_AUTH_PROFILES.NONE,
+            supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
         )
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         try:
@@ -154,8 +154,8 @@ class TestStorageRegistry:
             parameters=[
                 ParameterSpec(name="BAR", type=str, tier="core", default=None)
             ],
-            default_auth=CONST_AUTH_MODE.NONE,
-            supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
+            default_auth=CONST_AUTH_PROFILES.NONE,
+            supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
         )
 
         @register

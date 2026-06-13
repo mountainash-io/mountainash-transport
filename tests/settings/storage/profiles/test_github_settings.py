@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth
+from mountainash_auth_client import NoAuthProfile
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -18,7 +18,7 @@ def _make(*, auth=None, **extra):
         "PROVIDER_TYPE": CONST_STORAGE_PROVIDER_TYPE.GITHUB,
         "ORG": "mountainash-io",
         "REPO": "mountainash",
-        "auth": auth if auth is not None else NoAuth(),
+        "auth": auth if auth is not None else NoAuthProfile(),
     }
     kwargs.update(extra)
     return GitHubRepoStorageProfile(**kwargs)
@@ -66,7 +66,7 @@ class TestGitHubFsspecKwargs:
     """to_handler_kwargs returns SDK-level config only (no auth)."""
 
     def test_kwargs_shape_minimal(self):
-        s = _make(auth=NoAuth())
+        s = _make(auth=NoAuthProfile())
         kw = s.to_handler_kwargs()
         assert kw["org"] == "mountainash-io"
         assert kw["repo"] == "mountainash"

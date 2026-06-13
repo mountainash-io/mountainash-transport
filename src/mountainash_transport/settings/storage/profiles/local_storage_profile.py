@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -83,8 +83,8 @@ LOCAL_SPEC = StorageProfileSpec(
             ),
         ),
     ],
-    default_auth=CONST_AUTH_MODE.NONE,
-    supported_auth=frozenset({CONST_AUTH_MODE.NONE}),
+    default_auth=CONST_AUTH_PROFILES.NONE,
+    supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
 )
 
 

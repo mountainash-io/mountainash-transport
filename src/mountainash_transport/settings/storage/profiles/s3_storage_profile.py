@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -176,8 +176,8 @@ S3_SPEC = StorageProfileSpec(
             ),
         ),
     ],
-    default_auth=CONST_AUTH_MODE.IAM,
-    supported_auth=frozenset({CONST_AUTH_MODE.IAM, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.NONE}),
+    default_auth=CONST_AUTH_PROFILES.IAM,
+    supported_auth=frozenset({CONST_AUTH_PROFILES.IAM, CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.NONE}),
     metadata={
         "flavor_endpoints": {
             "aws": None,

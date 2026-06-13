@@ -8,7 +8,7 @@
 
 # from __future__ import annotations
 
-# from mountainash_auth_client import AUTH_REGISTRY, AuthMode, CONST_AUTH_MODE
+# from mountainash_auth_client import AUTH_REGISTRY, AuthMode, CONST_AUTH_PROFILES
 # from mountainash_settings import SettingsParameters, get_settings
 
 # from .profile import StorageProfile
@@ -22,7 +22,7 @@
 #     *,
 #     config_file: str | None = None,
 #     secrets_provider: str | None = None,
-#     auth_mode: CONST_AUTH_MODE | None = None,
+#     auth_mode: CONST_AUTH_PROFILES | None = None,
 # ) -> tuple[StorageProfile, AuthMode]:
 #     """Materialise a storage profile and auth instance from config.
 
