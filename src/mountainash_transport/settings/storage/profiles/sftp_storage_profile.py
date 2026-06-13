@@ -16,6 +16,7 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_PROFILES
+from mountainash_auth_client.targets import TargetFamily
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -31,20 +32,6 @@ _VALID_HOST_KEY_POLICIES: frozenset[str] = frozenset(
     {"reject", "warn", "auto_add", "ignore"}
 )
 
-
-
-# Canonical descriptor-field name → paramiko ``connect()`` kwarg name.
-_DRIVER_KEYS: tuple[tuple[str, str], ...] = (
-    ("HOST", "hostname"),
-    ("PORT", "port"),
-    ("USERNAME", "username"),
-    ("TIMEOUT", "timeout"),
-    ("BANNER_TIMEOUT", "banner_timeout"),
-    ("AUTH_TIMEOUT", "auth_timeout"),
-    ("ALLOW_AGENT", "allow_agent"),
-    ("LOOK_FOR_KEYS", "look_for_keys"),
-    ("COMPRESS", "compress"),
-)
 
 
 def _validate_host_key_policy(v: str) -> str:
@@ -174,6 +161,21 @@ SFTP_SPEC = StorageProfileSpec(
 )
 
 
+def _sftp_paramiko_kwargs(profile: "SFTPStorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Compose on the driver_key merge (kw) and append the post-connect envelope."""
+    result: dict[str, t.Any] = dict(kw)
+    post_connect: dict[str, t.Any] = {}
+    known_hosts = getattr(profile, "KNOWN_HOSTS_FILE", None)
+    host_key_policy = getattr(profile, "HOST_KEY_POLICY", None)
+    if known_hosts:
+        post_connect["known_hosts_file"] = str(known_hosts)
+    if host_key_policy:
+        post_connect["host_key_policy"] = host_key_policy
+    if post_connect:
+        result["_post_connect"] = post_connect
+    return result
+
+
 @register
 class SFTPStorageProfile(Profile):
     """SFTP storage settings backed by paramiko.
@@ -192,6 +194,10 @@ class SFTPStorageProfile(Profile):
     """
 
     __spec__ = SFTP_SPEC
+    __adapters__ = {TargetFamily.PARAMIKO: _sftp_paramiko_kwargs}
+
+    def _sdk_family(self) -> TargetFamily:
+        return TargetFamily.PARAMIKO
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -209,28 +215,10 @@ class SFTPStorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build paramiko ``SSHClient.connect`` kwargs from an :class:`SFTPStorageProfile`.
+        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.PARAMIKO).
 
         Returns SDK-level config only (hostname, port, timeout, agent/key
         discovery flags, post-connect envelope). Auth credentials (password,
         key, Kerberos) are injected by the auth strategy layer.
         """
-        kwargs: dict[str, t.Any] = {}
-
-        for field_name, driver_key in _DRIVER_KEYS:
-            value = getattr(self, field_name, None)
-            if value is None:
-                continue
-            kwargs[driver_key] = value
-
-        post_connect: dict[str, t.Any] = {}
-        known_hosts = getattr(self, "KNOWN_HOSTS_FILE", None)
-        host_key_policy = getattr(self, "HOST_KEY_POLICY", None)
-        if known_hosts:
-            post_connect["known_hosts_file"] = str(known_hosts)
-        if host_key_policy:
-            post_connect["host_key_policy"] = host_key_policy
-        if post_connect:
-            kwargs["_post_connect"] = post_connect
-
-        return kwargs
+        return self.emit(self._sdk_family())

@@ -136,3 +136,42 @@ class TestSFTPDescriptor:
 
     def test_descriptor_does_not_support_multipart(self):
         assert SFTP_SPEC.supports_multipart is False
+
+
+from mountainash_auth_client.targets import TargetFamily
+
+
+class TestSFTPEmitGolden:
+    def test_driver_keys_plus_post_connect(self):
+        p = SFTPStorageProfile(HOST="h", USERNAME="u", PORT=2222, TIMEOUT=15.0)
+        out = p.emit(TargetFamily.PARAMIKO)
+        assert out["hostname"] == "h"
+        assert out["username"] == "u"
+        assert out["port"] == 2222
+        assert out["timeout"] == 15.0
+        # default HOST_KEY_POLICY="reject" always lands in the _post_connect envelope
+        assert out["_post_connect"] == {"host_key_policy": "reject"}
+
+    def test_known_hosts_in_post_connect(self):
+        p = SFTPStorageProfile(HOST="h", USERNAME="u",
+                               KNOWN_HOSTS_FILE="/etc/known_hosts", HOST_KEY_POLICY="auto_add")
+        out = p.emit(TargetFamily.PARAMIKO)
+        assert out["_post_connect"] == {
+            "known_hosts_file": "/etc/known_hosts",
+            "host_key_policy": "auto_add",
+        }
+
+    def test_none_timeouts_skipped(self):
+        p = SFTPStorageProfile(HOST="h", USERNAME="u")  # BANNER/AUTH_TIMEOUT default None
+        out = p.emit(TargetFamily.PARAMIKO)
+        assert "banner_timeout" not in out
+        assert "auth_timeout" not in out
+
+    def test_emit_no_target_fails_closed(self):
+        import pytest
+        with pytest.raises(ValueError):
+            SFTPStorageProfile(HOST="h", USERNAME="u").emit()
+
+    def test_shim_equals_emit(self):
+        p = SFTPStorageProfile(HOST="h", USERNAME="u", KNOWN_HOSTS_FILE="/k")
+        assert p.to_handler_kwargs() == p.emit(TargetFamily.PARAMIKO)
