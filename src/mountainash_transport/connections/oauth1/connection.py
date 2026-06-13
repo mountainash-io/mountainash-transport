@@ -9,11 +9,11 @@ import httpx
 
 from mountainash_auth_client import OAuth1AuthProfile
 from mountainash_auth_client.targets import TargetFamily
+from mountainash_auth_client.errors import AuthorizationRequired as AuthClientAuthorizationRequired
+from mountainash_auth_client.connections.oauth1.flow import OAuth1Flow
 from mountainash_transport.connections.errors import AuthorizationRequired
 from mountainash_transport.connections.http import HTTPConnection
-from mountainash_transport.connections.oauth1.flow import OAuth1Flow
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
-from mountainash_settings.secrets.registry import get_secrets_backend
 
 
 class OAuth1Connection:
@@ -33,7 +33,20 @@ class OAuth1Connection:
         self._inner: HTTPConnection | None = None
 
     def connect(self) -> Self:
-        self._inner = HTTPConnection(self._resolve_kwargs())
+        try:
+            oauth_token, oauth_token_secret = OAuth1Flow(self._spec).resolve_token_pair(
+                self._auth, auto_authorize=self._auto_authorize
+            )
+        except AuthClientAuthorizationRequired:
+            raise AuthorizationRequired(provider=self._spec.name, user="default")
+        emitter = OAuth1AuthProfile(
+            CONSUMER_KEY=self._auth.CONSUMER_KEY,
+            CONSUMER_SECRET=self._auth.CONSUMER_SECRET,  # SecretStr through; do NOT unwrap
+            ACCESS_TOKEN=oauth_token,
+            ACCESS_TOKEN_SECRET=oauth_token_secret,
+        )
+        merged = emitter.emit(TargetFamily.HTTP, base=self._profile.to_handler_kwargs())
+        self._inner = HTTPConnection(merged)
         self._inner.connect()
         return self
 
@@ -56,26 +69,3 @@ class OAuth1Connection:
     def __exit__(self, *args: t.Any) -> None:
         self.disconnect()
 
-    def _resolve_kwargs(self) -> dict[str, t.Any]:
-        provider = self._spec.name
-        backend = get_secrets_backend(self._auth.SETTINGS_SOURCE_SECRETS_PROVIDER)
-        key = self._auth.persist_key()
-        tokens = backend.get(key)
-
-        if not (tokens and tokens.get("oauth_token")):
-            if not self._auto_authorize:
-                raise AuthorizationRequired(provider=provider, user="default")
-            flow = OAuth1Flow(self._spec)
-            tokens = flow.authorize(
-                consumer_key=self._auth.CONSUMER_KEY,
-                consumer_secret=self._auth.CONSUMER_SECRET.get_secret_value(),
-            )
-            backend.set(key, tokens)
-
-        emitter = OAuth1AuthProfile(
-            CONSUMER_KEY=self._auth.CONSUMER_KEY,
-            CONSUMER_SECRET=self._auth.CONSUMER_SECRET.get_secret_value(),
-            ACCESS_TOKEN=tokens["oauth_token"],
-            ACCESS_TOKEN_SECRET=tokens["oauth_token_secret"],
-        )
-        return emitter.emit(TargetFamily.HTTP, base=self._profile.to_handler_kwargs())
