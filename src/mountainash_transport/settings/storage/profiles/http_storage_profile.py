@@ -10,7 +10,7 @@ import typing as t
 import httpx
 
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -81,8 +81,8 @@ HTTP_SPEC = StorageProfileSpec(
             description="Custom request headers merged with auth headers.",
         ),
     ],
-    default_auth=CONST_AUTH_MODE.NONE,
-    supported_auth=frozenset({CONST_AUTH_MODE.NONE, CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.PASSWORD}),
+    default_auth=CONST_AUTH_PROFILES.NONE,
+    supported_auth=frozenset({CONST_AUTH_PROFILES.NONE, CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.PASSWORD}),
 )
 
 

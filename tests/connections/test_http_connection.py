@@ -6,11 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import httpx
 
-from mountainash_transport._core.auth.strategies import (
-    AuthStrategy,
-    BearerTokenStrategy,
-    NoAuthStrategy,
-)
 from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport.connections.http import HTTPConnection
 
@@ -20,7 +15,7 @@ FAKE_HTTP_KWARGS: dict = {"timeout": 30, "follow_redirects": True}
 
 class TestHTTPConnectionProtocol:
     def test_conforms_to_connection_protocol(self):
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         assert isinstance(conn, ConnectionProtocol)
 
 
@@ -30,7 +25,7 @@ class TestHTTPConnectionLifecycle:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
 
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         result = conn.connect()
 
         mock_client_cls.assert_called_once_with(timeout=30, follow_redirects=True)
@@ -43,7 +38,7 @@ class TestHTTPConnectionLifecycle:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
 
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         conn.connect()
         conn.disconnect()
 
@@ -52,13 +47,13 @@ class TestHTTPConnectionLifecycle:
         assert conn.is_connected is False
 
     def test_not_connected_initially(self):
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         assert conn.client is None
         assert conn.is_connected is False
 
     @patch("mountainash_transport.connections.http.httpx.Client")
     def test_disconnect_when_not_connected_is_noop(self, mock_client_cls):
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         conn.disconnect()  # should not raise
 
     @patch("mountainash_transport.connections.http.httpx.Client")
@@ -66,7 +61,7 @@ class TestHTTPConnectionLifecycle:
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
 
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         with conn:
             conn.connect()
             assert conn.is_connected is True
@@ -75,9 +70,9 @@ class TestHTTPConnectionLifecycle:
 
 class TestHTTPConnectionAuth:
     @patch("mountainash_transport.connections.http.httpx.Client")
-    def test_bearer_token_injected(self, mock_client_cls):
-        strategy = BearerTokenStrategy("my-token")
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, strategy)
+    def test_merged_headers_passed_to_httpx(self, mock_client_cls):
+        kwargs = {**FAKE_HTTP_KWARGS, "headers": {"Authorization": "Bearer my-token"}}
+        conn = HTTPConnection(kwargs)
         conn.connect()
 
         call_kwargs = mock_client_cls.call_args[1]
@@ -86,7 +81,7 @@ class TestHTTPConnectionAuth:
 
     @patch("mountainash_transport.connections.http.httpx.Client")
     def test_no_auth_no_headers(self, mock_client_cls):
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         conn.connect()
 
         call_kwargs = mock_client_cls.call_args[1]
@@ -101,7 +96,7 @@ class TestHTTPConnectionErrorWrapping:
         from mountainash_transport.connections.errors import ConnectionTimeoutError
 
         mock_client_cls.side_effect = httpx.TimeoutException("timed out")
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         with pytest.raises(ConnectionTimeoutError):
             conn.connect()
 
@@ -110,6 +105,6 @@ class TestHTTPConnectionErrorWrapping:
         from mountainash_transport.connections.errors import TransportConnectionError
 
         mock_client_cls.side_effect = httpx.ConnectError("refused")
-        conn = HTTPConnection(FAKE_HTTP_KWARGS, NoAuthStrategy())
+        conn = HTTPConnection(FAKE_HTTP_KWARGS)
         with pytest.raises(TransportConnectionError):
             conn.connect()

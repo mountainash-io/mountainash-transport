@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -98,8 +98,8 @@ SMB_SPEC = StorageProfileSpec(
             description="Connection / negotiation timeout in seconds.",
         ),
     ],
-    default_auth=CONST_AUTH_MODE.PASSWORD,
-    supported_auth=frozenset({CONST_AUTH_MODE.PASSWORD, CONST_AUTH_MODE.KERBEROS}),
+    default_auth=CONST_AUTH_PROFILES.PASSWORD,
+    supported_auth=frozenset({CONST_AUTH_PROFILES.PASSWORD, CONST_AUTH_PROFILES.KERBEROS}),
     implemented=False,
 )
 

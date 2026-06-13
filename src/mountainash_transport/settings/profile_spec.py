@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 from mountainash_settings.profiles import (
     MISSING,
     ParameterSpec,
@@ -53,8 +53,8 @@ class StorageProfileSpec(ProfileSpec):
     supports_streaming: bool = True
     supports_multipart: bool = True
     read_only: bool = False
-    default_auth: CONST_AUTH_MODE = CONST_AUTH_MODE.NONE
-    supported_auth: frozenset[CONST_AUTH_MODE] = field(
-        default_factory=lambda: frozenset({CONST_AUTH_MODE.NONE})
+    default_auth: CONST_AUTH_PROFILES = CONST_AUTH_PROFILES.NONE
+    supported_auth: frozenset[CONST_AUTH_PROFILES] = field(
+        default_factory=lambda: frozenset({CONST_AUTH_PROFILES.NONE})
     )
     implemented: bool = True

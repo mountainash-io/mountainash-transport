@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth
+from mountainash_auth_client import NoAuthProfile
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (

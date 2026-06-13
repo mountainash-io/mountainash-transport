@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from mountainash_auth_client import NoAuth
+from mountainash_auth_client import NoAuthProfile
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
@@ -41,7 +41,7 @@ def _make(
         "PROVIDER_TYPE": _PROVIDER_TYPE_BY_FLAVOR[flavor],
         "FLAVOR": flavor,
         "REGION": region,
-        "auth": auth if auth is not None else NoAuth(),
+        "auth": auth if auth is not None else NoAuthProfile(),
     }
     kwargs.update(extra)
     return S3StorageProfile(**kwargs)

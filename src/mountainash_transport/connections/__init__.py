@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.auth.resolver import resolve_auth_strategy
+from mountainash_auth_client.targets import TargetFamily
+
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
@@ -68,6 +69,46 @@ def _connection_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) 
     return _PROVIDER_CONNECTION_MAP.get(provider_str, HTTPConnection)
 
 
+# --- Provider → SDK target family map ----------------------------------------
+
+_PROVIDER_FAMILY_MAP: dict[str, TargetFamily] = {
+    "http": TargetFamily.HTTP,
+    "s3": TargetFamily.BOTO, "s3express": TargetFamily.BOTO, "r2": TargetFamily.BOTO,
+    "minio": TargetFamily.BOTO, "b2": TargetFamily.BOTO,
+    "sftp": TargetFamily.PARAMIKO, "ssh": TargetFamily.PARAMIKO,
+}
+
+
+def _family_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) -> TargetFamily | None:
+    """Map a storage provider type to the SDK target family it emits for."""
+    if provider_type is None:
+        return None
+    provider_str = str(provider_type.value) if hasattr(provider_type, "value") else str(provider_type)
+    return _PROVIDER_FAMILY_MAP.get(provider_str)
+
+
+def _emit_kwargs(
+    profile: ProfileProtocol,
+    auth_profile: AuthProfile | None,
+    family: TargetFamily | None,
+) -> dict[str, t.Any]:
+    """Merge handler kwargs with auth credentials via emit().
+
+    NoAuthProfile / None / no-family → kwargs pass through unchanged. For the S3
+    assume-role envelope (nested base_kwargs), credentials emit onto the inner
+    base_kwargs, leaving role_arn/session_name untouched.
+    """
+    from mountainash_auth_client import NoAuthProfile
+
+    base = profile.to_handler_kwargs()
+    if auth_profile is None or isinstance(auth_profile, NoAuthProfile) or family is None:
+        return base
+    if "base_kwargs" in base:
+        inner = auth_profile.emit(family, base=base["base_kwargs"])
+        return {**base, "base_kwargs": inner}
+    return auth_profile.emit(family, base=base)
+
+
 def create_connection(
     profile: ProfileProtocol,
     auth_profile: AuthProfile | None = None,
@@ -75,32 +116,29 @@ def create_connection(
     auto_authorize: bool = False,
 ) -> ConnectionProtocol:
     """Create the right connection for a profile + auth combination."""
-    from mountainash_auth_client import OAuth2Auth, OAuth2AuthCodeAuth
+    from mountainash_auth_client import OAuth2AuthProfile, OAuth2AuthCodeAuthProfile
 
-    if isinstance(auth_profile, (OAuth2Auth, OAuth2AuthCodeAuth)):
+    if isinstance(auth_profile, (OAuth2AuthProfile, OAuth2AuthCodeAuthProfile)):
         return OAuth2Connection(profile, auth_profile, auto_authorize=auto_authorize)
 
     try:
-        from mountainash_auth_client.schemas.oauth1 import OAuth1Auth
-        if isinstance(auth_profile, OAuth1Auth):
+        from mountainash_auth_client.schemas.oauth1 import OAuth1AuthProfile
+        if isinstance(auth_profile, OAuth1AuthProfile):
             return OAuth1Connection(profile, auth_profile, auto_authorize=auto_authorize)
     except ImportError:
         pass
 
     provider_type = _provider_type_from_profile(profile)
-    kwargs = profile.to_handler_kwargs()
+    family = _family_for_provider(provider_type)
 
-    # SFTP: two-layer composition (SSHConnection → SFTPConnection)
     if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
-        strategy = resolve_auth_strategy(auth_profile, provider_type=CONST_STORAGE_PROVIDER_TYPE.SFTP)
-        ssh_conn = SSHConnection(kwargs, strategy)
+        ssh_conn = SSHConnection(_emit_kwargs(profile, auth_profile, family))
         return SFTPConnection(ssh_conn)
 
-    strategy = resolve_auth_strategy(auth_profile, provider_type=provider_type)
     leaf_cls = _connection_for_provider(provider_type)
     if leaf_cls is NullConnection:
         return NullConnection()
-    return leaf_cls(kwargs, strategy)
+    return leaf_cls(_emit_kwargs(profile, auth_profile, family))
 
 
 def create_tunnelled_connection(
@@ -112,11 +150,8 @@ def create_tunnelled_connection(
     remote_port: int,
 ) -> TunnelledConnection:
     """Create a tunnelled connection through an SSH bastion host."""
-    bastion_kwargs = bastion_profile.to_handler_kwargs()
-    ssh_conn = SSHConnection(
-        bastion_kwargs,
-        resolve_auth_strategy(bastion_auth, provider_type=CONST_STORAGE_PROVIDER_TYPE.SSH),
-    )
+    bastion_family = _family_for_provider(CONST_STORAGE_PROVIDER_TYPE.SSH)
+    ssh_conn = SSHConnection(_emit_kwargs(bastion_profile, bastion_auth, bastion_family))
 
     def inner_factory(local_port: int) -> ConnectionProtocol:
         patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)

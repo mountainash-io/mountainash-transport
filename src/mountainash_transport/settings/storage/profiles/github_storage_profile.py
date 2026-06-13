@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_MODE
+from mountainash_auth_client import CONST_AUTH_PROFILES
 
 from ...profile_spec import MISSING, ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -88,8 +88,8 @@ GITHUB_REPO_SPEC = StorageProfileSpec(
             description="HTTP request timeout in seconds.",
         ),
     ],
-    default_auth=CONST_AUTH_MODE.TOKEN,
-    supported_auth=frozenset({CONST_AUTH_MODE.TOKEN, CONST_AUTH_MODE.OAUTH2, CONST_AUTH_MODE.JWT, CONST_AUTH_MODE.NONE}),
+    default_auth=CONST_AUTH_PROFILES.TOKEN,
+    supported_auth=frozenset({CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.OAUTH2, CONST_AUTH_PROFILES.JWT, CONST_AUTH_PROFILES.NONE}),
     implemented=False,
 )
 

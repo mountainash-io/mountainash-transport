@@ -7,7 +7,8 @@ from typing_extensions import Self
 
 import httpx
 
-from mountainash_transport._core.auth.strategies import BearerTokenStrategy
+from mountainash_auth_client import TokenAuthProfile
+from mountainash_auth_client.targets import TargetFamily
 from mountainash_transport.connections.errors import AuthorizationRequired
 from mountainash_transport.connections.http import HTTPConnection
 from mountainash_transport.connections.oauth2.flow import OAuthFlow
@@ -15,8 +16,8 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 from mountainash_settings.secrets.registry import get_secrets_backend
 
 if t.TYPE_CHECKING:
-    from mountainash_auth_client.schemas.oauth2 import OAuth2Auth
-    from mountainash_auth_client.schemas.oauth2_authcode import OAuth2AuthCodeAuth
+    from mountainash_auth_client.schemas.oauth2 import OAuth2AuthProfile
+    from mountainash_auth_client.schemas.oauth2_authcode import OAuth2AuthCodeAuthProfile
 
 
 class OAuth2Connection:
@@ -25,7 +26,7 @@ class OAuth2Connection:
     def __init__(
         self,
         profile: StorageProfileProtocol,
-        auth_profile: OAuth2Auth | OAuth2AuthCodeAuth,
+        auth_profile: OAuth2AuthProfile | OAuth2AuthCodeAuthProfile,
         *,
         auto_authorize: bool = False,
     ) -> None:
@@ -37,8 +38,10 @@ class OAuth2Connection:
 
     def connect(self) -> Self:
         access_token = self._resolve_token()
-        strategy = BearerTokenStrategy(access_token)
-        self._inner = HTTPConnection(self._profile.to_handler_kwargs(), strategy)
+        merged = TokenAuthProfile(TOKEN=access_token).emit(
+            TargetFamily.HTTP, base=self._profile.to_handler_kwargs()
+        )
+        self._inner = HTTPConnection(merged)
         self._inner.connect()
         return self
 
@@ -93,7 +96,7 @@ class OAuth2Connection:
                         backend.set(key, new_tokens)
                         access_token = new_tokens["access_token"]
 
-        if access_token is None:
+        if not access_token:
             if self._auto_authorize:
                 new_tokens = flow.authorize(
                     client_id=self._auth.CLIENT_ID,

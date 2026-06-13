@@ -7,15 +7,13 @@ from typing_extensions import Self
 
 import httpx
 
-from mountainash_transport._core.auth.strategies import AuthStrategy, OAuth1SignedStrategy
+from mountainash_auth_client import OAuth1AuthProfile
+from mountainash_auth_client.targets import TargetFamily
 from mountainash_transport.connections.errors import AuthorizationRequired
 from mountainash_transport.connections.http import HTTPConnection
 from mountainash_transport.connections.oauth1.flow import OAuth1Flow
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 from mountainash_settings.secrets.registry import get_secrets_backend
-
-if t.TYPE_CHECKING:
-    from mountainash_auth_client.schemas.oauth1 import OAuth1Auth
 
 
 class OAuth1Connection:
@@ -24,7 +22,7 @@ class OAuth1Connection:
     def __init__(
         self,
         profile: StorageProfileProtocol,
-        auth_profile: OAuth1Auth,
+        auth_profile: OAuth1AuthProfile,
         *,
         auto_authorize: bool = False,
     ) -> None:
@@ -35,8 +33,7 @@ class OAuth1Connection:
         self._inner: HTTPConnection | None = None
 
     def connect(self) -> Self:
-        strategy = self._resolve_strategy()
-        self._inner = HTTPConnection(self._profile.to_handler_kwargs(), strategy)
+        self._inner = HTTPConnection(self._resolve_kwargs())
         self._inner.connect()
         return self
 
@@ -59,33 +56,26 @@ class OAuth1Connection:
     def __exit__(self, *args: t.Any) -> None:
         self.disconnect()
 
-    def _resolve_strategy(self) -> AuthStrategy:
+    def _resolve_kwargs(self) -> dict[str, t.Any]:
         provider = self._spec.name
-
         backend = get_secrets_backend(self._auth.SETTINGS_SOURCE_SECRETS_PROVIDER)
         key = self._auth.persist_key()
         tokens = backend.get(key)
 
-        if tokens and tokens.get("oauth_token"):
-            return OAuth1SignedStrategy(
-                consumer_key=self._auth.CONSUMER_KEY,
-                consumer_secret=self._auth.CONSUMER_SECRET.get_secret_value(),
-                oauth_token=tokens["oauth_token"],
-                oauth_token_secret=tokens["oauth_token_secret"],
-            )
-
-        if self._auto_authorize:
+        if not (tokens and tokens.get("oauth_token")):
+            if not self._auto_authorize:
+                raise AuthorizationRequired(provider=provider, user="default")
             flow = OAuth1Flow(self._spec)
-            new_tokens = flow.authorize(
+            tokens = flow.authorize(
                 consumer_key=self._auth.CONSUMER_KEY,
                 consumer_secret=self._auth.CONSUMER_SECRET.get_secret_value(),
             )
-            backend.set(key, new_tokens)
-            return OAuth1SignedStrategy(
-                consumer_key=self._auth.CONSUMER_KEY,
-                consumer_secret=self._auth.CONSUMER_SECRET.get_secret_value(),
-                oauth_token=new_tokens["oauth_token"],
-                oauth_token_secret=new_tokens["oauth_token_secret"],
-            )
+            backend.set(key, tokens)
 
-        raise AuthorizationRequired(provider=provider, user="default")
+        emitter = OAuth1AuthProfile(
+            CONSUMER_KEY=self._auth.CONSUMER_KEY,
+            CONSUMER_SECRET=self._auth.CONSUMER_SECRET.get_secret_value(),
+            ACCESS_TOKEN=tokens["oauth_token"],
+            ACCESS_TOKEN_SECRET=tokens["oauth_token_secret"],
+        )
+        return emitter.emit(TargetFamily.HTTP, base=self._profile.to_handler_kwargs())

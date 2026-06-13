@@ -15,7 +15,7 @@ from .http_read import HTTPReadMixin
 from .http_write import HTTPWriteMixin
 
 if t.TYPE_CHECKING:
-    from mountainash_transport._core.auth.strategies import AuthStrategy
+    from mountainash_transport._core.http.auth_protocol import AuthStrategy
 
 
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.HTTP)

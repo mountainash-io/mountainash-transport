@@ -8,7 +8,7 @@ from unittest.mock import patch
 import httpx
 import pytest
 
-from mountainash_transport._core.auth.strategies import (
+from mountainash_transport._core.http.auth_protocol import (
     AuthStrategy,
     RefreshableAuthStrategy,
 )

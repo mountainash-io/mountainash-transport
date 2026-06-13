@@ -7,7 +7,6 @@ from typing_extensions import Self
 
 import httpx
 
-from mountainash_transport._core.auth.strategies import AuthStrategy
 from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
@@ -17,18 +16,12 @@ from .._core.protocols import ConnectionProtocol
 class HTTPConnection(ConnectionProtocol):
     """Creates an authenticated httpx.Client from connect kwargs + auth strategy."""
 
-    def __init__(
-        self,
-        connect_kwargs: dict[str, t.Any],
-        auth_strategy: AuthStrategy,
-    ) -> None:
+    def __init__(self, connect_kwargs: dict[str, t.Any]) -> None:
         self._connect_kwargs = connect_kwargs
-        self._auth_strategy = auth_strategy
         self._client: httpx.Client | None = None
 
     def connect(self) -> Self:
         kwargs = dict(self._connect_kwargs)
-        kwargs = self._auth_strategy.apply(kwargs)
         try:
             self._client = httpx.Client(**kwargs)
         except httpx.TimeoutException as exc:

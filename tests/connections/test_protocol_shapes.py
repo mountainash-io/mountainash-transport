@@ -4,7 +4,6 @@ from __future__ import annotations
 import pytest
 
 from mountainash_transport._core.protocols import ConnectionProtocol
-from mountainash_transport._core.auth.strategies import NoAuthStrategy
 from mountainash_transport.connections.http import HTTPConnection
 from mountainash_transport.connections.null import NullConnection
 from mountainash_transport.connections.protocols import (
@@ -52,7 +51,7 @@ class FakeProfile:
 
 class TestConnectionProtocolConformance:
     def test_http_connection_conforms(self):
-        conn = HTTPConnection(FakeProfile(), NoAuthStrategy())
+        conn = HTTPConnection({})
         assert isinstance(conn, ConnectionProtocol)
 
     def test_null_connection_conforms(self):
@@ -60,7 +59,7 @@ class TestConnectionProtocolConformance:
 
     def test_s3_connection_conforms(self):
         from mountainash_transport.connections.s3 import S3Connection
-        conn = S3Connection(FakeProfile(), NoAuthStrategy())
+        conn = S3Connection({})
         assert isinstance(conn, ConnectionProtocol)
 
     def test_oauth2_connection_conforms(self):
