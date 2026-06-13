@@ -137,6 +137,27 @@ class TestOAuth2ConnectionLifecycle:
             with pytest.raises((TokenExchangeError, KeyError)):
                 conn.connect()
 
+    def test_resolved_token_emitted_as_bearer(self, memory_backend):
+        memory_backend.set("test.oauth2", {
+            "access_token": "AT0KEN",
+            "token_expires_at": 9999999999,
+        })
+        conn = OAuth2Connection(FakeProfile(), FakeOAuth2Auth())
+        with patch("mountainash_transport.connections.http.httpx.Client"):
+            conn.connect()
+        assert conn._inner._connect_kwargs["headers"]["Authorization"] == "Bearer AT0KEN"
+
+    def test_empty_cached_token_raises(self, memory_backend):
+        """An empty-string cached access token must trigger re-authorize, not a
+        header-less client (the Bearer adapter drops empty tokens)."""
+        memory_backend.set("test.oauth2", {
+            "access_token": "",
+            "token_expires_at": 9999999999,
+        })
+        conn = OAuth2Connection(FakeProfile(), FakeOAuth2Auth())
+        with pytest.raises(AuthorizationRequired):
+            conn.connect()
+
     @patch("mountainash_transport.connections.http.httpx.Client")
     def test_disconnect_closes_inner(self, mock_client_cls, memory_backend):
         memory_backend.set("test.oauth2", {

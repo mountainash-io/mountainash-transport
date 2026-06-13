@@ -100,9 +100,13 @@ class TestOAuth1ConnectionLifecycle:
     @patch("mountainash_transport.connections.http.httpx.Client")
     def test_connect_with_stored_tokens(self, mock_client_cls, memory_backend):
         import sys
-        mock_oauth1_module = MagicMock()
-        mock_oauth1_module.OAuth1Auth = MagicMock()
-        sys.modules["authlib.integrations.httpx_client.oauth1_client"] = mock_oauth1_module
+        # The OAuth1 HTTP adapter loads ``OAuth1Auth`` from
+        # ``authlib.integrations.httpx_client`` — inject a stand-in so the
+        # signer constructs without importing the real (httpx-incompatible)
+        # authlib module.
+        mock_authlib_module = MagicMock()
+        mock_authlib_module.OAuth1Auth = MagicMock()
+        sys.modules["authlib.integrations.httpx_client"] = mock_authlib_module
         try:
             memory_backend.set("test.oauth1", {
                 "oauth_token": "stored-tok",
@@ -117,17 +121,16 @@ class TestOAuth1ConnectionLifecycle:
             assert result is conn
             assert conn.is_connected is True
             assert conn.client is mock_client
-            call_kwargs = mock_client_cls.call_args[1]
-            assert "auth" in call_kwargs
+            assert "auth" in conn._inner._connect_kwargs
         finally:
-            sys.modules.pop("authlib.integrations.httpx_client.oauth1_client", None)
+            sys.modules.pop("authlib.integrations.httpx_client", None)
 
     @patch("mountainash_transport.connections.http.httpx.Client")
     def test_disconnect_closes_inner(self, mock_client_cls, memory_backend):
         import sys
-        mock_oauth1_module = MagicMock()
-        mock_oauth1_module.OAuth1Auth = MagicMock()
-        sys.modules["authlib.integrations.httpx_client.oauth1_client"] = mock_oauth1_module
+        mock_authlib_module = MagicMock()
+        mock_authlib_module.OAuth1Auth = MagicMock()
+        sys.modules["authlib.integrations.httpx_client"] = mock_authlib_module
         try:
             memory_backend.set("test.oauth1", {
                 "oauth_token": "tok",
@@ -143,4 +146,4 @@ class TestOAuth1ConnectionLifecycle:
             mock_client.close.assert_called_once()
             assert conn.is_connected is False
         finally:
-            sys.modules.pop("authlib.integrations.httpx_client.oauth1_client", None)
+            sys.modules.pop("authlib.integrations.httpx_client", None)
