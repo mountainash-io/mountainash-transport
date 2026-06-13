@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import SecretStr
 
 from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport.connections.errors import AuthorizationRequired
@@ -59,7 +60,7 @@ class FakeProfile:
 
 class FakeOAuth1Auth:
     CONSUMER_KEY = "consumer_key"
-    CONSUMER_SECRET = property(lambda self: type("S", (), {"get_secret_value": lambda s: "consumer_secret"})())
+    CONSUMER_SECRET = SecretStr("consumer_secret")
     SETTINGS_SOURCE_SECRETS_PROVIDER = "test_mem"
 
     def persist_key(self):
@@ -145,5 +146,36 @@ class TestOAuth1ConnectionLifecycle:
 
             mock_client.close.assert_called_once()
             assert conn.is_connected is False
+        finally:
+            sys.modules.pop("authlib.integrations.httpx_client", None)
+
+
+class TestOAuth1StorageConfigParity:
+    def test_storage_config_survives_oauth1_binding(self, memory_backend):
+        import sys
+        mock_authlib_module = MagicMock()
+        mock_authlib_module.OAuth1Auth = MagicMock()
+        sys.modules["authlib.integrations.httpx_client"] = mock_authlib_module
+        try:
+            memory_backend.set("test.oauth1", {
+                "oauth_token": "OT", "oauth_token_secret": "OTS",
+            })
+
+            class RichProfile:
+                __spec__ = FakeOAuth1Spec()
+
+                def to_handler_kwargs(self, auth_profile=None) -> dict:
+                    return {"timeout": 30, "verify": False}
+
+                def get_connection_url(self) -> str:
+                    return "https://api.example.com"
+
+            conn = OAuth1Connection(RichProfile(), FakeOAuth1Auth())
+            with patch("mountainash_transport.connections.http.httpx.Client"):
+                conn.connect()
+            kw = conn._inner._connect_kwargs
+            assert kw["verify"] is False
+            assert kw["timeout"] == 30
+            assert "auth" in kw  # OAuth1 signer attached
         finally:
             sys.modules.pop("authlib.integrations.httpx_client", None)
