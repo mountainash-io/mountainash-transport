@@ -21,7 +21,7 @@ import typing as t
 
 import httpx
 
-from mountainash_transport._core.auth.strategies import AuthStrategy, RefreshableAuthStrategy
+from mountainash_transport._core.http.auth_protocol import AuthStrategy, RefreshableAuthStrategy
 from mountainash_transport._core.http.errors import (
     HttpConnectionError,
     HttpProtocolError,
