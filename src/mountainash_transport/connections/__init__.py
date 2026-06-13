@@ -9,18 +9,16 @@ from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
 # --- Legacy/existing public API (kept for backward compat) -------------------
-from .protocols import (
-    OAuth2FlowProtocol, OAuth1FlowProtocol,
-    CallbackServerProtocol,
-)
 from .errors import (
     ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
     TransportConnectionError, ConnectionTimeoutError,
 )
-from .oauth2.flow import OAuthFlow
-from .oauth1.flow import OAuth1Flow
-from .server.callback import LocalCallbackServer
-from .server.manual import extract_code_from_input, prompt_for_code
+from mountainash_auth_client.connections.oauth2.flow import OAuthFlow
+from mountainash_auth_client.connections.oauth1.flow import OAuth1Flow
+from mountainash_auth_client.connections.server.callback import LocalCallbackServer
+from mountainash_auth_client.connections.server.manual import (
+    extract_code_from_input, prompt_for_code,
+)
 
 # --- New connection classes ---------------------------------------------------
 from .http import HTTPConnection
@@ -162,8 +160,6 @@ def create_tunnelled_connection(
 
 __all__ = [
     # Legacy
-    "OAuth2FlowProtocol", "OAuth1FlowProtocol",
-    "CallbackServerProtocol",
     "ConnectionError", "TokenExchangeError", "TokenRefreshError", "AuthorizationRequired",
     "TransportConnectionError", "ConnectionTimeoutError",
     "OAuthFlow",
