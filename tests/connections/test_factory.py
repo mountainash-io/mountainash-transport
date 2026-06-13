@@ -25,6 +25,9 @@ class FakeS3Profile:
     def to_handler_kwargs(self):
         return {"service_name": "s3", "region_name": "us-east-1"}
 
+    def emit(self, target=None, *, base=None):
+        return {**(base or {}), "service_name": "s3", "region_name": "us-east-1"}
+
     def get_connection_url(self):
         return "s3://b/k"
 
@@ -59,6 +62,9 @@ class FakeHTTPProfile:
 
     def to_handler_kwargs(self) -> dict:
         return {"timeout": 30}
+
+    def emit(self, target=None, *, base=None) -> dict:
+        return {**(base or {}), "timeout": 30}
 
     def get_connection_url(self) -> str:
         return "https://example.com"
@@ -120,6 +126,15 @@ class FakeSFTPProfile:
 
     def to_handler_kwargs(self) -> dict:
         return {
+            "hostname": "example.com",
+            "port": 22,
+            "username": "user",
+            "_post_connect": {"host_key_policy": "auto_add"},
+        }
+
+    def emit(self, target=None, *, base=None) -> dict:
+        return {
+            **(base or {}),
             "hostname": "example.com",
             "port": 22,
             "username": "user",

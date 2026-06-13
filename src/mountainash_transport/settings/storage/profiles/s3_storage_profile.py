@@ -17,6 +17,7 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_auth_client import CONST_AUTH_PROFILES
+from mountainash_auth_client.targets import TargetFamily
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -190,12 +191,71 @@ S3_SPEC = StorageProfileSpec(
 )
 
 
-# Adapter is imported lazily to avoid a circular import with the adapters
-# package which depends on StorageProfile.
-# def _adapter(profile: "S3StorageProfile", auth=None) -> dict[str, t.Any]:
-#     from ..adapters.s3 import build_handler_kwargs
+def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Build boto3 client kwargs, composing on the driver_key merge (``kw``).
 
-#     return build_handler_kwargs(profile, auth)
+    ``kw`` already carries the driver_key fields (region_name, use_ssl, and
+    endpoint_url when ENDPOINT_URL is set). This recomputes the flavor-dependent
+    region/endpoint/addressing and the botocore Config, preserving the exact
+    output the legacy ``to_handler_kwargs`` produced.
+    """
+    try:
+        import botocore.config as _botocore_config
+    except ImportError:  # pragma: no cover - botocore is a boto3 transitive
+        _botocore_config = None  # type: ignore[assignment]
+
+    flavor = getattr(profile, "FLAVOR", "aws")
+    region = getattr(profile, "REGION", None)
+    endpoint_url = getattr(profile, "ENDPOINT_URL", None)
+    account_id = getattr(profile, "ACCOUNT_ID", None)
+    use_ssl = getattr(profile, "USE_SSL", True)
+    addressing_style = profile._resolve_addressing_style(
+        flavor, getattr(profile, "ADDRESSING_STYLE", "auto")
+    )
+    accelerate = bool(getattr(profile, "ACCELERATE_ENDPOINT", False))
+    dualstack = bool(getattr(profile, "DUALSTACK_ENDPOINT", False))
+    verify_ssl = getattr(profile, "VERIFY_SSL", True)
+    role_arn = getattr(profile, "ROLE_ARN", None)
+
+    effective_region = "auto" if flavor == "r2" else region
+
+    base: dict[str, t.Any] = dict(kw)            # compose on driver_key output
+    base["service_name"] = "s3"
+    base["region_name"] = effective_region
+    base["use_ssl"] = use_ssl
+    base["verify"] = verify_ssl
+
+    resolved_endpoint = profile._resolve_endpoint_url(
+        flavor, region, endpoint_url, account_id
+    )
+    if resolved_endpoint is not None:
+        base["endpoint_url"] = resolved_endpoint
+    else:
+        base.pop("endpoint_url", None)           # aws/express: never present
+
+    if _botocore_config is not None:
+        s3_config: dict[str, t.Any] = {"addressing_style": addressing_style}
+        if flavor == "aws":
+            if accelerate:
+                s3_config["use_accelerate_endpoint"] = True
+            if dualstack:
+                s3_config["use_dualstack_endpoint"] = True
+        config_kwargs: dict[str, t.Any] = {"s3": s3_config}
+        connect_timeout = getattr(profile, "CONNECT_TIMEOUT", None)
+        read_timeout = getattr(profile, "READ_TIMEOUT", None)
+        if connect_timeout is not None:
+            config_kwargs["connect_timeout"] = connect_timeout
+        if read_timeout is not None:
+            config_kwargs["read_timeout"] = read_timeout
+        base["config"] = _botocore_config.Config(**config_kwargs)
+
+    if role_arn:
+        return {
+            "base_kwargs": base,
+            "role_arn": role_arn,
+            "session_name": "mountainash-transport",
+        }
+    return base
 
 
 @register
@@ -210,6 +270,10 @@ class S3StorageProfile(Profile):
     """
 
     __spec__ = S3_SPEC
+    __adapters__ = {TargetFamily.BOTO: _s3_boto_kwargs}
+
+    def _sdk_family(self) -> TargetFamily:
+        return TargetFamily.BOTO
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""
@@ -272,86 +336,9 @@ class S3StorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build boto3 S3 client kwargs from an :class:`S3Settings` profile.
+        """Deprecated shim — kept for downstream callers (Phase 4 D2a).
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]`` contract;
-        callers always pass an :class:`S3Settings` instance in practice.
-
-        Returns either a flat dict ready for ``boto3.client("s3", **kwargs)`` or
-        a nested ``{"base_kwargs": ..., "role_arn": ..., "session_name": ...}``
-        dict when ``ROLE_ARN`` is set.
+        Delegates to the unified ``emit()`` pipeline. Internal callers should
+        use ``emit(TargetFamily.BOTO)`` directly. Slated for removal in a later major.
         """
-        try:
-            import botocore.config as _botocore_config
-        except ImportError:  # pragma: no cover - botocore is a boto3 transitive
-            _botocore_config = None  # type: ignore[assignment]
-
-        flavor = getattr(self, "FLAVOR", "aws")
-        region = getattr(self, "REGION", None)
-        endpoint_url = getattr(self, "ENDPOINT_URL", None)
-        account_id = getattr(self, "ACCOUNT_ID", None)
-        use_ssl = getattr(self, "USE_SSL", True)
-        addressing_style = self._resolve_addressing_style(
-            flavor, getattr(self, "ADDRESSING_STYLE", "auto")
-        )
-        accelerate = bool(getattr(self, "ACCELERATE_ENDPOINT", False))
-        dualstack = bool(getattr(self, "DUALSTACK_ENDPOINT", False))
-        verify_ssl = getattr(self, "VERIFY_SSL", True)
-        role_arn = getattr(self, "ROLE_ARN", None)
-
-        # R2 always uses region_name="auto"; others honour REGION.
-        effective_region = "auto" if flavor == "r2" else region
-
-        base: dict[str, t.Any] = {
-            "service_name": "s3",
-            "region_name": effective_region,
-            "use_ssl": use_ssl,
-            "verify": verify_ssl,
-        }
-
-        resolved_endpoint = self._resolve_endpoint_url(
-            flavor, region, endpoint_url, account_id
-        )
-        if resolved_endpoint is not None:
-            base["endpoint_url"] = resolved_endpoint
-
-        # Auth credentials are injected by the auth strategy layer, not here.
-
-        # # Credentials from IAMAuth / TokenAuth fields.
-        # if isinstance(auth, IAMAuth):
-        #     if auth.ACCESS_KEY_ID:
-        #         base["aws_access_key_id"] = auth.ACCESS_KEY_ID
-        #     if auth.SECRET_ACCESS_KEY:
-        #         base["aws_secret_access_key"] = _unwrap_secret(auth.SECRET_ACCESS_KEY)
-        #     if auth.SESSION_TOKEN:
-        #         base["aws_session_token"] = _unwrap_secret(auth.SESSION_TOKEN)
-        # elif isinstance(auth, TokenAuth):
-        #     if auth.TOKEN:
-        #         base["aws_session_token"] = _unwrap_secret(auth.TOKEN)
-
-        if _botocore_config is not None:
-            s3_config: dict[str, t.Any] = {"addressing_style": addressing_style}
-            # Accelerate / dualstack only apply to standard AWS S3.
-            if flavor == "aws":
-                if accelerate:
-                    s3_config["use_accelerate_endpoint"] = True
-                if dualstack:
-                    s3_config["use_dualstack_endpoint"] = True
-            config_kwargs: dict[str, t.Any] = {"s3": s3_config}
-            connect_timeout = getattr(self, "CONNECT_TIMEOUT", None)
-            read_timeout = getattr(self, "READ_TIMEOUT", None)
-            if connect_timeout is not None:
-                config_kwargs["connect_timeout"] = connect_timeout
-            if read_timeout is not None:
-                config_kwargs["read_timeout"] = read_timeout
-            base["config"] = _botocore_config.Config(**config_kwargs)
-
-        if role_arn:
-            return {
-                "base_kwargs": base,
-                "role_arn": role_arn,
-                "session_name": "mountainash-transport",
-            }
-
-        return base
+        return self.emit(self._sdk_family())

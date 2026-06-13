@@ -9,8 +9,8 @@ import typing as t
 
 import httpx
 
-
 from mountainash_auth_client import CONST_AUTH_PROFILES
+from mountainash_auth_client.targets import TargetFamily
 
 from ...profile_spec import ParameterSpec, StorageProfileSpec
 from mountainash_settings.profiles import Profile
@@ -86,10 +86,22 @@ HTTP_SPEC = StorageProfileSpec(
 )
 
 
-# def _adapter(profile: "HTTPStorageProfile", auth=None) -> dict[str, t.Any]:
-#     from ..adapters.http import build_handler_kwargs
-
-#     return build_handler_kwargs(profile, auth)
+def _http_httpx_kwargs(profile: "HTTPStorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+    """Build httpx.Client kwargs (composing on kw, which is empty for HTTP)."""
+    result: dict[str, t.Any] = dict(kw)
+    result["timeout"] = httpx.Timeout(
+        connect=getattr(profile, "TIMEOUT_CONNECT", 10.0),
+        read=getattr(profile, "TIMEOUT_READ", 30.0),
+        write=getattr(profile, "TIMEOUT_WRITE", 60.0),
+        pool=5.0,
+    )
+    result["follow_redirects"] = getattr(profile, "FOLLOW_REDIRECTS", True)
+    result["max_redirects"] = getattr(profile, "MAX_REDIRECTS", 10)
+    result["verify"] = getattr(profile, "VERIFY_SSL", True)
+    custom_headers = getattr(profile, "HEADERS", None) or {}
+    if custom_headers:
+        result["headers"] = dict(custom_headers)
+    return result
 
 
 @register
@@ -97,40 +109,15 @@ class HTTPStorageProfile(Profile):
     """HTTP/HTTPS provider settings."""
 
     __spec__ = HTTP_SPEC
+    __adapters__ = {TargetFamily.HTTP: _http_httpx_kwargs}
+
+    def _sdk_family(self) -> TargetFamily:
+        return TargetFamily.HTTP
 
     def get_connection_url(self) -> str:
         """Return a placeholder connection URL for logging/inspection."""
         return "http(s)://<dynamic>"
 
-
-
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build httpx.Client kwargs from an :class:`HTTPSettings` profile.
-
-        Returns SDK-level config only (timeouts, redirects, TLS, custom
-        headers). Auth headers are injected by the auth strategy layer, not
-        here.
-        """
-        timeout_connect = getattr(self, "TIMEOUT_CONNECT", 10.0)
-        timeout_read = getattr(self, "TIMEOUT_READ", 30.0)
-        timeout_write = getattr(self, "TIMEOUT_WRITE", 60.0)
-        follow_redirects = getattr(self, "FOLLOW_REDIRECTS", True)
-        max_redirects = getattr(self, "MAX_REDIRECTS", 10)
-        verify = getattr(self, "VERIFY_SSL", True)
-        custom_headers = getattr(self, "HEADERS", None) or {}
-
-        kwargs: dict[str, t.Any] = {
-            "timeout": httpx.Timeout(
-                connect=timeout_connect,
-                read=timeout_read,
-                write=timeout_write,
-                pool=5.0,
-            ),
-            "follow_redirects": follow_redirects,
-            "max_redirects": max_redirects,
-            "verify": verify,
-        }
-        if custom_headers:
-            kwargs["headers"] = dict(custom_headers)
-
-        return kwargs
+        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.HTTP)."""
+        return self.emit(self._sdk_family())

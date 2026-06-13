@@ -232,3 +232,105 @@ class TestS3TimeoutConfiguration:
         opts = config._user_provided_options
         assert "connect_timeout" not in opts
         assert "read_timeout" not in opts
+
+
+import botocore.config
+from mountainash_auth_client.targets import TargetFamily
+from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+
+def _split_config(d: dict):
+    d = dict(d)
+    cfg = d.pop("config", None)
+    return d, cfg
+
+
+class TestS3EmitGolden:
+    def test_aws_default(self):
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1")
+        out = p.emit(TargetFamily.BOTO)
+        flat, cfg = _split_config(out)
+        assert flat == {
+            "service_name": "s3", "region_name": "us-east-1",
+            "use_ssl": True, "verify": True,
+        }
+        assert cfg.s3 == {"addressing_style": "auto"}
+
+    def test_r2_region_auto_and_endpoint_from_account(self):
+        p = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="acct123")
+        out = p.emit(TargetFamily.BOTO)
+        flat, cfg = _split_config(out)
+        assert flat == {
+            "service_name": "s3", "region_name": "auto", "use_ssl": True,
+            "verify": True, "endpoint_url": "https://acct123.r2.cloudflarestorage.com",
+        }
+        assert cfg.s3 == {"addressing_style": "auto"}
+
+    def test_minio_requires_explicit_endpoint(self):
+        p = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="http://localhost:9000", REGION="us-east-1")
+        out = p.emit(TargetFamily.BOTO)
+        flat, _ = _split_config(out)
+        assert flat["endpoint_url"] == "http://localhost:9000"
+        assert flat["region_name"] == "us-east-1"
+
+    def test_b2_default_endpoint(self):
+        p = S3StorageProfile(FLAVOR="b2", REGION="us-west-004")
+        out = p.emit(TargetFamily.BOTO)
+        flat, _ = _split_config(out)
+        assert flat["endpoint_url"] == "https://s3.us-west-004.backblazeb2.com"
+
+    def test_express_forces_virtual_addressing(self):
+        p = S3StorageProfile(FLAVOR="express", REGION="us-east-1")
+        out = p.emit(TargetFamily.BOTO)
+        _, cfg = _split_config(out)
+        assert cfg.s3 == {"addressing_style": "virtual"}
+
+    def test_aws_accelerate_and_dualstack(self):
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1",
+                             ACCELERATE_ENDPOINT=True, DUALSTACK_ENDPOINT=True)
+        _, cfg = _split_config(p.emit(TargetFamily.BOTO))
+        assert cfg.s3 == {
+            "addressing_style": "auto",
+            "use_accelerate_endpoint": True,
+            "use_dualstack_endpoint": True,
+        }
+
+    def test_timeouts_land_on_config(self):
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1",
+                             CONNECT_TIMEOUT=3.0, READ_TIMEOUT=7.0)
+        _, cfg = _split_config(p.emit(TargetFamily.BOTO))
+        assert cfg.connect_timeout == 3.0
+        assert cfg.read_timeout == 7.0
+
+    def test_role_arn_nested_envelope(self):
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1",
+                             ROLE_ARN="arn:aws:iam::123:role/r")
+        out = p.emit(TargetFamily.BOTO)
+        assert out["role_arn"] == "arn:aws:iam::123:role/r"
+        assert out["session_name"] == "mountainash-transport"
+        inner_flat, inner_cfg = _split_config(out["base_kwargs"])
+        assert inner_flat == {
+            "service_name": "s3", "region_name": "us-east-1",
+            "use_ssl": True, "verify": True,
+        }
+        assert inner_cfg.s3 == {"addressing_style": "auto"}
+
+    def test_driver_keys_preserved_in_emit(self):
+        # The 2-arg adapter composes on driver_key output (use_ssl/region_name),
+        # not orphaning it.
+        p = S3StorageProfile(FLAVOR="aws", REGION="eu-west-1", USE_SSL=False)
+        flat, _ = _split_config(p.emit(TargetFamily.BOTO))
+        assert flat["region_name"] == "eu-west-1"   # REGION driver_key
+        assert flat["use_ssl"] is False             # USE_SSL driver_key
+
+    def test_emit_no_target_fails_closed(self):
+        import pytest
+        with pytest.raises(ValueError):
+            S3StorageProfile(FLAVOR="aws").emit()
+
+    def test_shim_equals_emit(self):
+        p = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="acct123")
+        shim, semit = _split_config(p.to_handler_kwargs())
+        emit, eemit = _split_config(p.emit(TargetFamily.BOTO))
+        assert shim == emit
+        assert semit.s3 == eemit.s3

@@ -94,3 +94,36 @@ class TestHTTPHandlerKwargs:
         s = _make()
         kw = s.to_handler_kwargs()
         assert "headers" not in kw
+
+
+import httpx
+from mountainash_auth_client.targets import TargetFamily
+from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
+
+
+class TestHTTPEmitGolden:
+    def test_default_config(self):
+        out = HTTPStorageProfile().emit(TargetFamily.HTTP)
+        assert out["follow_redirects"] is True
+        assert out["max_redirects"] == 10
+        assert out["verify"] is True
+        assert out["timeout"] == httpx.Timeout(connect=10.0, read=30.0, write=60.0, pool=5.0)
+        assert "headers" not in out
+
+    def test_custom_timeouts_and_headers(self):
+        out = HTTPStorageProfile(
+            TIMEOUT_CONNECT=1.0, TIMEOUT_READ=2.0, TIMEOUT_WRITE=3.0,
+            VERIFY_SSL=False, HEADERS={"X-A": "1"},
+        ).emit(TargetFamily.HTTP)
+        assert out["timeout"] == httpx.Timeout(connect=1.0, read=2.0, write=3.0, pool=5.0)
+        assert out["verify"] is False
+        assert out["headers"] == {"X-A": "1"}
+
+    def test_emit_no_target_fails_closed(self):
+        import pytest
+        with pytest.raises(ValueError):
+            HTTPStorageProfile().emit()
+
+    def test_shim_equals_emit(self):
+        p = HTTPStorageProfile(HEADERS={"X-A": "1"})
+        assert p.to_handler_kwargs() == p.emit(TargetFamily.HTTP)

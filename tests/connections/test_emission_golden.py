@@ -112,6 +112,14 @@ class TestS3RoleArnLayering:
                     "session_name": "mountainash-transport",
                 }
 
+            def emit(self, target=None, *, base=None):
+                return {
+                    **(base or {}),
+                    "base_kwargs": {"service_name": "s3", "region_name": "us-east-1"},
+                    "role_arn": "arn:aws:iam::123:role/r",
+                    "session_name": "mountainash-transport",
+                }
+
             def get_connection_url(self):
                 return "s3://b/k"
 
@@ -143,6 +151,9 @@ class TestS3RoleArnLayering:
             def to_handler_kwargs(self):
                 return {"base_kwargs": inner, "role_arn": "arn:x", "session_name": "s"}
 
+            def emit(self, target=None, *, base=None):
+                return {**(base or {}), "base_kwargs": inner, "role_arn": "arn:x", "session_name": "s"}
+
             def get_connection_url(self):
                 return "s3://b/k"
 
@@ -168,6 +179,9 @@ class TestPerLeafEmission:
 
             def to_handler_kwargs(self):
                 return {"hostname": "h"}
+
+            def emit(self, target=None, *, base=None):
+                return {**(base or {}), "hostname": "h"}
 
             def get_connection_url(self):
                 return "sftp://h/p"
