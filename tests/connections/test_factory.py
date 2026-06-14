@@ -103,17 +103,17 @@ class TestCreateConnection:
         conn = create_connection(FakeHTTPProfile(), auth_profile=TokenAuthProfile(TOKEN="tok"))
         assert isinstance(conn, HTTPConnection)
 
-    def test_oauth2_returns_oauth2_connection(self):
+    def test_oauth2_auth_raises_unsupported(self):
         from mountainash_auth_client import OAuth2AuthCodeAuthProfile
-        from mountainash_transport.connections.oauth2.connection import OAuth2Connection
+        from mountainash_transport.connections.errors import UnsupportedAuthProfileError
         auth = OAuth2AuthCodeAuthProfile(
             CLIENT_ID="cid",
             CLIENT_SECRET="csec",
             SCOPE="read",
             SETTINGS_SOURCE_SECRETS_PROVIDER="test",
         )
-        conn = create_connection(FakeHTTPProfile(), auth_profile=auth)
-        assert isinstance(conn, OAuth2Connection)
+        with pytest.raises(UnsupportedAuthProfileError):
+            create_connection(FakeHTTPProfile(), auth_profile=auth)
 
 
 from mountainash_transport.connections.sftp import SFTPConnection
