@@ -10,6 +10,7 @@ from mountainash_transport.connections.errors import (
     TokenRefreshError,
     TransportConnectionError,
     ConnectionTimeoutError,
+    UnsupportedAuthProfileError,
 )
 
 
@@ -118,3 +119,21 @@ class TestExistingSubclassesReparented:
 
     def test_authorization_required(self):
         assert issubclass(AuthorizationRequired, TransportConnectionError)
+
+
+class TestUnsupportedAuthProfileError:
+    def test_is_transport_connection_error(self):
+        assert issubclass(UnsupportedAuthProfileError, TransportConnectionError)
+
+    def test_message_names_the_profile(self):
+        err = UnsupportedAuthProfileError("OAuth2AuthCodeAuthProfile")
+        assert "OAuth2AuthCodeAuthProfile" in str(err)
+        # Points callers at the right home for OAuth-authenticated connections.
+        assert "auth-client" in str(err) or "ProviderProfile" in str(err)
+
+    def test_stores_profile_name(self):
+        assert UnsupportedAuthProfileError("X").profile_name == "X"
+
+    def test_raisable_as_transport_connection_error(self):
+        with pytest.raises(TransportConnectionError):
+            raise UnsupportedAuthProfileError("X")

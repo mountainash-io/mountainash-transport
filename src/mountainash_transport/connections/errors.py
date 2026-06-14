@@ -41,3 +41,22 @@ class AuthorizationRequired(TransportConnectionError):
         self.provider = provider
         self.user = user
         super().__init__(f"Authorization required for {provider}/{user}")
+
+
+class UnsupportedAuthProfileError(TransportConnectionError):
+    """The connection factory was given an auth profile it does not handle.
+
+    Transport's ``create_connection`` builds storage connections; OAuth
+    *authorization* flows are not a transport concern. Construct
+    ``mountainash_auth_client``'s ``OAuth2Connection``/``OAuth1Connection`` with
+    an ``OAuth2ProviderProfile``/``OAuth1ProviderProfile`` (which carry the
+    OAuth-server coordinates) instead.
+    """
+
+    def __init__(self, profile_name: str) -> None:
+        self.profile_name = profile_name
+        super().__init__(
+            f"{profile_name} is not supported by transport's create_connection; "
+            "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
+            "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
+        )

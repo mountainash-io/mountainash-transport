@@ -24,8 +24,6 @@ from mountainash_auth_client.connections.server.manual import (
 from .http import HTTPConnection
 from .null import NullConnection
 from .s3 import S3Connection
-from .oauth2.connection import OAuth2Connection
-from .oauth1.connection import OAuth1Connection
 from .ssh import SSHConnection
 from .sftp import SFTPConnection
 from .tunnel import TunnelledConnection, _PatchedEndpointProfile
@@ -122,17 +120,22 @@ def create_connection(
     auto_authorize: bool = False,
 ) -> ConnectionProtocol:
     """Create the right connection for a profile + auth combination."""
-    from mountainash_auth_client import OAuth2AuthProfile, OAuth2AuthCodeAuthProfile
+    from mountainash_auth_client import (
+        OAuth1AuthProfile,
+        OAuth2AuthCodeAuthProfile,
+        OAuth2AuthProfile,
+    )
 
-    if isinstance(auth_profile, (OAuth2AuthProfile, OAuth2AuthCodeAuthProfile)):
-        return OAuth2Connection(profile, auth_profile, auto_authorize=auto_authorize)
+    if isinstance(
+        auth_profile,
+        (OAuth2AuthProfile, OAuth2AuthCodeAuthProfile, OAuth1AuthProfile),
+    ):
+        # OAuth authorization flows are not a transport concern — they need a
+        # ProviderProfile (OAuth-server coordinates), which storage profiles
+        # don't carry. See auth-client's parameterised OAuth connections.
+        from .errors import UnsupportedAuthProfileError
 
-    try:
-        from mountainash_auth_client.schemas.oauth1 import OAuth1AuthProfile
-        if isinstance(auth_profile, OAuth1AuthProfile):
-            return OAuth1Connection(profile, auth_profile, auto_authorize=auto_authorize)
-    except ImportError:
-        pass
+        raise UnsupportedAuthProfileError(type(auth_profile).__name__)
 
     provider_type = _provider_type_from_profile(profile)
     family = _family_for_provider(provider_type)
@@ -174,7 +177,7 @@ __all__ = [
     "OAuth1Flow",
     "LocalCallbackServer", "extract_code_from_input", "prompt_for_code",
     # New
-    "HTTPConnection", "NullConnection", "S3Connection", "OAuth2Connection", "OAuth1Connection",
+    "HTTPConnection", "NullConnection", "S3Connection",
     "SSHConnection", "SFTPConnection", "TunnelledConnection",
     "create_connection", "create_tunnelled_connection",
 ]

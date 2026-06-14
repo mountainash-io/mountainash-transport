@@ -41,7 +41,9 @@ keep working unchanged.
 - **Trigger:** a coordinated major version + confirmation no external caller imports `to_handler_kwargs`.
 - **Refs:** Phase-4 spec D2/D4; `settings/profile_protocol.py`.
 
-### A3. 🟡 Migrate the OAuth connections off the `to_handler_kwargs` shim
+### A3. ⛔ ~~Migrate the OAuth connections off the `to_handler_kwargs` shim~~
+
+> ⛔ **Obsoleted (2026-06-14):** the transport OAuth connections were deleted in PR 2 of the ProviderProfile cycle — there is nothing left to migrate. See `docs/superpowers/plans/2026-06-14-oauth-connection-deletion-transport.md`.
 
 `connections/oauth2/connection.py` and `oauth1/connection.py` build the storage base via
 `self._profile.to_handler_kwargs()`. This routes through `emit(HTTP)` underneath (via the
@@ -79,7 +81,9 @@ through the tunnel.
 - **Why deferred:** pre-existing behavior (the old `to_handler_kwargs` patch had the same top-level-only limitation); Phase 4 preserved it deliberately. Only matters once B1 (assume-role at connect) is real.
 - **Refs:** Phase-4 spec "Risks"; `connections/tunnel.py`.
 
-### B3. 🧊 Thread a real callback-server factory through transport (dedup D1)
+### B3. ⛔ ~~Thread a real callback-server factory through transport (dedup D1)~~
+
+> ⛔ **Obsoleted (2026-06-14):** transport no longer owns OAuth connections — callback-server threading is auth-client's concern (`resolve_access_token(..., callback_server=...)`). See the PR-2 deletion plan.
 
 Transport's collapsed OAuth connections call the auth-client resolver with
 `callback_server=None`. The resolver accepts a `CallbackServerFactory` and forwards it to
@@ -180,7 +184,7 @@ completeness. **Verify current status before acting** — some may have landed.
 
 | Priority | Items |
 |---|---|
-| **High value, scoped** | A3 (OAuth→emit cleanup), B3 (callback threading), D1 (mypy override) |
+| **High value, scoped** | ~~A3 (OAuth→emit cleanup)~~ ⛔ obsolete, ~~B3 (callback threading)~~ ⛔ obsolete, D1 (mypy override) |
 | **Larger efforts** | A1 (describe-only families), B1 (S3 assume-role), C1 (wiring), C2 (load_storage) |
 | **Deferred-by-design (need a trigger)** | A2 (shim removal), B2 (nested tunnel patch), E1/E2 (stubs) |
 | **Hygiene** | B4, D2, F-series |
