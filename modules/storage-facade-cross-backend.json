@@ -1,0 +1,34 @@
+{
+  "id": "mountainash_utils_files.storage_facade.cross_backend",
+  "path": "src/mountainash_utils_files/storage_facade/cross_backend.py",
+  "summary": "copy_between() function for cross-backend file transfers. Uses native same-backend copy when possible; falls back to stream-through when pipelines are involved. Accepts separate source_pipeline= and destination_pipeline= arguments.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["copy_between"],
+  "key_classes": [],
+  "key_functions": ["copy_between"],
+  "dependencies": ["storage_facade.facade", "storage_transforms"],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": ["Phase 4: added source_pipeline= and destination_pipeline= arguments"],
+  "documentation_hooks": ["Cross-backend copy workflow"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/cross_backend/test_read_write.py", "detail": "Cross-backend read/write tests"},
+    {"path": "tests/cross_backend/test_delete.py", "detail": "Cross-backend delete tests"},
+    {"path": "tests/cross_backend/test_list.py", "detail": "Cross-backend list tests"},
+    {"path": "tests/cross_backend/test_metadata.py", "detail": "Cross-backend metadata tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_facade/cross_backend.py", "detail": "copy_between function"},
+    {"kind": "test", "path": "tests/cross_backend/", "detail": "4 cross-backend test files"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

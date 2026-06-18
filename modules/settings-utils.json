@@ -1,0 +1,32 @@
+{
+  "id": "mountainash_utils_files.settings.utils",
+  "path": "src/mountainash_utils_files/settings/utils/",
+  "summary": "Settings utility subpackage. connection.py and validation.py are entirely commented-out placeholders. security.py has mostly commented-out code with one active class: ConnectionValidator (validate_connection_params, validate_endpoint static methods).",
+  "role": "legacy",
+  "visibility": "internal",
+  "stability": "unknown",
+  "audiences": ["maintainers"],
+  "doc_priority": "skip-with-reason",
+  "confidence": "high",
+  "public_api": ["ConnectionValidator"],
+  "key_classes": ["ConnectionValidator"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": ["Mostly placeholder code — connection.py and validation.py are fully commented out"],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [
+    "Commented-out code may mislead readers about actual capabilities"
+  ],
+  "open_questions": [
+    {"question": "Should the commented-out placeholder code be removed or implemented?", "evidence": "connection.py and validation.py are 100% commented out; security.py is ~80% commented out"}
+  ],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/utils/security.py", "detail": "ConnectionValidator is the only active code"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

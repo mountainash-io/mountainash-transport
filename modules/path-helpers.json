@@ -1,0 +1,43 @@
+{
+  "id": "mountainash_utils_files.path_helpers",
+  "path": "src/mountainash_utils_files/path_helpers/",
+  "summary": "Path parsing, normalisation, and scheme-aware dispatch. StoragePath (identify_scheme, normalize, join, matches), SchemeSpec registry (30+ schemes incl. placeholders), S3-specific helpers (s3_bucket, s3_key), suffix-aware transform inference (infer_pipeline from .gz/.gpg chains).",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["StoragePath", "SchemeSpec", "SCHEMES", "SUFFIX_TRANSFORMS", "infer_pipeline", "s3_bucket", "s3_key"],
+  "key_classes": ["StoragePath", "SchemeSpec"],
+  "key_functions": ["infer_pipeline", "s3_bucket", "s3_key"],
+  "dependencies": ["storage_transforms"],
+  "dependents": ["storage_facade", "storage_registry.backend_detection"],
+  "extension_points": [
+    "SCHEMES registry: add SchemeSpec entries for new URL schemes",
+    "SUFFIX_TRANSFORMS dict: add suffix-to-transform mappings for new compression/encryption formats"
+  ],
+  "lifecycle_notes": [
+    "Phase 3 (#40): hygiene pass, extracted scheme.py and storage_path.py",
+    "Phase 5 (#41): canonical dispatcher — StoragePath.identify_scheme and SCHEMES registry",
+    "Phase 6 (#42): suffix-aware inference — infer_pipeline and SUFFIX_TRANSFORMS"
+  ],
+  "documentation_hooks": ["How path dispatch works", "Supported URL schemes", "Suffix-to-transform mapping"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/path_helpers/test_scheme.py", "detail": "SchemeSpec and SCHEMES registry tests"},
+    {"path": "tests/path_helpers/test_storage_path.py", "detail": "StoragePath methods tests"},
+    {"path": "tests/path_helpers/test_s3.py", "detail": "S3 path parsing tests"},
+    {"path": "tests/path_helpers/test_suffixes.py", "detail": "Suffix inference and infer_pipeline tests"}
+  ],
+  "risks": [],
+  "open_questions": [
+    {"question": "Placeholder schemes (dbfs, hdfs, spark, gdrive, etc.) are defined but have no backend — should they be documented or hidden?", "evidence": "scheme.py lists ~15 placeholder SchemeSpec entries with no corresponding backend"}
+  ],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/path_helpers/__init__.py", "detail": "__all__ exports 7 names"},
+    {"kind": "test", "path": "tests/path_helpers/", "detail": "4 test files covering all submodules"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

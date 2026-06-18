@@ -1,0 +1,57 @@
+{
+  "id": "mountainash_utils_files.settings.providers",
+  "path": "src/mountainash_utils_files/settings/providers/",
+  "summary": "Nine consolidated provider settings classes with typed specs. S3Settings (FLAVOR discriminator: aws/express/r2/minio/b2), AzureStorageSettings (SERVICE_TYPE: blob/files), GCSSettings, SSHSettings, FTPSettings (USE_TLS discriminator), SMBSettings, LocalSettings (optional MOUNT_SPEC), GitHubRepoSettings (read-only), HTTPSettings. Each declares __spec__ (StorageDescriptor), __adapter__ (adapter module), and auth_modes (allowed AuthSpec subtypes).",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "S3Settings", "S3_SPEC",
+    "AzureStorageSettings", "AZURE_STORAGE_SPEC",
+    "GCSSettings", "GCS_SPEC",
+    "SSHSettings", "SSH_SPEC",
+    "FTPSettings", "FTP_SPEC",
+    "SMBSettings", "SMB_SPEC",
+    "LocalSettings", "LOCAL_SPEC",
+    "GitHubRepoSettings", "GITHUB_REPO_SPEC",
+    "HTTPSettings", "HTTP_SPEC"
+  ],
+  "key_classes": ["S3Settings", "AzureStorageSettings", "GCSSettings", "SSHSettings", "FTPSettings", "SMBSettings", "LocalSettings", "GitHubRepoSettings", "HTTPSettings"],
+  "key_functions": [],
+  "dependencies": ["settings.base", "settings.descriptor", "settings.profile", "settings.registry"],
+  "dependents": ["storage_backends"],
+  "extension_points": ["Add new provider by creating a settings class with __spec__ and __adapter__, then @register it"],
+  "lifecycle_notes": [
+    "Phase 4: consolidated 15 legacy classes into 8 (+ HTTP)",
+    "Phase 4b: removed legacy aliases (S3StorageAuthSettings, R2StorageAuthSettings, etc.)",
+    "Phase 5: renamed descriptor to spec in settings"
+  ],
+  "documentation_hooks": [
+    "Provider configuration reference (one section per class)",
+    "Discriminator field semantics (FLAVOR, SERVICE_TYPE, USE_TLS)",
+    "Auth mode compatibility per provider"
+  ],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_unit/settings/providers/test_s3_settings.py", "detail": "S3 settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_azure_settings.py", "detail": "Azure settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_gcs_settings.py", "detail": "GCS settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_ssh_settings.py", "detail": "SSH settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_ftp_settings.py", "detail": "FTP settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_smb_settings.py", "detail": "SMB settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_local_settings.py", "detail": "Local settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_github_settings.py", "detail": "GitHub settings tests"},
+    {"path": "tests/test_unit/settings/providers/test_http_settings.py", "detail": "HTTP settings tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/providers/__init__.py", "detail": "9 settings classes + 9 spec constants"},
+    {"kind": "test", "path": "tests/test_unit/settings/providers/", "detail": "9 provider test files"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.exceptions",
+  "path": "src/mountainash_utils_files/exceptions.py",
+  "summary": "Core exception hierarchy: StorageError base, with UnsupportedOperationError, StorageConnectionError, PathNotFoundError, AuthenticationError, TransformError.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["StorageError", "UnsupportedOperationError", "StorageConnectionError", "PathNotFoundError", "AuthenticationError", "TransformError"],
+  "key_classes": ["StorageError", "PathNotFoundError", "TransformError"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["storage_backends", "storage_facade", "storage_transforms"],
+  "extension_points": [],
+  "lifecycle_notes": ["TransformError added in Phase 4 for stream transform pipeline"],
+  "documentation_hooks": ["Error handling reference for users"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_constants_and_exceptions.py", "detail": "Exception hierarchy tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/exceptions.py", "detail": "6 exception classes"},
+    {"kind": "test", "path": "tests/test_constants_and_exceptions.py", "detail": "Tests exception class hierarchy"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

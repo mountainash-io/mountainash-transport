@@ -1,0 +1,36 @@
+{
+  "id": "mountainash_utils_files.constants",
+  "path": "src/mountainash_utils_files/constants.py",
+  "summary": "Defines storage-domain enums with case-insensitive lookup: CONST_STORAGE_PROVIDER_TYPE (16 providers), CONST_STORAGE_AUTH_METHOD (9 methods), CONST_STORAGE_ACCESS_TYPE, CONST_STORAGE_ENCRYPTION_TYPE, CONST_STORAGE_CONNECTION_STATUS, CONST_STORAGE_TRANSFER_MODE, CONST_STORAGE_COMPRESSION_TYPE.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "CONST_STORAGE_PROVIDER_TYPE", "CONST_STORAGE_AUTH_METHOD",
+    "CONST_STORAGE_ACCESS_TYPE", "CONST_STORAGE_ENCRYPTION_TYPE",
+    "CONST_STORAGE_CONNECTION_STATUS", "CONST_STORAGE_TRANSFER_MODE",
+    "CONST_STORAGE_COMPRESSION_TYPE"
+  ],
+  "key_classes": ["CONST_STORAGE_PROVIDER_TYPE", "CONST_STORAGE_AUTH_METHOD"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["storage_registry", "storage_backends", "settings"],
+  "extension_points": ["Adding new CONST_STORAGE_PROVIDER_TYPE members enables new backend registration"],
+  "lifecycle_notes": ["Phase 4 added HTTP provider type", "R2, B2, S3EXPRESS added during S3 consolidation"],
+  "documentation_hooks": ["Enum reference table for all supported providers and auth methods"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_constants_and_exceptions.py", "detail": "Tests enum membership and lookup"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/constants.py", "detail": "7 enum classes with _FindMemberMixin"},
+    {"kind": "test", "path": "tests/test_constants_and_exceptions.py", "detail": "Constants and exceptions tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}
