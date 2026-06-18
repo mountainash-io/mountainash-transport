@@ -2,8 +2,8 @@
   {
     "id": 1,
     "category": "General Architecture",
-    "question": "What is mountainash-utils-files and what problem does it solve?",
-    "answer": "Mountainash-utils-files is a cloud-native storage abstraction library for Python that provides a unified, protocol-driven interface for reading, writing, copying, and managing files across multiple storage backends. Instead of writing separate code for local filesystem operations, S3 uploads, and HTTP downloads, developers use a single StorageFacade API that dispatches operations to the correct backend automatically based on the file path or URL scheme. The library solves the problem of backend-specific code proliferating through an application. Without it, a function that reads a file from the local filesystem needs entirely different code to read the same logical file from S3 or an HTTP endpoint. With mountainash-utils-files, the same read_bytes(\"s3://bucket/key\") or read_bytes(\"/local/path\") call works transparently. The protocol-driven architecture also means backends only need to implement the capabilities they support, and the facade raises clear errors when an unsupported operation is attempted.",
+    "question": "What is mountainash-transport and what problem does it solve?",
+    "answer": "Mountainash-transport is a cloud-native storage abstraction library for Python that provides a unified, protocol-driven interface for reading, writing, copying, and managing files across multiple storage backends. Instead of writing separate code for local filesystem operations, S3 uploads, and HTTP downloads, developers use a single StorageFacade API that dispatches operations to the correct backend automatically based on the file path or URL scheme. The library solves the problem of backend-specific code proliferating through an application. Without it, a function that reads a file from the local filesystem needs entirely different code to read the same logical file from S3 or an HTTP endpoint. With mountainash-transport, the same read_bytes(\"s3://bucket/key\") or read_bytes(\"/local/path\") call works transparently. The protocol-driven architecture also means backends only need to implement the capabilities they support, and the facade raises clear errors when an unsupported operation is attempted.",
     "concepts": ["StorageFacade Class", "Protocol Checked Dispatch", "Detect Provider From Path"]
   },
   {
@@ -17,7 +17,7 @@
     "id": 3,
     "category": "General Architecture",
     "question": "What backends are currently supported?",
-    "answer": "Mountainash-utils-files ships with three storage backends. The Local backend provides full 8-protocol coverage for filesystem operations, implementing Connection, Read, Write, List, Delete, Metadata, Copy, and Directory protocols through 8 corresponding mixin classes. The S3 backend unifies five S3-compatible services (AWS S3, S3 Express One Zone, Cloudflare R2, MinIO, and Backblaze B2) under a single class with flavor dispatch, implementing 7 of 8 protocols. The HTTP backend is a read-only backend for HTTP and HTTPS URLs, implementing Connection, Read, and Metadata protocols using the httpx client library. Each backend is registered with the StorageRegistry and selected automatically based on the URL scheme or path pattern of the file being accessed.",
+    "answer": "Mountainash-transport ships with three storage backends. The Local backend provides full 8-protocol coverage for filesystem operations, implementing Connection, Read, Write, List, Delete, Metadata, Copy, and Directory protocols through 8 corresponding mixin classes. The S3 backend unifies five S3-compatible services (AWS S3, S3 Express One Zone, Cloudflare R2, MinIO, and Backblaze B2) under a single class with flavor dispatch, implementing 7 of 8 protocols. The HTTP backend is a read-only backend for HTTP and HTTPS URLs, implementing Connection, Read, and Metadata protocols using the httpx client library. Each backend is registered with the StorageRegistry and selected automatically based on the URL scheme or path pattern of the file being accessed.",
     "concepts": ["LocalStorageBackend Class", "S3StorageBackend Class", "HTTPStorageBackend Class", "Registry Pattern"]
   },
   {
@@ -30,14 +30,14 @@
   {
     "id": 5,
     "category": "General Architecture",
-    "question": "How do I install and configure mountainash-utils-files?",
-    "answer": "Mountainash-utils-files is a Python package designed for Python developers and platform engineers. It requires intermediate Python knowledge, including familiarity with protocols, dataclasses, mixins, and context managers. You also need basic understanding of file I/O, binary streams, URL schemes, and cloud object storage concepts such as buckets and keys. Configuration is handled through the settings system. StorageAuthBase is the base class for provider settings, and each provider type has its own settings class with fields for credentials, endpoints, and provider-specific options. Settings can be loaded from profiles, and settings adapters transform credentials into the format expected by each backend's client library (boto3 for S3, httpx for HTTP).",
+    "question": "How do I install and configure mountainash-transport?",
+    "answer": "Mountainash-transport is a Python package designed for Python developers and platform engineers. It requires intermediate Python knowledge, including familiarity with protocols, dataclasses, mixins, and context managers. You also need basic understanding of file I/O, binary streams, URL schemes, and cloud object storage concepts such as buckets and keys. Configuration is handled through the settings system. StorageAuthBase is the base class for provider settings, and each provider type has its own settings class with fields for credentials, endpoints, and provider-specific options. Settings can be loaded from profiles, and settings adapters transform credentials into the format expected by each backend's client library (boto3 for S3, httpx for HTTP).",
     "concepts": ["StorageAuthBase Class", "Per Provider Settings", "Settings Profile", "Settings Adapters"]
   },
   {
     "id": 6,
     "category": "General Architecture",
-    "question": "What topics does mountainash-utils-files intentionally exclude?",
+    "question": "What topics does mountainash-transport intentionally exclude?",
     "answer": "The library focuses specifically on the storage abstraction layer and deliberately excludes several adjacent concerns. It does not handle cloud provider account management or IAM policy authoring. Network transport layer details such as TCP connections and TLS handshakes are outside its scope. Database or lakehouse storage is handled by the separate mountainash-data package. File format parsing for CSV, Parquet, or JSON deserialization is not included. Deployment and infrastructure provisioning are also excluded. This focused scope keeps the library lean and composable, allowing it to integrate with other mountainash packages that handle those responsibilities.",
     "concepts": ["StorageFacade Class"]
   },

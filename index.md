@@ -1,6 +1,6 @@
 # Learning Graph for Mountainash Utils Files
 
-This section contains the learning graph for the mountainash-utils-files package — a cloud-native storage abstraction library with a unified, protocol-driven interface for reading, writing, copying, and managing files across multiple storage backends.
+This section contains the learning graph for the mountainash-transport package — a cloud-native storage abstraction library with a unified, protocol-driven interface for reading, writing, copying, and managing files across multiple storage backends.
 
 The graph maps 90 concepts covering 8 storage protocols, StorageFacade, path handling, composable transforms, local/S3/HTTP backends, and settings configuration.
 

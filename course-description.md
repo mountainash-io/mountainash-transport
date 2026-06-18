@@ -1,6 +1,6 @@
 ---
 title: Mountainash Utils Files Package Description
-description: A detailed description of the mountainash-utils-files cloud-native storage abstraction library
+description: A detailed description of the mountainash-transport cloud-native storage abstraction library
 quality_score: 86
 ---
 
@@ -82,4 +82,4 @@ After studying this package, developers will be able to:
 
 ## Context
 
-Mountainash-utils-files provides a cloud-native storage abstraction with a protocol-driven architecture. Eight runtime-checkable protocols define fine-grained capabilities, backends compose mixin classes to implement subsets of those protocols, and the StorageFacade dispatches operations after isinstance-checking the underlying backend. Composable transform pipelines handle compression and encryption transparently. The S3 backend unifies five S3-compatible services under a single class with flavor dispatch. Path-driven provider detection routes any URL scheme to the correct backend automatically.
+Mountainash-transport provides a cloud-native storage abstraction with a protocol-driven architecture. Eight runtime-checkable protocols define fine-grained capabilities, backends compose mixin classes to implement subsets of those protocols, and the StorageFacade dispatches operations after isinstance-checking the underlying backend. Composable transform pipelines handle compression and encryption transparently. The S3 backend unifies five S3-compatible services under a single class with flavor dispatch. Path-driven provider detection routes any URL scheme to the correct backend automatically.

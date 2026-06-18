@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "Mountainash Utils Files Concept Graph",
-    "description": "A concept dependency graph for the mountainash-utils-files cloud-native storage abstraction library. 90 concepts across 9 categories covering storage protocols, facade, path handling, transforms, local/S3/HTTP backends, and settings.",
+    "description": "A concept dependency graph for the mountainash-transport cloud-native storage abstraction library. 90 concepts across 9 categories covering storage protocols, facade, path handling, transforms, local/S3/HTTP backends, and settings.",
     "creator": "Nathaniel Ramm",
     "date": "2026-06-03",
     "version": "1.0",
@@ -9,7 +9,7 @@
     "schema": "https://raw.githubusercontent.com/dmccreary/learning-graphs/refs/heads/main/src/schema/learning-graph-schema.json",
     "license": "CC BY-NC-SA 4.0 DEED",
     "source_commit": "65bc90f901403a1454ba5d3d608660a95d64b163",
-    "profile_dir": "03.profile/mountainash-utils-files"
+    "profile_dir": "03.profile/mountainash-transport"
   },
   "groups": {
     "FOUND": {
