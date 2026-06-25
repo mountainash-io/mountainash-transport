@@ -33,7 +33,7 @@ This document outlines the process for creating a new release of the mountainash
    - Once the workflow completes successfully, go to the "Releases" section of the repository
    - You should see a new release created with the version number you specified
    - Verify that the following assets are attached to the release:
-     - Wheel file (`mountainash_utils-files-{version}-py3-none-any.whl`)
+     - Wheel file (`mountainash_transport-{version}-py3-none-any.whl`)
      - Full SBOM (`mountainash-transport-{version}-sbom-full.xml`)
      - Direct dependencies SBOM (`mountainash-transport-{version}-sbom-direct.xml`)
 
