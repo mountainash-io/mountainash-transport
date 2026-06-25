@@ -1,12 +1,12 @@
 # File Helpers Consistency Analysis Report
 
 **Generated**: July 22, 2025
-**Scope**: `mountainash-utils-files/src/mountainash_utils_files/file_helpers`
+**Scope**: `mountainash-transport/src/mountainash_utils_files/file_helpers`
 **Analyst**: Claude Code Review System
 
 ## Executive Summary
 
-The mountainash-utils-files file_helpers module demonstrates a well-architected foundation with consistent inheritance patterns and a comprehensive abstract base class. However, significant opportunities exist for standardization across 10+ storage implementations that would improve maintainability, developer experience, and ecosystem alignment.
+The mountainash-transport file_helpers module demonstrates a well-architected foundation with consistent inheritance patterns and a comprehensive abstract base class. However, significant opportunities exist for standardization across 10+ storage implementations that would improve maintainability, developer experience, and ecosystem alignment.
 
 ## Consistency Analysis Results
 
