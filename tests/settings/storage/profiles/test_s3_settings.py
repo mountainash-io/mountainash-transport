@@ -315,13 +315,20 @@ class TestS3EmitGolden:
         }
         assert inner_cfg.s3 == {"addressing_style": "auto"}
 
-    def test_driver_keys_preserved_in_emit(self):
-        # The 2-arg adapter composes on driver_key output (use_ssl/region_name),
-        # not orphaning it.
-        p = S3StorageProfile(FLAVOR="aws", REGION="eu-west-1", USE_SSL=False)
-        flat, _ = _split_config(p.emit(TargetFamily.BOTO))
-        assert flat["region_name"] == "eu-west-1"   # REGION driver_key
-        assert flat["use_ssl"] is False             # USE_SSL driver_key
+    def test_adapter_is_sole_source_of_region_use_ssl_endpoint(self):
+        # REGION/USE_SSL/ENDPOINT_URL are computed by the adapter, not by driver_key
+        # passthrough. r2 forces region_name='auto'; aws omits endpoint_url; USE_SSL
+        # flows through the adapter.
+        aws = S3StorageProfile(FLAVOR="aws", REGION="eu-west-1", USE_SSL=False)
+        flat, _ = _split_config(aws.emit(TargetFamily.BOTO))
+        assert flat["region_name"] == "eu-west-1"
+        assert flat["use_ssl"] is False
+        assert "endpoint_url" not in flat                      # aws: popped by adapter
+
+        r2 = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="acct123", REGION="eu-west-1")
+        flat_r2, _ = _split_config(r2.emit(TargetFamily.BOTO))
+        assert flat_r2["region_name"] == "auto"               # adapter overrides REGION
+        assert flat_r2["endpoint_url"] == "https://acct123.r2.cloudflarestorage.com"
 
     def test_emit_no_target_fails_closed(self):
         import pytest

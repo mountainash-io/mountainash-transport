@@ -78,7 +78,6 @@ S3_SPEC = StorageProfileSpec(
             type=str,
             tier="core",
             default="us-east-1",
-            driver_key="region_name",
             description="AWS-style region name (e.g. us-east-1).",
         ),
         ParameterSpec(
@@ -106,7 +105,6 @@ S3_SPEC = StorageProfileSpec(
             type=str,
             tier="advanced",
             default=None,
-            driver_key="endpoint_url",
             description=(
                 "Override the default endpoint URL. Required for FLAVOR='minio'. "
                 "Auto-derived from ACCOUNT_ID / REGION for r2 / b2."
@@ -117,7 +115,6 @@ S3_SPEC = StorageProfileSpec(
             type=bool,
             tier="advanced",
             default=True,
-            driver_key="use_ssl",
             description="Whether to use HTTPS (boto3 `use_ssl`).",
         ),
         ParameterSpec(
