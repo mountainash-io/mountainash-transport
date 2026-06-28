@@ -1,8 +1,8 @@
 """Tests for S3StorageProfile — consolidated S3-family settings.
 
 Covers the flavor discriminator matrix (aws / express / r2 / minio / b2),
-the adapter-produced boto3 kwargs, ROLE_ARN nested-envelope path, and
-regression guards for USE_SSL default + PATH_STYLE removal.
+the adapter-produced boto3 kwargs (always flat — role envelope moved to applier),
+and regression guards for USE_SSL default + PATH_STYLE removal.
 """
 
 from __future__ import annotations
