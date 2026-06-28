@@ -175,7 +175,7 @@ S3_SPEC = StorageProfileSpec(
         ),
     ],
     default_auth=CONST_AUTH_PROFILES.IAM,
-    supported_auth=frozenset({CONST_AUTH_PROFILES.IAM, CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.NONE}),
+    supported_auth=frozenset({CONST_AUTH_PROFILES.IAM, CONST_AUTH_PROFILES.NONE}),
     metadata={
         "flavor_endpoints": {
             "aws": None,

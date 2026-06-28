@@ -158,6 +158,67 @@ class TestCreateConnectionSFTP:
         assert isinstance(conn, SFTPConnection)
 
 
+class _FakeS3SpecProfile:
+    """S3-like profile whose __spec__ carries a real supported_auth set."""
+    class __spec__:
+        from mountainash_auth_client import CONST_AUTH_PROFILES as _C
+        provider_type = "s3"
+        supported_auth = frozenset({_C.IAM, _C.NONE})
+
+    def emit(self, target=None, *, base=None):
+        return {**(base or {}), "service_name": "s3", "region_name": "us-east-1"}
+
+    def to_handler_kwargs(self):
+        return {"service_name": "s3", "region_name": "us-east-1"}
+
+    def get_connection_url(self):
+        return "s3://b/k"
+
+
+class TestSupportedAuthEnforcement:
+    def test_auth_kind_maps_profiles(self):
+        from mountainash_auth_client import (
+            CONST_AUTH_PROFILES, IAMAuthProfile, NoAuthProfile, TokenAuthProfile,
+        )
+        from mountainash_transport.connections import _auth_kind
+        assert _auth_kind(None) is CONST_AUTH_PROFILES.NONE
+        assert _auth_kind(NoAuthProfile()) is CONST_AUTH_PROFILES.NONE
+        assert _auth_kind(IAMAuthProfile(ACCESS_KEY_ID="a", SECRET_ACCESS_KEY="b")) is CONST_AUTH_PROFILES.IAM
+        assert _auth_kind(TokenAuthProfile(TOKEN="t")) is CONST_AUTH_PROFILES.TOKEN
+
+    def test_token_on_s3_rejected(self):
+        from mountainash_auth_client import TokenAuthProfile
+        from mountainash_transport.connections.errors import UnsupportedAuthProfileError
+        with pytest.raises(UnsupportedAuthProfileError):
+            create_connection(_FakeS3SpecProfile(), TokenAuthProfile(TOKEN="t"))
+
+    def test_iam_on_s3_allowed(self):
+        conn = create_connection(_FakeS3SpecProfile(), IAMAuthProfile(ACCESS_KEY_ID="a", SECRET_ACCESS_KEY="b"))
+        assert conn._connect_kwargs["aws_access_key_id"] == "a"
+
+    def test_specless_fake_skips_enforcement(self):
+        # FakeHTTPProfile.__spec__ has no supported_auth → enforcement skipped,
+        # preserving the factory's tolerance for bare ProfileProtocol impls.
+        # JWT would be outside http's real set {NONE,TOKEN,PASSWORD}; the specless
+        # fake has no set so it passes (and JWTAuthProfile emits a Bearer on HTTP,
+        # so dispatch succeeds — unlike TokenAuthProfile on a BOTO fake, whose
+        # emit(BOTO) fails closed).
+        from mountainash_auth_client import JWTAuthProfile
+        conn = create_connection(FakeHTTPProfile(), JWTAuthProfile(TOKEN="jw7"))
+        assert conn is not None
+
+
+class TestSftpNoneAllowed:
+    def test_real_sftp_profile_accepts_no_auth(self):
+        # SFTP's set now includes NONE; SSH-agent / default-key path must survive
+        # enforcement. Uses the real profile so __spec__.supported_auth is live.
+        from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+        from mountainash_transport.connections.sftp import SFTPConnection
+        prof = SFTPStorageProfile(HOST="h.example.com", USERNAME="u")
+        conn = create_connection(prof, auth_profile=None)
+        assert isinstance(conn, SFTPConnection)
+
+
 class TestCreateTunnelledConnection:
     @patch("mountainash_transport.connections.tunnel._start_forwarder")
     def test_factory_creates_tunnelled_connection(self, mock_forwarder):

@@ -89,7 +89,7 @@ GITHUB_REPO_SPEC = StorageProfileSpec(
         ),
     ],
     default_auth=CONST_AUTH_PROFILES.TOKEN,
-    supported_auth=frozenset({CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.OAUTH2, CONST_AUTH_PROFILES.JWT, CONST_AUTH_PROFILES.NONE}),
+    supported_auth=frozenset({CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.JWT, CONST_AUTH_PROFILES.NONE}),
     implemented=False,
 )
 

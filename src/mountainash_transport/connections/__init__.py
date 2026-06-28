@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_auth_client import CONST_AUTH_PROFILES
 from mountainash_auth_client.targets import TargetFamily
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -31,6 +32,20 @@ from .tunnel import TunnelledConnection, _PatchedEndpointProfile
 if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
     from mountainash_transport._core.protocols import ConnectionProtocol
+
+
+def _auth_kind(auth_profile: "AuthProfile | None") -> CONST_AUTH_PROFILES:
+    """Derive the auth mode from an auth profile's spec provider_type.
+
+    None → NONE. Every *AuthProfile's __spec__.provider_type string is a
+    CONST_AUTH_PROFILES member value (e.g. "iam", "token", "none").
+    """
+    if auth_profile is None:
+        return CONST_AUTH_PROFILES.NONE
+    provider_type = getattr(getattr(auth_profile, "__spec__", None), "provider_type", None)
+    if provider_type is None:
+        return CONST_AUTH_PROFILES.NONE
+    return CONST_AUTH_PROFILES(str(provider_type))
 
 
 def _provider_type_from_profile(profile: ProfileProtocol) -> CONST_STORAGE_PROVIDER_TYPE | None:
@@ -136,6 +151,19 @@ def create_connection(
         from .errors import UnsupportedAuthProfileError
 
         raise UnsupportedAuthProfileError(type(auth_profile).__name__)
+
+    spec = getattr(profile, "__spec__", None)
+    supported = getattr(spec, "supported_auth", None)
+    if supported is not None:
+        mode = _auth_kind(auth_profile)
+        if mode not in supported:
+            from .errors import UnsupportedAuthProfileError
+            name = type(auth_profile).__name__ if auth_profile else "NoAuth"
+            raise UnsupportedAuthProfileError(
+                name,
+                reason=f"mode {mode.value!r} not in supported_auth "
+                       f"{sorted(m.value for m in supported)}",
+            )
 
     provider_type = _provider_type_from_profile(profile)
     family = _family_for_provider(provider_type)

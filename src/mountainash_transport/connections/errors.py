@@ -53,10 +53,13 @@ class UnsupportedAuthProfileError(TransportConnectionError):
     OAuth-server coordinates) instead.
     """
 
-    def __init__(self, profile_name: str) -> None:
+    def __init__(self, profile_name: str, *, reason: str | None = None) -> None:
         self.profile_name = profile_name
-        super().__init__(
-            f"{profile_name} is not supported by transport's create_connection; "
-            "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
-            "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
-        )
+        if reason is not None:
+            super().__init__(f"{profile_name} is not supported: {reason}")
+        else:
+            super().__init__(
+                f"{profile_name} is not supported by transport's create_connection; "
+                "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
+                "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
+            )
