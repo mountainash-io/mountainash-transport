@@ -98,33 +98,50 @@ def _family_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) -> T
     return _PROVIDER_FAMILY_MAP.get(provider_str)
 
 
+_NON_STS_FLAVORS = frozenset({"r2", "minio", "b2"})
+
+
 def _emit_kwargs(
     profile: ProfileProtocol,
     auth_profile: AuthProfile | None,
     family: TargetFamily | None,
 ) -> dict[str, t.Any]:
-    """Assemble connection kwargs: storage config via emit(family), then auth
-    credentials layered on the same family.
-
-    family is None (Local / unmapped) → no SDK emission; fall back to
-    to_handler_kwargs (Local keeps its real method). For the S3 assume-role
-    envelope (nested base_kwargs), credentials emit onto the inner base_kwargs.
-    """
+    """Assemble connection kwargs. For BOTO with ROLE_ARN/PROFILE_NAME, build a
+    Session-instruction envelope (consumed by S3Connection); otherwise layer
+    credentials flat. Performs NO I/O."""
     from mountainash_auth_client import NoAuthProfile
 
     if family is None:
         return profile.to_handler_kwargs()
 
-    # Profiles emit SDK config via emit(family). ProfileProtocol's base contract
-    # is to_handler_kwargs-only (by design — see test_profile_protocol), so a
-    # bare protocol implementer without emit() falls back to to_handler_kwargs,
-    # preserving the factory's pre-Phase-4 tolerance for any ProfileProtocol.
     emit = getattr(profile, "emit", None)
     base = emit(family) if callable(emit) else profile.to_handler_kwargs()
+
     if auth_profile is None or isinstance(auth_profile, NoAuthProfile):
         return base
-    if "base_kwargs" in base:
-        return {**base, "base_kwargs": auth_profile.emit(family, base=base["base_kwargs"])}
+
+    if family is TargetFamily.BOTO:
+        role_arn = getattr(auth_profile, "ROLE_ARN", None)
+        profile_name = getattr(auth_profile, "PROFILE_NAME", None)
+        if role_arn or profile_name:
+            flavor = getattr(profile, "FLAVOR", "aws")
+            if role_arn and flavor in _NON_STS_FLAVORS:
+                raise ValueError(
+                    f"assume-role (ROLE_ARN) is not supported for S3 flavor {flavor!r}; "
+                    "only aws/express reach AWS STS."
+                )
+            session: dict[str, t.Any] = dict(auth_profile.emit(family))  # aws_* creds or {}
+            if profile_name:
+                session["profile_name"] = profile_name
+            if "region_name" in base:
+                session["region_name"] = base["region_name"]
+            return {
+                "client_config": base,
+                "session": session,
+                "role_arn": role_arn,
+                "session_name": "mountainash-transport",
+            }
+
     return auth_profile.emit(family, base=base)
 
 
