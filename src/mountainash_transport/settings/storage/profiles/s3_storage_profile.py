@@ -147,13 +147,6 @@ S3_SPEC = StorageProfileSpec(
             description="Whether to verify SSL certificates.",
         ),
         ParameterSpec(
-            name="ROLE_ARN",
-            type=str,
-            tier="advanced",
-            default=None,
-            description="IAM Role ARN to assume via STS before creating the client.",
-        ),
-        ParameterSpec(
             name="CONNECT_TIMEOUT",
             type=t.Optional[float],
             tier="advanced",
@@ -212,7 +205,6 @@ def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[s
     accelerate = bool(getattr(profile, "ACCELERATE_ENDPOINT", False))
     dualstack = bool(getattr(profile, "DUALSTACK_ENDPOINT", False))
     verify_ssl = getattr(profile, "VERIFY_SSL", True)
-    role_arn = getattr(profile, "ROLE_ARN", None)
 
     effective_region = "auto" if flavor == "r2" else region
 
@@ -246,12 +238,6 @@ def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[s
             config_kwargs["read_timeout"] = read_timeout
         base["config"] = _botocore_config.Config(**config_kwargs)
 
-    if role_arn:
-        return {
-            "base_kwargs": base,
-            "role_arn": role_arn,
-            "session_name": "mountainash-transport",
-        }
     return base
 
 

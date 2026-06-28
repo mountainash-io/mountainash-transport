@@ -161,26 +161,16 @@ class TestS3HandlerKwargsMatrix:
 
 
 @pytest.mark.unit
-class TestS3RoleArnEnvelope:
-    """ROLE_ARN path returns a nested ``{base_kwargs, role_arn, session_name}`` dict."""
+class TestS3RoleArnRemoved:
+    def test_role_arn_not_a_field(self):
+        assert "ROLE_ARN" not in S3StorageProfile.model_fields
 
-    def test_role_arn_produces_nested_envelope(self):
-        s = _make(
-            "aws",
-            ROLE_ARN="arn:aws:iam::123456789012:role/MyRole",
-        )
-        kw = s.to_handler_kwargs()
-        assert kw["role_arn"] == "arn:aws:iam::123456789012:role/MyRole"
-        assert "base_kwargs" in kw
-        assert "session_name" in kw
-        assert kw["base_kwargs"]["service_name"] == "s3"
-
-    def test_no_role_arn_flat_dict(self):
-        """Absent ROLE_ARN yields a flat dict — not the envelope."""
-        s = _make("aws")
-        kw = s.to_handler_kwargs()
-        assert "role_arn" not in kw
-        assert "base_kwargs" not in kw
+    def test_emit_is_always_flat(self):
+        # Even constructed without any role concept, emit never nests base_kwargs.
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1")
+        out = p.emit(TargetFamily.BOTO)
+        assert "base_kwargs" not in out
+        assert "role_arn" not in out
 
 
 @pytest.mark.unit
@@ -301,19 +291,6 @@ class TestS3EmitGolden:
         _, cfg = _split_config(p.emit(TargetFamily.BOTO))
         assert cfg.connect_timeout == 3.0
         assert cfg.read_timeout == 7.0
-
-    def test_role_arn_nested_envelope(self):
-        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1",
-                             ROLE_ARN="arn:aws:iam::123:role/r")
-        out = p.emit(TargetFamily.BOTO)
-        assert out["role_arn"] == "arn:aws:iam::123:role/r"
-        assert out["session_name"] == "mountainash-transport"
-        inner_flat, inner_cfg = _split_config(out["base_kwargs"])
-        assert inner_flat == {
-            "service_name": "s3", "region_name": "us-east-1",
-            "use_ssl": True, "verify": True,
-        }
-        assert inner_cfg.s3 == {"addressing_style": "auto"}
 
     def test_adapter_is_sole_source_of_region_use_ssl_endpoint(self):
         # REGION/USE_SSL/ENDPOINT_URL are computed by the adapter, not by driver_key
