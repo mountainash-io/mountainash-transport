@@ -128,6 +128,8 @@ class TestS3ConnectionAssumeRole:
             _, fkwargs = MkFetcher.call_args
             assert fkwargs["role_arn"] == "arn:aws:iam::123:role/r"
             assert fkwargs["extra_args"] == {"RoleSessionName": "mountainash-transport"}
+            assert fkwargs["source_credentials"] is source._session.get_credentials.return_value
+            assert callable(fkwargs["client_creator"])
             # refreshable creds attached to the target botocore session
             assert target._credentials is MkCreds.return_value
 
