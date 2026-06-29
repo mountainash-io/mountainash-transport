@@ -1,8 +1,8 @@
 """Tests for S3StorageProfile — consolidated S3-family settings.
 
 Covers the flavor discriminator matrix (aws / express / r2 / minio / b2),
-the adapter-produced boto3 kwargs, ROLE_ARN nested-envelope path, and
-regression guards for USE_SSL default + PATH_STYLE removal.
+the adapter-produced boto3 kwargs (always flat — role envelope moved to applier),
+and regression guards for USE_SSL default + PATH_STYLE removal.
 """
 
 from __future__ import annotations
@@ -161,26 +161,16 @@ class TestS3HandlerKwargsMatrix:
 
 
 @pytest.mark.unit
-class TestS3RoleArnEnvelope:
-    """ROLE_ARN path returns a nested ``{base_kwargs, role_arn, session_name}`` dict."""
+class TestS3RoleArnRemoved:
+    def test_role_arn_not_a_field(self):
+        assert "ROLE_ARN" not in S3StorageProfile.model_fields
 
-    def test_role_arn_produces_nested_envelope(self):
-        s = _make(
-            "aws",
-            ROLE_ARN="arn:aws:iam::123456789012:role/MyRole",
-        )
-        kw = s.to_handler_kwargs()
-        assert kw["role_arn"] == "arn:aws:iam::123456789012:role/MyRole"
-        assert "base_kwargs" in kw
-        assert "session_name" in kw
-        assert kw["base_kwargs"]["service_name"] == "s3"
-
-    def test_no_role_arn_flat_dict(self):
-        """Absent ROLE_ARN yields a flat dict — not the envelope."""
-        s = _make("aws")
-        kw = s.to_handler_kwargs()
-        assert "role_arn" not in kw
-        assert "base_kwargs" not in kw
+    def test_emit_is_always_flat(self):
+        # Even constructed without any role concept, emit never nests base_kwargs.
+        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1")
+        out = p.emit(TargetFamily.BOTO)
+        assert "base_kwargs" not in out
+        assert "role_arn" not in out
 
 
 @pytest.mark.unit
@@ -302,26 +292,20 @@ class TestS3EmitGolden:
         assert cfg.connect_timeout == 3.0
         assert cfg.read_timeout == 7.0
 
-    def test_role_arn_nested_envelope(self):
-        p = S3StorageProfile(FLAVOR="aws", REGION="us-east-1",
-                             ROLE_ARN="arn:aws:iam::123:role/r")
-        out = p.emit(TargetFamily.BOTO)
-        assert out["role_arn"] == "arn:aws:iam::123:role/r"
-        assert out["session_name"] == "mountainash-transport"
-        inner_flat, inner_cfg = _split_config(out["base_kwargs"])
-        assert inner_flat == {
-            "service_name": "s3", "region_name": "us-east-1",
-            "use_ssl": True, "verify": True,
-        }
-        assert inner_cfg.s3 == {"addressing_style": "auto"}
+    def test_adapter_is_sole_source_of_region_use_ssl_endpoint(self):
+        # REGION/USE_SSL/ENDPOINT_URL are computed by the adapter, not by driver_key
+        # passthrough. r2 forces region_name='auto'; aws omits endpoint_url; USE_SSL
+        # flows through the adapter.
+        aws = S3StorageProfile(FLAVOR="aws", REGION="eu-west-1", USE_SSL=False)
+        flat, _ = _split_config(aws.emit(TargetFamily.BOTO))
+        assert flat["region_name"] == "eu-west-1"
+        assert flat["use_ssl"] is False
+        assert "endpoint_url" not in flat                      # aws: popped by adapter
 
-    def test_driver_keys_preserved_in_emit(self):
-        # The 2-arg adapter composes on driver_key output (use_ssl/region_name),
-        # not orphaning it.
-        p = S3StorageProfile(FLAVOR="aws", REGION="eu-west-1", USE_SSL=False)
-        flat, _ = _split_config(p.emit(TargetFamily.BOTO))
-        assert flat["region_name"] == "eu-west-1"   # REGION driver_key
-        assert flat["use_ssl"] is False             # USE_SSL driver_key
+        r2 = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="acct123", REGION="eu-west-1")
+        flat_r2, _ = _split_config(r2.emit(TargetFamily.BOTO))
+        assert flat_r2["region_name"] == "auto"               # adapter overrides REGION
+        assert flat_r2["endpoint_url"] == "https://acct123.r2.cloudflarestorage.com"
 
     def test_emit_no_target_fails_closed(self):
         import pytest

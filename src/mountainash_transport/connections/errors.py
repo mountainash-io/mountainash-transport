@@ -46,17 +46,23 @@ class AuthorizationRequired(TransportConnectionError):
 class UnsupportedAuthProfileError(TransportConnectionError):
     """The connection factory was given an auth profile it does not handle.
 
-    Transport's ``create_connection`` builds storage connections; OAuth
-    *authorization* flows are not a transport concern. Construct
-    ``mountainash_auth_client``'s ``OAuth2Connection``/``OAuth1Connection`` with
-    an ``OAuth2ProviderProfile``/``OAuth1ProviderProfile`` (which carry the
-    OAuth-server coordinates) instead.
+    Raised in two cases. First, OAuth: transport's ``create_connection`` builds
+    storage connections; OAuth *authorization* flows are not a transport
+    concern, so construct ``mountainash_auth_client``'s
+    ``OAuth2Connection``/``OAuth1Connection`` with an
+    ``OAuth2ProviderProfile``/``OAuth1ProviderProfile`` (which carry the
+    OAuth-server coordinates) instead. Second, ``supported_auth`` enforcement:
+    the auth mode is valid but outside the set a provider declares it accepts
+    (passed via ``reason``).
     """
 
-    def __init__(self, profile_name: str) -> None:
+    def __init__(self, profile_name: str, *, reason: str | None = None) -> None:
         self.profile_name = profile_name
-        super().__init__(
-            f"{profile_name} is not supported by transport's create_connection; "
-            "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
-            "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
-        )
+        if reason is not None:
+            super().__init__(f"{profile_name} is not supported: {reason}")
+        else:
+            super().__init__(
+                f"{profile_name} is not supported by transport's create_connection; "
+                "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
+                "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
+            )

@@ -88,81 +88,54 @@ class TestIntentionalDivergence:
 
 
 @pytest.mark.unit
-class TestS3RoleArnLayering:
-    """Credentials layer into the nested base_kwargs; the assume-role envelope is
-    preserved.
+class TestS3AssumeRoleEnvelope:
+    """The L3 applier builds the Session-instruction envelope from the auth
+    profile (ROLE_ARN/PROFILE_NAME). S3Connection consumes it (see
+    tests/connections/test_s3_connection.py)."""
 
-    NOTE: ``S3Connection`` does NOT yet consume this envelope (no STS AssumeRole
-    at connect time) — that is a pre-existing unimplemented gap, out of Phase 3
-    scope. This test asserts only the credential layering the spec requires.
-    """
+    def _profile(self, flavor="aws"):
+        from mountainash_transport.settings.storage.profiles import S3StorageProfile
+        return S3StorageProfile(FLAVOR=flavor, REGION="us-east-1",
+                                **({"ACCOUNT_ID": "a"} if flavor == "r2" else {}),
+                                **({"ENDPOINT_URL": "http://m:9000"} if flavor == "minio" else {}))
 
-    def test_credentials_land_in_base_kwargs(self):
+    def _emit(self, profile, auth):
         from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as P
         from mountainash_transport.connections import _emit_kwargs, _family_for_provider
+        return _emit_kwargs(profile, auth, _family_for_provider(P.S3))
 
-        class _Nested:
-            class __spec__:
-                provider_type = "s3"
-
-            def to_handler_kwargs(self):
-                return {
-                    "base_kwargs": {"service_name": "s3", "region_name": "us-east-1"},
-                    "role_arn": "arn:aws:iam::123:role/r",
-                    "session_name": "mountainash-transport",
-                }
-
-            def emit(self, target=None, *, base=None):
-                return {
-                    **(base or {}),
-                    "base_kwargs": {"service_name": "s3", "region_name": "us-east-1"},
-                    "role_arn": "arn:aws:iam::123:role/r",
-                    "session_name": "mountainash-transport",
-                }
-
-            def get_connection_url(self):
-                return "s3://b/k"
-
-        out = _emit_kwargs(
-            _Nested(),
-            IAMAuthProfile(ACCESS_KEY_ID="AKIA", SECRET_ACCESS_KEY="sk"),
-            _family_for_provider(P.S3),
-        )
-        # Outer assume-role envelope untouched.
+    def test_role_arn_builds_envelope(self):
+        out = self._emit(self._profile(), IAMAuthProfile(
+            ACCESS_KEY_ID="AKIA", SECRET_ACCESS_KEY="sk",
+            ROLE_ARN="arn:aws:iam::123:role/r"))
         assert out["role_arn"] == "arn:aws:iam::123:role/r"
         assert out["session_name"] == "mountainash-transport"
-        # Credentials landed inside base_kwargs, not at the top level.
-        assert out["base_kwargs"]["aws_access_key_id"] == "AKIA"
-        assert out["base_kwargs"]["aws_secret_access_key"] == "sk"
-        assert "aws_access_key_id" not in out
+        assert out["client_config"]["service_name"] == "s3"
+        assert out["session"]["aws_access_key_id"] == "AKIA"
+        assert out["session"]["region_name"] == "us-east-1"
 
-    def test_layering_does_not_mutate_caller_base_kwargs(self):
-        # Copy-on-write: the profile's returned base_kwargs dict is not mutated
-        # in place by the credential emission.
-        from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as P
-        from mountainash_transport.connections import _emit_kwargs, _family_for_provider
+    def test_keyless_role_arn_is_ambient(self):
+        out = self._emit(self._profile(), IAMAuthProfile(ROLE_ARN="arn:aws:iam::123:role/r"))
+        assert out["role_arn"] == "arn:aws:iam::123:role/r"
+        assert "aws_access_key_id" not in out["session"]   # ambient bootstrap
 
-        inner = {"service_name": "s3"}
+    def test_profile_name_builds_envelope_without_role(self):
+        out = self._emit(self._profile(), IAMAuthProfile(PROFILE_NAME="dev"))
+        assert out["role_arn"] is None
+        assert out["session"]["profile_name"] == "dev"
 
-        class _Nested:
-            class __spec__:
-                provider_type = "s3"
+    def test_profile_name_allowed_on_r2(self):
+        out = self._emit(self._profile("r2"), IAMAuthProfile(PROFILE_NAME="dev"))
+        assert out["session"]["profile_name"] == "dev"   # NOT guarded
 
-            def to_handler_kwargs(self):
-                return {"base_kwargs": inner, "role_arn": "arn:x", "session_name": "s"}
+    def test_role_arn_on_r2_raises(self):
+        with pytest.raises(ValueError, match="assume-role"):
+            self._emit(self._profile("r2"), IAMAuthProfile(ROLE_ARN="arn:aws:iam::123:role/r"))
 
-            def emit(self, target=None, *, base=None):
-                return {**(base or {}), "base_kwargs": inner, "role_arn": "arn:x", "session_name": "s"}
-
-            def get_connection_url(self):
-                return "s3://b/k"
-
-        _emit_kwargs(
-            _Nested(),
-            IAMAuthProfile(ACCESS_KEY_ID="AKIA", SECRET_ACCESS_KEY="sk"),
-            _family_for_provider(P.S3),
-        )
-        assert "aws_access_key_id" not in inner
+    def test_plain_iam_stays_flat(self):
+        out = self._emit(self._profile(), IAMAuthProfile(ACCESS_KEY_ID="AKIA", SECRET_ACCESS_KEY="sk"))
+        assert "client_config" not in out          # flat path
+        assert out["aws_access_key_id"] == "AKIA"
 
 
 @pytest.mark.unit

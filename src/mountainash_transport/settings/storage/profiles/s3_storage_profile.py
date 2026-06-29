@@ -78,7 +78,6 @@ S3_SPEC = StorageProfileSpec(
             type=str,
             tier="core",
             default="us-east-1",
-            driver_key="region_name",
             description="AWS-style region name (e.g. us-east-1).",
         ),
         ParameterSpec(
@@ -106,7 +105,6 @@ S3_SPEC = StorageProfileSpec(
             type=str,
             tier="advanced",
             default=None,
-            driver_key="endpoint_url",
             description=(
                 "Override the default endpoint URL. Required for FLAVOR='minio'. "
                 "Auto-derived from ACCOUNT_ID / REGION for r2 / b2."
@@ -117,7 +115,6 @@ S3_SPEC = StorageProfileSpec(
             type=bool,
             tier="advanced",
             default=True,
-            driver_key="use_ssl",
             description="Whether to use HTTPS (boto3 `use_ssl`).",
         ),
         ParameterSpec(
@@ -150,13 +147,6 @@ S3_SPEC = StorageProfileSpec(
             description="Whether to verify SSL certificates.",
         ),
         ParameterSpec(
-            name="ROLE_ARN",
-            type=str,
-            tier="advanced",
-            default=None,
-            description="IAM Role ARN to assume via STS before creating the client.",
-        ),
-        ParameterSpec(
             name="CONNECT_TIMEOUT",
             type=t.Optional[float],
             tier="advanced",
@@ -178,7 +168,7 @@ S3_SPEC = StorageProfileSpec(
         ),
     ],
     default_auth=CONST_AUTH_PROFILES.IAM,
-    supported_auth=frozenset({CONST_AUTH_PROFILES.IAM, CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.NONE}),
+    supported_auth=frozenset({CONST_AUTH_PROFILES.IAM, CONST_AUTH_PROFILES.NONE}),
     metadata={
         "flavor_endpoints": {
             "aws": None,
@@ -215,7 +205,6 @@ def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[s
     accelerate = bool(getattr(profile, "ACCELERATE_ENDPOINT", False))
     dualstack = bool(getattr(profile, "DUALSTACK_ENDPOINT", False))
     verify_ssl = getattr(profile, "VERIFY_SSL", True)
-    role_arn = getattr(profile, "ROLE_ARN", None)
 
     effective_region = "auto" if flavor == "r2" else region
 
@@ -249,12 +238,6 @@ def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[s
             config_kwargs["read_timeout"] = read_timeout
         base["config"] = _botocore_config.Config(**config_kwargs)
 
-    if role_arn:
-        return {
-            "base_kwargs": base,
-            "role_arn": role_arn,
-            "session_name": "mountainash-transport",
-        }
     return base
 
 
