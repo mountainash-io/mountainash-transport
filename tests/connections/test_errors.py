@@ -126,8 +126,8 @@ class TestUnsupportedAuthProfileError:
         assert issubclass(UnsupportedAuthProfileError, TransportConnectionError)
 
     def test_message_names_the_profile(self):
-        err = UnsupportedAuthProfileError("OAuth2AuthCodeAuthProfile")
-        assert "OAuth2AuthCodeAuthProfile" in str(err)
+        err = UnsupportedAuthProfileError("OAuth2AuthProfile")
+        assert "OAuth2AuthProfile" in str(err)
         # Points callers at the right home for OAuth-authenticated connections.
         assert "auth-client" in str(err) or "ProviderProfile" in str(err)
 
