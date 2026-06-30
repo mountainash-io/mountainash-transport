@@ -14,10 +14,10 @@ from .errors import (
     ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
     TransportConnectionError, ConnectionTimeoutError,
 )
-from mountainash_auth_client.connections.oauth2.flow import OAuthFlow
-from mountainash_auth_client.connections.oauth1.flow import OAuth1Flow
-from mountainash_auth_client.connections.server.callback import LocalCallbackServer
-from mountainash_auth_client.connections.server.manual import (
+from mountainash_auth_client.oauth.oauth2.flow import OAuthFlow
+from mountainash_auth_client.oauth.oauth1.flow import OAuth1Flow
+from mountainash_auth_client.oauth.server.callback import LocalCallbackServer
+from mountainash_auth_client.oauth.server.manual import (
     extract_code_from_input, prompt_for_code,
 )
 
