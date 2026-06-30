@@ -48,10 +48,12 @@ class UnsupportedAuthProfileError(TransportConnectionError):
 
     Raised in two cases. First, OAuth: transport's ``create_connection`` builds
     storage connections; OAuth *authorization* flows are not a transport
-    concern, so construct ``mountainash_auth_client``'s
-    ``OAuth2Connection``/``OAuth1Connection`` with an
-    ``OAuth2ProviderProfile``/``OAuth1ProviderProfile`` (which carry the
-    OAuth-server coordinates) instead. Second, ``supported_auth`` enforcement:
+    concern, so acquire a token through ``mountainash_auth_client``'s lifecycle
+    seam — build an ``OAuth2TokenManager`` (OAuth1: ``OAuth1TokenManager``) with
+    an ``OAuth2ProviderProfile``/``OAuth1ProviderProfile`` (which carry the
+    OAuth-server coordinates), call ``acquire()`` for a token credential (OAuth1:
+    ``acquire_auth()`` for the request signer), and render it via ``emit(HTTP)``
+    for the consumer's HTTP transport. Second, ``supported_auth`` enforcement:
     the auth mode is valid but outside the set a provider declares it accepts
     (passed via ``reason``).
     """
@@ -63,6 +65,8 @@ class UnsupportedAuthProfileError(TransportConnectionError):
         else:
             super().__init__(
                 f"{profile_name} is not supported by transport's create_connection; "
-                "use mountainash-auth-client's OAuth2Connection/OAuth1Connection with "
-                "an OAuth2ProviderProfile/OAuth1ProviderProfile instead."
+                "acquire a token via mountainash-auth-client's OAuth2TokenManager "
+                "(OAuth1: OAuth1TokenManager) with an "
+                "OAuth2ProviderProfile/OAuth1ProviderProfile, then render it with "
+                "emit(HTTP) for your HTTP transport."
             )
