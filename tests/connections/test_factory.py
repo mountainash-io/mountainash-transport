@@ -104,9 +104,9 @@ class TestCreateConnection:
         assert isinstance(conn, HTTPConnection)
 
     def test_oauth2_auth_raises_unsupported(self):
-        from mountainash_auth_client import OAuth2AuthCodeAuthProfile
+        from mountainash_auth_client import OAuth2AuthProfile
         from mountainash_transport.connections.errors import UnsupportedAuthProfileError
-        auth = OAuth2AuthCodeAuthProfile(
+        auth = OAuth2AuthProfile(
             CLIENT_ID="cid",
             CLIENT_SECRET="csec",
             SCOPE="read",

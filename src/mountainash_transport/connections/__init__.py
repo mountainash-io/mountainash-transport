@@ -154,13 +154,12 @@ def create_connection(
     """Create the right connection for a profile + auth combination."""
     from mountainash_auth_client import (
         OAuth1AuthProfile,
-        OAuth2AuthCodeAuthProfile,
         OAuth2AuthProfile,
     )
 
     if isinstance(
         auth_profile,
-        (OAuth2AuthProfile, OAuth2AuthCodeAuthProfile, OAuth1AuthProfile),
+        (OAuth2AuthProfile, OAuth1AuthProfile),
     ):
         # OAuth authorization flows are not a transport concern — they need a
         # ProviderProfile (OAuth-server coordinates), which storage profiles
