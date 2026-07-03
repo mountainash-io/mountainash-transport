@@ -32,7 +32,6 @@ After working through this manual, you'll know how to:
 - **Use search** — the search bar (top right) is the fastest way to find a specific class, function, or concept
 - **Try the MicroSims** — when interactive simulations are available, they're the quickest way to build intuition
 - **Check the Learning Graph** — the [Learning Graph](learning-graph/index.md) shows how concepts relate, so you can see what to read next
-- **Use the API Reference** — the [API Reference](api/index.md) is auto-generated from source and covers every public module
 
 ## About mountainash-transport
 

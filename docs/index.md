@@ -18,7 +18,6 @@ The API reference tells you *what* each function does. This manual explains *why
 - **[Chapters](chapters/index.md)** — 9 chapters covering everything from foundation concepts through storage protocols, configuration, the facade pattern, transforms, and each backend (local, S3, HTTP)
 - **[Learning Graph](learning-graph/index.md)** — a dependency graph showing how concepts build on each other, so you can see what to read first
 - **[MicroSims](sims/index.md)** — interactive simulations for building hands-on intuition (coming soon)
-- **[API Reference](api/index.md)** — auto-generated documentation for every public module, class, and function
 
 ## Who This Is For
 

@@ -54,18 +54,6 @@ nav:
   - MicroSims:
       - List of MicroSims: sims/index.md
 
-  - API Reference:
-      - Overview: api/index.md
-      - Dataclasses: api/dataclasses.md
-      - Path Helpers: api/path_helpers.md
-      - Settings: api/settings.md
-      - Storage Backends: api/storage_backends.md
-      - Storage Facade: api/storage_facade.md
-      - Storage Protocols: api/storage_protocols.md
-      - Storage Registry: api/storage_registry.md
-      - Storage Transforms: api/storage_transforms.md
-      - Constants: api/constants.md
-      - Exceptions: api/exceptions.md
 
   - License: license.md
   - Contact: contact.md
@@ -97,17 +85,6 @@ theme:
 # Plugins
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: ["../../../mountainash-transport/src"]
-          options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_full_path: false
-            heading_level: 2
-            members_order: source
   # Uncomment after running `pip install "mkdocs-material[imaging]"`:
   # - social
   # Uncomment after running `pip install mkdocs-glightbox`:
