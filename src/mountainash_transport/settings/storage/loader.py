@@ -191,9 +191,13 @@ def resolve_storage(
     try:
         auth_profile = auth_cls.model_validate(auth_params)
     except ValidationError as exc:
+        summary = "; ".join(
+            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
+            for e in exc.errors(include_url=False)
+        )
         raise ProfileResolutionError(
             name,
-            f"invalid auth parameters for mode {effective_mode.value!r}: {exc}",
+            f"invalid auth parameters for mode {effective_mode.value!r}: {summary}",
         ) from exc
 
     return storage_profile, auth_profile
