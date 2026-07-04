@@ -157,7 +157,7 @@ src/mountainash_transport/
 │   ├── storage/                   # Storage-specific settings
 │   │   ├── registry.py            # STORAGE_REGISTRY
 │   │   ├── templates.py           # URL templates
-│   │   ├── loader.py              # load_storage() (WIP)
+│   │   ├── loader.py              # resolve_storage() (named-profile resolver)
 │   │   └── profiles/              # 9 per-provider profile classes
 │   └── messaging/                 # Stub — future messaging profiles
 └── storage/                       # Request/response family
@@ -227,11 +227,10 @@ tests/
 - **pydantic==2.9.2**: Data validation and settings management
 - **pydantic-settings==2.6.1**: Settings management with Pydantic
 - **universal_pathlib==0.2.2**: Universal path library for different storage systems
-- **boto3>=1.29.4,<=1.34.113**: AWS SDK for Python (upper-bounded for Taipy compat)
 - **httpx>=0.27**: HTTP client for HTTP/HTTPS storage backend
 
 ### Optional Dependencies
-- **S3** `[s3]`: s3fs, minio
+- **S3** `[s3]`: boto3, s3fs, minio (boto3 now in `[s3]` extra)
 - **GCS** `[gcs]`: google-cloud-storage, gcsfs
 - **Azure** `[azure]`: azure-storage-blob, adlfs
 - **SFTP** `[sftp]`: paramiko, smart-open[ssh]
