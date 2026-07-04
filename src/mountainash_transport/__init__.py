@@ -20,6 +20,12 @@ from .storage.protocols import (
 )
 from ._core.protocols import ConnectionProtocol
 from .settings.profile_protocol import ProfileProtocol, StorageProfileProtocol
+from .settings import (
+    AuthBlock,
+    StorageProfileBlock,
+    StorageProfilesSettings,
+    resolve_storage,
+)
 from .connections.errors import TransportConnectionError
 from .connections import (
     SSHConnection, SFTPConnection, TunnelledConnection,
@@ -92,6 +98,7 @@ __all__ = [
     "StorageEnumerateProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
     "StorageCopyProtocol", "StorageDirectoryProtocol",
     "ProfileProtocol", "StorageProfileProtocol",
+    "resolve_storage", "StorageProfilesSettings", "StorageProfileBlock", "AuthBlock",
     "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
     "PathNotFoundError", "AuthenticationError", "TransformError", "BackendNotImplementedError",
