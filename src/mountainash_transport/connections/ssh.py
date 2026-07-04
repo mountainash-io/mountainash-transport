@@ -12,9 +12,6 @@ from mountainash_transport.connections.errors import (
 )
 from .._core.protocols import ConnectionProtocol
 
-if t.TYPE_CHECKING:
-    import paramiko
-
 
 _HOST_KEY_POLICIES: dict[str, str] = {
     "reject": "RejectPolicy",
