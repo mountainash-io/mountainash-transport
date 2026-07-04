@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import socket
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,6 +25,20 @@ FAKE_SSH_KWARGS_WITH_POST_CONNECT: dict = {
 }
 
 
+@pytest.fixture
+def mock_paramiko():
+    """Stand in for the real `paramiko` module for the duration of a test.
+
+    SSHConnection.connect() does `import paramiko` lazily (to keep it out of
+    the package's top-level import graph), so patching the module out of
+    `sys.modules` — rather than patching an `ssh.paramiko` module attribute
+    that no longer exists — is what actually intercepts it.
+    """
+    mock = MagicMock()
+    with patch.dict(sys.modules, {"paramiko": mock}):
+        yield mock
+
+
 class TestSSHConnectionProtocol:
     def test_conforms_to_connection_protocol(self):
         conn = SSHConnection(FAKE_SSH_KWARGS)
@@ -31,7 +46,6 @@ class TestSSHConnectionProtocol:
 
 
 class TestSSHConnectionLifecycle:
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_connect_creates_client(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -46,7 +60,6 @@ class TestSSHConnectionLifecycle:
         assert conn.is_connected is True
         assert result is conn
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_disconnect_closes_client(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -65,12 +78,10 @@ class TestSSHConnectionLifecycle:
         assert conn.client is None
         assert conn.is_connected is False
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_disconnect_when_not_connected_is_noop(self, mock_paramiko):
         conn = SSHConnection(FAKE_SSH_KWARGS)
         conn.disconnect()  # should not raise
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_context_manager(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -83,7 +94,6 @@ class TestSSHConnectionLifecycle:
         mock_client.close.assert_called_once()
         assert conn.is_connected is False
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_connect_is_idempotent(self, mock_paramiko):
         """connect() when already connected disconnects first, then reconnects."""
         mock_client1 = MagicMock()
@@ -101,7 +111,6 @@ class TestSSHConnectionLifecycle:
 
 
 class TestSSHConnectionAuth:
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_password_passed_to_paramiko(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -114,7 +123,6 @@ class TestSSHConnectionAuth:
         call_kwargs = mock_client.connect.call_args[1]
         assert call_kwargs["password"] == "s3cr3t"
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_no_auth_no_password(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -128,7 +136,6 @@ class TestSSHConnectionAuth:
 
 
 class TestSSHConnectionHostKeyPolicy:
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_auto_add_policy_set(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -144,7 +151,6 @@ class TestSSHConnectionHostKeyPolicy:
         policy_arg = mock_client.set_missing_host_key_policy.call_args[0][0]
         assert isinstance(policy_arg, mock_paramiko.AutoAddPolicy)
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_reject_policy_set_by_default(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -157,7 +163,6 @@ class TestSSHConnectionHostKeyPolicy:
         policy_arg = mock_client.set_missing_host_key_policy.call_args[0][0]
         assert isinstance(policy_arg, mock_paramiko.RejectPolicy)
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_known_hosts_file_loaded(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -169,7 +174,6 @@ class TestSSHConnectionHostKeyPolicy:
 
         mock_client.load_host_keys.assert_called_once_with("/home/user/.ssh/known_hosts")
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_known_hosts_not_loaded_when_absent(self, mock_paramiko):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
@@ -182,7 +186,6 @@ class TestSSHConnectionHostKeyPolicy:
 
 
 class TestSSHConnectionErrorWrapping:
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_authentication_exception_wrapped(self, mock_paramiko):
         from mountainash_transport.connections.errors import TransportConnectionError
 
@@ -197,7 +200,6 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_ssh_exception_wrapped(self, mock_paramiko):
         from mountainash_transport.connections.errors import TransportConnectionError
 
@@ -211,7 +213,6 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_socket_timeout_raises_connection_timeout_error(self, mock_paramiko):
         from mountainash_transport.connections.errors import ConnectionTimeoutError
 
@@ -224,7 +225,6 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(ConnectionTimeoutError, match="SSH connection timed out"):
             conn.connect()
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_socket_gaierror_wrapped(self, mock_paramiko):
         from mountainash_transport.connections.errors import TransportConnectionError
 
@@ -237,7 +237,6 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH DNS resolution failed"):
             conn.connect()
 
-    @patch("mountainash_transport.connections.ssh.paramiko")
     def test_oserror_wrapped(self, mock_paramiko):
         from mountainash_transport.connections.errors import TransportConnectionError
 
@@ -250,10 +249,10 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
-    @patch("mountainash_transport.connections.ssh.paramiko", new=None)
     def test_paramiko_none_raises_transport_connection_error(self):
         from mountainash_transport.connections.errors import TransportConnectionError
 
-        conn = SSHConnection(FAKE_SSH_KWARGS)
-        with pytest.raises(TransportConnectionError, match="paramiko is required"):
-            conn.connect()
+        with patch.dict(sys.modules, {"paramiko": None}):
+            conn = SSHConnection(FAKE_SSH_KWARGS)
+            with pytest.raises(TransportConnectionError, match="paramiko is required"):
+                conn.connect()

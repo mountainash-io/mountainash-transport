@@ -43,7 +43,7 @@ class StorageProfileSpec(ProfileSpec):
         supports_streaming: Whether the backend supports streaming reads/writes.
         supports_multipart: Whether the backend supports multipart upload.
         read_only: Whether the backend is read-only (``GitHubRepoSettings`` = True).
-        default_auth: Auth mode used by ``load_storage()`` when caller doesn't specify.
+        default_auth: Auth mode used by ``resolve_storage()`` when caller doesn't specify.
         supported_auth: Full set of valid auth modes for this provider.
     """
 

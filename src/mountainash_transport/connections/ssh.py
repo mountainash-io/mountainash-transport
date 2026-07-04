@@ -12,11 +12,6 @@ from mountainash_transport.connections.errors import (
 )
 from .._core.protocols import ConnectionProtocol
 
-try:
-    import paramiko
-except ImportError:
-    paramiko = None  # type: ignore[assignment]
-
 
 _HOST_KEY_POLICIES: dict[str, str] = {
     "reject": "RejectPolicy",
@@ -33,11 +28,13 @@ class SSHConnection(ConnectionProtocol):
         self._client: t.Any = None
 
     def connect(self) -> Self:
-        if paramiko is None:
+        try:
+            import paramiko
+        except ImportError as exc:
             raise TransportConnectionError(
                 "paramiko is required for SSH connections — "
                 "install with: pip install mountainash-transport[sftp]"
-            )
+            ) from exc
 
         if self._client is not None:
             self.disconnect()

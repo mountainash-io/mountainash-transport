@@ -33,3 +33,23 @@ class TransformError(StorageError):
 
 class BackendNotImplementedError(StorageError):
     """Raised when a storage provider has no backend implementation yet."""
+
+
+class ProfileResolutionError(StorageError):
+    """A named storage profile could not be materialised from configuration."""
+
+    def __init__(self, name: str, reason: str) -> None:
+        self.name = name
+        self.reason = reason
+        super().__init__(f"Cannot resolve storage profile {name!r}: {reason}")
+
+
+class ProfileNotFoundError(ProfileResolutionError):
+    """The named storage profile is absent from configuration."""
+
+    def __init__(self, name: str, available: list[str]) -> None:
+        self.available = available
+        super().__init__(
+            name,
+            f"not found in configuration. Available: {sorted(available) or '(none)'}",
+        )

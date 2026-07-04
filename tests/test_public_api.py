@@ -162,3 +162,20 @@ class TestHttpTransportPublicApi:
         ]
         for name in http_names:
             assert name in mountainash_transport.__all__, f"{name!r} missing from __all__"
+
+
+def test_resolver_public_api():
+    import mountainash_transport as mt
+
+    assert callable(mt.resolve_storage)
+    for name in ("StorageProfilesSettings", "StorageProfileBlock", "AuthBlock",
+                 "ProfileResolutionError", "ProfileNotFoundError"):
+        assert hasattr(mt, name), name
+
+
+def test_legacy_settings_surface_removed():
+    import mountainash_transport.settings as s
+
+    assert not hasattr(s, "StorageAuthTemplates")
+    assert not hasattr(s, "StorageAuthError")
+    assert not hasattr(s, "load_storage")

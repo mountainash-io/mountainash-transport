@@ -9,17 +9,6 @@ from mountainash_transport.connections.errors import TransportConnectionError
 
 from .._core.protocols import ConnectionProtocol
 
-try:
-    import botocore.session
-    from botocore.credentials import (
-        AssumeRoleCredentialFetcher,
-        DeferredRefreshableCredentials,
-    )
-except ImportError:  # pragma: no cover - botocore ships with boto3
-    botocore = None  # type: ignore[assignment]
-    AssumeRoleCredentialFetcher = None  # type: ignore[assignment]
-    DeferredRefreshableCredentials = None  # type: ignore[assignment]
-
 
 class S3Connection(ConnectionProtocol):
     """Creates an authenticated boto3 S3 client from connect kwargs + auth strategy."""
@@ -74,6 +63,17 @@ class S3Connection(ConnectionProtocol):
 
         if not role_arn:
             return source.client("s3", **client_config)
+
+        try:
+            import botocore.session
+            from botocore.credentials import (
+                AssumeRoleCredentialFetcher,
+                DeferredRefreshableCredentials,
+            )
+        except ImportError as exc:  # pragma: no cover - botocore ships with boto3
+            raise TransportConnectionError(
+                "botocore is required for assume-role S3 connections"
+            ) from exc
 
         bc = source._session
         verify = client_config.get("verify", True)

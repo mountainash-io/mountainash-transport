@@ -118,8 +118,8 @@ class TestS3ConnectionAssumeRole:
     def test_assume_role_builds_refreshable_client(self):
         with patch("boto3.Session") as MkSession, \
              patch("botocore.session.get_session") as mk_get, \
-             patch("mountainash_transport.connections.s3.AssumeRoleCredentialFetcher") as MkFetcher, \
-             patch("mountainash_transport.connections.s3.DeferredRefreshableCredentials") as MkCreds:
+             patch("botocore.credentials.AssumeRoleCredentialFetcher") as MkFetcher, \
+             patch("botocore.credentials.DeferredRefreshableCredentials") as MkCreds:
             source = MkSession.return_value
             source._session.get_credentials.return_value = MagicMock()  # ambient present
             target = mk_get.return_value
