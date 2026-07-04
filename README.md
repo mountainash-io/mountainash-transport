@@ -10,7 +10,7 @@ Unified file operations across multiple storage systems. Read, write, list, copy
 - **Scheme-driven dispatch** — `StorageFacade.from_path("s3://bucket/key")` infers the provider from the URL scheme
 - **8 granular protocols** — backends implement Connection, Read, Write, List, Delete, Metadata, Copy, and Directory à la carte
 - **Stream transforms** — composable `Pipeline` of `Gzip` and `GPG` transforms for compression and encryption
-- **Suffix-aware inference** — `read_bytes("s3://bucket/data.parquet.gz", infer=True)` auto-decompresses based on file extensions
+- **Suffix-aware inference** — `StorageFacade.from_path("s3://bucket/data.parquet.gz").read("s3://bucket/data.parquet.gz", infer=True)` auto-decompresses based on file extensions
 - **Profile + auth separation** — storage configuration (profile) and authentication (auth profile) are independent concerns
 - **Three-layer connections** — auth strategies inject credentials, connections create SDK clients, backends are stateless operations
 - **SSH tunnelling** — `TunnelledConnection` routes any backend through an SSH bastion via local TCP forwarding

@@ -12,7 +12,7 @@ Settings follow the **profile + auth separation pattern** — see the Settings A
 
 ### Core Components
 
-- **StorageFacade**: Unified API class providing consistent file operations across storage backends, with `from_path()` for scheme-driven dispatch and `read_bytes()` convenience function
+- **StorageFacade**: Unified API class providing consistent file operations across storage backends, with `from_path()` for scheme-driven dispatch and `read()` method for reading bytes
 - **StorageBackend (registry)**: Per-provider backend implementations registered against `CONST_STORAGE_PROVIDER_TYPE` values
 - **Storage protocols**: 8 granular protocols (Read/Write/List/Delete/Metadata/Copy/Directory/Connection) that backends implement à la carte
 - **Profile-driven settings**: Per-provider profile classes that produce SDK-ready kwargs; auth is a separate parameter, not embedded in the profile
@@ -96,18 +96,20 @@ The same `Pipeline` instance is used on both read and write paths; the facade ap
 ### Suffix-Aware Transform Inference (Phase 6, 2026-04-18)
 
 `infer_pipeline(path, gpg=..., gzip=...)` parses a path's suffix chain
-right-to-left into a `Pipeline`. `read_bytes` accepts an opt-in `infer=True`
+right-to-left into a `Pipeline`. `StorageFacade.read()` accepts an opt-in `infer=True`
 flag that routes through this inference.
 
 ```python
-from mountainash_transport import read_bytes, GPG
+from mountainash_transport import StorageFacade, GPG
 
 # Auto-decompress a gzip-encoded file.
-plaintext = read_bytes("s3://bucket/data.parquet.gz", infer=True)
+facade = StorageFacade.from_path("s3://bucket/data.parquet.gz")
+plaintext = facade.read("s3://bucket/data.parquet.gz", infer=True)
 
 # Auto-decrypt-then-decompress. gpg= supplies key material — a .gpg-family
 # suffix without an instance raises ValueError.
-plaintext = read_bytes(
+facade = StorageFacade.from_path("s3://bucket/data.parquet.gz.gpg")
+plaintext = facade.read(
     "s3://bucket/data.parquet.gz.gpg",
     infer=True,
     gpg=GPG(gnupghome="/path/to/keyring"),
@@ -167,7 +169,7 @@ src/mountainash_transport/
     │   ├── local/                 # LocalStorageBackend (all 8 protocols)
     │   ├── s3/                    # S3StorageBackend (flavor-dispatched)
     │   └── sftp/                  # SFTPStorageBackend (read/write/list/delete/metadata)
-    ├── facade/                    # StorageFacade, from_path(), cross_backend, read_bytes
+    ├── facade/                    # StorageFacade, from_path(), cross_backend, read/write
     ├── path_helpers/              # StoragePath, SchemeSpec, suffixes, S3 helpers
     └── registry/                  # get_storage_backend, get_registered_backends, detect_provider_from_path
 ```
@@ -207,7 +209,7 @@ tests/
 │   ├── test_local.py                           # LocalStorageBackend
 │   ├── test_s3.py                              # S3StorageBackend
 │   └── test_sftp.py                            # SFTPStorageBackend
-├── storage_facade/                             # Facade, from_path, read_bytes, infer
+├── storage_facade/                             # Facade, from_path, read/write, infer
 ├── storage_protocols/                          # Protocol conformance + shapes + registry completeness
 ├── storage_registry/                           # Registry + backend detection
 └── storage_transforms/                         # Pipeline, Gzip, GPG, materialize, facade integration
@@ -361,10 +363,10 @@ tunnel.connect()
 httpx_client = tunnel.client  # → httpx.Client routed through SSH tunnel
 ```
 
-### Storage facade and read_bytes
+### Storage facade read/write operations
 
 ```python
-from mountainash_transport import StorageFacade, read_bytes
+from mountainash_transport import StorageFacade
 from mountainash_auth_client import TokenAuth
 
 # Facade from a path — provider inferred from the URL scheme
@@ -376,10 +378,10 @@ facade = StorageFacade.from_path(
     auth_profile=TokenAuth(TOKEN="..."),
 )
 
-# One-liner that reads bytes from any recognised scheme
-payload = read_bytes("s3://bucket/data.parquet")
-html = read_bytes("https://example.com/page.html")
-local = read_bytes("/tmp/local-file")
+# Read bytes from any recognised scheme
+payload = StorageFacade.from_path("s3://bucket/data.parquet").read("s3://bucket/data.parquet")
+html = StorageFacade.from_path("https://example.com/page.html").read("https://example.com/page.html")
+local = StorageFacade.from_path("/tmp/local-file").read("/tmp/local-file")
 ```
 
 ## Versioning Strategy
