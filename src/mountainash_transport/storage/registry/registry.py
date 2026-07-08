@@ -23,6 +23,7 @@ def get_storage_backend(
     storage_profile: StorageProfileProtocol | None,
     *,
     connection: t.Any = None,
+    auth_strategy: t.Any = None,
 ) -> t.Any:
     """Instantiate and return a backend for the given provider type.
 
@@ -40,6 +41,7 @@ def get_storage_backend(
         provider_type: The storage provider to look up.
         storage_profile: Optional profile forwarded to the backend constructor.
         connection: Optional pre-built connection object forwarded to the backend.
+        auth_strategy: Optional auth strategy forwarded to the backend constructor (HTTP backends only).
 
     Returns:
         An instantiated backend object.
@@ -51,7 +53,10 @@ def get_storage_backend(
     # Step 1 — registered backend found
     cls = _backend_registry.get(provider_type)
     if cls is not None:
-        return cls(storage_profile, connection=connection)
+        kwargs: dict[str, t.Any] = {"connection": connection}
+        if auth_strategy is not None:
+            kwargs["auth_strategy"] = auth_strategy
+        return cls(storage_profile, **kwargs)
 
     # Build the implemented-providers list for error messages
     implemented = sorted(str(k) for k in _backend_registry)

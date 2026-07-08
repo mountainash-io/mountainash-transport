@@ -82,7 +82,12 @@ HTTP_SPEC = StorageProfileSpec(
         ),
     ],
     default_auth=CONST_AUTH_PROFILES.NONE,
-    supported_auth=frozenset({CONST_AUTH_PROFILES.NONE, CONST_AUTH_PROFILES.TOKEN, CONST_AUTH_PROFILES.PASSWORD}),
+    supported_auth=frozenset({
+        CONST_AUTH_PROFILES.NONE,
+        CONST_AUTH_PROFILES.TOKEN,
+        CONST_AUTH_PROFILES.PASSWORD,
+        CONST_AUTH_PROFILES.OAUTH2,
+    }),
 )
 
 

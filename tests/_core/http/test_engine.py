@@ -37,6 +37,7 @@ from mountainash_transport._core.http.policy import (
     TimeoutPolicy,
 )
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse
+from mountainash_transport.connections.auth_strategy import OAuth2RefreshableAuthStrategy
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +396,26 @@ class _FakeRefreshableAuth:
         return {"Authorization": f"Bearer {self._token}"}
 
 
+class _Cred:
+    """Fake credential object for OAuth2RefreshableAuthStrategy."""
+    def __init__(self, tok: str) -> None:
+        self.access_token = tok
+        self.token_type = "Bearer"
+
+
+class _Mgr:
+    """Fake OAuth2 manager for testing OAuth2RefreshableAuthStrategy integration."""
+    def __init__(self) -> None:
+        self.refreshed = 0
+
+    def acquire(self) -> _Cred:
+        return _Cred("A")
+
+    def refresh(self) -> _Cred:
+        self.refreshed += 1
+        return _Cred("B")
+
+
 class TestAuthRefresh:
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_401_refresh_retry_succeeds(self, mock_sleep: t.Any) -> None:
@@ -464,6 +485,27 @@ class TestAuthRefresh:
         engine = HttpRequestEngine(client, policy=policy, auth_strategy=auth)
         resp = engine.request("POST", "https://example.com")
         assert resp.status_code == 200
+
+    def test_engine_refreshes_on_401_and_resends(self) -> None:
+        """A 401 triggers strategy.refresh() (auth_refresh_on_401 True) and a re-send
+        carrying the refreshed bearer. Integration test with OAuth2RefreshableAuthStrategy."""
+        seen: list[str | None] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request.headers.get("authorization"))
+            return httpx.Response(401 if len(seen) == 1 else 200)
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+        mgr = _Mgr()
+        engine = HttpRequestEngine(
+            client=client,
+            auth_strategy=OAuth2RefreshableAuthStrategy(mgr),
+            policy=_NO_RETRY_WITH_AUTH,
+        )
+        resp = engine.request("GET", "https://example.com/obj")
+        assert resp.status_code == 200
+        assert mgr.refreshed == 1
+        assert seen == ["Bearer A", "Bearer B"]
 
 
 # ---------------------------------------------------------------------------
