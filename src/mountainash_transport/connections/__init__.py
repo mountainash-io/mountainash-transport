@@ -152,22 +152,6 @@ def create_connection(
     auto_authorize: bool = False,
 ) -> ConnectionProtocol:
     """Create the right connection for a profile + auth combination."""
-    from mountainash_auth_client import (
-        OAuth1AuthProfile,
-        OAuth2AuthProfile,
-    )
-
-    if isinstance(
-        auth_profile,
-        (OAuth2AuthProfile, OAuth1AuthProfile),
-    ):
-        # OAuth authorization flows are not a transport concern — they need a
-        # ProviderProfile (OAuth-server coordinates), which storage profiles
-        # don't carry. See auth-client's parameterised OAuth connections.
-        from .errors import UnsupportedAuthProfileError
-
-        raise UnsupportedAuthProfileError(type(auth_profile).__name__)
-
     spec = getattr(profile, "__spec__", None)
     supported = getattr(spec, "supported_auth", None)
     if supported is not None:

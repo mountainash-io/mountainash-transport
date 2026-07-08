@@ -127,3 +127,10 @@ class TestHTTPEmitGolden:
     def test_shim_equals_emit(self):
         p = HTTPStorageProfile(HEADERS={"X-A": "1"})
         assert p.to_handler_kwargs() == p.emit(TargetFamily.HTTP)
+
+
+class TestHTTPSupportedAuth:
+    def test_http_declares_oauth2(self):
+        from mountainash_auth_client import CONST_AUTH_PROFILES
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTP_SPEC
+        assert CONST_AUTH_PROFILES.OAUTH2 in HTTP_SPEC.supported_auth

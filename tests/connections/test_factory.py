@@ -103,17 +103,21 @@ class TestCreateConnection:
         conn = create_connection(FakeHTTPProfile(), auth_profile=TokenAuthProfile(TOKEN="tok"))
         assert isinstance(conn, HTTPConnection)
 
-    def test_oauth2_auth_raises_unsupported(self):
+    def test_oauth2_auth_no_longer_raises(self):
+        # The blanket OAuth refusal was removed — the supported_auth gate now
+        # governs admission (FakeHTTPProfile.__spec__ is specless, so
+        # enforcement is skipped and dispatch proceeds). Managed OAuth2
+        # (no ACCESS_TOKEN) leaves kwargs unchanged via emit(); a connection
+        # is still produced rather than raising.
         from mountainash_auth_client import OAuth2AuthProfile
-        from mountainash_transport.connections.errors import UnsupportedAuthProfileError
         auth = OAuth2AuthProfile(
             CLIENT_ID="cid",
             CLIENT_SECRET="csec",
             SCOPE="read",
             SETTINGS_SOURCE_SECRETS_PROVIDER="test",
         )
-        with pytest.raises(UnsupportedAuthProfileError):
-            create_connection(FakeHTTPProfile(), auth_profile=auth)
+        conn = create_connection(FakeHTTPProfile(), auth_profile=auth)
+        assert isinstance(conn, HTTPConnection)
 
 
 from mountainash_transport.connections.sftp import SFTPConnection
