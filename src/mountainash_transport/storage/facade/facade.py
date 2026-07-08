@@ -93,11 +93,12 @@ class StorageFacade:
         strategy = None
         if storage_profile is not None:
             connection = create_connection(storage_profile, auth_profile)   # gate runs FIRST
-            connection.connect()
             strategy = create_auth_strategy(
                 auth_profile, oauth_provider=oauth_provider, secret_resolver=secret_resolver,
             )
-            # fail-closed: managed OAuth2 (no static token) must have a strategy
+            # fail-closed: managed OAuth2 (no static token) must have a strategy.
+            # Checked BEFORE connect() so a misconfiguration never opens (and then
+            # leaks) an unclosed client on the raise path.
             if (
                 isinstance(auth_profile, OAuth2AuthProfile)
                 and strategy is None
@@ -108,6 +109,7 @@ class StorageFacade:
                     "supply oauth_provider + secret_resolver for the managed flow, "
                     "or set a static ACCESS_TOKEN."
                 )
+            connection.connect()
 
         backend_kwargs: dict[str, t.Any] = {"connection": connection}
         if strategy is not None:

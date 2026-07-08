@@ -32,9 +32,12 @@ def test_refresh_updates_header():
     assert mgr.refreshed == 1
 
 
-def test_apply_is_noop():
+def test_apply_is_noop_but_returns_new_dict():
     s = OAuth2RefreshableAuthStrategy(_FakeMgr())
-    assert s.apply({"x": 1}) == {"x": 1}
+    original = {"x": 1}
+    result = s.apply(original)
+    assert result == {"x": 1}
+    assert result is not original      # honours the protocol's "new dict" contract
 
 
 class _FakeProvider:   # stand-in for OAuth2ProviderProfileProtocol

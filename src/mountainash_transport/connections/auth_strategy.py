@@ -29,7 +29,10 @@ class OAuth2RefreshableAuthStrategy:
             return True
 
     def apply(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
-        return kwargs                                 # engine injects via get_headers()
+        # Engine injects auth via get_headers(); apply() is a no-op for this
+        # strategy but still honours the protocol's "returns a NEW dict" contract
+        # so a caller can safely reuse its own kwargs without aliasing.
+        return dict(kwargs)
 
 
 def create_auth_strategy(

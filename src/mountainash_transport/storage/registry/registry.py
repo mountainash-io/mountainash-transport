@@ -1,5 +1,6 @@
 # storage_registry/registry.py
 
+import inspect
 import typing as t
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -8,6 +9,22 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 
 
 _backend_registry: dict[CONST_STORAGE_PROVIDER_TYPE, type] = {}
+
+
+def _accepts_auth_strategy(cls: type) -> bool:
+    """True if ``cls.__init__`` accepts an ``auth_strategy`` keyword.
+
+    Either an explicit ``auth_strategy`` parameter or a ``**kwargs`` catch-all
+    counts. When the signature cannot be introspected we assume acceptance
+    rather than block a legitimate backend.
+    """
+    try:
+        params = inspect.signature(cls).parameters
+    except (ValueError, TypeError):  # pragma: no cover - un-introspectable ctor
+        return True
+    if "auth_strategy" in params:
+        return True
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
 def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Callable[[type], type]:
@@ -55,6 +72,15 @@ def get_storage_backend(
     if cls is not None:
         kwargs: dict[str, t.Any] = {"connection": connection}
         if auth_strategy is not None:
+            # Guard: forwarding a strategy to a backend whose ctor cannot accept
+            # it would raise a bare TypeError. Fail with a clear message instead
+            # (today only HTTP both declares OAUTH2 and accepts auth_strategy).
+            if not _accepts_auth_strategy(cls):
+                raise BackendNotImplementedError(
+                    f"The '{provider_type}' backend ({cls.__name__}) does not accept "
+                    "an auth_strategy; strategy-based auth (managed OAuth2) is "
+                    "currently only supported by the HTTP backend."
+                )
             kwargs["auth_strategy"] = auth_strategy
         return cls(storage_profile, **kwargs)
 

@@ -165,6 +165,11 @@ test-ci = [
 #================
 [envs.ruff]
 installer = "uv"
+# Own path: the tool envs must NOT share the project `.venv` (inherited from
+# [envs.default]). Sharing it makes `hatch run ruff:...` and `hatch run test:...`
+# thrash — each re-syncs `.venv` to its own disjoint dependency set, so whichever
+# ran last leaves the other's binary missing.
+path = ".hatch/ruff"
 skip-install = true
 dependencies = ["ruff==0.3.7"]
 [envs.ruff.scripts]
@@ -176,6 +181,7 @@ fix = "ruff check ./src --fix"
 #================
 [envs.radon]
 installer = "uv"
+path = ".hatch/radon"          # own path — see [envs.ruff] note
 dependencies = ["radon==6.0.1"]
 [envs.radon.scripts]
 radon-cc = "radon cc ./src -nd"
@@ -190,6 +196,7 @@ radon-cc-detail = "radon cc ./src"
 #================
 [envs.mypy]
 installer = "uv"
+path = ".hatch/mypy"           # own path — see [envs.ruff] note
 dependencies = ["mypy==1.10.1"]
 [envs.mypy.scripts]
 check = "mypy --install-types --non-interactive {args:src/mountainash_transport tests}"

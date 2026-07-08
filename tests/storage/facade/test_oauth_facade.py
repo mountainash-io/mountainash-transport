@@ -31,6 +31,26 @@ def test_managed_oauth2_without_provider_fails_closed():
         )
 
 
+def test_fail_closed_does_not_open_a_connection(monkeypatch):
+    """The fail-closed raise fires BEFORE connect(), so the misconfiguration path
+    never opens (and leaks) a client — regression guard for the reorder fix."""
+    import mountainash_transport.connections.http as http_mod
+    calls = {"n": 0}
+    original = http_mod.HTTPConnection.connect
+
+    def _spy(self, *args, **kwargs):
+        calls["n"] += 1
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(http_mod.HTTPConnection, "connect", _spy)
+    with pytest.raises(ValueError):
+        StorageFacade(
+            CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+            auth_profile=OAuth2AuthProfile(),             # no static token, no provider
+        )
+    assert calls["n"] == 0                                # never connected
+
+
 def test_static_token_oauth2_needs_no_strategy():
     f = StorageFacade(
         CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
