@@ -28,6 +28,7 @@ from .s3 import S3Connection
 from .ssh import SSHConnection
 from .sftp import SFTPConnection
 from .tunnel import TunnelledConnection, _PatchedEndpointProfile
+from .auth_strategy import OAuth2RefreshableAuthStrategy, create_auth_strategy
 
 if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
@@ -207,5 +208,6 @@ __all__ = [
     # New
     "HTTPConnection", "NullConnection", "S3Connection",
     "SSHConnection", "SFTPConnection", "TunnelledConnection",
+    "OAuth2RefreshableAuthStrategy", "create_auth_strategy",
     "create_connection", "create_tunnelled_connection",
 ]

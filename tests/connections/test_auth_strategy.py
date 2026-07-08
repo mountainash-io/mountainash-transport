@@ -1,4 +1,8 @@
-from mountainash_transport.connections.auth_strategy import OAuth2RefreshableAuthStrategy
+import pytest
+from mountainash_auth_client import OAuth2AuthProfile
+from mountainash_transport.connections.auth_strategy import (
+    OAuth2RefreshableAuthStrategy, create_auth_strategy,
+)
 
 
 class _FakeCred:
@@ -31,3 +35,33 @@ def test_refresh_updates_header():
 def test_apply_is_noop():
     s = OAuth2RefreshableAuthStrategy(_FakeMgr())
     assert s.apply({"x": 1}) == {"x": 1}
+
+
+class _FakeProvider:   # stand-in for OAuth2ProviderProfileProtocol
+    NAME = "idp"
+
+
+def test_no_provider_returns_none():
+    assert create_auth_strategy(OAuth2AuthProfile(ACCESS_TOKEN="t")) is None
+
+
+def test_provider_without_resolver_raises():
+    with pytest.raises((ValueError, TypeError)):
+        create_auth_strategy(OAuth2AuthProfile(), oauth_provider=_FakeProvider())
+
+
+def test_provider_and_resolver_builds_strategy(monkeypatch):
+    import mountainash_transport.connections.auth_strategy as mod
+    monkeypatch.setattr(mod, "OAuth2TokenManager", lambda *a, **k: object())
+    s = create_auth_strategy(OAuth2AuthProfile(), oauth_provider=_FakeProvider(),
+                             secret_resolver=object())
+    assert isinstance(s, OAuth2RefreshableAuthStrategy)
+
+
+def test_non_oauth2_auth_with_provider_raises():
+    """A stray oauth_provider paired with a non-OAuth2 auth profile is a
+    misconfiguration — surfaced fail-closed, not silently ignored."""
+    from mountainash_auth_client import NoAuthProfile
+    with pytest.raises(ValueError):
+        create_auth_strategy(NoAuthProfile(), oauth_provider=_FakeProvider(),
+                             secret_resolver=object())
