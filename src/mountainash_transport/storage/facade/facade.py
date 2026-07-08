@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import io
+import typing as t
 from typing import BinaryIO
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
@@ -28,6 +29,12 @@ from mountainash_transport.storage.path_helpers.suffixes import infer_pipeline a
 from mountainash_transport._core.transforms import GPG, Gzip, Pipeline, StreamTransform
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+
+
+def _has_static_token(auth_profile: t.Any) -> bool:
+    """Return True if *auth_profile* carries a non-empty static ACCESS_TOKEN."""
+    tok = getattr(auth_profile, "ACCESS_TOKEN", None)
+    return bool(tok.get_secret_value()) if tok is not None else False
 
 
 class _PairedStream(io.RawIOBase):
@@ -76,18 +83,36 @@ class StorageFacade:
         storage_profile: StorageProfileProtocol | None = None,
         *,
         auth_profile: AuthProfile | None = None,
+        oauth_provider: t.Any = None,
+        secret_resolver: t.Any = None,
     ) -> None:
-        from mountainash_transport.connections import create_connection
+        from mountainash_transport.connections import create_connection, create_auth_strategy
+        from mountainash_auth_client import OAuth2AuthProfile
 
         connection = None
+        strategy = None
         if storage_profile is not None:
-            connection = create_connection(storage_profile, auth_profile)
+            connection = create_connection(storage_profile, auth_profile)   # gate runs FIRST
             connection.connect()
+            strategy = create_auth_strategy(
+                auth_profile, oauth_provider=oauth_provider, secret_resolver=secret_resolver,
+            )
+            # fail-closed: managed OAuth2 (no static token) must have a strategy
+            if (
+                isinstance(auth_profile, OAuth2AuthProfile)
+                and strategy is None
+                and not _has_static_token(auth_profile)
+            ):
+                raise ValueError(
+                    "OAuth2 profile has no static ACCESS_TOKEN and no oauth_provider; "
+                    "supply oauth_provider + secret_resolver for the managed flow, "
+                    "or set a static ACCESS_TOKEN."
+                )
 
-        self._backend = get_storage_backend(
-            provider_type, storage_profile,
-            connection=connection,
-        )
+        backend_kwargs: dict[str, t.Any] = {"connection": connection}
+        if strategy is not None:
+            backend_kwargs["auth_strategy"] = strategy
+        self._backend = get_storage_backend(provider_type, storage_profile, **backend_kwargs)
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -105,6 +130,8 @@ class StorageFacade:
         storage_profile: StorageProfileProtocol | None = None,
         *,
         auth_profile: AuthProfile | None = None,
+        oauth_provider: t.Any = None,
+        secret_resolver: t.Any = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
@@ -113,6 +140,8 @@ class StorageFacade:
             profile: Optional storage profile forwarded to the backend.
             auth: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
                 When provided, overrides any Authorization header set by *profile*.
+            oauth_provider: Optional OAuth2 provider profile for the managed token flow.
+            secret_resolver: Optional secret store resolver for the managed token flow.
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
@@ -121,7 +150,10 @@ class StorageFacade:
             ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
         provider = detect_provider_from_path(path)
-        return cls(provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile)
+        return cls(
+            provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,
+            oauth_provider=oauth_provider, secret_resolver=secret_resolver,
+        )
 
     # ------------------------------------------------------------------
     # Protocol introspection
