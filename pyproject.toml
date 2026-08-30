@@ -27,10 +27,7 @@ dependencies = [
     "pydantic-settings==2.6.1",
     "universal_pathlib==0.2.2",
     "httpx>=0.27",
-    # "mountainash-settings",
-    # "mountainash-auth-client",
 ]
-
 
 [project.optional-dependencies]
 s3 = [
