@@ -11,6 +11,7 @@ packages = ["src/mountainash_transport"]
 # Env: build_github
 #================
 [envs.build_github]
+python = "3.12"
 installer = "uv"
 dependencies = [
     "cyclonedx-bom==4.5.0",
@@ -27,6 +28,7 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 # Env: default
 #================
 [envs.default]
+python = "3.12"
 installer = "uv"
 path = ".venv"
 dependencies = [
@@ -42,6 +44,7 @@ python = ["3.12"]
 
 [envs.test_github]
 installer = "uv"
+path = ".hatch/test-github"
 dependencies = [
     "pytest==8.3.5",
     "pytest-check==2.5.3",
@@ -71,6 +74,7 @@ python = ["3.12"]
 
 [envs.test]
 installer = "uv"
+path = ".hatch/test"
 dependencies = [
     "coverage[toml]>=6.5",
     "pytest==8.3.5",
@@ -195,6 +199,7 @@ radon-cc-detail = "radon cc ./src"
 # Env: mypy
 #================
 [envs.mypy]
+python = "3.12"
 installer = "uv"
 path = ".hatch/mypy"           # own path — see [envs.ruff] note
 dependencies = ["mypy==1.10.1"]
