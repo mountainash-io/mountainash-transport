@@ -186,6 +186,7 @@ fix = "ruff check ./src --fix"
 [envs.radon]
 installer = "uv"
 path = ".hatch/radon"          # own path — see [envs.ruff] note
+skip-install = true
 dependencies = ["radon==6.0.1"]
 [envs.radon.scripts]
 radon-cc = "radon cc ./src -nd"
