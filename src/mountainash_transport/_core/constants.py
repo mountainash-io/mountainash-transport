@@ -1,8 +1,7 @@
 #constants.py
 
+from enum import StrEnum
 import typing as t
-
-from strenum import LowercaseStrEnum as StrEnum
 
 
 class _FindMemberMixin(StrEnum):

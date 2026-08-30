@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from strenum import LowercaseStrEnum as StrEnum
+from enum import StrEnum
 
 
 class EntryType(StrEnum):
