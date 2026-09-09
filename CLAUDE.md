@@ -8,6 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Settings follow the **descriptor-driven profiles pattern** (Phase 4, 2026-04-17) — see the Settings Architecture section below. Configuration uses upstream `mountainash_settings.profiles.DescriptorProfile` + typed `AuthSpec` discriminated union from `mountainash_settings.auth`.
 
+
+## Central Repository — Principles & Backlog
+
+Durable architecture principles and the implementation backlog for this project live in the
+**mountainash-central** repo, not here.
+
+- **Principles:** [`../mountainash-central/01.principles/mountainash-transport/README.md`](../mountainash-central/01.principles/mountainash-transport/README.md) — see [`PRINCIPLES.md`](../mountainash-central/01.principles/mountainash-transport/PRINCIPLES.md) for governance (statuses, category precedence).
+- **Backlog:** [`../mountainash-central/04.planning/mountainash-transport/a.backlog/INDEX.md`](../mountainash-central/04.planning/mountainash-transport/a.backlog/INDEX.md) — prioritized items; see that directory's `CHANGELOG.md` for update history.
+- **Specs & plans:** save new design specs/plans to `../mountainash-central/04.planning/mountainash-transport/superpowers/{specs,plans}/`, not under `docs/superpowers/` in this repo.
+
 ## Architecture
 
 ### Core Components
