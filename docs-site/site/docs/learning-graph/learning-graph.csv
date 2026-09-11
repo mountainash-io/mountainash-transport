@@ -1,0 +1,91 @@
+ConceptID,ConceptLabel,Dependencies,TaxonomyID
+1,File Systems,,FOUND
+2,Cloud Object Storage,,FOUND
+3,URL Schemes,,FOUND
+4,Binary Streams,,FOUND
+5,Python Protocols,,FOUND
+6,Runtime Checkable Protocol,5,FOUND
+7,Mixin Pattern,,FOUND
+8,Pydantic Models,,FOUND
+9,Decorators,,FOUND
+10,Registry Pattern,9,FOUND
+11,StorageConnectionProtocol,5|6,PROTO
+12,StorageReadProtocol,5|6|4,PROTO
+13,StorageWriteProtocol,5|6|4,PROTO
+14,StorageListProtocol,5|6,PROTO
+15,StorageDeleteProtocol,5|6,PROTO
+16,StorageMetadataProtocol,5|6,PROTO
+17,StorageCopyProtocol,5|6,PROTO
+18,StorageDirectoryProtocol,5|6,PROTO
+19,StorageFacade Class,11|12|13|14|15|16|17|40,FACADE
+20,Protocol Checked Dispatch,19|6,FACADE
+21,UnsupportedOperationError,20,FACADE
+22,Read Bytes Method,19|12,FACADE
+23,Read Stream Method,19|12|4,FACADE
+24,Write Bytes Method,19|13,FACADE
+25,Write Stream Method,19|13|4,FACADE
+26,List Files Method,19|14,FACADE
+27,Delete Method,19|15,FACADE
+28,Exists Method,19|16,FACADE
+29,Get Metadata Method,19|16,FACADE
+30,Copy Method,19|17,FACADE
+31,StoragePath Class,3,PATH
+32,SchemeSpec Dataclass,3,PATH
+33,SCHEMES Registry,32|10,PATH
+34,Alias Resolution,33,PATH
+35,Identify Scheme Method,31|33,PATH
+36,Normalize Method,31|35,PATH
+37,GenericSchemePath Fallback,36,PATH
+38,Path Joining,31,PATH
+39,UPath Integration,31,PATH
+40,Detect Provider From Path,35|33,PATH
+41,StreamTransform Protocol,5|6|4,TRANS
+42,Wrap Method,41,TRANS
+43,Unwrap Method,41,TRANS
+44,Pipeline Class,41,TRANS
+45,Apply Read Direction,44|43,TRANS
+46,Apply Write Direction,44|42,TRANS
+47,Gzip Transform,41,TRANS
+48,GPG Transform,41,TRANS
+49,Suffix Transforms Map,3,TRANS
+50,Infer Pipeline Function,49|44|47|48,TRANS
+51,Materialize Utility,4,TRANS
+52,PairedStream Helper,4|23,TRANS
+53,LocalStorageBackend Class,7|10|11,LOCAL
+54,LocalConnectionMixin,7|11|1,LOCAL
+55,LocalReadMixin,7|12|1,LOCAL
+56,LocalWriteMixin,7|13|1,LOCAL
+57,LocalListMixin,7|14|1,LOCAL
+58,LocalDeleteMixin,7|15|1,LOCAL
+59,LocalMetadataMixin,7|16|1,LOCAL
+60,LocalCopyMixin,7|17|1,LOCAL
+61,LocalDirectoryMixin,7|18|1,LOCAL
+62,Full Protocol Coverage Local,53|54|55|56|57|58|59|60|61,LOCAL
+63,S3StorageBackend Class,7|10|11|2,S3
+64,S3ConnectionMixin,7|11|71,S3
+65,S3ReadMixin,7|12|71,S3
+66,S3WriteMixin,7|13|71,S3
+67,S3ListMixin,7|14|71,S3
+68,S3DeleteMixin,7|15|71,S3
+69,S3MetadataMixin,7|16|71,S3
+70,S3CopyMixin,7|17|71,S3
+71,Boto3 Client,2,S3
+72,S3 Flavor Dispatch,63|84,S3
+73,AWS S3 Flavor,72,S3
+74,S3 Express One Zone Flavor,72,S3
+75,Cloudflare R2 Flavor,72,S3
+76,MinIO Flavor,72,S3
+77,HTTPStorageBackend Class,10|11|3,HTTP
+78,HTTP Read Support,77|12|81,HTTP
+79,HTTP Metadata Support,77|16|81,HTTP
+80,HTTP Connection Support,77|11|81,HTTP
+81,Httpx Client,3,HTTP
+82,HTTP Error Mapping,77,HTTP
+83,StorageAuthBase Class,8|84|85,SETT
+84,Provider Type Enum,,SETT
+85,Auth Method Enum,,SETT
+86,Access Type Enum,84,SETT
+87,Per Provider Settings,83|10,SETT
+88,Settings Descriptor,83,SETT
+89,Settings Profile,83,SETT
+90,Settings Adapters,83,SETT

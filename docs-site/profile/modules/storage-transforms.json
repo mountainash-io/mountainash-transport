@@ -1,0 +1,45 @@
+{
+  "id": "mountainash_utils_files.storage_transforms",
+  "path": "src/mountainash_utils_files/storage_transforms/",
+  "summary": "Stream transform framework for compression and encryption. StreamTransform protocol (wrap/unwrap). Pipeline class orders transforms outermost-first. Built-in transforms: Gzip (stdlib, reproducible mtime=0) and GPG (requires python-gnupg optional extra). materialize() utility buffers streams to recover known length. GzipCompressingReader provides RFC 1952-compliant on-demand compression.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["StreamTransform", "Pipeline", "Gzip", "GPG", "materialize"],
+  "key_classes": ["Pipeline", "Gzip", "GPG", "StreamTransform"],
+  "key_functions": ["materialize"],
+  "dependencies": [],
+  "dependents": ["storage_facade", "path_helpers.suffixes"],
+  "extension_points": ["Implement StreamTransform protocol (wrap/unwrap) for custom transforms"],
+  "lifecycle_notes": [
+    "Phase 4 (2026-04-17): restored stream transforms with Pipeline architecture",
+    "Phase 6 (2026-04-18): suffix-aware inference integration"
+  ],
+  "documentation_hooks": [
+    "Transform pipeline ordering (outermost-first)",
+    "How to write a custom StreamTransform",
+    "GPG optional dependency setup"
+  ],
+  "examples": [],
+  "tests": [
+    {"path": "tests/storage_transforms/test_base.py", "detail": "StreamTransform protocol tests"},
+    {"path": "tests/storage_transforms/test_pipeline.py", "detail": "Pipeline ordering tests"},
+    {"path": "tests/storage_transforms/test_gzip.py", "detail": "Gzip wrap/unwrap tests"},
+    {"path": "tests/storage_transforms/test_gpg.py", "detail": "GPG encryption/decryption tests"},
+    {"path": "tests/storage_transforms/test_materialize.py", "detail": "materialize utility tests"},
+    {"path": "tests/storage_transforms/test_facade_integration.py", "detail": "Transform+facade integration"}
+  ],
+  "risks": [
+    "GPG transform buffers entire payload in memory (python-gnupg limitation)"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_transforms/__init__.py", "detail": "4 exported names"},
+    {"kind": "test", "path": "tests/storage_transforms/", "detail": "6 test files"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

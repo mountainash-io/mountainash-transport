@@ -1,0 +1,28 @@
+{
+  "id": "mountainash_utils_files.settings.base",
+  "path": "src/mountainash_utils_files/settings/base.py",
+  "summary": "StorageAuthBase pydantic model: shared-fields mixin providing PROVIDER_TYPE, AUTH_METHOD, ENDPOINT, PORT, TIMEOUT, ROOT_PATH, CREATE_PATH, USERNAME, PASSWORD, ACCESS_KEY_ID, SECRET_KEY, TOKEN, COMPRESSION_TYPE, ENCRYPTION_TYPE, ACCESS_TYPE. Field validators for type coercion. Base for all provider settings classes.",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageAuthBase"],
+  "key_classes": ["StorageAuthBase"],
+  "key_functions": [],
+  "dependencies": ["constants"],
+  "dependents": ["settings.providers"],
+  "extension_points": ["Subclass for new provider settings"],
+  "lifecycle_notes": ["Phase 4: migrated from flat fields to typed AuthSpec discriminated union"],
+  "documentation_hooks": ["Shared settings field reference"],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/base.py", "detail": "StorageAuthBase pydantic BaseSettings subclass"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

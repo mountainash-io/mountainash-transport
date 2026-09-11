@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.settings.descriptor",
+  "path": "src/mountainash_utils_files/settings/descriptor.py",
+  "summary": "StorageDescriptor(ProfileSpec) dataclass: typed metadata per provider — sdk_package, handler_module, handler_class, supports_streaming, supports_multipart, read_only. Used by registry for capability introspection.",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture", "extension-authors"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageDescriptor"],
+  "key_classes": ["StorageDescriptor"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["settings.providers", "settings.registry"],
+  "extension_points": ["Define StorageDescriptor for new backends to declare their SDK requirements and capabilities"],
+  "lifecycle_notes": ["Phase 5 renamed from Descriptor to Spec pattern (ProfileSpec base class from mountainash-settings)"],
+  "documentation_hooks": ["Provider capability declaration pattern"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_unit/settings/test_descriptor_invariants.py", "detail": "Descriptor field invariant tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/descriptor.py", "detail": "StorageDescriptor dataclass"},
+    {"kind": "test", "path": "tests/test_unit/settings/test_descriptor_invariants.py", "detail": "Invariant tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

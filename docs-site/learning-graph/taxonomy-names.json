@@ -1,0 +1,11 @@
+{
+  "FOUND": "Foundation Concepts",
+  "PROTO": "Storage Protocols",
+  "FACADE": "StorageFacade",
+  "PATH": "Path Handling",
+  "TRANS": "Transforms",
+  "LOCAL": "Local Backend",
+  "S3": "S3 Backend",
+  "HTTP": "HTTP Backend",
+  "SETT": "Settings & Configuration"
+}

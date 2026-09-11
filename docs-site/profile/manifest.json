@@ -1,0 +1,75 @@
+{
+  "profile_version": "1.0",
+  "generated_at": "2026-06-02T00:00:00Z",
+  "source": {
+    "root": "/home/nathanielramm/git/mountainash-io/mountainash/mountainash-transport",
+    "git": {
+      "previous_hash": null,
+      "current_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+      "branch": "develop",
+      "working_tree_dirty": true
+    }
+  },
+  "scope": {
+    "include": ["src/mountainash_utils_files/**/*.py"],
+    "exclude": ["**/__pycache__/**"],
+    "package_roots": ["src/mountainash_utils_files"]
+  },
+  "audiences": ["users", "maintainers", "backend-architecture", "broader-hype"],
+  "counts": {
+    "modules_discovered": 25,
+    "modules_profiled": 25,
+    "profiles_ignored": 0,
+    "facets_written": 4
+  },
+  "changed_scopes": {
+    "files": [],
+    "modules": [],
+    "facets": []
+  },
+  "ignored_paths": [
+    {
+      "path": "src/mountainash_utils_files/settings/utils/connection.py",
+      "reason": "Entirely commented-out placeholder code"
+    },
+    {
+      "path": "src/mountainash_utils_files/settings/utils/validation.py",
+      "reason": "Entirely commented-out placeholder code"
+    }
+  ],
+  "profile_files": {
+    "modules": {
+      "root-init": "modules/root-init.json",
+      "constants": "modules/constants.json",
+      "exceptions": "modules/exceptions.json",
+      "dataclasses-file-metadata": "modules/dataclasses-file-metadata.json",
+      "path-helpers": "modules/path-helpers.json",
+      "storage-protocols": "modules/storage-protocols.json",
+      "storage-registry": "modules/storage-registry.json",
+      "storage-facade": "modules/storage-facade.json",
+      "storage-transforms": "modules/storage-transforms.json",
+      "storage-backends-local": "modules/storage-backends-local.json",
+      "storage-backends-s3": "modules/storage-backends-s3.json",
+      "storage-backends-http": "modules/storage-backends-http.json",
+      "settings-base": "modules/settings-base.json",
+      "settings-descriptor": "modules/settings-descriptor.json",
+      "settings-profile": "modules/settings-profile.json",
+      "settings-registry": "modules/settings-registry.json",
+      "settings-templates": "modules/settings-templates.json",
+      "settings-exceptions": "modules/settings-exceptions.json",
+      "settings-providers": "modules/settings-providers.json",
+      "settings-adapters": "modules/settings-adapters.json",
+      "settings-utils": "modules/settings-utils.json",
+      "storage-facade-cross-backend": "modules/storage-facade-cross-backend.json",
+      "storage-facade-read-bytes": "modules/storage-facade-read-bytes.json",
+      "storage-transforms-pipeline": "modules/storage-transforms-pipeline.json",
+      "storage-transforms-stream-encoder": "modules/storage-transforms-stream-encoder.json"
+    },
+    "facets": {
+      "users": "facets/users.json",
+      "maintainers": "facets/maintainers.json",
+      "backend-architecture": "facets/backend-architecture.json",
+      "broader-hype": "facets/broader-hype.json"
+    }
+  }
+}

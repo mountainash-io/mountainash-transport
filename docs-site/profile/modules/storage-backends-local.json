@@ -1,0 +1,32 @@
+{
+  "id": "mountainash_utils_files.storage_backends.local",
+  "path": "src/mountainash_utils_files/storage_backends/local/",
+  "summary": "Local filesystem backend composed from 8 mixins (Connection, Read, Write, List, Delete, Metadata, Copy, Directory). Registered for CONST_STORAGE_PROVIDER_TYPE.LOCAL. Connection is no-op. Write creates parent dirs. List is non-recursive. rmdir uses shutil.rmtree.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["LocalStorageBackend"],
+  "key_classes": ["LocalStorageBackend", "LocalReadMixin", "LocalWriteMixin", "LocalListMixin", "LocalDeleteMixin", "LocalMetadataMixin", "LocalCopyMixin", "LocalDirectoryMixin", "LocalConnectionMixin"],
+  "key_functions": [],
+  "dependencies": ["constants", "exceptions", "dataclasses.file_metadata", "storage_registry"],
+  "dependents": ["storage_facade"],
+  "extension_points": [],
+  "lifecycle_notes": ["Implements all 8 storage protocols — the most complete backend"],
+  "documentation_hooks": ["Mixin composition pattern reference for new backends"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/backends/test_local.py", "detail": "Local backend operation tests"},
+    {"path": "tests/protocol_alignment/test_protocol_conformance.py", "detail": "Protocol conformance checks"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_backends/local/__init__.py", "detail": "8 mixin classes composed into LocalStorageBackend"},
+    {"kind": "test", "path": "tests/backends/test_local.py", "detail": "Backend tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

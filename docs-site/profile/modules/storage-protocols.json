@@ -1,0 +1,43 @@
+{
+  "id": "mountainash_utils_files.storage_protocols",
+  "path": "src/mountainash_utils_files/storage_protocols/",
+  "summary": "Eight runtime-checkable Protocol classes defining the backend contract: Connection, Read, Write, List, Delete, Metadata, Copy, Directory. Backends implement protocols a la carte; facade uses isinstance checks for capability dispatch.",
+  "role": "protocol",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture", "extension-authors"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageConnectionProtocol", "StorageReadProtocol", "StorageWriteProtocol",
+    "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol"
+  ],
+  "key_classes": [
+    "StorageReadProtocol", "StorageWriteProtocol", "StorageListProtocol",
+    "StorageMetadataProtocol", "StorageConnectionProtocol"
+  ],
+  "key_functions": [],
+  "dependencies": ["dataclasses.file_metadata"],
+  "dependents": ["storage_backends", "storage_facade"],
+  "extension_points": ["Each protocol is independently implementable — new backends pick which capabilities they support"],
+  "lifecycle_notes": ["Protocols are runtime_checkable for isinstance-based capability detection in StorageFacade"],
+  "documentation_hooks": [
+    "Protocol reference table showing methods per protocol",
+    "Backend conformance matrix (which backends implement which protocols)"
+  ],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_protocols.py", "detail": "Protocol class tests"},
+    {"path": "tests/protocol_alignment/test_protocol_conformance.py", "detail": "Verifies backends conform to declared protocols"},
+    {"path": "tests/protocol_alignment/test_registry_completeness.py", "detail": "Verifies all providers are registered"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_protocols/__init__.py", "detail": "8 Protocol classes in __all__"},
+    {"kind": "test", "path": "tests/protocol_alignment/", "detail": "Conformance and completeness tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}
