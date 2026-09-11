@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "baseline": {
+    "source_commit": "65bc90f901403a1454ba5d3d608660a95d64b163",
+    "refresh_date": "2026-06-04T12:43:03Z",
+    "tool_versions": {
+      "python": "3.12",
+      "enrich_script": "1.0.0"
+    }
+  },
+  "chapter_state": {
+    "01-foundation-concepts": {
+      "content_hash": "4932fdd7ed5b0fafd715adecee13b75c611fbe86004a7f2aa634f59238077e11",
+      "word_count": 2996,
+      "has_concept_markers": true
+    },
+    "02-storage-protocols": {
+      "content_hash": "ed028ba2c98a1709c8c1b1d4f2cd4697c754590f4f4b9626b3298a4701ad074a",
+      "word_count": 2739,
+      "has_concept_markers": true
+    },
+    "03-path-handling": {
+      "content_hash": "5f30b537a9477dd72c3c7ebc6c0c579e796cef03092c4057e825695f3679da21",
+      "word_count": 2744,
+      "has_concept_markers": true
+    },
+    "04-settings-and-configuration": {
+      "content_hash": "bb7bd50ac77ed655f4935d15dc750f3aaa345c12c4e03ff45ee070666cc4cea7",
+      "word_count": 2527,
+      "has_concept_markers": true
+    },
+    "05-storage-facade": {
+      "content_hash": "93b6f4a0c5937fcdb8b5c0bb3dda0748c43c337d505f5b557ad7b9699c4fc600",
+      "word_count": 2458,
+      "has_concept_markers": true
+    },
+    "06-transforms": {
+      "content_hash": "456048746fda8351c497acf5fa988dac8b09337a870c504a9e69aac8be9a4f10",
+      "word_count": 2792,
+      "has_concept_markers": true
+    },
+    "07-local-backend": {
+      "content_hash": "d38dcab02da960080c33aad262377ad8bfeec45ab1f0c6e5fdb305e96872c66e",
+      "word_count": 2290,
+      "has_concept_markers": true
+    },
+    "08-s3-backend": {
+      "content_hash": "57c3937fb1708f07bb256031465c2ac39f025643f81692669153fd6d28c2340d",
+      "word_count": 2367,
+      "has_concept_markers": true
+    },
+    "09-http-backend": {
+      "content_hash": "f6ae9c9445f951c33f54fb992b28797d7e47e1d00ce01f8a5e587b6707e346d9",
+      "word_count": 3219,
+      "has_concept_markers": true
+    }
+  },
+  "learning_graph_state": {
+    "content_hash": "b13ddc138b829a30d4d1fce5921dc399d5875f769d779b87fbc678fe7cf8288e",
+    "node_count": 90,
+    "edge_count": 176,
+    "enriched_nodes": 90,
+    "low_confidence_count": 52
+  },
+  "faq_state": null,
+  "refresh_history": []
+}

@@ -1,0 +1,42 @@
+{
+  "id": "mountainash_utils_files",
+  "path": "src/mountainash_utils_files/__init__.py",
+  "summary": "Package root exporting ~25 public symbols: StorageFacade, read_bytes, copy_between, storage protocols, transforms (Pipeline, Gzip, GPG), path helpers (StoragePath, infer_pipeline), constants, exceptions, and FileMetadata.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "broader-hype"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "__version__", "StorageFacade", "copy_between", "read_bytes", "storage",
+    "get_storage_backend", "detect_provider_from_path",
+    "StorageConnectionProtocol", "StorageReadProtocol", "StorageWriteProtocol",
+    "StorageListProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol",
+    "CONST_STORAGE_PROVIDER_TYPE", "FileMetadata",
+    "StorageError", "UnsupportedOperationError", "StorageConnectionError",
+    "PathNotFoundError", "AuthenticationError", "TransformError",
+    "Pipeline", "StreamTransform", "Gzip", "GPG",
+    "StoragePath", "infer_pipeline"
+  ],
+  "key_classes": ["StorageFacade"],
+  "key_functions": ["read_bytes", "copy_between", "storage", "get_storage_backend", "detect_provider_from_path", "infer_pipeline"],
+  "dependencies": ["storage_facade", "storage_registry", "storage_protocols", "storage_transforms", "path_helpers", "constants", "exceptions", "dataclasses"],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": ["Phase 5 (2026-04-18) added read_bytes and StorageFacade.from_path for path-driven dispatch", "Phase 6 added infer_pipeline for suffix-aware transforms"],
+  "documentation_hooks": ["Entry point for all user documentation", "Shows the full public surface area"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_public_api.py", "detail": "Verifies all __all__ exports are importable"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/__init__.py", "detail": "__all__ defines 25+ exported names"},
+    {"kind": "test", "path": "tests/test_public_api.py", "detail": "Public API surface test"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

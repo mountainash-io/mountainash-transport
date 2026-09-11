@@ -1,0 +1,30 @@
+{
+  "id": "mountainash_utils_files.settings.registry",
+  "path": "src/mountainash_utils_files/settings/registry.py",
+  "summary": "STORAGE_REGISTRY instance (Registry('storage', spec_type=StorageDescriptor, profile_type=StorageProfile)). @register decorator reads cls.__spec__. get_spec(name) and get_settings_class(name) lookups. Deprecated get_descriptor(name) alias.",
+  "role": "orchestration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["STORAGE_REGISTRY", "register", "get_spec", "get_settings_class", "get_descriptor"],
+  "key_classes": [],
+  "key_functions": ["register", "get_spec", "get_settings_class"],
+  "dependencies": ["settings.descriptor", "settings.profile"],
+  "dependents": ["settings.providers"],
+  "extension_points": ["@register decorator for new provider settings classes"],
+  "lifecycle_notes": ["Phase 5 renamed get_descriptor to get_spec"],
+  "documentation_hooks": ["Settings registry pattern"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_unit/settings/test_registry.py", "detail": "Settings registry tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/registry.py", "detail": "STORAGE_REGISTRY + register/get_spec/get_settings_class"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

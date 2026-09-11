@@ -1,0 +1,28 @@
+{
+  "id": "mountainash_utils_files.dataclasses.file_metadata",
+  "path": "src/mountainash_utils_files/dataclasses/file_metadata.py",
+  "summary": "FileMetadata frozen pydantic model: filename, directory, full_path, size, last_modified, etag, storage_class, checksum, source. Standardised metadata returned by list and metadata operations across all backends.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["FileMetadata"],
+  "key_classes": ["FileMetadata"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["storage_protocols", "storage_backends"],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": ["Return type for list_files() and get_metadata() across all backends"],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/dataclasses/file_metadata.py", "detail": "Pydantic BaseModel with frozen=True"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

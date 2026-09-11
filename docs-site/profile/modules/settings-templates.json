@@ -1,0 +1,30 @@
+{
+  "id": "mountainash_utils_files.settings.templates",
+  "path": "src/mountainash_utils_files/settings/templates.py",
+  "summary": "StorageAuthTemplates pydantic model with URL template strings for each provider (local, S3, Azure, GCS, SFTP, FTP, SMB, NFS, MinIO, auth, SSL, connection strings). LRU-cached via get_storage_auth_templates(). Legacy — most templates inlined as ParameterSpec.template in Phase 4.",
+  "role": "legacy",
+  "visibility": "internal",
+  "stability": "deprecated",
+  "audiences": ["maintainers"],
+  "doc_priority": "internal-note",
+  "confidence": "medium",
+  "public_api": ["StorageAuthTemplates", "get_storage_auth_templates"],
+  "key_classes": ["StorageAuthTemplates"],
+  "key_functions": ["get_storage_auth_templates"],
+  "dependencies": [],
+  "dependents": ["settings.base"],
+  "extension_points": [],
+  "lifecycle_notes": ["Most templates inlined as ParameterSpec.template in Phase 4; this module is legacy"],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [
+    {"question": "Can this module be removed now that templates are inlined?", "evidence": "Phase 4 notes say most templates were inlined as ParameterSpec.template"}
+  ],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/templates.py", "detail": "StorageAuthTemplates + LRU-cached getter"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

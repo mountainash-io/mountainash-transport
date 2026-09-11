@@ -1,0 +1,32 @@
+{
+  "id": "mountainash_utils_files.storage_facade.read_bytes",
+  "path": "src/mountainash_utils_files/storage_facade/read_bytes.py",
+  "summary": "read_bytes() top-level convenience function. Dispatches by URL scheme via StorageFacade.from_path(). Supports suffix-driven transform inference with infer=True, and optional gpg=/gzip= parameters.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["read_bytes"],
+  "key_classes": [],
+  "key_functions": ["read_bytes"],
+  "dependencies": ["storage_facade.facade", "path_helpers.suffixes"],
+  "dependents": [],
+  "extension_points": [],
+  "lifecycle_notes": ["Phase 5 (2026-04-18): introduced as one-liner API for reading from any scheme"],
+  "documentation_hooks": ["Quickstart entry point for users"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/storage_facade/test_read_bytes.py", "detail": "read_bytes basic tests"},
+    {"path": "tests/storage_facade/test_read_bytes_infer.py", "detail": "read_bytes with suffix inference"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_facade/read_bytes.py", "detail": "read_bytes function"},
+    {"kind": "test", "path": "tests/storage_facade/", "detail": "2 read_bytes test files"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

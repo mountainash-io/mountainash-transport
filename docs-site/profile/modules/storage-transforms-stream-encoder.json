@@ -1,0 +1,28 @@
+{
+  "id": "mountainash_utils_files.storage_transforms._stream_encoder",
+  "path": "src/mountainash_utils_files/storage_transforms/_stream_encoder.py",
+  "summary": "GzipCompressingReader: RFC 1952-compliant gzip on-demand reader. Lazily compresses source bytes with fixed mtime for reproducible output. Internal implementation detail of Gzip transform.",
+  "role": "io",
+  "visibility": "private",
+  "stability": "stable",
+  "audiences": ["maintainers"],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": ["GzipCompressingReader"],
+  "key_classes": ["GzipCompressingReader"],
+  "key_functions": ["_gzip_header"],
+  "dependencies": [],
+  "dependents": ["storage_transforms.compression"],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_transforms/_stream_encoder.py", "detail": "Underscore-prefixed module, used only by compression.py"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}
