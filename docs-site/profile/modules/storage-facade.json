@@ -1,0 +1,43 @@
+{
+  "id": "mountainash_utils_files.storage_facade",
+  "path": "src/mountainash_utils_files/storage_facade/facade.py",
+  "summary": "StorageFacade: unified API dispatching operations through protocol-checked backends. Factory methods: for_local(), from_path(). Operations: read/write (bytes and stream with optional pipeline= transforms), list_files, list_directories, delete, exists, metadata, get_size, copy, mkdir, rmdir. _require() raises UnsupportedOperationError for missing protocols. _PairedStream helper for resource cleanup.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": ["users", "maintainers", "backend-architecture"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["StorageFacade", "StorageFacade.for_local", "StorageFacade.from_path", "StorageFacade.read", "StorageFacade.read_stream", "StorageFacade.write", "StorageFacade.write_stream", "StorageFacade.list_files", "StorageFacade.list_directories", "StorageFacade.delete", "StorageFacade.exists", "StorageFacade.metadata", "StorageFacade.get_size", "StorageFacade.copy", "StorageFacade.mkdir", "StorageFacade.rmdir", "StorageFacade.supports"],
+  "key_classes": ["StorageFacade"],
+  "key_functions": [],
+  "dependencies": ["storage_registry", "storage_protocols", "storage_transforms", "path_helpers", "exceptions"],
+  "dependents": [],
+  "extension_points": ["Pipeline argument on read/write for custom transform stacks"],
+  "lifecycle_notes": [
+    "Phase 4: added pipeline= argument to read/write operations",
+    "Phase 5: added from_path() factory and read_bytes() top-level helper"
+  ],
+  "documentation_hooks": [
+    "Primary user-facing API reference",
+    "Usage examples for each operation",
+    "Protocol capability matrix"
+  ],
+  "examples": [],
+  "tests": [
+    {"path": "tests/facade/test_facade.py", "detail": "StorageFacade operation tests"},
+    {"path": "tests/facade/test_facade_infer.py", "detail": "Suffix inference integration"},
+    {"path": "tests/storage_facade/test_from_path.py", "detail": "from_path factory tests"},
+    {"path": "tests/storage_facade/test_read_bytes.py", "detail": "read_bytes helper tests"},
+    {"path": "tests/storage_facade/test_read_bytes_infer.py", "detail": "read_bytes with inference tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_facade/facade.py", "detail": "StorageFacade class with 15+ public methods"},
+    {"kind": "test", "path": "tests/facade/", "detail": "2 facade test files"},
+    {"kind": "test", "path": "tests/storage_facade/", "detail": "3 facade test files"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

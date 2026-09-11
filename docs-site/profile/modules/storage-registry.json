@@ -1,0 +1,33 @@
+{
+  "id": "mountainash_utils_files.storage_registry",
+  "path": "src/mountainash_utils_files/storage_registry/",
+  "summary": "Backend registry and path-to-provider detection. register_storage_backend decorator maps provider types to backend classes. detect_provider_from_path resolves URL schemes to provider types via SCHEMES registry. get_storage_backend instantiates a backend by provider type.",
+  "role": "orchestration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture", "extension-authors"],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": ["register_storage_backend", "get_storage_backend", "get_registered_backends", "clear_registry", "detect_provider_from_path"],
+  "key_classes": [],
+  "key_functions": ["register_storage_backend", "get_storage_backend", "detect_provider_from_path"],
+  "dependencies": ["constants", "path_helpers.scheme"],
+  "dependents": ["storage_facade", "storage_backends"],
+  "extension_points": ["register_storage_backend decorator: register new backend classes for new or existing provider types"],
+  "lifecycle_notes": [],
+  "documentation_hooks": ["How to register a new backend", "How path-to-provider detection works"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_registry.py", "detail": "Registry get/register tests"},
+    {"path": "tests/storage_registry/test_backend_detection.py", "detail": "detect_provider_from_path tests"},
+    {"path": "tests/protocol_alignment/test_registry_completeness.py", "detail": "All providers registered"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_registry/__init__.py", "detail": "5 public functions in __all__"},
+    {"kind": "test", "path": "tests/storage_registry/", "detail": "Backend detection tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

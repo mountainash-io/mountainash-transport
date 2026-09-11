@@ -1,0 +1,58 @@
+{
+  "audience": "broader-hype",
+  "summary": "Cloud-native storage abstraction — one interface for local files, S3 (any flavour), HTTP, and more, with transparent compression, encryption, and cross-backend transfers.",
+
+  "the_vision": "Data lives everywhere — local disks, S3 buckets, HTTP endpoints, R2, MinIO, B2, and eventually GCS, Azure, and SFTP. The access patterns are the same but every backend demands its own code. mountainash-transport provides a single interface where backends declare their capabilities through protocols, compression and encryption compose as transform pipelines, and path-driven dispatch routes to the right backend automatically.",
+
+  "what_it_makes_possible": [
+    {
+      "capability": "Read from anywhere with one call",
+      "essence": "read_bytes('s3://bucket/file.gz'), read_bytes('https://api.example.com/data.csv'), read_bytes('/tmp/local.parquet') — same function, same interface. URL scheme detection routes to the right backend. Transform pipelines decompress and decrypt transparently."
+    },
+    {
+      "capability": "S3-family unification",
+      "essence": "AWS S3, Cloudflare R2, MinIO, Backblaze B2, S3 Express — all S3-compatible, all slightly different. One settings class with a flavour field handles the variations. Connect to any S3-compatible service with the same code."
+    },
+    {
+      "capability": "Transparent compression and encryption",
+      "essence": "Gzip and GPG transforms compose as pipelines. Attach them to reads, writes, or cross-backend transfers. The infer_pipeline helper reads file extensions and applies the right transforms automatically — .csv.gz gets decompressed, .csv.gz.gpg gets decrypted then decompressed."
+    },
+    {
+      "capability": "Cross-backend transfers",
+      "essence": "Copy from S3 to local, local to another S3 bucket, HTTP to S3 — with transforms applied in flight. The source and destination can be any supported backend. Compression and encryption compose into the transfer pipeline."
+    },
+    {
+      "capability": "Backends that declare their capabilities",
+      "essence": "Eight storage protocols — Read, Write, List, Delete, Metadata, Copy, Directory, Connection — each independently implementable. A backend picks which capabilities it supports. The facade dispatches based on what's available. Adding a new storage backend means implementing the protocols that matter for your use case."
+    }
+  ],
+
+  "use_cases": [
+    {
+      "title": "The multi-cloud data pipeline",
+      "story": "A pipeline reads compressed data from S3, processes it, and writes results to a different cloud provider. The storage facade handles both ends. Transforms decompress on read and compress on write. The pipeline code doesn't know or care which cloud the data lives on."
+    },
+    {
+      "title": "The encrypted data lake",
+      "story": "Sensitive data lands GPG-encrypted in S3. Analytics pipelines read it through the storage facade with automatic decryption. Processed results write back encrypted. The encryption is a transform pipeline, not application code — it composes with any read or write operation."
+    },
+    {
+      "title": "The migration that doesn't touch application code",
+      "story": "An organisation migrates from AWS S3 to Cloudflare R2. The application code calls the same storage facade methods. The settings class changes its flavour field. The migration is a configuration change."
+    }
+  ],
+
+  "featured_modules": [
+    "mountainash_utils_files.storage_facade.read_bytes",
+    "mountainash_utils_files.storage_facade",
+    "mountainash_utils_files.storage_transforms",
+    "mountainash_utils_files.storage_protocols",
+    "mountainash_utils_files.storage_facade.cross_backend"
+  ],
+  "hidden_or_internal_modules": [
+    "mountainash_utils_files.settings.adapters",
+    "mountainash_utils_files.settings.utils",
+    "mountainash_utils_files.storage_registry"
+  ],
+  "open_questions": []
+}

@@ -1,0 +1,41 @@
+{
+  "id": "mountainash_utils_files.storage_backends.s3",
+  "path": "src/mountainash_utils_files/storage_backends/s3/",
+  "summary": "Unified S3-family backend serving AWS S3, S3 Express, R2, MinIO, and B2 via flavor-dispatched connection. Composed from 7 mixins (Connection, Read, Write, List, Delete, Metadata, Copy). Registered under 5 provider types. Backwards-compatible aliases (R2StorageBackend, etc.) exported. Uses boto3 internally.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["S3StorageBackend", "R2StorageBackend", "S3ExpressStorageBackend", "MinIOStorageBackend", "B2StorageBackend"],
+  "key_classes": ["S3StorageBackend", "S3ConnectionMixin", "S3ReadMixin", "S3WriteMixin"],
+  "key_functions": ["parse_s3_path"],
+  "dependencies": ["constants", "exceptions", "dataclasses.file_metadata", "storage_registry"],
+  "dependents": ["storage_facade"],
+  "extension_points": ["Flavor dispatch in S3ConnectionMixin controls endpoint/region for new S3-compatible services"],
+  "lifecycle_notes": [
+    "Phase 4: consolidated 5 separate backend classes into one with flavor dispatch",
+    "S3ConnectionMixin supports 3 auth_params shapes (profile, legacy wrapper, None)"
+  ],
+  "documentation_hooks": [
+    "Flavor dispatch pattern",
+    "S3 path parsing (s3://bucket/key)",
+    "Multi-provider registration via stacked decorators"
+  ],
+  "examples": [],
+  "tests": [
+    {"path": "tests/backends/test_s3.py", "detail": "S3 backend operation tests"},
+    {"path": "tests/protocol_alignment/test_protocol_conformance.py", "detail": "Protocol conformance"}
+  ],
+  "risks": [
+    "read_to_stream wraps bytes in BytesIO rather than streaming from S3 body — memory concern for large objects"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/storage_backends/s3/__init__.py", "detail": "5 stacked @register decorators, 7 mixins"},
+    {"kind": "test", "path": "tests/backends/test_s3.py", "detail": "S3 backend tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}
