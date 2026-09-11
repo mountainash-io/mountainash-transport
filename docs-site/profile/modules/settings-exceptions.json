@@ -1,0 +1,32 @@
+{
+  "id": "mountainash_utils_files.settings.exceptions",
+  "path": "src/mountainash_utils_files/settings/exceptions.py",
+  "summary": "Settings-layer exception hierarchy: StorageAuthError base, with 16 subclasses covering config, connection, validation, security, permission, encryption, timeout, quota, retry, pool, operation, version, state, feature, compatibility, and migration errors. All include contextual metadata in messages.",
+  "role": "model",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers"],
+  "doc_priority": "reference-only",
+  "confidence": "high",
+  "public_api": ["StorageAuthError", "StorageConfigError", "StorageConnectionError", "StorageValidationError", "StorageSecurityError", "StoragePermissionError", "StorageEncryptionError", "StorageTimeoutError", "StorageQuotaError", "StorageRetryError", "StoragePoolError", "StorageOperationError", "StorageVersionError", "StorageStateError", "StorageFeatureError", "StorageCompatibilityError", "StorageMigrationError"],
+  "key_classes": ["StorageAuthError", "StorageConfigError"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["settings.providers", "settings.adapters"],
+  "extension_points": [],
+  "lifecycle_notes": [],
+  "documentation_hooks": [],
+  "examples": [],
+  "tests": [],
+  "risks": [
+    "17 exception classes seems overspecified for current usage — many may be unused"
+  ],
+  "open_questions": [
+    {"question": "Which of these 17 exceptions are actually raised in practice?", "evidence": "Large hierarchy without obvious test coverage for each"}
+  ],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/exceptions.py", "detail": "17 exception classes"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

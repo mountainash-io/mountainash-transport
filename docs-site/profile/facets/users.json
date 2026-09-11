@@ -1,0 +1,74 @@
+{
+  "audience": "users",
+  "summary": "mountainash-transport gives you a single, consistent way to read, write, copy, and manage files across local disk, S3-compatible stores, and HTTP endpoints. Configure your storage provider, then use read_bytes() for quick one-liners or StorageFacade for full-featured operations. Built-in transform pipelines handle compression and encryption transparently, and suffix-aware path helpers keep your code clean.",
+  "use_cases": [
+    "Read a file from S3 with a single function call",
+    "Copy files between local disk and cloud storage with optional compression",
+    "Automatically decompress .gz or decrypt .gpg files based on file extension",
+    "Switch between AWS S3, Cloudflare R2, MinIO, and Backblaze B2 with only a config change",
+    "Stream large files through gzip or GPG transform pipelines"
+  ],
+  "concepts": [
+    {
+      "name": "One-liner file reading",
+      "module_ids": ["mountainash_utils_files.storage_facade.read_bytes"],
+      "description": "read_bytes() accepts any supported URL scheme and returns file contents in a single call. It dispatches to the correct backend automatically, so you can read from local paths, S3 URIs, or HTTP URLs with the same function."
+    },
+    {
+      "name": "Unified file operations via StorageFacade",
+      "module_ids": ["mountainash_utils_files.storage_facade"],
+      "description": "StorageFacade provides the full set of file operations: read, write, list, delete, copy, and metadata retrieval. Use from_path() to create a facade instance for any supported storage location."
+    },
+    {
+      "name": "Provider configuration",
+      "module_ids": ["mountainash_utils_files.settings.providers"],
+      "description": "Each storage provider has a dedicated settings class with typed fields for authentication, endpoints, and provider-specific options. Configuration is explicit and discoverable, with clear required and optional parameters."
+    },
+    {
+      "name": "Cross-backend file copying",
+      "module_ids": ["mountainash_utils_files.storage_facade.cross_backend"],
+      "description": "copy_between() moves files across different storage backends in a single call. You can apply transform pipelines during the copy, enabling workflows like compressing a local file while uploading it to S3."
+    },
+    {
+      "name": "Compression and encryption transforms",
+      "module_ids": ["mountainash_utils_files.storage_transforms"],
+      "description": "Pipeline, Gzip, and GPG transforms let you compose compression and encryption steps declaratively. Pipelines apply transforms in the correct order for both reads and writes, keeping your application logic focused on data rather than encoding details."
+    },
+    {
+      "name": "Suffix-aware transform inference",
+      "module_ids": ["mountainash_utils_files.path_helpers"],
+      "description": "infer_pipeline examines file suffixes like .gz and .gpg and builds the appropriate transform pipeline automatically. Files are decompressed or decrypted on read and compressed or encrypted on write, with no manual pipeline construction needed."
+    },
+    {
+      "name": "Storage path utilities",
+      "module_ids": ["mountainash_utils_files.path_helpers"],
+      "description": "StoragePath provides URL scheme identification, path normalisation, and join operations across all supported backends. It gives you a consistent way to construct and manipulate paths regardless of the underlying storage system."
+    },
+    {
+      "name": "Error handling",
+      "module_ids": ["mountainash_utils_files.exceptions"],
+      "description": "A clear exception hierarchy lets you catch storage errors at the right level of specificity, from broad storage failures down to provider-specific issues. Each exception carries context about what went wrong and where."
+    }
+  ],
+  "featured_modules": [
+    "mountainash_utils_files",
+    "mountainash_utils_files.storage_facade",
+    "mountainash_utils_files.storage_facade.read_bytes",
+    "mountainash_utils_files.settings.providers",
+    "mountainash_utils_files.storage_transforms",
+    "mountainash_utils_files.path_helpers"
+  ],
+  "hidden_or_internal_modules": [
+    "mountainash_utils_files.storage_transforms._stream_encoder",
+    "mountainash_utils_files.settings.adapters",
+    "mountainash_utils_files.settings.utils",
+    "mountainash_utils_files.settings.templates",
+    "mountainash_utils_files.settings.base",
+    "mountainash_utils_files.settings.descriptor",
+    "mountainash_utils_files.settings.profile",
+    "mountainash_utils_files.settings.registry",
+    "mountainash_utils_files.settings.exceptions",
+    "mountainash_utils_files.storage_registry"
+  ],
+  "open_questions": []
+}

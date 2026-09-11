@@ -1,0 +1,31 @@
+{
+  "id": "mountainash_utils_files.settings.profile",
+  "path": "src/mountainash_utils_files/settings/profile.py",
+  "summary": "StorageProfile(Profile) base class: extends mountainash_settings.profiles.Profile with to_handler_kwargs() that delegates to __adapter__ class variable (resolved via lookup_class_var). Each provider settings class sets __adapter__ to its SDK-specific adapter module.",
+  "role": "orchestration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": ["maintainers", "backend-architecture"],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": ["StorageProfile"],
+  "key_classes": ["StorageProfile"],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": ["settings.providers"],
+  "extension_points": ["Set __adapter__ on subclass to wire custom kwargs builder"],
+  "lifecycle_notes": [],
+  "documentation_hooks": ["Profile-to-kwargs dispatch mechanism"],
+  "examples": [],
+  "tests": [
+    {"path": "tests/test_unit/settings/test_profile.py", "detail": "StorageProfile tests"}
+  ],
+  "risks": [],
+  "open_questions": [],
+  "evidence": [
+    {"kind": "symbol", "path": "src/mountainash_utils_files/settings/profile.py", "detail": "StorageProfile with to_handler_kwargs()"},
+    {"kind": "test", "path": "tests/test_unit/settings/test_profile.py", "detail": "Profile tests"}
+  ],
+  "source_hash": "65bc90f901403a1454ba5d3d608660a95d64b163",
+  "manual": {"notes": "", "editorial_status": "", "owner": "", "manual_summary": ""}
+}

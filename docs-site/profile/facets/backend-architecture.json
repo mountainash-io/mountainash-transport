@@ -1,0 +1,73 @@
+{
+  "audience": "backend-architecture",
+  "summary": "mountainash-transport is built on a protocol-driven, registry-dispatched architecture. Eight runtime-checkable protocols define the storage contract, backends implement whichever protocols they support, and the facade dispatches operations through runtime isinstance checks. Settings flow through a spec-driven profile pattern with per-SDK adapter modules that produce kwargs dicts, keeping backend code cleanly separated from configuration concerns.",
+  "use_cases": [
+    "Understand how a URL scheme maps through provider detection to a concrete backend class",
+    "Trace the full dispatch path from StorageFacade method call to backend protocol implementation",
+    "Evaluate the protocol conformance of each backend to plan capability expansion",
+    "Follow the settings pipeline from StorageProfile through adapters to SDK-specific kwargs"
+  ],
+  "concepts": [
+    {
+      "name": "Eight granular protocols",
+      "module_ids": ["mountainash_utils_files.storage_protocols"],
+      "description": "Eight @runtime_checkable Protocol classes (Read, Write, List, Delete, Metadata, Copy, Directory, Connection) define the full storage contract. Each protocol is independently implementable, allowing backends to declare exactly which capabilities they provide."
+    },
+    {
+      "name": "Backend registry pattern",
+      "module_ids": ["mountainash_utils_files.storage_registry"],
+      "description": "Backends register themselves via the @register_storage_backend decorator, which maps provider types to backend classes in a central registry. This decouples backend discovery from instantiation and supports clean extensibility."
+    },
+    {
+      "name": "Protocol conformance matrix",
+      "module_ids": ["mountainash_utils_files.storage_backends.local", "mountainash_utils_files.storage_backends.s3", "mountainash_utils_files.storage_backends.http"],
+      "description": "Each backend implements a distinct set of protocols based on what the underlying storage system supports. The local backend implements all eight protocols, the S3 backend covers seven, and the HTTP backend focuses on read, write, and metadata. Automated conformance tests verify protocol alignment."
+    },
+    {
+      "name": "Facade dispatch mechanism",
+      "module_ids": ["mountainash_utils_files.storage_facade"],
+      "description": "StorageFacade uses isinstance checks against protocol classes to determine whether the active backend supports a requested operation. The _require() method gates access and supports() lets callers check capabilities before invoking them."
+    },
+    {
+      "name": "Mixin composition for backends",
+      "module_ids": ["mountainash_utils_files.storage_backends.local", "mountainash_utils_files.storage_backends.s3", "mountainash_utils_files.storage_backends.http"],
+      "description": "The local and S3 backends use mixin composition, with one mixin per protocol, making it straightforward to add or modify individual capabilities. The HTTP backend uses a single-class approach suited to its smaller protocol surface."
+    },
+    {
+      "name": "S3 multi-provider unification via flavor dispatch",
+      "module_ids": ["mountainash_utils_files.storage_backends.s3"],
+      "description": "A single S3 backend class serves AWS S3, Cloudflare R2, MinIO, Backblaze B2, and other S3-compatible providers. Five stacked @register_storage_backend decorators map each provider type to the same backend, with flavor-specific configuration handled in the connection layer."
+    },
+    {
+      "name": "Settings to SDK kwargs pipeline",
+      "module_ids": ["mountainash_utils_files.settings.profile", "mountainash_utils_files.settings.adapters", "mountainash_utils_files.settings.descriptor"],
+      "description": "Configuration flows from StorageProfile through a provider-specific adapter module that translates profile fields into SDK-ready kwargs dicts. This pipeline keeps provider settings declarative while giving each SDK the exact parameters it expects."
+    },
+    {
+      "name": "Scheme-to-provider path dispatch",
+      "module_ids": ["mountainash_utils_files.path_helpers", "mountainash_utils_files.storage_registry"],
+      "description": "URL schemes map to provider types through the SCHEMES registry, and provider types resolve to backend classes via the storage registry. This two-step chain enables clean path-driven dispatch with support for scheme aliases and provider detection."
+    },
+    {
+      "name": "Stream transform pipeline architecture",
+      "module_ids": ["mountainash_utils_files.storage_transforms"],
+      "description": "Transform pipelines apply in outermost-first order matching file extension layering. On read, transforms strip outward-in (decompress then decrypt); on write, they wrap inward-out (encrypt then compress). This ordering stays consistent with how file extensions are stacked."
+    }
+  ],
+  "featured_modules": [
+    "mountainash_utils_files.storage_protocols",
+    "mountainash_utils_files.storage_registry",
+    "mountainash_utils_files.storage_backends.local",
+    "mountainash_utils_files.storage_backends.s3",
+    "mountainash_utils_files.storage_backends.http",
+    "mountainash_utils_files.storage_facade",
+    "mountainash_utils_files.settings.profile",
+    "mountainash_utils_files.settings.adapters",
+    "mountainash_utils_files.path_helpers"
+  ],
+  "hidden_or_internal_modules": [
+    "mountainash_utils_files.settings.utils",
+    "mountainash_utils_files.settings.templates"
+  ],
+  "open_questions": []
+}
