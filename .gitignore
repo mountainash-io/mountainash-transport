@@ -172,8 +172,11 @@ htmlcov/
 .vscode/
 .sonarlint/
 
-#testing artifacts
-junit.*
-coverage.*
-.benchmarks/
+# Test / tooling caches
+.pytest_cache/
 .ruff_cache/
+.coverage
+coverage.*
+htmlcov/
+junit.*
+**.lock
