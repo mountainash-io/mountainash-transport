@@ -1,8 +1,11 @@
 # mountainash-transport
 
-![Python](https://img.shields.io/badge/python-3.10%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
 
 Unified file operations across multiple storage systems. Read, write, list, copy, and delete files with a consistent API regardless of whether the data lives on local disk, S3, Azure, GCS, SFTP, HTTP, or any other supported backend.
+Requires Python 3.12 or later.
+
+> CI verifies transport with checked-out settings, secrets, and auth-client packages; public PyPI releases of those siblings are not required. GitHub/wheel distribution and protected opt-in PyPI publishing share verified artifacts. PyPI consumers still need compatible sibling packages through MountainAsh distribution or checkout setup; see [RELEASE.md](RELEASE.md).
 
 ## Features
 

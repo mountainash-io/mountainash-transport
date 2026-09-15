@@ -1,18 +1,19 @@
-name: Pytest Runner
+name: Pytest
 
 on:
   pull_request:
     paths:
-      - "src/**"
-      - "tests/**"
-      - "pyproject.toml"
-      - "hatch.toml"
+      - src/mountainash_transport/**
+      - tests/**
+      - pyproject.toml
+      - hatch.toml
+      - .github/**
   workflow_dispatch:
     inputs:
       fallback_branch:
-        description: "Fallback branch to use"
+        description: Dependency fallback branch.
         required: true
-        default: "develop"
+        default: develop
         type: choice
         options:
           - develop
@@ -23,32 +24,34 @@ permissions:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
-        python-version: ["3.12"]
-
+    runs-on: ubuntu-24.04
     steps:
-      - name: Set fallback branch
+      - name: Set dependency branch variables
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_FALLBACK_BRANCH: ${{ inputs.fallback_branch }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "FALLBACK_BRANCH=${{ github.event.inputs.fallback_branch }}" >> $GITHUB_ENV
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "FALLBACK_BRANCH=${{ github.base_ref }}" >> $GITHUB_ENV
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            echo "FALLBACK_BRANCH=$INPUT_FALLBACK_BRANCH" >> "$GITHUB_ENV"
+            echo "TARGET_BRANCH=$REF_NAME" >> "$GITHUB_ENV"
           else
-            echo "FALLBACK_BRANCH=develop" >> $GITHUB_ENV
+            echo "FALLBACK_BRANCH=$BASE_REF" >> "$GITHUB_ENV"
+            echo "TARGET_BRANCH=$HEAD_REF" >> "$GITHUB_ENV"
           fi
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           check-latest: true
 
       - name: Generate GitHub App token
@@ -59,35 +62,38 @@ jobs:
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
           owner: mountainash-io
 
-      - name: Load Dependencies
-        id: deps
+      - name: Load dependencies
+        id: dependencies
         uses: ./.github/actions/load-dependencies
         with:
           config-path: .github/config/mountainash_dependencies.yml
 
-      - name: Checkout Dependencies
+      - name: Check out dependencies
         uses: ./.github/actions/checkout-dependencies
         with:
-          dependencies: ${{ steps.deps.outputs.dependencies }}
-          target-branch: ${{ github.head_ref }}
+          dependencies: ${{ steps.dependencies.outputs.dependencies }}
+          target-branch: ${{ env.TARGET_BRANCH }}
           default-branch: ${{ env.FALLBACK_BRANCH }}
           token: ${{ steps.app-token.outputs.token }}
           org-name: mountainash-io
 
       - name: Install Hatch
-        run: pip install hatch
+        run: python -m pip install --disable-pip-version-check --no-input hatch
 
-      - name: Create virtual environment
+      - name: Create test environment
         run: hatch env create test_github
 
-      - name: Run Coverage Tests
+      - name: Run coverage tests
         run: hatch run test_github:test-cov
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

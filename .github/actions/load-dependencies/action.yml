@@ -1,41 +1,58 @@
-# .github/workflows/actions/load-dependencies/action.yml
-name: 'Load Dependencies'
-description: 'Loads and processes dependency configuration'
+name: Load Dependencies
+description: Parse the Mountain Ash dependency manifest into compact JSON.
 
 inputs:
   config-path:
-    description: 'Path to dependencies configuration file'
+    description: Path to the dependency manifest.
     required: true
-    default: '.github/config/mountainash_dependencies.yml'
+    default: .github/config/mountainash_dependencies.yml
 
 outputs:
   dependencies:
-    description: 'JSON string of processed dependencies'
-    value: ${{ steps.parse-deps.outputs.deps }}
+    description: JSON array of dependency definitions.
+    value: ${{ steps.parse.outputs.dependencies }}
 
 runs:
   using: composite
   steps:
-    - name: Install Dependencies
+    - name: Install YAML parser
       shell: bash
-      run: |
-        # Install yq for YAML processing
-        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64
-        sudo chmod +x /usr/local/bin/yq
-       
-    - name: Parse Dependencies
-      id: parse-deps
-      shell: bash
-      run: |
-        # Create a properly escaped JSON string
-        DEPS=$(yq eval -o=json '.dependencies' "${{ inputs.config-path }}" | jq -c .)
-        # Use GitHub's special delimiter for multi-line strings
-        echo "deps<<EOF" >> $GITHUB_OUTPUT
-        echo "$DEPS" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+      run: python -m pip install --disable-pip-version-check --no-input PyYAML
 
-    - name: Debug Output
+    - name: Parse dependency manifest
+      id: parse
       shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config-path }}
       run: |
-        echo "Generated dependencies:"
-        yq eval -o=json '.dependencies' "${{ inputs.config-path }}" | jq '.'
+        set -euo pipefail
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        import yaml
+
+        config_path = Path(os.environ["CONFIG_PATH"])
+        try:
+            document = yaml.safe_load(config_path.read_text())
+        except (OSError, yaml.YAMLError) as error:
+            raise SystemExit(f"Unable to parse dependency manifest {config_path}: {error}") from error
+
+        dependencies = document.get("dependencies") if isinstance(document, dict) else None
+        if not isinstance(dependencies, list):
+            raise SystemExit("Dependency manifest must contain a dependencies list")
+
+        for dependency in dependencies:
+            if not isinstance(dependency, dict):
+                raise SystemExit("Each dependency must be a mapping")
+            if not isinstance(dependency.get("name"), str) or not dependency["name"]:
+                raise SystemExit("Each dependency must have a non-empty name")
+            if "org-name" in dependency and (
+                not isinstance(dependency["org-name"], str) or not dependency["org-name"]
+            ):
+                raise SystemExit("Dependency org-name values must be non-empty strings")
+
+        with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+            print(f"dependencies={json.dumps(dependencies, separators=(',', ':'))}", file=output)
+        PY

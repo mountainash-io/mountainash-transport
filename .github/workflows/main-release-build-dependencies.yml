@@ -1,55 +1,27 @@
-# Pre-merge validation workflow
-name: Validate Main Release PR - Build Dependencies
+name: Validate Main Release PR Dependencies
 
 on:
   pull_request:
     branches:
-      - "main"
+      - main
 
 permissions:
   contents: read
 
 jobs:
-  main-release-build-dependencies:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04]
-        python-version: ["3.12"]
-
-    env:
-      BUILD_ENV: "build_github"
-
+  build-dependencies:
+    runs-on: ubuntu-24.04
     steps:
-      # ======================================================
-      # INITIALIZE
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
-          fetch-depth: 0 # Get the target branch name (branch PR was merged into)
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set Branch Vars
-        run: |
-          echo "SOURCE_BRANCH=${{ github.head_ref }}" >> $GITHUB_ENV
-          echo "TARGET_BRANCH=${{ github.base_ref }}" >> $GITHUB_ENV
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      # ======================================================
-      # DEPENDENCIES
-
-      - name: Python Dependencies
-        run: |
-          pip install hatchling==1.29.0
-          pip install hatch==1.16.5
-
-      # Checkout Mountain Ash Dependencies
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v2
@@ -58,24 +30,23 @@ jobs:
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
           owner: mountainash-io
 
-      - name: Load Dependencies
-        id: deps
+      - name: Load dependencies
+        id: dependencies
         uses: ./.github/actions/load-dependencies
         with:
           config-path: .github/config/mountainash_dependencies.yml
 
-      - name: Checkout Dependencies
+      - name: Check out main dependencies
         uses: ./.github/actions/checkout-dependencies
         with:
-          dependencies: ${{ steps.deps.outputs.dependencies }}
-          target-branch: ${{ env.TARGET_BRANCH }}
+          dependencies: ${{ steps.dependencies.outputs.dependencies }}
+          target-branch: main
           default-branch: main
           token: ${{ steps.app-token.outputs.token }}
-          org-name: ${{ env.ORGNAME }}
+          org-name: mountainash-io
 
-      # ======================================================
-      # BUILD ARTIFACTS
+      - name: Install Hatch
+        run: python -m pip install --disable-pip-version-check --no-input hatch
 
-      - name: Setup Build Environment
-        run: |
-          hatch env create ${{ env.BUILD_ENV }}
+      - name: Create build environment
+        run: hatch env create build_github
