@@ -84,7 +84,7 @@ jobs:
         run: |
           mkdir -p "$RELEASE_ROOT/home"
           env -i PATH="$PATH" HOME="$RELEASE_ROOT/home" PIP_CONFIG_FILE=/dev/null PIP_INDEX_URL=https://pypi.org/simple PIP_DISABLE_PIP_VERSION_CHECK=1 \
-            python -I -m pip install --isolated --no-input --index-url https://pypi.org/simple build twine hatch
+            python -I -m pip install --isolated --no-input --index-url https://pypi.org/simple build==1.6.1 twine==7.0.0 hatch==1.18.0
 
       - name: Set release version
         env:
