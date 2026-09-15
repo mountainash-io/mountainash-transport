@@ -7,6 +7,9 @@ path = "src/mountainash_transport/__version__.py"
 [build.targets.wheel]
 packages = ["src/mountainash_transport"]
 
+[build.targets.sdist]
+include = ["/src", "/pyproject.toml", "/hatch.toml", "/README.md", "/LICENSE"]
+
 #================
 # Env: build_github
 #================
