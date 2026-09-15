@@ -5,7 +5,7 @@
 Unified file operations across multiple storage systems. Read, write, list, copy, and delete files with a consistent API regardless of whether the data lives on local disk, S3, Azure, GCS, SFTP, HTTP, or any other supported backend.
 Requires Python 3.12 or later.
 
-> Public PyPI publication is not confirmed by these source changes. Treat builds as unpublished candidates until the public confirmation stage succeeds. Settings and auth-client releases must already resolve from PyPI; see [RELEASE.md](RELEASE.md).
+> CI verifies transport with checked-out settings, secrets, and auth-client packages; public PyPI releases of those siblings are not required. GitHub/wheel distribution and protected opt-in PyPI publishing share verified artifacts. PyPI consumers still need compatible sibling packages through MountainAsh distribution or checkout setup; see [RELEASE.md](RELEASE.md).
 
 ## Features
 

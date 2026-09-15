@@ -1,6 +1,6 @@
-# Testing Mountain Ash Utils - Files
+# Testing mountainash-transport
 
-This document outlines the testing procedures for the Mountain Ash Utils - Files project, including how to run tests locally and via GitHub Actions.
+This document describes local and GitHub Actions testing for mountainash-transport.
 
 ## Table of Contents
 
@@ -18,6 +18,10 @@ We use [Hatch](https://hatch.pypa.io/) to manage our development environment and
    ```bash
    pip install hatch
    ```
+   Clone compatible `mountainash-settings`, `mountainash-secrets`, and
+   `mountainash-auth-client` repositories adjacent to this repository. The local
+   Hatch environments install these siblings before transport, so no public PyPI
+   releases of the sibling packages are required.
 
 2. Run the comprehensive test suite (recommended for daily use):
    ```bash
@@ -124,17 +128,17 @@ After running `hatch run test:test` or any coverage-enabled command, you'll find
 
 ## GitHub Actions Testing
 
-Our GitHub Actions workflow automatically runs tests on pull requests and pushes to specific branches. The workflow is defined in `.github/workflows/python-run-pytest.yml`.
+The workflow `.github/workflows/python-run-pytest.yml` runs on relevant pull-request changes and manual dispatch.
 
 Key points:
 - Tests are run on Ubuntu 24.04 with Python 3.12
-- The workflow is triggered on pull requests that modify `src/mountainash_transport/**` files
+- PR changes to source, tests, package/Hatch configuration, or `.github/**` trigger testing
 - Uses the `test_github` environment defined in `hatch.toml`
 - Automatically uploads coverage to Codecov
 
 To manually trigger the tests in GitHub Actions:
 1. Go to the "Actions" tab in the GitHub repository
-2. Select the "Pytest Runner" workflow
+2. Select the "Pytest" workflow
 3. Click "Run workflow" and select the branch you want to test
 4. Choose the fallback branch for dependencies:
    - `develop` (default)
@@ -148,10 +152,17 @@ One of the key features of our testing setup is the ability to test changes acro
 To test dependency changes:
 1. Create branches with identical names across all relevant Mountain Ash repositories.
 2. Push your changes to these branches.
-3. When you create a pull request or push to the branch in this repository, the GitHub Actions workflow will automatically use the matching branches from the dependency repositories.
-4. If a matching branch doesn't exist for a dependency, the workflow falls back to using the branch specified in the workflow dispatch (either main or develop).
+3. PR runs select the PR source branch; manual runs select the dispatched branch.
+4. If a matching sibling branch is absent, PR runs fall back to the PR base branch; manual runs use the selected `fallback_branch`.
 
 This allows you to test integrated changes across multiple packages before merging, with the flexibility to choose which version of dependencies to fall back on.
+
+The manifest `.github/config/mountainash_dependencies.yml` contains settings,
+secrets, and auth-client. The GitHub App credentials `CI_APP_ID` and
+`CI_APP_PRIVATE_KEY` authorize checkouts under `temp/`. API/clone failures stop the
+job; credentials are not retained in clone remotes. `test_github` and
+`build_github` bootstrap all three siblings before Hatch installs transport.
+Fork PRs require review and a trusted-branch run before secret-backed checks.
 
 ## Online Coverage Tracking
 
@@ -165,14 +176,3 @@ To view online coverage reports:
 
 We strive to maintain high code coverage. Please ensure that your contributions include appropriate test coverage.
 
-## Development Dependencies
-
-Our testing setup supports testing across multiple Mountain Ash repositories simultaneously, useful when making changes that affect multiple packages.
-
-To test dependency changes:
-1. Create branches with identical names across all relevant Mountain Ash repositories
-2. Push your changes to these branches
-3. When you create a pull request or push to the branch in this repository, the GitHub Actions workflow will automatically use the matching branches from dependency repositories
-4. If a matching branch doesn't exist for a dependency, the workflow falls back to the specified branch (main or develop)
-
-This allows you to test integrated changes across multiple packages before merging.

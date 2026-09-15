@@ -1,33 +1,81 @@
 # Release Procedure
 
-mountainash-transport requires Python 3.12+. Source changes and candidate builds do not establish public publication. Settings and auth-client, including auth-client's secrets dependency, must have compatible public PyPI releases first.
+mountainash-transport requires Python 3.12+. MountainAsh distribution and optional
+PyPI publishing consume the same verified artifacts when enabled together. Source
+changes or candidate builds alone do not establish publication.
 
 ## Prepare and verify
 
-1. Prepare the final unused version in `src/mountainash_transport/__version__.py` under this repository's version policy. Use reviewed `release/*` or `hotfix/*` changes and existing branch/CI rules; do not push directly to protected branches.
-2. `build-and-release-package.yml` builds candidates for PRs targeting `main`/`develop` and for manual dispatch. Default manual input is `publish=false`.
-3. The workflow builds exactly one wheel and one sdist with public build requirements, checks metadata and records hashes/source/run identity. It installs the wheel and an independently sdist-derived wheel in fresh external Python 3.12 environments, using only public PyPI dependencies.
-4. Installation reports, `pip check`, imported-module origins and wheel/sdist metadata agreement must pass. A sibling checkout or private wheelhouse is not final release evidence.
+1. Prepare an unused version in `src/mountainash_transport/__version__.py` through
+   reviewed `release/*` or `hotfix/*` changes. Never push directly to protected branches.
+2. CI reads `.github/config/mountainash_dependencies.yml` and checks out settings,
+   secrets, and auth-client under `temp/`. It selects a matching source branch,
+   falling back to the PR base branch or manual `fallback_branch` input.
+3. Hatch installs all three siblings before installing transport. Runtime version
+   bounds remain enforced; local paths do not bypass compatibility checks.
+4. `build-and-release-package.yml` builds one transport wheel and sdist plus sibling
+   wheels. It verifies the transport wheel and independently sdist-derived wheel
+   in fresh external Python 3.12 environments using those sibling wheels and
+   public PyPI for other dependencies.
+5. Install reports, `pip check`, module origins, metadata agreement, artifact hashes,
+   sibling revisions, and full/direct JSON SBOMs are recorded as verification evidence.
 
-## Publishing setup requires separate authorization
+The distribution artifact contains only transport's wheel and sdist. Sibling wheels
+travel in the separate evidence artifact, with hashes checked before PyPI publication.
 
-- Establish PyPI ownership or a pending publisher for `mountainash-transport`. Pending publishers do not reserve names.
-- Configure the GitHub environment **`pypi`** with required human reviewers and exactly one custom deployment policy allowing the **`main` branch**.
-- Configure PyPI Trusted Publishing for this repository's exact owner/name, workflow filename **`build-and-release-package.yml`**, and environment **`pypi`**.
-- No token, unprotected environment, fallback branch or alternate index substitutes for missing setup. Preflight fails closed if protection is missing or cannot be verified.
+## Publication controls
 
-## Approve, publish, confirm
+| Trigger | GitHub release and wheels PR | PyPI |
+| --- | --- | --- |
+| Open or updated PR | No; build and verify only | No |
+| Merged PR | Yes | No |
+| Manual, default inputs | No; build and verify only | No |
+| Manual, `release=true` | Yes | Only if separately enabled |
+| Manual on `main`, `publish=true` | Only if `release=true` | Yes, after approval |
 
-After authorization, dispatch on `main` with `publish=true`. Review the exact source/version, wheel/sdist hashes and verification evidence before approving the `pypi` environment.
+Merges to `main` use the reviewed source version. Merges to `develop` produce
+`rc<run_number>` versions; merges to other configured branches produce
+`b<run_number>` versions. Manual MountainAsh releases select `release_type`
+(`production`, `rc`, or `beta`). Suffixes change only the build checkout, never source commits.
 
-The publisher downloads the exact same-run distribution/evidence artifact IDs, checks identity and hashes, and uploads with short-lived OIDC authority. It never rebuilds, rewrites the version or uses `skip-existing`. It then checks the public PyPI file set/hashes and performs a fresh public-index install/import.
+GitHub releases contain the verified wheel, sdist, and SBOMs. Wheel distribution
+opens a release-branch PR targeting `mountainash-wheels/develop`; it does not push
+directly to `develop` or `main`.
 
-Evidence artifacts are named `release-dist-<run>-<attempt>`, `release-evidence-<run>-<attempt>` and, after successful confirmation, `publication-evidence-<run>-<attempt>`. The old automatic GitHub/SBOM/wheels-repository release path is replaced; historical releases remain untouched.
+To publish to both destinations in one run, dispatch on `main` with `release=true`,
+`publish=true`, and `release_type=production`. Both publishers download exact
+same-run artifact IDs and verify hashes without rebuilding or overwriting existing
+releases. If GitHub already carries this version, leave `release=false` for a
+PyPI-only run.
+
+## Credentials and PyPI protection
+
+- `CI_APP_ID` and `CI_APP_PRIVATE_KEY`: sibling read access and contents/pull-request
+  write access to `mountainash-wheels`.
+- `CODECOV_TOKEN`: coverage and test-result uploads.
+- Establish PyPI ownership or a pending publisher for `mountainash-transport`.
+  Pending publishers do not reserve names.
+- Configure the `pypi` GitHub environment with human reviewers and exactly one
+  custom deployment policy allowing the `main` branch.
+- Configure PyPI Trusted Publishing for this repository, workflow filename
+  `build-and-release-package.yml`, and environment `pypi`. The preflight fails
+  closed if protection is missing or cannot be verified.
+
+After approval, PyPI publishing uses short-lived OIDC authority and never uses
+`skip-existing`. It confirms public transport file hashes and performs a fresh
+install/import with the exact approved sibling wheels. Consumers likewise need
+compatible sibling packages through MountainAsh distribution or checkout setup;
+this does not claim a standalone public-PyPI-only installation works.
 
 ## Failure handling
 
-Missing public dependencies, incompatible metadata, install/import failures, changed hashes or missing environment protection block publication. Collisions, partial uploads and unexpected public files require explicit reconciliation before a new attempt; upload success alone is not confirmation.
+Missing sibling checkouts, incompatible metadata, install/import failures, changed
+hashes, or missing environment protection block publication. Collisions and partial
+uploads require explicit reconciliation; upload success alone is not confirmation.
 
-Do not relax safe sdist extraction to accept repository-local tooling links. Source archives contain portable package/build inputs rather than the development checkout. Source/version changes require a new candidate and approval.
+Do not relax safe sdist extraction to accept repository-local tooling links.
+Source archives contain portable package/build inputs rather than the development
+checkout. Source/version changes require a new candidate and approval.
 
-See [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/adding-a-publisher/) and [first-publication setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
+See [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/adding-a-publisher/)
+and [first-publication setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
