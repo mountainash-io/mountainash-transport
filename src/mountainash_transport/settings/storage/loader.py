@@ -193,22 +193,6 @@ def _build_params(
     )
 
 
-def _materialize_profile(
-    profile_cls: type[MountainAshBaseSettings], parameters: dict[str, t.Any]
-) -> MountainAshBaseSettings:
-    """Validate already-resolved data without running settings sources again.
-
-    Profile.model_validate invokes the settings constructor, which treats
-    reference-shaped strings as fresh input. BaseModel initialization retains
-    field/model validators and defaults without that second settings stage.
-    Run the profile hook as well so derived defaults retain their semantics.
-    """
-    profile = profile_cls.__new__(profile_cls)
-    BaseModel.__init__(profile, **parameters)
-    profile.post_init()
-    return profile
-
-
 def resolve_storage(
     name: str,
     *,
@@ -230,7 +214,7 @@ def resolve_storage(
     if block is None:
         raise ProfileNotFoundError(name, available=list(settings.storage_profiles))
 
-    # Settings resolves nested references once. Reference-shaped results are data.
+    # Settings owns reference resolution; do not add a transport resolver pass.
     storage_params = dict(block.parameters)
     reference_inputs = settings.reference_inputs.get(name, {})
 
@@ -243,7 +227,7 @@ def resolve_storage(
         ) from exc
 
     try:
-        storage_profile = _materialize_profile(storage_cls, storage_params)
+        storage_profile = storage_cls.model_validate(storage_params)
     except ValidationError as exc:
         if not _sensitive_validation(exc, reference_inputs.get("parameters", {})):
             raise ProfileResolutionError(
@@ -289,7 +273,7 @@ def resolve_storage(
             name, f"no auth profile class for mode {effective_mode.value!r}"
         ) from exc
     try:
-        auth_profile = _materialize_profile(auth_cls, auth_params)
+        auth_profile = auth_cls.model_validate(auth_params)
     except ValidationError as exc:
         if not _sensitive_validation(
             exc, reference_inputs.get("auth", {}).get("parameters", {})

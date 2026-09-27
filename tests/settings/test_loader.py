@@ -121,6 +121,38 @@ class TestResolveStorage:
             resolve_storage("scratch", settings_parameters=params)
 
 
+@pytest.mark.parametrize(
+    ("name", "member", "expected"),
+    [
+        ("scratch", 0, {"ROOT_PATH": "/tmp/scratch"}),
+        ("scratch", 1, {}),
+        (
+            "lake",
+            0,
+            {"FLAVOR": "aws", "REGION": "ap-southeast-2", "BUCKET": "test-lake"},
+        ),
+        ("lake", 1, {"ACCESS_KEY_ID": "AKIATEST", "SECRET_ACCESS_KEY": "shhh"}),
+    ],
+)
+def test_ordinary_returned_profiles_can_reconstruct_settings(
+    config_params, name, member, expected
+):
+    from mountainash_settings import get_settings
+    from pydantic import SecretStr
+
+    profile = resolve_storage(name, settings_parameters=config_params)[member]
+    extracted = profile.extract_settings_parameters()
+    assert extracted.settings_class is type(profile)
+    rebuilt = get_settings(settings_parameters=extracted)
+    assert type(rebuilt) is type(profile)
+    assert rebuilt is not profile
+    for field, value in expected.items():
+        actual = getattr(rebuilt, field)
+        if isinstance(actual, SecretStr):
+            actual = actual.get_secret_value()
+        assert actual == value
+
+
 class TestSecretResolution:
     def test_secret_reference_resolved_via_backend(self, tmp_path):
         from mountainash_settings.secrets import MemorySecretStore
@@ -224,15 +256,13 @@ def test_missing_record_or_field_remains_failure(tmp_path, record):
         resolve_storage("lake", settings_parameters=params)
 
 
-def test_nested_references_resolve_once_and_reference_shaped_values_are_data():
+def test_nested_references_resolve_once():
     from mountainash_settings.secrets import MemorySecretStore
 
     class CountingReader:
         def __init__(self):
             self.store = MemorySecretStore()
-            self.store.set(
-                "values", {"root": "secret:not.a.lookup", "option": "resolved"}
-            )
+            self.store.set("values", {"root": "/resolved/root", "option": "resolved"})
             self.reads = []
 
         def get(self, key):
@@ -267,11 +297,11 @@ def test_nested_references_resolve_once_and_reference_shaped_values_are_data():
         },
     )
     profile, _ = resolve_storage("nested", settings_parameters=params)
-    assert profile.ROOT_PATH == "secret:not.a.lookup"
+    assert profile.ROOT_PATH == "/resolved/root"
     assert profile.MOUNT_SPEC == {"options": ["resolved", {"nested": "resolved"}]}
     assert reader.reads == ["values", "values", "values", "values"]
     _, auth = resolve_storage("lake", settings_parameters=params)
-    assert auth.SECRET_ACCESS_KEY.get_secret_value() == "secret:not.a.lookup"
+    assert auth.SECRET_ACCESS_KEY.get_secret_value() == "/resolved/root"
     assert reader.reads == ["values"] * 8
 
 
@@ -337,6 +367,52 @@ def test_resolved_validation_failure_has_no_value_or_exception_chain(
         )
     with pytest.raises(ProfileResolutionError) as caught:
         resolve_storage("invalid", settings_parameters=params)
+    assert sentinel not in str(caught.value)
+    assert sentinel not in repr(caught.value)
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+
+
+@pytest.mark.parametrize("from_file", [False, True])
+@pytest.mark.parametrize("failure", ["missing_username", "invalid_password_shape"])
+def test_password_validation_does_not_expose_resolved_input(
+    tmp_path, from_file, failure
+):
+    import yaml
+
+    from mountainash_settings.secrets import MemorySecretStore
+
+    sentinel = "private-password-57218"
+    store = MemorySecretStore()
+    store.set("account", {"password": sentinel})
+    if failure == "missing_username":
+        # PASSWORD is valid for SecretStr, but a missing USERNAME error carries
+        # the entire raw parameter mapping, before SecretStr masking.
+        auth_parameters = {"PASSWORD": "secret:account.password"}
+    else:
+        # The nested reference resolves normally; the resulting mapping is not
+        # valid input to SecretStr and must not leak via the validation error.
+        auth_parameters = {
+            "USERNAME": "user",
+            "PASSWORD": {"nested": "secret:account.password"},
+        }
+    data = {
+        "storage_profiles": {
+            "private": {
+                "provider": "http",
+                "auth": {"mode": "password", "parameters": auth_parameters},
+            }
+        }
+    }
+    if from_file:
+        cfg = tmp_path / "profiles.yaml"
+        cfg.write_text(yaml.safe_dump(data))
+        params = SettingsParameters.create(config_files=[str(cfg)], secret_store=store)
+    else:
+        params = SettingsParameters.create(secret_store=store, **data)
+
+    with pytest.raises(ProfileResolutionError) as caught:
+        resolve_storage("private", settings_parameters=params)
     assert sentinel not in str(caught.value)
     assert sentinel not in repr(caught.value)
     assert caught.value.__cause__ is None
