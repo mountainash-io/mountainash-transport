@@ -1,23 +1,34 @@
 import pytest
 from mountainash_auth_client import OAuth2AuthProfile
+from mountainash_settings.secrets import MemorySecretStore
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.storage.facade import StorageFacade
 from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
 
 
-class _FakeProvider: NAME = "idp"
+class _FakeProvider:
+    NAME = "idp"
 
 
 def _http(): return HTTPStorageProfile()
 
 
-def test_managed_oauth2_threads_strategy_into_engine(monkeypatch):
+@pytest.mark.parametrize("from_path", [False, True])
+def test_managed_oauth2_threads_strategy_into_engine(monkeypatch, from_path):
     import mountainash_transport.connections.auth_strategy as mod
-    monkeypatch.setattr(mod, "OAuth2TokenManager", lambda *a, **k: object())
-    f = StorageFacade(
-        CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+    store = MemorySecretStore()
+
+    def manager(provider, auth, *, token_store):
+        assert token_store is store
+        return object()
+
+    monkeypatch.setattr(mod, "OAuth2TokenManager", manager)
+    factory = StorageFacade.from_path if from_path else StorageFacade
+    target = "https://example.com/file" if from_path else CONST_STORAGE_PROVIDER_TYPE.HTTP
+    f = factory(
+        target, _http(),
         auth_profile=OAuth2AuthProfile(),                 # no static token
-        oauth_provider=_FakeProvider(), secret_resolver=object(),
+        oauth_provider=_FakeProvider(), token_store=store,
     )
     engine = f._backend._engine
     assert engine is not None and engine._auth_strategy is not None   # wiring gap regression
@@ -31,7 +42,9 @@ def test_managed_oauth2_without_provider_fails_closed():
         )
 
 
-def test_fail_closed_does_not_open_a_connection(monkeypatch):
+@pytest.mark.parametrize("from_path", [False, True])
+@pytest.mark.parametrize("provider", [None, _FakeProvider()])
+def test_fail_closed_does_not_open_a_connection(monkeypatch, from_path, provider):
     """The fail-closed raise fires BEFORE connect(), so the misconfiguration path
     never opens (and leaks) a client — regression guard for the reorder fix."""
     import mountainash_transport.connections.http as http_mod
@@ -43,10 +56,13 @@ def test_fail_closed_does_not_open_a_connection(monkeypatch):
         return original(self, *args, **kwargs)
 
     monkeypatch.setattr(http_mod.HTTPConnection, "connect", _spy)
-    with pytest.raises(ValueError):
-        StorageFacade(
-            CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+    factory = StorageFacade.from_path if from_path else StorageFacade
+    target = "https://example.com/file" if from_path else CONST_STORAGE_PROVIDER_TYPE.HTTP
+    with pytest.raises(ValueError, match="token_store"):
+        factory(
+            target, _http(),
             auth_profile=OAuth2AuthProfile(),             # no static token, no provider
+            oauth_provider=provider,
         )
     assert calls["n"] == 0                                # never connected
 
@@ -73,7 +89,7 @@ def test_gate_rejects_oauth2_on_s3_without_building_manager(monkeypatch):
             CONST_STORAGE_PROVIDER_TYPE.S3,
             S3StorageProfile(BUCKET="b", FLAVOR="aws"),
             auth_profile=OAuth2AuthProfile(),
-            oauth_provider=_FakeProvider(), secret_resolver=object(),
+            oauth_provider=_FakeProvider(), token_store=MemorySecretStore(),
         )
     assert built["n"] == 0            # manager never constructed
 
@@ -92,7 +108,7 @@ def test_managed_oauth2_no_stored_token_propagates(monkeypatch):
     f = StorageFacade(
         CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
         auth_profile=OAuth2AuthProfile(),
-        oauth_provider=_FakeProvider(), secret_resolver=object(),
+        oauth_provider=_FakeProvider(), token_store=MemorySecretStore(),
     )
     with pytest.raises(AuthorizationRequired):
         f._backend._engine._auth_strategy.get_headers()   # first use triggers acquire()

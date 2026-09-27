@@ -8,6 +8,8 @@ import io
 import typing as t
 from typing import BinaryIO
 
+from mountainash_settings.secrets import ClearableSecretStore
+
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport._core.exceptions import UnsupportedOperationError
@@ -84,7 +86,7 @@ class StorageFacade:
         *,
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
-        secret_resolver: t.Any = None,
+        token_store: ClearableSecretStore | None = None,
     ) -> None:
         from mountainash_transport.connections import create_connection, create_auth_strategy
         from mountainash_auth_client import OAuth2AuthProfile
@@ -94,7 +96,7 @@ class StorageFacade:
         if storage_profile is not None:
             connection = create_connection(storage_profile, auth_profile)   # gate runs FIRST
             strategy = create_auth_strategy(
-                auth_profile, oauth_provider=oauth_provider, secret_resolver=secret_resolver,
+                auth_profile, oauth_provider=oauth_provider, token_store=token_store,
             )
             # fail-closed: managed OAuth2 (no static token) must have a strategy.
             # Checked BEFORE connect() so a misconfiguration never opens (and then
@@ -106,7 +108,7 @@ class StorageFacade:
             ):
                 raise ValueError(
                     "OAuth2 profile has no static ACCESS_TOKEN and no oauth_provider; "
-                    "supply oauth_provider + secret_resolver for the managed flow, "
+                    "supply oauth_provider + token_store for the managed flow, "
                     "or set a static ACCESS_TOKEN."
                 )
             connection.connect()
@@ -133,7 +135,7 @@ class StorageFacade:
         *,
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
-        secret_resolver: t.Any = None,
+        token_store: ClearableSecretStore | None = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
@@ -143,7 +145,8 @@ class StorageFacade:
             auth: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
                 When provided, overrides any Authorization header set by *profile*.
             oauth_provider: Optional OAuth2 provider profile for the managed token flow.
-            secret_resolver: Optional secret store resolver for the managed token flow.
+            token_store: Raw ClearableSecretStore for managed tokens, distinct from
+                the config reader. The caller owns its lifetime.
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
@@ -154,7 +157,7 @@ class StorageFacade:
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,
-            oauth_provider=oauth_provider, secret_resolver=secret_resolver,
+            oauth_provider=oauth_provider, token_store=token_store,
         )
 
     # ------------------------------------------------------------------
