@@ -19,10 +19,10 @@ class TestImplementedFlagDrift:
 
     @pytest.mark.parametrize(
         "name",
-        list(STORAGE_REGISTRY.descriptors.keys()),
+        list(STORAGE_REGISTRY.specs.keys()),
     )
     def test_implemented_matches_backend_registry(self, name):
-        spec = STORAGE_REGISTRY.descriptors[name]
+        spec = STORAGE_REGISTRY.get_spec(name)
         backends = get_registered_backends()
         has_backend = spec.provider_type in backends
         assert spec.implemented == has_backend, (

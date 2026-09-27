@@ -16,6 +16,8 @@ exercised by whichever phase fully wires each backend.
 
 from __future__ import annotations
 
+import pytest
+
 # Trigger provider registration so STORAGE_REGISTRY is populated.
 import mountainash_transport.settings.storage.profiles  # noqa: F401
 
@@ -37,3 +39,24 @@ def test_implemented_defaults_to_true():
 def test_implemented_can_be_false():
     spec = StorageProfileSpec(name="test", provider_type="test", parameters=[], implemented=False)
     assert spec.implemented is False
+
+
+def test_profile_lookup_and_backend_discovery_survive_specs_copy_clear():
+    """Public settings lookups and backend discovery use the current registry API."""
+    from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+    from mountainash_transport._core.exceptions import BackendNotImplementedError
+    from mountainash_transport.settings.storage.profiles import LOCAL_SPEC, LocalStorageProfile
+    from mountainash_transport.settings.storage.registry import get_settings_class, get_spec
+    from mountainash_transport.storage.backends.local import LocalStorageBackend
+    from mountainash_transport.storage.registry import get_registered_backends, get_storage_backend
+
+    specs = STORAGE_REGISTRY.specs
+    specs.clear()
+
+    assert get_spec("local") is LOCAL_SPEC
+    assert get_settings_class("local") is LocalStorageProfile
+    assert "local" in STORAGE_REGISTRY.specs
+    assert get_registered_backends()[CONST_STORAGE_PROVIDER_TYPE.LOCAL] is LocalStorageBackend
+    assert isinstance(get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL, None), LocalStorageBackend)
+    with pytest.raises(BackendNotImplementedError, match="gcs"):
+        get_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS, None)

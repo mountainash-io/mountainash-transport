@@ -9,6 +9,7 @@ This is the **settings** registry (spec-driven, wraps
 from __future__ import annotations
 
 import pytest
+from mountainash_settings.profiles import Profile
 
 # Trigger provider registration so STORAGE_REGISTRY is populated.
 import mountainash_transport.settings.storage.profiles  # noqa: F401
@@ -68,15 +69,15 @@ class TestStorageRegistry:
         """The registry exposes the expected domain name."""
         assert STORAGE_REGISTRY.name == "storage"
 
-    def test_all_eight_providers_registered(self):
-        """All 8 Phase 4 specs register themselves at import time."""
-        registered = set(STORAGE_REGISTRY.descriptors.keys())
+    def test_all_providers_registered(self):
+        """All expected specs register themselves at import time."""
+        registered = set(STORAGE_REGISTRY.specs.keys())
         missing = EXPECTED_PROVIDERS - registered
         assert not missing, f"missing from STORAGE_REGISTRY: {missing}"
 
     def test_no_unexpected_providers(self):
-        """Only the 8 expected providers are registered (no stragglers)."""
-        registered = set(STORAGE_REGISTRY.descriptors.keys())
+        """Only the expected providers are registered (no stragglers)."""
+        registered = set(STORAGE_REGISTRY.specs.keys())
         extras = registered - EXPECTED_PROVIDERS
         assert not extras, f"unexpected extras in STORAGE_REGISTRY: {extras}"
 
@@ -136,10 +137,17 @@ class TestStorageRegistry:
         snapshot = STORAGE_REGISTRY._snapshot_for_tests()
         try:
             @register
-            class _DummyStorageProfile(StorageProfileProtocol):
+            class _DummyStorageProfile(Profile):
                 __spec__ = dummy_spec
 
-            assert "_test_registry_binding" in STORAGE_REGISTRY.descriptors
+                def to_handler_kwargs(self) -> dict:
+                    return {"foo": self.FOO}
+
+                def get_connection_url(self) -> str:
+                    return "test://"
+
+            assert isinstance(_DummyStorageProfile(), StorageProfileProtocol)
+            assert "_test_registry_binding" in STORAGE_REGISTRY.specs
             assert get_settings_class("_test_registry_binding") is _DummyStorageProfile
         finally:
             STORAGE_REGISTRY._reset_for_tests(*snapshot)
@@ -158,18 +166,26 @@ class TestStorageRegistry:
             supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
         )
 
-        @register
-        class _TmpStorageProfile(StorageProfileProtocol):
-            __spec__ = tmp_spec
+        try:
+            @register
+            class _TmpStorageProfile(Profile):
+                __spec__ = tmp_spec
 
-        assert "_snapshot_dummy" in STORAGE_REGISTRY.descriptors
+                def to_handler_kwargs(self) -> dict:
+                    return {"bar": self.BAR}
 
-        STORAGE_REGISTRY._reset_for_tests(*snapshot)
+                def get_connection_url(self) -> str:
+                    return "test://"
 
-        assert "_snapshot_dummy" not in STORAGE_REGISTRY.descriptors
-        # Original 8 providers still present.
+            assert isinstance(_TmpStorageProfile(), StorageProfileProtocol)
+            assert "_snapshot_dummy" in STORAGE_REGISTRY.specs
+        finally:
+            STORAGE_REGISTRY._reset_for_tests(*snapshot)
+
+        assert "_snapshot_dummy" not in STORAGE_REGISTRY.specs
+        # Original providers still present.
         for name in EXPECTED_PROVIDERS:
-            assert name in STORAGE_REGISTRY.descriptors
+            assert name in STORAGE_REGISTRY.specs
 
     def test_registry_supports_contains(self):
         """The wrapper supports ``in`` membership checks by name."""

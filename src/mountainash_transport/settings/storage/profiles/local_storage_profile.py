@@ -143,12 +143,11 @@ class LocalStorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build LocalStorageBackend kwargs from a :class:`LocalSettings` profile.
+        """Build LocalStorageBackend kwargs from this profile.
 
-        Signature widened to ``StorageProfile`` to satisfy the upstream
-        ``__adapter__: Callable[[Profile], dict[str, Any]]``
-        contract; callers always pass a :class:`LocalSettings` instance in
-        practice.
+        This transport hook returns SDK config directly. Settings emission
+        adapters belong in the target-specific ``__adapters__`` mapping;
+        each adapter receives ``(profile, merged)`` for its selected target.
         """
         kwargs: dict[str, t.Any] = {
             "root_path": getattr(self, "ROOT_PATH", None),
