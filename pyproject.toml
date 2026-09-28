@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "mountainash-settings>=0.1.0,<0.2",
-    "mountainash-auth-client>=26.6.1,<27",
+    "mountainash-auth-client>=0.1.0,<0.2",
     "pydantic==2.9.2",
     "typing-extensions>=4.0",
     "universal_pathlib==0.2.2",
