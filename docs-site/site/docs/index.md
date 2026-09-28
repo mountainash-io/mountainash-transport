@@ -37,7 +37,7 @@ This manual is for Python developers who need to read, write, and move files acr
 
 You should be comfortable with:
 
-- Python 3.10+ (type hints, dataclasses, protocols)
+- Python 3.12+ (type hints, dataclasses, protocols)
 - Basic file I/O in Python (open, read, write)
 - What S3 is and how buckets and keys work (you don't need deep AWS experience)
 - Environment variables and configuration patterns
@@ -57,7 +57,7 @@ After working through this manual, you'll know how to:
 
 ## Prerequisites
 
-- Python 3.10+ with familiarity in type hints, dataclasses, and protocols
+- Python 3.12+ with familiarity in type hints, dataclasses, and protocols
 - Basic file I/O in Python
 - Conceptual understanding of S3 (buckets, keys, URI schemes)
 - Familiarity with environment variables and configuration patterns

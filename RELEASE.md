@@ -1,83 +1,118 @@
 # Release Procedure
 
-This document outlines the process for creating a new release of the mountainash-transport package.
+mountainash-transport requires Python 3.12+. MountainAsh distribution and optional
+PyPI publishing consume the same verified artifacts when enabled together. Source
+changes or candidate builds alone do not establish publication.
 
-## Prerequisites
+## Prepare and verify
 
-- You have push access to the main repository.
-- You have the necessary permissions to create releases on GitHub.
-- You have [Hatch](https://hatch.pypa.io/) installed locally.
+1. Prepare an unused version in `src/mountainash_transport/__version__.py` through
+   reviewed `release/*` or `hotfix/*` changes. Never push directly to protected branches.
+2. CI reads `.github/config/mountainash_dependencies.yml` and checks out settings,
+   secrets, and auth-client under `temp/`. It selects a matching source branch,
+   falling back to the PR base branch or manual `fallback_branch` input.
+3. Hatch installs all three siblings before installing transport. Runtime version
+   bounds remain enforced; local paths do not bypass compatibility checks.
+4. `build-and-release-package.yml` builds one transport wheel and sdist plus sibling
+   wheels. It verifies the transport wheel and independently sdist-derived wheel
+   in fresh external Python 3.12 environments using those sibling wheels and
+   public PyPI for other dependencies.
+5. Install reports, `pip check`, module origins, metadata agreement, artifact hashes,
+   sibling revisions, and full/direct JSON SBOMs are recorded as verification evidence.
 
-## Release Process
+The distribution artifact contains only transport's wheel and sdist. Sibling wheels
+travel in the separate evidence artifact, with hashes checked before PyPI publication.
 
-1. **Update Version**
-   - Navigate to `src/mountainash_transport/__version__.py`
-   - Update the `__version__` variable with the new version number
-   - Ensure the version number follows the specified semantic versioning format:
-     - Year and month: `YYYYMM`
-     - Release candidate: `YYYYMM.0.0`
-     - Prod release: `YYYYMM.1.0`
-     - Updates to candidate or prod release: `YYYYMM.1.x`
-   - Commit this change to the `main` branch
+This is a **development rehearsal**, not public-PyPI readiness: its sibling
+wheels are deliberately allowed only inside the rehearsal environments.
 
-2. **Push Changes**
-   - Push your changes to the `main` branch on GitHub
-   - This will trigger the release workflow
+## Public-only readiness rehearsal
 
-3. **Monitor Workflow**
-   - Go to the "Actions" tab in the GitHub repository
-   - You should see the "Release with SBOMs" workflow running
-   - Monitor the workflow for any errors
+Dispatch `build-and-release-package.yml` with `verify_public=true`,
+`release=false`, and `publish=false` to test public-only resolution without any
+release, wheels, or PyPI publication. It may run on an allowed feature or
+development branch:
+```sh
+gh workflow run build-and-release-package.yml --repo mountainash-io/mountainash-transport \
+  --ref develop -f verify_public=true -f release=false -f publish=false \
+  -f release_type=production -f fallback_branch=develop
+```
 
-4. **Verify Release**
-   - Once the workflow completes successfully, go to the "Releases" section of the repository
-   - You should see a new release created with the version number you specified
-   - Verify that the following assets are attached to the release:
-     - Wheel file (`mountainash_transport-{version}-py3-none-any.whl`)
-     - Full SBOM (`mountainash-transport-{version}-sbom-full.xml`)
-     - Direct dependencies SBOM (`mountainash-transport-{version}-sbom-direct.xml`)
+The `verify-public` job downloads the exact rehearsal wheel/sdist and `release.json`
+artifact IDs, revalidates their filenames/hashes, and verifies both the original
+wheel and a new wheel built from the sdist. Fresh temporary environments obtain
+dependencies and build tools only from public PyPI; static and backend-reported
+dynamic build requirements are source-checked and installed with retained
+provenance reports. The selected candidate or sdist-derived wheel is the sole
+permitted local distribution. Install reports must be present and name only that
+candidate or public PyPI sources. The rebuilt wheel is evidence only and is never
+published.
 
-5. **Release Branch**
-   - The workflow will create a new `release-{version}` branch
-   - This branch can be used for any hotfixes if needed
+Public verification requires compatible PyPI wheels for dependencies and build tools. Source-only dependencies cannot pass and are not built implicitly; the candidate's own sdist is still rebuilt through the controlled path.
 
-## Hotfix Process
+Until every runtime sibling is publicly available, a missing dependency is a
+correct readiness failure. These packages remain unready and unpublished; neither
+this rehearsal nor the development rehearsal claims an end-to-end public-PyPI
+installation has succeeded.
 
-If you need to create a hotfix for an existing release:
+## Publication controls
 
-1. Check out the release branch for the version you want to hotfix:
-   ```
-   git checkout release-X.Y.Z
-   ```
+| Trigger | GitHub release and wheels PR | PyPI |
+| --- | --- | --- |
+| Open or updated PR | No; build and verify only | No |
+| Merged PR | Yes | No |
+| Manual, default inputs | No; development rehearsal only | No |
+| Manual, `verify_public=true`, `release=false`, `publish=false` | No; public-only readiness rehearsal | No |
+| Manual, `release=true` | Yes | Only if separately enabled |
+| Manual on `main`, `publish=true` | Only if `release=true` | Yes, after public-only verification and approval |
 
-2. Create a new branch for your hotfix:
-   ```
-   git checkout -b hotfix-X.Y.Z.1
-   ```
+Merges to `main` use the reviewed source version. Merges to `develop` produce
+`rc<run_number>` versions; merges to other configured branches produce
+`b<run_number>` versions. Manual MountainAsh releases select `release_type`
+(`production`, `rc`, or `beta`). Suffixes change only the build checkout, never source commits.
 
-3. Make your changes and update the version in `__version__.py` to `X.Y.Z.1`
+GitHub releases contain the verified wheel, sdist, and SBOMs. Wheel distribution
+opens a release-branch PR targeting `mountainash-wheels/develop`; it does not push
+directly to `develop` or `main`.
 
-4. Commit your changes and push the hotfix branch
+To publish to both destinations in one run, dispatch on `main` with `release=true`,
+`publish=true`, and `release_type=production`. Publication requires both a
+successful `verify-public` job and the protected-environment preflight. The
+publishers then download exact same-run artifact IDs and verify hashes without
+rebuilding or overwriting existing releases. If GitHub already carries this
+version, leave `release=false` for a PyPI-only run.
 
-5. Create a pull request to merge the hotfix branch into the release branch
+## Credentials and PyPI protection
 
-6. Once the pull request is merged, the release workflow will be triggered automatically
+- `CI_APP_ID` and `CI_APP_PRIVATE_KEY`: sibling read access and contents/pull-request
+  write access to `mountainash-wheels`.
+- `CODECOV_TOKEN`: coverage and test-result uploads.
+- Establish PyPI ownership or a pending publisher for `mountainash-transport`.
+  Pending publishers do not reserve names.
+- Configure the `pypi` GitHub environment with human reviewers and exactly one
+  custom deployment policy allowing the `main` branch.
+- Configure PyPI Trusted Publishing for this repository, workflow filename
+  `build-and-release-package.yml`, and environment `pypi`. The preflight fails
+  closed if protection is missing or cannot be verified.
 
-## Notes
+After approval, PyPI publishing uses short-lived OIDC authority and never uses
+`skip-existing`. It confirms public transport file hashes and then installs only
+`distribution==version` from public PyPI; the post-publication provenance check
+rejects every local or non-public dependency source. A successful public install
+is not claimed before the dependency chain is actually published.
 
-- The workflow checks for existing tags and releases. If a tag or release already exists for the version you're trying to release, the workflow will fail.
-- The workflow generates two types of Software Bill of Materials (SBOM):
-  - Full SBOM: Includes all dependencies
-  - Direct SBOM: Includes only direct dependencies
-- The workflow uses Hatch to manage the build environment and dependencies
-- The release process includes checking out several related repositories. Ensure that the necessary access tokens are configured in the repository secrets.
+## Failure handling
 
-## Troubleshooting
+Missing sibling checkouts, incompatible metadata, install/import failures, changed
+hashes, or missing environment protection block publication. Collisions and partial
+uploads require explicit reconciliation; upload success alone is not confirmation.
 
-If the release workflow fails:
+Do not relax safe sdist extraction to accept repository-local tooling links.
+Source archives contain portable package/build inputs rather than the development
+checkout. Source/version changes require a new candidate and approval.
 
-1. Check the workflow logs for any error messages
-2. Ensure that the version number in `__version__.py` is unique and has not been used before
-3. Verify that all necessary secrets and permissions are correctly set up in the repository settings
+See [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/adding-a-publisher/)
+and [first-publication setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
 
-For any other issues, please contact the maintainers or create an issue in the repository.
+See the [shared release procedures](https://github.com/mountainash-io/mountainash-central/blob/main/05.devops/releases/shared/README.md)
+for the release-routing and rehearsal definitions shared by MountainAsh packages.

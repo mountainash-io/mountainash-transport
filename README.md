@@ -3,6 +3,9 @@
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
 
 Unified file operations across multiple storage systems. Read, write, list, copy, and delete files with a consistent API regardless of whether the data lives on local disk, S3, Azure, GCS, SFTP, HTTP, or any other supported backend.
+Requires Python 3.12 or later.
+
+> CI's development rehearsal verifies transport with checked-out settings, secrets, and auth-client packages. A separate opt-in `verify_public=true` manual run uses only public PyPI dependencies and performs no upload when `release=false` and `publish=false`; it may correctly fail until siblings are public. Publication requires that gate, and post-publication installation accepts no local dependency. See [RELEASE.md](RELEASE.md) and the [shared release procedures](https://github.com/mountainash-io/mountainash-central/blob/main/05.devops/releases/shared/README.md).
 
 ## Features
 

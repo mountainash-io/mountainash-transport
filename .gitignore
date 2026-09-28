@@ -180,3 +180,8 @@ coverage.*
 htmlcov/
 junit.*
 **.lock
+
+# CI dependency checkouts and generated release evidence
+temp/
+sbom-*.json
+requirements.txt
