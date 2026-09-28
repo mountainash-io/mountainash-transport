@@ -12,7 +12,7 @@ from packaging.utils import canonicalize_name
     ("name", "bound", "accepted", "rejected"),
     [
         ("mountainash-settings", ">=0.1.0,<0.2", "0.1.0", ["0.0.9", "0.2.0"]),
-        ("mountainash-auth-client", ">=26.6.1,<27", "26.6.1", ["26.6.0", "27.0.0"]),
+        ("mountainash-auth-client", ">=0.1.0,<0.2", "0.1.0", ["0.0.9", "0.2.0", "26.6.1"]),
     ],
 )
 def test_runtime_dependency_bounds(name, bound, accepted, rejected):

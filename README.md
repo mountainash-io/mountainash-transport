@@ -35,13 +35,11 @@ Requires Python 3.12 or later.
 ## Installation
 
 Requires Python **3.12+**, `mountainash-settings>=0.1.0,<0.2`, and
-`mountainash-auth-client>=26.6.1,<27`.
+`mountainash-auth-client>=0.1.0,<0.2`.
 
-This migration branch is an unpublished candidate. The auth-client lower bound
-is provisional: it must advance to the eventual migrated release before transport
-publication. For rehearsal, install the exact settings and migrated auth-client
-wheels identified by the execution receipt alongside transport; matching version
-numbers alone do not identify migrated artifacts.
+The coordinated development baseline is **0.1.0**. Hatch selects sibling source
+checkouts for development and CI. Record source commits and artifact hashes for
+verification; matching version numbers alone do not identify artifacts.
 
 ```bash
 pip install mountainash-transport
