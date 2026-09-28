@@ -1,7 +1,5 @@
 dependencies:
   - name: mountainash-settings
     org-name: mountainash-io
-  - name: mountainash-secrets
-    org-name: mountainash-io
   - name: mountainash-auth-client
     org-name: mountainash-io
