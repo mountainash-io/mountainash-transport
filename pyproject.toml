@@ -17,12 +17,13 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "mountainash-auth-client>=26.6.1",
-    "mountainash_settings>=26.5.0",
+    "mountainash-settings>=0.1.0,<0.2",
+    "mountainash-auth-client>=26.6.1,<27",
     "pydantic==2.9.2",
     "typing-extensions>=4.0",
     "universal_pathlib==0.2.2",

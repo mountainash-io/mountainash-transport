@@ -36,7 +36,7 @@ register = STORAGE_REGISTRY.decorator()
 
 
 def get_spec(name: str) -> ProfileSpec:
-    return STORAGE_REGISTRY.get_descriptor(name)
+    return STORAGE_REGISTRY.get_spec(name)
 
 
 def get_descriptor(name: str) -> ProfileSpec:

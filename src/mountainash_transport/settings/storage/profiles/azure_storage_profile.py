@@ -194,14 +194,6 @@ AZURE_STORAGE_SPEC = StorageProfileSpec(
 )
 
 
-# Adapter is imported lazily to avoid a circular import with the
-# adapters package which depends on StorageProfile.
-# def _adapter(profile: "AzureStorageProfile", auth=None) -> dict[str, t.Any]:
-#     from ..adapters.azure import build_handler_kwargs
-
-#     return build_handler_kwargs(profile, auth)
-
-
 @register
 class AzureStorageProfile(Profile):
     """Unified Azure Storage settings for both Blob and Files services.
@@ -223,7 +215,8 @@ class AzureStorageProfile(Profile):
     """
 
     __spec__ = AZURE_STORAGE_SPEC
-    # __adapter__ = staticmethod(_adapter)
+    # Settings emission adapters belong in __adapters__ keyed by SDK target.
+    # Each adapter receives (profile, merged); auth stays in the strategy layer.
 
     def get_connection_url(self) -> str:
         """Return a best-effort connection URL for logging/inspection."""

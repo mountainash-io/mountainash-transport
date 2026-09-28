@@ -34,6 +34,15 @@ Requires Python 3.12 or later.
 
 ## Installation
 
+Requires Python **3.12+**, `mountainash-settings>=0.1.0,<0.2`, and
+`mountainash-auth-client>=26.6.1,<27`.
+
+This migration branch is an unpublished candidate. The auth-client lower bound
+is provisional: it must advance to the eventual migrated release before transport
+publication. For rehearsal, install the exact settings and migrated auth-client
+wheels identified by the execution receipt alongside transport; matching version
+numbers alone do not identify migrated artifacts.
+
 ```bash
 pip install mountainash-transport
 
@@ -88,6 +97,76 @@ from mountainash_transport import resolve_storage, StorageFacade
 profile, auth = resolve_storage("lake")           # from MOUNTAINASH_PROFILES_CONFIG
 facade = StorageFacade.from_path("s3://my-lake/x.parquet", profile, auth_profile=auth)
 data = facade.read("s3://my-lake/x.parquet")
+```
+
+### Explicit configuration reader
+
+For example, `profiles.yaml` can select an S3 profile and an IAM credential:
+
+```yaml
+storage_profiles:
+  lake:
+    provider: s3
+    parameters:
+      BUCKET: my-lake
+      REGION: ap-southeast-2
+    auth:
+      mode: iam
+      parameters:
+        ACCESS_KEY_ID: example-access-key
+        SECRET_ACCESS_KEY: "secret:aws.secret_key"
+```
+
+Select a reader at the application boundary. Here the application has provisioned
+an `aws` record containing a `secret_key` field in its private config-record root:
+
+```python
+from pathlib import Path
+from mountainash_settings import SettingsParameters
+from mountainash_settings.secrets import FilesystemBackend
+from mountainash_transport import resolve_storage, StorageFacade
+
+with FilesystemBackend(Path("/private/config-records")) as config_reader:
+    params = SettingsParameters.create(
+        config_files=["profiles.yaml"], secret_store=config_reader,
+    )
+    profile, auth = resolve_storage("lake", settings_parameters=params)
+    facade = StorageFacade.from_path(
+        "s3://my-lake/x.parquet", storage_profile=profile, auth_profile=auth,
+    )
+    data = facade.read("s3://my-lake/x.parquet")
+```
+
+A `secret:` reference requires the selected reader; missing records and failed
+lookups are errors, with no provider-name or environment-store fallback. Literal
+resolved strings beginning with `secret:` remain a deferred reserved-prefix case.
+
+### Separate managed HTTP OAuth token store
+
+Managed OAuth uses a raw token store, independently of the configuration reader.
+The application supplies `provider` and `oauth_auth`; the latter supplies client
+credentials and `persist_key()` for the managed OAuth lifecycle.
+
+```python
+from pathlib import Path
+from mountainash_settings.secrets import FilesystemBackend
+from mountainash_transport import StorageFacade
+from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
+
+with FilesystemBackend(Path("/private/oauth-records")) as tokens:
+    facade = StorageFacade.from_path(
+        "https://example.test/data", storage_profile=HTTPStorageProfile(),
+        auth_profile=oauth_auth, oauth_provider=provider, token_store=tokens,
+    )
+    data = facade.read("https://example.test/data")
+```
+
+Pass the raw store: auth-client applies its OAuth namespace once. Transport
+borrows both stores; the application keeps them open until all operations finish
+and owns closure. Ordinary local/no-auth use requires neither store:
+
+```python
+data = StorageFacade.from_path("/tmp/local-file.csv").read("/tmp/local-file.csv")
 ```
 
 ## Development

@@ -90,7 +90,7 @@ def get_storage_backend(
     # Step 2 — provider has a profile but backend is not implemented
     from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY  # avoid circular import
 
-    for spec in STORAGE_REGISTRY.descriptors.values():
+    for spec in STORAGE_REGISTRY.specs.values():
         if spec.provider_type == provider_type:
             raise BackendNotImplementedError(
                 f"The '{provider_type}' storage provider is not yet implemented. "

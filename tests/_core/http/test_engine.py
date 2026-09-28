@@ -407,13 +407,15 @@ class _Mgr:
     """Fake OAuth2 manager for testing OAuth2RefreshableAuthStrategy integration."""
     def __init__(self) -> None:
         self.refreshed = 0
+        self.credential = _Cred("A")
 
     def acquire(self) -> _Cred:
-        return _Cred("A")
+        return self.credential
 
     def refresh(self) -> _Cred:
         self.refreshed += 1
-        return _Cred("B")
+        self.credential = _Cred("B")
+        return self.credential
 
 
 class TestAuthRefresh:

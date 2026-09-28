@@ -8,7 +8,7 @@ path = "src/mountainash_transport/__version__.py"
 packages = ["src/mountainash_transport"]
 
 [build.targets.sdist]
-include = ["/src", "/pyproject.toml", "/hatch.toml", "/README.md", "/LICENSE"]
+include = ["/src", "/pyproject.toml", "/hatch.toml", "/requirements-hatch.txt", "/README.md", "/LICENSE"]
 
 #================
 # Env: build_github
@@ -17,12 +17,10 @@ include = ["/src", "/pyproject.toml", "/hatch.toml", "/README.md", "/LICENSE"]
 python = "3.12"
 installer = "uv"
 # Hatch installs the project before syncing environment dependencies.
-pre-install-commands = ['uv pip install "{root}/temp/mountainash-settings" "{root}/temp/mountainash-secrets" "{root}/temp/mountainash-auth-client"']
 dependencies = [
     "cyclonedx-bom==4.5.0",
 
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
-    "mountainash_secrets @     {root:uri}/temp/mountainash-secrets",
     "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
 ]
 [envs.build_github.scripts]
@@ -37,10 +35,8 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 python = "3.12"
 installer = "uv"
 path = ".venv"
-pre-install-commands = ['uv pip install "{root}/../mountainash-settings" "{root}/../mountainash-secrets" "{root}/../mountainash-auth-client"']
 dependencies = [
     "mountainash_settings @          {root:uri}/../mountainash-settings",
-    "mountainash_secrets @           {root:uri}/../mountainash-secrets",
     "mountainash_auth_client @       {root:uri}/../mountainash-auth-client",
 ]
 
@@ -53,7 +49,6 @@ python = ["3.12"]
 [envs.test_github]
 installer = "uv"
 path = ".hatch/test-github"
-pre-install-commands = ['uv pip install "{root}/temp/mountainash-settings" "{root}/temp/mountainash-secrets" "{root}/temp/mountainash-auth-client"']
 dependencies = [
     "pytest==8.3.5",
     "pytest-check==2.5.3",
@@ -67,7 +62,6 @@ dependencies = [
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
     "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
 
-    "mountainash_secrets @      {root:uri}/temp/mountainash-secrets",
 
 
 ]
@@ -84,7 +78,6 @@ python = ["3.12"]
 [envs.test]
 installer = "uv"
 path = ".hatch/test"
-pre-install-commands = ['uv pip install "{root}/../mountainash-settings" "{root}/../mountainash-secrets" "{root}/../mountainash-auth-client"']
 dependencies = [
     "coverage[toml]>=6.5",
     "pytest==8.3.5",
@@ -105,7 +98,6 @@ dependencies = [
     "authlib>=1.3.0",
 
     "mountainash_settings @    {root:uri}/../mountainash-settings",
-    "mountainash_secrets @      {root:uri}/../mountainash-secrets",
     "mountainash_auth_client @ {root:uri}/../mountainash-auth-client",
 ]
 [envs.test.scripts]
@@ -184,7 +176,7 @@ installer = "uv"
 # thrash — each re-syncs `.venv` to its own disjoint dependency set, so whichever
 # ran last leaves the other's binary missing.
 path = ".hatch/ruff"
-skip-install = true
+detached = true
 dependencies = ["ruff==0.3.7"]
 [envs.ruff.scripts]
 check = "ruff check ./src"
@@ -196,7 +188,7 @@ fix = "ruff check ./src --fix"
 [envs.radon]
 installer = "uv"
 path = ".hatch/radon"          # own path — see [envs.ruff] note
-skip-install = true
+detached = true
 dependencies = ["radon==6.0.1"]
 [envs.radon.scripts]
 radon-cc = "radon cc ./src -nd"
@@ -216,3 +208,15 @@ path = ".hatch/mypy"           # own path — see [envs.ruff] note
 dependencies = ["mypy==1.10.1"]
 [envs.mypy.scripts]
 check = "mypy --install-types --non-interactive {args:src/mountainash_transport tests}"
+
+[envs.default.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/.."
+
+[envs.test_github.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/temp"
+
+[envs.build_github.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/temp"
