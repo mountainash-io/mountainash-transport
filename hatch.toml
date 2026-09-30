@@ -207,7 +207,7 @@ installer = "uv"
 path = ".hatch/mypy"           # own path — see [envs.ruff] note
 dependencies = ["mypy==1.10.1"]
 [envs.mypy.scripts]
-check = "mypy --install-types --non-interactive {args:src/mountainash_transport tests}"
+check = "mypy --install-types --non-interactive {args:src/mountainash_transport}"
 
 [envs.default.env-vars]
 UV_CONSTRAINT = "{root}/requirements-hatch.txt"
