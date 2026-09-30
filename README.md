@@ -34,8 +34,10 @@ Requires Python 3.12 or later.
 
 ## Installation
 
-Requires Python **3.12+**, `mountainash-settings>=0.1.0,<0.2`, and
-`mountainash-auth-client>=0.1.0,<0.2`.
+Requires Python **3.12+**, **Pydantic >=2.10,<3**,
+`mountainash-settings>=0.1.0,<0.2`, and `mountainash-auth-client>=0.1.0,<0.2`.
+The Pydantic range permits the current settings dependency chain while excluding
+the next major release; transport does not require the historical 2.9.2 pin.
 
 The coordinated development baseline is **0.1.0**. Hatch selects sibling source
 checkouts for development and CI. Record source commits and artifact hashes for

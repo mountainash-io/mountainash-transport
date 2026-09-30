@@ -226,8 +226,8 @@ tests/
 ## Dependencies
 
 ### Core Dependencies
-- **pydantic==2.9.2**: Data validation and settings management
-- **pydantic-settings==2.6.1**: Settings management with Pydantic
+- **pydantic>=2.10,<3**: Data validation; compatible with the current settings dependency floor
+- **pydantic-settings**: Owned by `mountainash-settings`, not directly pinned by transport
 - **universal_pathlib==0.2.2**: Universal path library for different storage systems
 - **httpx>=0.27**: HTTP client for HTTP/HTTPS storage backend
 
