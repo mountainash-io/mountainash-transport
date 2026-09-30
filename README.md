@@ -194,7 +194,7 @@ pytest tests/path/to/test_file.py::TestClass::test_function -v
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** — Architecture, settings, and development guide
+- **[AGENTS.md](AGENTS.md)** — Architecture, settings, and development guide
 - **[Mountain Ash Documentation](https://mountainash-io.github.io/mountainash-docs/)** — Complete ecosystem documentation
 
 ## Branch Strategy
