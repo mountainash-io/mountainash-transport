@@ -1,151 +1,143 @@
 # mountainash-transport
 
-![Python](https://img.shields.io/badge/python-3.12%2B-blue) ![Category](https://img.shields.io/badge/category-utils-purple) ![Tests](https://img.shields.io/badge/tests-✓-green) ![Docs](https://img.shields.io/badge/docs-✓-blue)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-lightgrey)](LICENSE)
 
-Unified file operations across multiple storage systems. Read, write, list, copy, and delete files with a consistent API regardless of whether the data lives on local disk, S3, Azure, GCS, SFTP, HTTP, or any other supported backend.
-Requires Python 3.12 or later.
+One file API across storage systems: read, write, stream, list, copy and delete
+on local disk, S3-compatible stores, SFTP and HTTP(S) with the same calls. The
+path's scheme selects the backend. Stores are described by storage profiles;
+credentials come separately from `mountainash-auth-client` auth profiles.
 
-> CI's development rehearsal verifies transport with checked-out settings, secrets, and auth-client packages. A separate opt-in `verify_public=true` manual run uses only public PyPI dependencies and performs no upload when `release=false` and `publish=false`; it may correctly fail until siblings are public. Publication requires that gate, and post-publication installation accepts no local dependency. See [RELEASE.md](RELEASE.md) and the [shared release procedures](https://github.com/mountainash-io/mountainash-central/blob/main/05.devops/releases/shared/README.md).
+[Examples](examples/) · [Agent and architecture guide](AGENTS.md) ·
+[Release process](RELEASE.md)
 
-## Features
+## What it provides
 
-- **Consistent API** — `StorageFacade` provides the same read/write/list/delete/copy/metadata interface across all backends
-- **Scheme-driven dispatch** — `StorageFacade.from_path("s3://bucket/key")` infers the provider from the URL scheme
-- **8 granular protocols** — backends implement Connection, Read, Write, List, Delete, Metadata, Copy, and Directory à la carte
-- **Stream transforms** — composable `Pipeline` of `Gzip` and `GPG` transforms for compression and encryption
-- **Suffix-aware inference** — `StorageFacade.from_path("s3://bucket/data.parquet.gz").read("s3://bucket/data.parquet.gz", infer=True)` auto-decompresses based on file extensions
-- **Profile + auth separation** — storage configuration (profile) and authentication (auth profile) are independent concerns
-- **Three-layer connections** — auth strategies inject credentials, connections create SDK clients, backends are stateless operations
-- **SSH tunnelling** — `TunnelledConnection` routes any backend through an SSH bastion via local TCP forwarding
+| Area | Capabilities | Explore |
+|---|---|---|
+| File operations | `StorageFacade` read/write/stream, metadata, delete, copy and directories; capability checks before calling | [Files](examples/#files) |
+| Stream transforms | Composable `Pipeline` of `Gzip` and `GPG`; opt-in suffix inference on read; transforms applied during cross-backend copy | [Stream transforms](examples/#stream-transforms) |
+| Path dispatch | Scheme-to-provider detection, aliases, strict normalisation and joining | [Paths](examples/#paths) |
+| Profiles and auth | Per-provider storage profiles emitting SDK kwargs; auth profiles paired and validated at connection time; named profiles from configuration | [Profiles and authentication](examples/#profiles-and-authentication) |
+| HTTP transport | `HttpRequestEngine` with retry, timeout and redirect policies and typed errors | [HTTP](examples/#http) |
+| Connections | SSH, SFTP and S3 connections; SSH tunnelling to reach internal services through a bastion | [AGENTS.md](AGENTS.md#connections) |
 
-## Supported Storage Backends
+## Supported storage
 
-| Backend | Provider types | Protocols |
-|---------|---------------|-----------|
-| **Local** | `LOCAL` | Connection, Read, Write, List, Delete, Metadata, Copy, Directory |
-| **S3** | `S3`, `S3EXPRESS`, `R2`, `MINIO` | Connection, Read, Write, List, Delete, Metadata, Copy |
-| **HTTP/HTTPS** | `HTTP` | Read, Write, Metadata |
-| **Azure** | Blob, Files | Via profile (not yet backend-implemented) |
-| **GCS** | Google Cloud Storage | Via profile (not yet backend-implemented) |
-| **SSH/SFTP** | `SSH` | Read, Write, List, Delete, Metadata |
-| **FTP** | FTP, FTPS | Via profile (not yet backend-implemented) |
-| **SMB** | SMB | Via profile (not yet backend-implemented) |
-| **GitHub** | GitHub repos (read-only) | Via profile (not yet backend-implemented) |
+Operations follow the backend's capability protocols; unsupported calls raise
+`UnsupportedOperationError`.
+
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Prefix listing |
+|---|---|---|---|---|---|---|---|---|
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | |
+
+Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and
+recognised schemes but no backend yet: constructing a facade for them raises
+`BackendNotImplementedError`.
 
 ## Installation
 
-Requires Python **3.12+**, **Pydantic >=2.10,<3**,
-`mountainash-settings>=0.1.0,<0.2`, and `mountainash-auth-client>=0.1.0,<0.2`.
-The Pydantic range permits the current settings dependency chain while excluding
-the next major release; transport does not require the historical 2.9.2 pin.
+Requires **Python 3.12+**, **Pydantic 2.10+**, `mountainash-settings` 0.1 and
+`mountainash-auth-client` 0.1.
 
-The coordinated development baseline is **0.1.0**. Hatch selects sibling source
-checkouts for development and CI. Record source commits and artifact hashes for
-verification; matching version numbers alone do not identify artifacts.
+This README describes the **0.1.0 development baseline**. Until the sibling
+packages are published, install development checkouts side by side:
 
 ```bash
-pip install mountainash-transport
-
-# With optional extras
-pip install mountainash-transport[s3]        # s3fs, minio
-pip install mountainash-transport[gcs]       # google-cloud-storage, gcsfs
-pip install mountainash-transport[azure]     # azure-storage-blob, adlfs
-pip install mountainash-transport[sftp]      # paramiko, smart-open[ssh]
-pip install mountainash-transport[encryption] # python-gnupg
-pip install mountainash-transport[all]       # everything
+git clone --branch develop https://github.com/mountainash-io/mountainash-transport.git
+cd mountainash-transport
+python -m pip install -e ".[s3]"
 ```
 
-## Quick Start
+| Extra | Adds |
+|---|---|
+| `[s3]` | boto3, s3fs, minio |
+| `[sftp]` | paramiko, smart-open[ssh] |
+| `[encryption]` | python-gnupg (for `GPG`) |
+| `[oauth1]` | authlib |
+| `[gcs]`, `[azure]` | SDKs for the pending GCS and Azure backends |
+| `[all]` | all of the above |
+
+## Quick start
+
+Save this as `quickstart.py` and run it with `python quickstart.py`:
 
 ```python
+import tempfile
+from pathlib import Path
+
+from mountainash_transport import Gzip, StorageFacade
+
+with tempfile.TemporaryDirectory() as root:
+    path = str(Path(root) / "sales.csv.gz")
+    storage = StorageFacade.from_path(path)  # bare path -> local backend
+
+    storage.write(path, b"region,total\nnorth,120\n", pipeline=Gzip())
+    text = storage.read(path, infer=True).decode()  # .gz suffix -> gunzip
+
+    print(f"{storage.get_size(path)} bytes stored; first row: {text.splitlines()[1]}")
+```
+
+Output:
+
+```text
+43 bytes stored; first row: north,120
+```
+
+`from_path()` picks the backend from the scheme, so the same calls work with
+`s3://reports/2026/sales.csv.gz` once a profile and credentials are supplied.
+
+## Connecting to remote stores
+
+Pass a storage profile and an auth profile. Profiles never embed credentials:
+
+```python
+from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import StorageFacade
+from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
-# Read from any supported scheme
-facade = StorageFacade.from_path("s3://my-bucket/data.parquet")
-data = facade.read("s3://my-bucket/data.parquet")
-page = StorageFacade.from_path("https://example.com/page.html").read("https://example.com/page.html")
-local = StorageFacade.from_path("/tmp/local-file.csv").read("/tmp/local-file.csv")
-
-# Facade for richer operations
-facade = StorageFacade.from_path("s3://my-bucket/prefix/")
-files = facade.list_files("s3://my-bucket/prefix/")
-facade.copy("s3://my-bucket/src.txt", "s3://my-bucket/dst.txt")
-
-# Stream transforms — auto-decompress based on suffix
-plaintext = StorageFacade.from_path("s3://bucket/data.parquet.gz").read("s3://bucket/data.parquet.gz", infer=True)
-
-# Explicit pipeline
-from mountainash_transport import Pipeline, Gzip
-facade.write("s3://bucket/out.gz", data, pipeline=Pipeline(Gzip()))
-
-# SSH/SFTP connection
-from mountainash_transport import create_connection
-from mountainash_auth_client import PasswordAuth
-
-conn = create_connection(ssh_profile, auth_profile=PasswordAuth(USERNAME="user", PASSWORD="pass"))
-conn.connect()
-# conn.client is a paramiko.SFTPClient — ready for file operations
+profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
+auth = IAMAuthProfile(ROLE_ARN="arn:aws:iam::123456789012:role/reports-reader")
+storage = StorageFacade.from_path("s3://reports/2026/sales.csv", profile, auth_profile=auth)
+data = storage.read("s3://reports/2026/sales.csv")
 ```
 
-## Named Profiles
+The pairing is validated against the profile's supported auth modes before any
+connection opens ([auth compatibility](examples/auth_compatibility/)).
 
-Use `resolve_storage()` to load named profiles from configuration:
+### Named profiles and secret references
 
-```python
-from mountainash_transport import resolve_storage, StorageFacade
-
-profile, auth = resolve_storage("lake")           # from MOUNTAINASH_PROFILES_CONFIG
-facade = StorageFacade.from_path("s3://my-lake/x.parquet", profile, auth_profile=auth)
-data = facade.read("s3://my-lake/x.parquet")
-```
-
-### Explicit configuration reader
-
-For example, `profiles.yaml` can select an S3 profile and an IAM credential:
-
-```yaml
-storage_profiles:
-  lake:
-    provider: s3
-    parameters:
-      BUCKET: my-lake
-      REGION: ap-southeast-2
-    auth:
-      mode: iam
-      parameters:
-        ACCESS_KEY_ID: example-access-key
-        SECRET_ACCESS_KEY: "secret:aws.secret_key"
-```
-
-Select a reader at the application boundary. Here the application has provisioned
-an `aws` record containing a `secret_key` field in its private config-record root:
+`resolve_storage(name)` materialises `(storage_profile, auth_profile)` from the
+`storage_profiles` section of the file named by `MOUNTAINASH_PROFILES_CONFIG`, or
+from explicit settings parameters ([named profiles](examples/named_profiles/)).
+Reference credentials with `secret:<record>.<field>` and select a reader at the
+application boundary:
 
 ```python
 from pathlib import Path
 from mountainash_settings import SettingsParameters
 from mountainash_settings.secrets import FilesystemBackend
-from mountainash_transport import resolve_storage, StorageFacade
+from mountainash_transport import StorageFacade, resolve_storage
 
 with FilesystemBackend(Path("/private/config-records")) as config_reader:
-    params = SettingsParameters.create(
-        config_files=["profiles.yaml"], secret_store=config_reader,
-    )
+    params = SettingsParameters.create(config_files=["profiles.yaml"], secret_store=config_reader)
     profile, auth = resolve_storage("lake", settings_parameters=params)
-    facade = StorageFacade.from_path(
-        "s3://my-lake/x.parquet", storage_profile=profile, auth_profile=auth,
-    )
-    data = facade.read("s3://my-lake/x.parquet")
+    data = StorageFacade.from_path(
+        "s3://reports/2026/sales.csv", profile, auth_profile=auth,
+    ).read("s3://reports/2026/sales.csv")
 ```
 
 A `secret:` reference requires the selected reader; missing records and failed
-lookups are errors, with no provider-name or environment-store fallback. Literal
-resolved strings beginning with `secret:` remain a deferred reserved-prefix case.
+lookups are errors, with no provider-name or environment fallback.
 
-### Separate managed HTTP OAuth token store
+### Managed HTTP OAuth
 
-Managed OAuth uses a raw token store, independently of the configuration reader.
-The application supplies `provider` and `oauth_auth`; the latter supplies client
-credentials and `persist_key()` for the managed OAuth lifecycle.
+Managed OAuth2 uses a raw token store, separate from the configuration reader.
+The application supplies the OAuth provider and auth profile; auth-client owns
+token acquisition and refresh:
 
 ```python
 from pathlib import Path
@@ -154,59 +146,41 @@ from mountainash_transport import StorageFacade
 from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
 
 with FilesystemBackend(Path("/private/oauth-records")) as tokens:
-    facade = StorageFacade.from_path(
-        "https://example.test/data", storage_profile=HTTPStorageProfile(),
+    storage = StorageFacade.from_path(
+        "https://files.example.com/data", HTTPStorageProfile(),
         auth_profile=oauth_auth, oauth_provider=provider, token_store=tokens,
     )
-    data = facade.read("https://example.test/data")
+    data = storage.read("https://files.example.com/data")
 ```
 
-Pass the raw store: auth-client applies its OAuth namespace once. Transport
-borrows both stores; the application keeps them open until all operations finish
-and owns closure. Ordinary local/no-auth use requires neither store:
+Transport borrows both stores; the application keeps them open until all
+operations finish and owns closure.
 
-```python
-data = StorageFacade.from_path("/tmp/local-file.csv").read("/tmp/local-file.csv")
-```
+## Learn more
 
-## Development
+Explore the [storage recipes](examples/): each runs offline and independently,
+using the same small dataset.
 
-```bash
-# Build
-hatch build
+| Guide | Contents |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Architecture, package map, commands and conventions |
+| [TESTING.md](TESTING.md) | Test layout and markers |
+| [RELEASE.md](RELEASE.md) | Release rehearsal, public-dependency gate and publication |
 
-# Run tests
-hatch run test:test
+Design principles, backlog, specs and plans live in
+[mountainash-central](https://github.com/mountainash-io/mountainash-central)
+under `mountainash-transport`.
 
-# Run tests with coverage
-hatch run test:cov
+## Contributing
 
-# Lint
-hatch run ruff:check
-hatch run ruff:fix    # auto-fix
+See [CONTRIBUTING.md](CONTRIBUTING.md). Branch from `develop`; PRs target
+`develop`. Run `hatch run test:test` and `hatch run ruff:check` before opening one.
 
-# Type check
-hatch run mypy:check
-
-# Single test
-pytest tests/path/to/test_file.py::TestClass::test_function -v
-```
-
-## Documentation
-
-- **[AGENTS.md](AGENTS.md)** — Architecture, settings, and development guide
-- **[Mountain Ash Documentation](https://mountainash-io.github.io/mountainash-docs/)** — Complete ecosystem documentation
-
-## Branch Strategy
-
-- `main` — production releases (CalVer `YY.MM.MICRO`)
-- `develop` — integration branch for development
-- `feature/*`, `bugfix/*`, `hotfix/*` — work branches targeting `develop`
+Part of the [Mountain Ash ecosystem](https://github.com/mountainash-io), alongside
+`mountainash-settings`, `mountainash-auth-client`, `mountainash-files`,
+`mountainash-data` and `mountainash`. Authentication models and OAuth flows belong
+to `mountainash-auth-client`.
 
 ## License
 
-See LICENSE file for details.
-
-## Mountain Ash Ecosystem
-
-This package is part of the [Mountain Ash](https://github.com/mountainash-io) ecosystem of Python packages.
+Proprietary — see [LICENSE](LICENSE).

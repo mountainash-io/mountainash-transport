@@ -83,8 +83,8 @@ Package-local map. The *why* behind each layer lives in the central principles.
 
 ### Storage
 
-- **Protocols** (`storage/protocols/prtcl_*.py`): 8 granular capabilities (Read/Write/List/Delete/Metadata/Copy/Directory/Connection) implemented à la carte.
-- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all 8), `s3` (flavor-dispatched), `sftp` (read/write/list/delete/metadata). Other profiled providers have no backend yet (`BackendNotImplementedError`).
+- **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Directory, plus `ConnectionProtocol` in `_core`) implemented à la carte.
+- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all but enumerate), `s3` (flavor-dispatched; all but directory), `sftp` (read/write/delete/metadata/directory). Other profiled providers have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`.
 - **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `cross_backend` copy.
 - **Registry** (`storage/registry/`): `get_storage_backend`, `get_registered_backends`, `detect_provider_from_path`.
 - **Path helpers** (`storage/path_helpers/`): `StoragePath`, `SchemeSpec`, suffixes, S3 paths.
@@ -116,7 +116,7 @@ src/mountainash_transport/
 └── storage/               # protocols, backends, facade, path_helpers, registry
 ```
 
-Tests mirror `src/` under `tests/` (`_core/`, `connections/`, `settings/`, `storage/`) plus top-level public-API, lazy-import, installed-contract and release-provenance tests.
+Tests mirror `src/` under `tests/` (`_core/`, `connections/`, `settings/`, `storage/`) plus top-level public-API, lazy-import, installed-contract and release-provenance tests. `tests/examples/` runs every `examples/*/example.py` against its README's expected output and executes the root README quick start; a new recipe needs an index row in `examples/README.md`.
 
 ## Commands
 
