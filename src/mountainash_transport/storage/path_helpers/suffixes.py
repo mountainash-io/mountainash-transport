@@ -1,7 +1,8 @@
 """Suffix-aware transform inference.
 
 Parses a path's suffix chain right-to-left into a Pipeline of stream
-transforms. See docs/superpowers/specs/2026-04-18-suffix-aware-transform-inference-design.md.
+transforms. See mountainash-central:
+04.planning/mountainash-transport/superpowers/specs/2026-04-18-suffix-aware-transform-inference-design.md.
 """
 from __future__ import annotations
 

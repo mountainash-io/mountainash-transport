@@ -34,7 +34,7 @@ Save new superpowers specs and plans to mountainash-central, not this repo:
 - **Specs:** `mountainash-central/04.planning/mountainash-transport/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
 - **Plans:** `mountainash-central/04.planning/mountainash-transport/superpowers/plans/YYYY-MM-DD-<topic>.md`
 
-`docs/superpowers/` and `docs/BACKLOG.md` in this repo are historical; do not add to them. Update the central indexes in the same change that adds a record.
+This repo has no `docs/` planning folder; do not create one. Update the central indexes in the same change that adds a record, following `mountainash-central/_meta/superpowers-index-conventions.md`.
 
 ### Central documentation workflow
 
