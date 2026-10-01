@@ -1,10 +1,14 @@
 name: Pytest
 
 on:
+  push:
+    branches: [develop, main]
   pull_request:
     paths:
       - src/mountainash_transport/**
       - tests/**
+      - examples/**
+      - README.md
       - pyproject.toml
       - hatch.toml
       - requirements-hatch.txt
@@ -25,6 +29,9 @@ permissions:
 
 jobs:
   test:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-24.04
     steps:
       - name: Set dependency branch variables
@@ -39,6 +46,9 @@ jobs:
           set -euo pipefail
           if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
             echo "FALLBACK_BRANCH=$INPUT_FALLBACK_BRANCH" >> "$GITHUB_ENV"
+            echo "TARGET_BRANCH=$REF_NAME" >> "$GITHUB_ENV"
+          elif [[ "$EVENT_NAME" == push ]]; then
+            echo "FALLBACK_BRANCH=$REF_NAME" >> "$GITHUB_ENV"
             echo "TARGET_BRANCH=$REF_NAME" >> "$GITHUB_ENV"
           else
             echo "FALLBACK_BRANCH=$BASE_REF" >> "$GITHUB_ENV"
@@ -90,11 +100,18 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
+          use_oidc: true
+          fail_ci_if_error: true
+          files: ./coverage.xml
+          disable_search: true
           verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          use_oidc: true
+          fail_ci_if_error: true
+          files: ./junit.xml
+          disable_search: true
