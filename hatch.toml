@@ -67,7 +67,7 @@ dependencies = [
 ]
 [envs.test_github.scripts]
 test = "pytest"
-test-cov = "pytest --cov --junitxml=junit.xml -o junit_family=legacy --cov-report=xml"
+test-cov = "pytest --cov --cov-config={root}/pyproject.toml --junitxml=junit.xml -o junit_family=legacy --cov-report=xml"
 
 #================
 # Env: test
@@ -106,7 +106,7 @@ dependencies = [
 # ===========================================
 
 test = [
-    "pytest --cov --junitxml=junit.xml",
+    "pytest --cov --cov-config={root}/pyproject.toml --junitxml=junit.xml",
     "coverage json --pretty-print",
     "coverage xml",
     "coverage html",
