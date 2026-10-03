@@ -38,11 +38,11 @@ def test_gzip_unwrap_decodes_stdlib_gzip_bytes():
 
 
 def test_gzip_mtime_zero_is_reproducible():
-    """With mtime=0 (default), identical input yields byte-identical output."""
-    data = b"reproducibility matters"
-    a = Gzip().wrap(io.BytesIO(data)).read()
-    b = Gzip().wrap(io.BytesIO(data)).read()
-    assert a == b
+    """The default gzip header uses a fixed zero timestamp."""
+    import struct
+
+    encoded = Gzip().wrap(io.BytesIO(b"reproducibility matters")).read()
+    assert struct.unpack("<I", encoded[4:8])[0] == 0
 
 
 def test_gzip_default_level_is_6():
@@ -50,14 +50,13 @@ def test_gzip_default_level_is_6():
 
 
 def test_gzip_wrap_is_lazy():
-    """Gzip().wrap should not read the source before the consumer pulls."""
-    source = io.BytesIO(b"x" * 10_000)
-    # Don't call .read() on the wrapped stream — expect source position still at 0
+    """Wrapping does not consume the source before the consumer reads."""
+    data = b"x" * 10_000
+    source = io.BytesIO(data)
     wrapped = Gzip().wrap(source)
+
     assert source.tell() == 0
-    # Now pull one byte — source should advance
-    wrapped.read(1)
-    assert source.tell() > 0
+    assert gzip.decompress(wrapped.read()) == data
 
 
 def test_gzip_mtime_none_uses_current_time():

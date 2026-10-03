@@ -190,14 +190,23 @@ class TestRetry:
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_retry_exhaustion_raises(self, mock_sleep: t.Any) -> None:
-        client = _mock_client(_resp(503), _resp(503), _resp(503))
+        attempts = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal attempts
+            attempts += 1
+            return _resp(503)
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
         policy = RequestPolicy(
-            retry=RetryPolicy(max_attempts=3, backoff_jitter=False),
+            retry=RetryPolicy(max_attempts=3, backoff_base=0.5, backoff_jitter=False),
             redirect=RedirectPolicy(follow_redirects=False),
         )
         engine = HttpRequestEngine(client, policy=policy)
         with pytest.raises(HttpServiceUnavailableError):
             engine.request("GET", "https://example.com")
+        assert attempts == 3
+        assert [call.args[0] for call in mock_sleep.call_args_list] == [0.5, 1.0]
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_post_not_retried_by_default(self, mock_sleep: t.Any) -> None:
@@ -224,8 +233,14 @@ class TestRetry:
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_backoff_max_respected(self, mock_sleep: t.Any) -> None:
-        # 3 retries with backoff_base=10, backoff_max=5 → sleep should never exceed 5
-        client = _mock_client(_resp(503), _resp(503), _resp(200, content=b"ok"))
+        attempts = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal attempts
+            attempts += 1
+            return _resp(200 if attempts == 3 else 503, content=b"ok")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
         policy = RequestPolicy(
             retry=RetryPolicy(
                 max_attempts=3, backoff_base=10.0, backoff_max=5.0, backoff_jitter=False,
@@ -234,8 +249,8 @@ class TestRetry:
         )
         engine = HttpRequestEngine(client, policy=policy)
         engine.request("GET", "https://example.com")
-        for call in mock_sleep.call_args_list:
-            assert call.args[0] <= 5.0
+        assert attempts == 3
+        assert [call.args[0] for call in mock_sleep.call_args_list] == [5.0, 5.0]
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_transport_error_retried(self, mock_sleep: t.Any) -> None:
@@ -252,6 +267,7 @@ class TestRetry:
         assert resp.status_code == 200
 
 
+
 # ---------------------------------------------------------------------------
 # 4. Body replayability
 # ---------------------------------------------------------------------------
@@ -260,7 +276,13 @@ class TestRetry:
 class TestBodyReplayability:
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_bytes_always_replayable(self, mock_sleep: t.Any) -> None:
-        client = _mock_client(_resp(503), _resp(200, content=b"ok"))
+        bodies: list[bytes] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            bodies.append(request.read())
+            return _resp(503 if len(bodies) == 1 else 200, content=b"ok")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
         policy = RequestPolicy(
             retry=RetryPolicy(max_attempts=3, retry_unsafe_methods=True, backoff_jitter=False),
             redirect=RedirectPolicy(follow_redirects=False),
@@ -268,11 +290,18 @@ class TestBodyReplayability:
         engine = HttpRequestEngine(client, policy=policy)
         resp = engine.request("POST", "https://example.com", content=b"body")
         assert resp.status_code == 200
+        assert bodies == [b"body", b"body"]
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_seekable_stream_replayable(self, mock_sleep: t.Any) -> None:
         stream = io.BytesIO(b"stream-body")
-        client = _mock_client(_resp(503), _resp(200, content=b"ok"))
+        bodies: list[bytes] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            bodies.append(request.read())
+            return _resp(503 if len(bodies) == 1 else 200, content=b"ok")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
         policy = RequestPolicy(
             retry=RetryPolicy(max_attempts=3, retry_unsafe_methods=True, backoff_jitter=False),
             redirect=RedirectPolicy(follow_redirects=False),
@@ -461,18 +490,27 @@ class TestAuthRefresh:
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_auth_refresh_not_counted_against_max_attempts(self, mock_sleep: t.Any) -> None:
-        """Auth refresh retry doesn't consume from max_attempts budget."""
-        # max_attempts=1 means only 1 normal attempt. 401→refresh→200 should still work.
-        client = _mock_client(_resp(401), _resp(200, content=b"ok"))
+        """Auth refresh leaves the full ordinary retry budget available."""
+        attempts = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal attempts
+            attempts += 1
+            status = (401, 503, 200)[attempts - 1]
+            return _resp(status, content=b"ok")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
         auth = _FakeRefreshableAuth(refresh_succeeds=True)
         policy = RequestPolicy(
-            retry=RetryPolicy(max_attempts=1),
+            retry=RetryPolicy(max_attempts=2, backoff_jitter=False),
             auth_refresh_on_401=True,
             redirect=RedirectPolicy(follow_redirects=False),
         )
         engine = HttpRequestEngine(client, policy=policy, auth_strategy=auth)
         resp = engine.request("GET", "https://example.com")
         assert resp.status_code == 200
+        assert attempts == 3
+        assert auth.refresh_called
 
     @patch("mountainash_transport._core.http.engine.time.sleep")
     def test_auth_refresh_retries_post(self, mock_sleep: t.Any) -> None:

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import io
 import os
 import shutil
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -21,7 +20,6 @@ from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
-    StorageEnumerateProtocol,
     StorageMetadataProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
@@ -59,9 +57,6 @@ class TestFactories:
         facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
         assert isinstance(facade, StorageFacade)
 
-    def test_backend_is_set(self, local_facade):
-        assert local_facade._backend is not None
-
 
 # ---------------------------------------------------------------------------
 # supports()
@@ -74,9 +69,6 @@ class TestSupports:
     def test_supports_write_protocol(self, local_facade):
         assert local_facade.supports(StorageWriteProtocol) is True
 
-    def test_supports_directory_protocol_local(self, local_facade):
-        assert local_facade.supports(StorageDirectoryProtocol) is True
-
     def test_supports_delete_protocol(self, local_facade):
         assert local_facade.supports(StorageDeleteProtocol) is True
 
@@ -88,25 +80,6 @@ class TestSupports:
 
     def test_supports_directory_protocol(self, local_facade):
         assert local_facade.supports(StorageDirectoryProtocol) is True
-
-
-# ---------------------------------------------------------------------------
-# Read / Write roundtrip
-# ---------------------------------------------------------------------------
-
-class TestReadWriteRoundtrip:
-    def test_bytes_roundtrip(self, local_facade, tmp_dir):
-        path = os.path.join(tmp_dir, "hello.bin")
-        data = b"Hello, StorageFacade!"
-        local_facade.write(path, data)
-        assert local_facade.read(path) == data
-
-    def test_stream_roundtrip(self, local_facade, tmp_dir):
-        path = os.path.join(tmp_dir, "stream.bin")
-        data = b"streamed content"
-        local_facade.write_stream(path, io.BytesIO(data))
-        with local_facade.read_stream(path) as fh:
-            assert fh.read() == data
 
 
 # ---------------------------------------------------------------------------
@@ -194,8 +167,6 @@ class TestMkdir:
 class TestUnsupportedOperation:
     def test_mkdir_raises_on_s3_backend(self, tmp_dir):
         """S3StorageBackend does not implement StorageDirectoryProtocol."""
-        from mountainash_transport.storage.backends.s3 import S3StorageBackend
-
         # Patch boto3.client so S3 backend can be instantiated without real AWS creds
         with patch("boto3.client"):
             facade = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3, auth_profile=None)

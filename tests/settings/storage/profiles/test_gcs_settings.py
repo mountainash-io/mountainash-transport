@@ -94,25 +94,28 @@ class TestGCSHandlerKwargs:
     def test_api_endpoint_forwarded_via_client_options(self):
         s = _make(API_ENDPOINT="https://custom.endpoint.example")
         kw = s.to_handler_kwargs()
-        co = kw.get("client_options")
-        # google-api-core installed -> ClientOptions object; else plain dict.
-        if co is None:
-            pytest.skip("client_options absent — unexpected path")
-        if hasattr(co, "api_endpoint"):
+        co = kw["client_options"]
+        try:
+            from google.api_core.client_options import ClientOptions
+        except ImportError:
+            assert isinstance(co, dict)
+            assert co["api_endpoint"] == "https://custom.endpoint.example"
+        else:
+            assert isinstance(co, ClientOptions)
             assert co.api_endpoint == "https://custom.endpoint.example"
-        elif isinstance(co, dict):
-            assert co.get("api_endpoint") == "https://custom.endpoint.example"
 
     def test_user_project_forwarded_as_quota_project(self):
         s = _make(USER_PROJECT="billing-project")
         kw = s.to_handler_kwargs()
-        co = kw.get("client_options")
-        if co is None:
-            pytest.skip("client_options absent — unexpected path")
-        if hasattr(co, "quota_project_id"):
+        co = kw["client_options"]
+        try:
+            from google.api_core.client_options import ClientOptions
+        except ImportError:
+            assert isinstance(co, dict)
+            assert co["quota_project_id"] == "billing-project"
+        else:
+            assert isinstance(co, ClientOptions)
             assert co.quota_project_id == "billing-project"
-        elif isinstance(co, dict):
-            assert co.get("quota_project_id") == "billing-project"
 
     def test_no_client_options_when_no_overrides(self):
         s = _make()

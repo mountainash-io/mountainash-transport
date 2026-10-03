@@ -66,10 +66,10 @@ class TestHttpResponse:
             r.json()
 
     def test_json_raises_http_decode_error_on_bad_encoding(self):
-        # invalid UTF-8 bytes — not valid JSON either
-        r = self._make(content=b"\xff\xfe")
-        with pytest.raises(HttpDecodeError):
+        r = self._make(content=b'"\xff"')
+        with pytest.raises(HttpDecodeError) as exc_info:
             r.json()
+        assert isinstance(exc_info.value.__cause__, UnicodeDecodeError)
 
     def test_json_is_a_method_not_a_property(self):
         r = self._make()
