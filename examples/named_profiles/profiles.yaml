@@ -1,0 +1,17 @@
+# Synthetic values. Real deployments reference credentials with
+# "secret:<record>.<field>" and pass a secret store; see the root README.
+storage_profiles:
+  lake:
+    provider: s3
+    parameters:
+      BUCKET: reports
+      REGION: ap-southeast-2
+    auth:
+      mode: iam
+      parameters:
+        ACCESS_KEY_ID: example-access-key
+        SECRET_ACCESS_KEY: example-secret
+  archive:
+    provider: local
+    auth:
+      mode: none

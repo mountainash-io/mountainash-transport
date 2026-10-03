@@ -128,13 +128,14 @@ After running `hatch run test:test` or any coverage-enabled command, you'll find
 
 ## GitHub Actions Testing
 
-The workflow `.github/workflows/python-run-pytest.yml` runs on relevant pull-request changes and manual dispatch.
+The workflow `.github/workflows/python-run-pytest.yml` runs on pushes to `develop`/`main`, relevant pull-request changes and manual dispatch.
 
 Key points:
 - Tests are run on Ubuntu 24.04 with Python 3.12
-- PR changes to source, tests, package/Hatch configuration, or `.github/**` trigger testing
-- Uses the `test_github` environment defined in `hatch.toml`
-- Automatically uploads coverage to Codecov
+- PR changes to source, tests, examples, README, package/Hatch configuration, or `.github/**` trigger testing
+- Uses the `test_github` environment defined in `hatch.toml`; `test-cov` passes `--cov-config={root}/pyproject.toml` so subprocesses (for example the example recipes) record coverage with the same branch/source settings
+- Uploads coverage (`coverage.xml`) and test results (`junit.xml`) to Codecov, authenticated with GitHub OIDC (job-scoped `id-token: write`); upload failures fail the job
+- Push runs keep the `develop` and `main` coverage baselines current after merges
 
 To manually trigger the tests in GitHub Actions:
 1. Go to the "Actions" tab in the GitHub repository
@@ -166,7 +167,7 @@ Fork PRs require review and a trusted-branch run before secret-backed checks.
 
 ## Online Coverage Tracking
 
-We use [Codecov](https://codecov.io/) to track code coverage across commits and pull requests. Coverage reports are automatically uploaded after successful test runs in GitHub Actions.
+We use [Codecov](https://codecov.io/) to track code coverage across commits and pull requests. Coverage and test-result reports are uploaded from every Pytest run with OIDC authentication; no `CODECOV_TOKEN` secret is used.
 
 To view online coverage reports:
 1. Go to the [Codecov dashboard](https://codecov.io/github/mountainash-io/mountainash-transport) for this repository
