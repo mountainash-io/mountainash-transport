@@ -42,9 +42,6 @@ class BadRead:
 
 
 class TestStorageReadProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodRead(), StorageReadProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodRead(), StorageReadProtocol)
 
@@ -70,9 +67,6 @@ class BadWrite:
 
 
 class TestStorageWriteProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodWrite(), StorageWriteProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodWrite(), StorageWriteProtocol)
 
@@ -104,9 +98,6 @@ class BadEnumerate:
 
 
 class TestStorageEnumerateProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodEnumerate(), StorageEnumerateProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodEnumerate(), StorageEnumerateProtocol)
 
@@ -130,9 +121,6 @@ class BadDelete:
 
 
 class TestStorageDeleteProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodDelete(), StorageDeleteProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodDelete(), StorageDeleteProtocol)
 
@@ -160,9 +148,6 @@ class BadMetadata:
 
 
 class TestStorageMetadataProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodMetadata(), StorageMetadataProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodMetadata(), StorageMetadataProtocol)
 
@@ -186,9 +171,6 @@ class BadCopy:
 
 
 class TestStorageCopyProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodCopy(), StorageCopyProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodCopy(), StorageCopyProtocol)
 
@@ -216,9 +198,6 @@ class BadDirectory:
 
 
 class TestStorageDirectoryProtocol:
-    def test_is_runtime_checkable(self) -> None:
-        assert isinstance(GoodDirectory(), StorageDirectoryProtocol)
-
     def test_positive_conformance(self) -> None:
         assert isinstance(GoodDirectory(), StorageDirectoryProtocol)
 

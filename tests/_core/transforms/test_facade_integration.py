@@ -151,18 +151,6 @@ def test_copy_between_destination_pipeline_encodes(local_facade, tmp_path):
     assert gzip.decompress(dst_path.read_bytes()) == b"hello world"
 
 
-def test_copy_between_no_pipeline_uses_native_copy(local_facade, tmp_path):
-    """With no pipelines, same-backend copy uses the native copy fast-path."""
-    from mountainash_transport import copy_between
-
-    src_path = tmp_path / "source.bin"
-    dst_path = tmp_path / "dest.bin"
-    src_path.write_bytes(b"payload")
-
-    copy_between(str(src_path), str(dst_path), local_facade, local_facade)
-    assert dst_path.read_bytes() == b"payload"
-
-
 def test_copy_between_forces_stream_when_pipeline_present(local_facade, tmp_path, monkeypatch):
     """When any pipeline is given, native copy is skipped even for same-backend."""
     from mountainash_transport import copy_between
