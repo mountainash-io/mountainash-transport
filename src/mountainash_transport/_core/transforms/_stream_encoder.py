@@ -62,10 +62,10 @@ class GzipCompressingReader(io.RawIOBase):
         if not self._header_emitted:
             self._buffer.extend(_gzip_header(self._mtime))
             self._header_emitted = True
-            # Fall through to read the first source chunk immediately — without this,
-            # a small readinto(N) (N <= header size) would return entirely from the
-            # buffered header without ever touching the source, breaking the laziness
-            # contract asserted by test_gzip_wrap_is_lazy.
+            # Fall through and compress the first source chunk in the same call.
+            # Not required for laziness (that contract is only that construction
+            # reads nothing from the source); it just lets the first fill also
+            # make progress on the source rather than yielding a header-only buffer.
         if not self._source_exhausted:
             chunk = self._source.read(self._chunk_size)
             if chunk:
