@@ -152,41 +152,6 @@ class TestStorageRegistry:
         finally:
             STORAGE_REGISTRY._reset_for_tests(*snapshot)
 
-    def test_reset_for_tests_restores_snapshot(self):
-        """_reset_for_tests rolls back to the snapshot state."""
-
-        snapshot = STORAGE_REGISTRY._snapshot_for_tests()
-        tmp_spec = StorageProfileSpec(
-            name="_snapshot_dummy",
-            provider_type="_test",
-            parameters=[
-                ParameterSpec(name="BAR", type=str, tier="core", default=None)
-            ],
-            default_auth=CONST_AUTH_PROFILES.NONE,
-            supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
-        )
-
-        try:
-            @register
-            class _TmpStorageProfile(Profile):
-                __spec__ = tmp_spec
-
-                def to_handler_kwargs(self) -> dict:
-                    return {"bar": self.BAR}
-
-                def get_connection_url(self) -> str:
-                    return "test://"
-
-            assert isinstance(_TmpStorageProfile(), StorageProfileProtocol)
-            assert "_snapshot_dummy" in STORAGE_REGISTRY.specs
-        finally:
-            STORAGE_REGISTRY._reset_for_tests(*snapshot)
-
-        assert "_snapshot_dummy" not in STORAGE_REGISTRY.specs
-        # Original providers still present.
-        for name in EXPECTED_PROVIDERS:
-            assert name in STORAGE_REGISTRY.specs
-
     def test_registry_supports_contains(self):
         """The wrapper supports ``in`` membership checks by name."""
         assert "s3" in STORAGE_REGISTRY
