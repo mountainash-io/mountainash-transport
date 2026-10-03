@@ -188,6 +188,86 @@ class HttpRequestEngine:
         return merged
 
     # ------------------------------------------------------------------
+    # Request-local redirects
+    # ------------------------------------------------------------------
+
+    def _send_with_redirects(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+        content: bytes | None,
+        params: dict[str, str] | None,
+        policy: RequestPolicy,
+        stream: bool = False,
+    ) -> httpx.Response:
+        """Follow httpx-generated requests without mutating client-wide limits."""
+        request = self._client.build_request(
+            method,
+            url,
+            headers=headers,
+            content=content,
+            params=params,
+            timeout=httpx.Timeout(
+                connect=policy.timeout.connect,
+                read=policy.timeout.read,
+                write=policy.timeout.write,
+                pool=policy.timeout.pool,
+            ),
+        )
+        auth = self._client.auth
+        if auth is None:
+            if request.url.username or request.url.password:
+                auth = httpx.BasicAuth(request.url.username, request.url.password)
+            else:
+                auth = httpx.Auth()
+
+        # Keep redirects inside the client's auth flow, so challenges at the
+        # destination still reach it. Individual sends must not reapply auth:
+        # httpx may have stripped Authorization on a cross-origin redirect.
+        no_auth = httpx.Auth()
+        response: httpx.Response | None = None
+        history: list[httpx.Response] = []
+        redirects = 0
+        try:
+            with contextlib.closing(auth.sync_auth_flow(request)) as auth_flow:
+                request = next(auth_flow)
+                while True:
+                    response = self._client.send(
+                        request,
+                        stream=True,
+                        auth=no_auth,
+                        follow_redirects=False,
+                    )
+                    response.history = list(history)
+                    if (
+                        policy.redirect.follow_redirects
+                        and response.next_request is not None
+                    ):
+                        if redirects >= policy.redirect.max_redirects:
+                            raise HttpRedirectError(
+                                f"Exceeded maximum allowed redirects ({policy.redirect.max_redirects})"
+                            )
+                        request = response.next_request
+                        redirects += 1
+                    else:
+                        try:
+                            request = auth_flow.send(response)
+                        except StopIteration:
+                            if not stream:
+                                response.read()
+                                response.close()
+                            return response
+                    response.read()
+                    response.close()
+                    history.append(response)
+        except BaseException:
+            if response is not None:
+                response.close()
+            raise
+
+    # ------------------------------------------------------------------
     # Error raising helpers
     # ------------------------------------------------------------------
 
@@ -270,12 +350,6 @@ class HttpRequestEngine:
         body = _resolve_body(content, stream)
 
         merged_headers = self._merge_headers(headers)
-        timeout = httpx.Timeout(
-            connect=pol.timeout.connect,
-            read=pol.timeout.read,
-            write=pol.timeout.write,
-            pool=pol.timeout.pool,
-        )
 
         auth_refreshed = False
         attempt = 0
@@ -284,14 +358,13 @@ class HttpRequestEngine:
             attempt += 1
 
             try:
-                response = self._client.request(
+                response = self._send_with_redirects(
                     method_upper,
                     url,
                     headers=merged_headers,
                     content=body,
                     params=params,
-                    timeout=timeout,
-                    follow_redirects=pol.redirect.follow_redirects,
+                    policy=pol,
                 )
             except httpx.InvalidURL as exc:
                 raise HttpRequestError(str(exc)) from exc
@@ -431,22 +504,18 @@ class HttpRequestEngine:
         pol = policy or self._policy
         method_upper = method.upper()
         merged_headers = self._merge_headers(headers)
-        timeout = httpx.Timeout(
-            connect=pol.timeout.connect,
-            read=pol.timeout.read,
-            write=pol.timeout.write,
-            pool=pol.timeout.pool,
-        )
 
         try:
-            with self._client.stream(
-                method_upper,
-                url,
-                headers=merged_headers,
-                content=content,
-                params=params,
-                timeout=timeout,
-                follow_redirects=pol.redirect.follow_redirects,
+            with contextlib.closing(
+                self._send_with_redirects(
+                    method_upper,
+                    url,
+                    headers=merged_headers,
+                    content=content,
+                    params=params,
+                    policy=pol,
+                    stream=True,
+                )
             ) as response:
                 status = response.status_code
 
