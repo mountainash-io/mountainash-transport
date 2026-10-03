@@ -76,8 +76,10 @@ class TestS3StorageProfileConstruction:
         assert s.REGION == "us-east-1"
 
     def test_invalid_flavor_rejected_at_construction(self):
-        with pytest.raises(Exception):
-            _make("not-a-real-flavor")
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="FLAVOR"):
+            S3StorageProfile(FLAVOR="not-a-real-flavor")
 
     def test_use_ssl_default_is_true(self):
         """Regression: USE_SSL now defaults True (old code had False)."""
