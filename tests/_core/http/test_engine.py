@@ -342,7 +342,7 @@ class TestBodyReplayability:
         )
         engine = HttpRequestEngine(client, policy=policy)
         with pytest.raises(HttpServiceUnavailableError):
-            engine.request("POST", "https://example.com", stream=stream)
+            engine.request("POST", "https://example.com", stream=t.cast(t.BinaryIO, stream))
         mock_sleep.assert_not_called()
 
 
@@ -539,7 +539,7 @@ class TestAuthRefresh:
         mgr = _Mgr()
         engine = HttpRequestEngine(
             client=client,
-            auth_strategy=OAuth2RefreshableAuthStrategy(mgr),
+            auth_strategy=OAuth2RefreshableAuthStrategy(t.cast(t.Any, mgr)),
             policy=_NO_RETRY_WITH_AUTH,
         )
         resp = engine.request("GET", "https://example.com/obj")

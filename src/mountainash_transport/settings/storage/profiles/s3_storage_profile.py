@@ -181,7 +181,7 @@ S3_SPEC = StorageProfileSpec(
 )
 
 
-def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     """Build boto3 client kwargs, composing on the driver_key merge (``kw``).
 
     ``kw`` already carries the driver_key fields (region_name, use_ssl, and
@@ -189,6 +189,8 @@ def _s3_boto_kwargs(profile: "S3StorageProfile", kw: dict[str, t.Any]) -> dict[s
     region/endpoint/addressing and the botocore Config, preserving the exact
     output the legacy ``to_handler_kwargs`` produced.
     """
+    if not isinstance(profile, S3StorageProfile):
+        raise TypeError(f"S3 BOTO adapter requires S3StorageProfile, got {type(profile).__name__}")
     try:
         import botocore.config as _botocore_config
     except ImportError:  # pragma: no cover - botocore is a boto3 transitive
@@ -251,6 +253,21 @@ class S3StorageProfile(Profile):
     addressing-style constraints; see
     :func:`~mountainash_transport.settings.adapters.s3.build_handler_kwargs`.
     """
+
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        FLAVOR: str
+        REGION: str
+        BUCKET: str | None
+        ACCOUNT_ID: str | None
+        ENDPOINT_URL: str | None
+        USE_SSL: bool
+        ADDRESSING_STYLE: str
+        ACCELERATE_ENDPOINT: bool
+        DUALSTACK_ENDPOINT: bool
+        VERIFY_SSL: bool
+        CONNECT_TIMEOUT: float | None
+        READ_TIMEOUT: float | None
 
     __spec__ = S3_SPEC
     __adapters__ = {TargetFamily.BOTO: _s3_boto_kwargs}

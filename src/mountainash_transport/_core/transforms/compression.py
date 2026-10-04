@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import gzip
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 from ._stream_encoder import GzipCompressingReader
 from .base import StreamTransform
@@ -26,7 +26,9 @@ class Gzip(StreamTransform):
 
     def wrap(self, stream: BinaryIO) -> BinaryIO:
         """Wrap *stream* so reads yield gzip-encoded bytes."""
-        return GzipCompressingReader(stream, level=self.level, mtime=self.mtime)
+        # RawIOBase reader exposing the binary-stream interface; typeshed's
+        # BinaryIO is nominal, so the adapter is not a declared subclass.
+        return cast(BinaryIO, GzipCompressingReader(stream, level=self.level, mtime=self.mtime))
 
     def unwrap(self, stream: BinaryIO) -> BinaryIO:
         """Unwrap *stream* so reads yield gzip-decoded (plaintext) bytes."""

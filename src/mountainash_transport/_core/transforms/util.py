@@ -5,7 +5,11 @@ from __future__ import annotations
 import io
 import shutil
 import tempfile
+import typing as t
 from typing import BinaryIO, Literal
+
+if t.TYPE_CHECKING:
+    from _typeshed import SupportsWrite
 
 
 def materialize(
@@ -24,7 +28,7 @@ def materialize(
     buffer is positioned at 0.
     """
     if to == "memory":
-        buffer: BinaryIO = io.BytesIO()
+        buffer = io.BytesIO()
 
         shutil.copyfileobj(stream, buffer)
         length = buffer.tell()
@@ -32,13 +36,16 @@ def materialize(
         return buffer, length
 
     elif to == "tempfile":
-        file_buffer: tempfile.SpooledTemporaryFile = tempfile.SpooledTemporaryFile(max_size=memory_cutoff)
-        shutil.copyfileobj(stream, file_buffer)
+        file_buffer: tempfile.SpooledTemporaryFile[bytes] = tempfile.SpooledTemporaryFile(max_size=memory_cutoff)
+        # mypy cannot pick AnyStr from IO[bytes].write's Buffer overload.
+        shutil.copyfileobj(stream, t.cast("SupportsWrite[bytes]", file_buffer))
 
         #Need to open stream to the file
         length = file_buffer.tell()
         file_buffer.seek(0)
-        return file_buffer, length
+        # typeshed models SpooledTemporaryFile as IO[bytes]; it provides the
+        # binary-stream interface callers of materialize() rely on.
+        return t.cast(BinaryIO, file_buffer), length
 
     else:
         raise ValueError(f"to={to!r} must be 'memory' or 'tempfile'")

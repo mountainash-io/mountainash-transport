@@ -161,7 +161,7 @@ SFTP_SPEC = StorageProfileSpec(
 )
 
 
-def _sftp_paramiko_kwargs(profile: "SFTPStorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+def _sftp_paramiko_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     """Compose on the driver_key merge (kw) and append the post-connect envelope."""
     result: dict[str, t.Any] = dict(kw)
     post_connect: dict[str, t.Any] = {}
@@ -192,6 +192,20 @@ class SFTPStorageProfile(Profile):
         - :class:`KerberosAuth`    → ``gss_auth=True`` + ``gss_host`` +
           ``gss_kex=True``
     """
+
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        HOST: str
+        PORT: int
+        USERNAME: str
+        TIMEOUT: float
+        BANNER_TIMEOUT: float | None
+        AUTH_TIMEOUT: float | None
+        ALLOW_AGENT: bool
+        LOOK_FOR_KEYS: bool
+        COMPRESS: bool
+        KNOWN_HOSTS_FILE: str | None
+        HOST_KEY_POLICY: str
 
     __spec__ = SFTP_SPEC
     __adapters__ = {TargetFamily.PARAMIKO: _sftp_paramiko_kwargs}

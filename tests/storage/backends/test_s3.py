@@ -411,7 +411,7 @@ class TestMetadata:
         mock_client = MagicMock()
         error_response = {"Error": {"Code": "404", "Message": "Not Found"}}
         exc = Exception("Not Found")
-        exc.response = error_response  # type: ignore[attr-defined]
+        exc.response = error_response
         mock_client.head_object.side_effect = exc
         # Fallback list_objects_v2 returns empty
         mock_client.list_objects_v2.return_value = {"Contents": []}

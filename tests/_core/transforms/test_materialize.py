@@ -50,4 +50,4 @@ def test_materialize_tempfile_mode_above_cutoff_rolls_to_disk():
 
 def test_materialize_invalid_mode_raises():
     with pytest.raises(ValueError, match="to="):
-        materialize(io.BytesIO(b""), to="bogus")  # type: ignore[arg-type]
+        materialize(io.BytesIO(b""), to="bogus")

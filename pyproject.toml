@@ -88,3 +88,12 @@ tests = ["tests", "*/mountainash-transport/tests"]
 
 [tool.coverage.report]
 exclude_lines = ["no cov", "if __name__ == .__main__:", "if TYPE_CHECKING:"]
+
+#================
+# Tool: mypy
+#================
+# python-gnupg ships no annotations and has no published stub package; the
+# [encryption] extra imports it lazily (see _core/transforms/encryption.py).
+[[tool.mypy.overrides]]
+module = ["gnupg"]
+ignore_missing_imports = true

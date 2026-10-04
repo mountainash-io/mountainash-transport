@@ -122,6 +122,12 @@ class LocalStorageProfile(Profile):
         )
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        ROOT_PATH: str | None
+        CREATE_PATH: bool
+        MOUNT_SPEC: dict[str, t.Any] | None
+
     __spec__ = LOCAL_SPEC
 
     def get_connection_url(self) -> str:

@@ -128,6 +128,15 @@ class SMBStorageProfile(Profile):
         - :class:`KerberosAuth`  → ``auth_protocol="kerberos"``.
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        SERVER: str
+        PORT: int
+        USERNAME: str | None
+        DOMAIN: str | None
+        ENCRYPT: bool
+        CONNECTION_TIMEOUT: int
+
     __spec__ = SMB_SPEC
 
     def get_connection_url(self) -> str:

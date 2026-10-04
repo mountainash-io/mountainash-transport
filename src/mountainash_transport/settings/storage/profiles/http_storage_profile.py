@@ -91,7 +91,7 @@ HTTP_SPEC = StorageProfileSpec(
 )
 
 
-def _http_httpx_kwargs(profile: "HTTPStorageProfile", kw: dict[str, t.Any]) -> dict[str, t.Any]:
+def _http_httpx_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     """Build httpx.Client kwargs (composing on kw, which is empty for HTTP)."""
     result: dict[str, t.Any] = dict(kw)
     result["timeout"] = httpx.Timeout(
@@ -112,6 +112,16 @@ def _http_httpx_kwargs(profile: "HTTPStorageProfile", kw: dict[str, t.Any]) -> d
 @register
 class HTTPStorageProfile(Profile):
     """HTTP/HTTPS provider settings."""
+
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        TIMEOUT_CONNECT: float
+        TIMEOUT_READ: float
+        TIMEOUT_WRITE: float
+        FOLLOW_REDIRECTS: bool
+        MAX_REDIRECTS: int
+        VERIFY_SSL: bool
+        HEADERS: dict[str, t.Any] | None
 
     __spec__ = HTTP_SPEC
     __adapters__ = {TargetFamily.HTTP: _http_httpx_kwargs}

@@ -43,7 +43,9 @@ if t.TYPE_CHECKING:
 # httpx exception → transport exception mapping (order: specific before base)
 # ---------------------------------------------------------------------------
 
-_HTTPX_EXCEPTION_MAP: list[tuple[type[httpx.HTTPError], type[HttpTransportError]]] = [
+# InvalidURL and StreamError are not httpx.HTTPError subclasses, so the key
+# type is the common Exception base.
+_HTTPX_EXCEPTION_MAP: list[tuple[type[Exception], type[HttpTransportError]]] = [
     # Timeouts (subclasses of httpx.TimeoutException)
     (httpx.ConnectTimeout, HttpTimeoutError),
     (httpx.ReadTimeout, HttpTimeoutError),

@@ -170,7 +170,10 @@ class TunnelledConnection(ConnectionProtocol):
         if not self._ssh.is_connected:
             self._ssh.connect()
 
-        transport = self._ssh.client.get_transport()
+        client = self._ssh.client
+        if client is None:
+            raise TransportConnectionError("SSH connection has no client after connect()")
+        transport = client.get_transport()
 
         try:
             server = _start_forwarder(transport, self._remote_host, self._remote_port)

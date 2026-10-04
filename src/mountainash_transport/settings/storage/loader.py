@@ -48,7 +48,7 @@ from mountainash_transport._core.exceptions import (
 )
 
 from . import profiles  # noqa: F401 — populate STORAGE_REGISTRY
-from .registry import get_settings_class, get_spec
+from .registry import STORAGE_REGISTRY, get_spec
 
 if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
@@ -183,7 +183,7 @@ def _build_params(
             "settings_parameters.settings_class must be unset — "
             "resolve_storage owns the settings class",
         )
-    kwargs = dict(settings_parameters.kwargs)
+    kwargs = dict(settings_parameters.kwargs or {})
     # Runtime fields replace captured fields; metadata follows that precedence.
     kwargs.pop("reference_inputs", None)
     if "storage_profiles" in kwargs:
@@ -219,7 +219,7 @@ def resolve_storage(
     reference_inputs = settings.reference_inputs.get(name, {})
 
     try:
-        storage_cls = get_settings_class(block.provider)
+        storage_cls = STORAGE_REGISTRY.get_settings_class(block.provider)
         spec = get_spec(block.provider)
     except KeyError as exc:
         raise ProfileResolutionError(
@@ -290,4 +290,9 @@ def resolve_storage(
     if auth_profile is None:
         raise ProfileResolutionError(name, "invalid resolved auth parameters")
 
-    return storage_profile, auth_profile
+    # Both registries enforce their protocol/base class at registration, so the
+    # validated instances satisfy the declared return types.
+    return (
+        t.cast("StorageProfileProtocol", storage_profile),
+        t.cast("AuthProfile", auth_profile),
+    )
