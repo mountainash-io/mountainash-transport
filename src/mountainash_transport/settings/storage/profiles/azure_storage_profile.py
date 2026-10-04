@@ -214,6 +214,18 @@ class AzureStorageProfile(Profile):
         - :class:`NoAuth`       → ``credential=None``
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        SERVICE_TYPE: str
+        ACCOUNT_NAME: str
+        CONTAINER_OR_SHARE: str | None
+        ACCOUNT_URL: str | None
+        ENDPOINT_SUFFIX: str
+        TOKEN_INTENT: str | None
+        API_VERSION: str | None
+        SECONDARY_HOSTNAME: str | None
+        MAX_BLOCK_SIZE: int | None
+
     __spec__ = AZURE_STORAGE_SPEC
     # Settings emission adapters belong in __adapters__ keyed by SDK target.
     # Each adapter receives (profile, merged); auth stays in the strategy layer.

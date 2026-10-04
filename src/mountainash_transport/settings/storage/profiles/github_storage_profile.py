@@ -127,6 +127,14 @@ class GitHubRepoStorageProfile(Profile):
     supports.
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        ORG: str
+        REPO: str
+        REF: str | None
+        BASE_URL: str
+        TIMEOUT: float
+
     __spec__ = GITHUB_REPO_SPEC
 
     def get_connection_url(self) -> str:

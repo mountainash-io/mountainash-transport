@@ -173,6 +173,18 @@ class FTPStorageProfile(Profile):
     class and applying the connect/post-connect steps.
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        HOST: str
+        PORT: int
+        USERNAME: str
+        ACCOUNT: str | None
+        TIMEOUT: float | None
+        SOURCE_ADDRESS: str | None
+        ENCODING: str
+        USE_TLS: bool
+        PASSIVE_MODE: bool
+
     __spec__ = FTP_SPEC
 
     def get_connection_url(self) -> str:

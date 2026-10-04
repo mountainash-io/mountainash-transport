@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import FrozenInstanceError
+import typing as t
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,7 +20,7 @@ from mountainash_transport._core.http.response import HttpResponse, HttpStreamRe
 
 class TestHttpResponse:
     def _make(self, **kwargs) -> HttpResponse:
-        defaults = {
+        defaults: dict[str, t.Any] = {
             "status_code": 200,
             "headers": {"content-type": "application/json"},
             "content": b'{"key": "value"}',
@@ -40,7 +41,7 @@ class TestHttpResponse:
     def test_frozen_immutability(self):
         r = self._make()
         with pytest.raises((FrozenInstanceError, AttributeError)):
-            r.status_code = 404  # type: ignore[misc]
+            r.status_code = 404
 
     def test_text_decodes_utf8(self):
         r = self._make(content="héllo".encode("utf-8"))

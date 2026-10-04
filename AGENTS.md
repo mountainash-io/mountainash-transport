@@ -34,7 +34,7 @@ Save new superpowers specs and plans to mountainash-central, not this repo:
 - **Specs:** `mountainash-central/04.planning/mountainash-transport/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
 - **Plans:** `mountainash-central/04.planning/mountainash-transport/superpowers/plans/YYYY-MM-DD-<topic>.md`
 
-This repo has no `docs/` planning folder; do not create one. Update the central indexes in the same change that adds a record, following `mountainash-central/_meta/superpowers-index-conventions.md`.
+This repo keeps no planning documents (specs, plans, backlog) in `docs/`; user documentation such as `docs/typing.md` is fine. Update the central indexes in the same change that adds a record, following `mountainash-central/_meta/superpowers-index-conventions.md`.
 
 ### Central documentation workflow
 
@@ -125,8 +125,16 @@ hatch run test:test                       # Full suite with coverage
 hatch run test:test-quick                 # No coverage
 hatch run test:test-target-quick <path>   # Specific file/test
 hatch run ruff:check                      # Lint (ruff:fix to auto-fix)
+hatch run mypy:check                      # mypy 1.10.1 over src + tests, --warn-unused-ignores
+hatch run mypy:qualify --output <new-dir-outside-checkouts>  # installed py.typed qualification
 hatch build
 ```
+
+Typing: the package ships `py.typed`; see [docs/typing.md](docs/typing.md) for the
+contract and dynamic boundaries. Keep the full `src` + `tests` mypy target; no blanket
+ignores. Storage profiles declare their spec-generated fields under `if t.TYPE_CHECKING:`;
+`tests/settings/storage/profiles/test_static_field_declarations.py` fails if they drift
+from `__spec__`. Public typing changes need a matching `tests/typing/consumer.py` contract.
 
 ## Dependencies
 

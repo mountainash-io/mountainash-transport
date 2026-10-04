@@ -64,7 +64,7 @@ def test_az_alias_resolves_to_azure():
 def test_schemespec_is_frozen():
     spec = SCHEMES["s3"]
     with pytest.raises(dataclasses.FrozenInstanceError):
-        spec.scheme = "nope"  # type: ignore[misc]
+        spec.scheme = "nope"
 
 
 def test_schemespec_has_provider_field_defaulting_to_none():

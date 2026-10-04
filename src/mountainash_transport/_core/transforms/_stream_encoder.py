@@ -44,7 +44,7 @@ class GzipCompressingReader(io.RawIOBase):
     def readable(self) -> bool:
         return True
 
-    def readinto(self, b) -> int:  # type: ignore[override]
+    def readinto(self, b) -> int:
         while len(self._buffer) < len(b) and not self._trailer_emitted:
             self._fill()
         n = min(len(b), len(self._buffer))

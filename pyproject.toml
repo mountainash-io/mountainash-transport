@@ -77,7 +77,8 @@ Source = "https://github.com/mountainash-io/mountainash-transport"
 source_pkgs = ["mountainash_transport", "tests"]
 branch = true
 parallel = true
-omit = ["src/mountainash_transport/__version__.py"]
+# tests/typing holds installed-consumer fixtures run by tools/qualify_typing.py, not pytest.
+omit = ["src/mountainash_transport/__version__.py", "tests/typing/*"]
 
 [tool.coverage.paths]
 mountainash_transport = [
@@ -87,4 +88,13 @@ mountainash_transport = [
 tests = ["tests", "*/mountainash-transport/tests"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__:", "if TYPE_CHECKING:"]
+exclude_lines = ["no cov", "if __name__ == .__main__:", "if (t\\.|typing\\.)?TYPE_CHECKING:"]
+
+#================
+# Tool: mypy
+#================
+# python-gnupg ships no annotations and has no published stub package; the
+# [encryption] extra imports it lazily (see _core/transforms/encryption.py).
+[[tool.mypy.overrides]]
+module = ["gnupg"]
+ignore_missing_imports = true

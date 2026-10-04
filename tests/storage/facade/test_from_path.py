@@ -62,7 +62,7 @@ def test_from_path_passes_profile(monkeypatch):
     monkeypatch.setattr(conn_mod, "create_connection", _fake_create_conn)
 
     sentinel = object()
-    StorageFacade.from_path("gs://bucket/key", storage_profile=sentinel)  # type: ignore[arg-type]
+    StorageFacade.from_path("gs://bucket/key", storage_profile=sentinel)
     assert captured["provider"] == CONST_STORAGE_PROVIDER_TYPE.GCS
     assert captured["storage_profile"] is sentinel
 

@@ -141,7 +141,7 @@ class TestStorageRegistry:
                 __spec__ = dummy_spec
 
                 def to_handler_kwargs(self) -> dict:
-                    return {"foo": self.FOO}
+                    return {"foo": getattr(self, "FOO")}
 
                 def get_connection_url(self) -> str:
                     return "test://"

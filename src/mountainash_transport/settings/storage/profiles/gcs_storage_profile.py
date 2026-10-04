@@ -149,6 +149,14 @@ class GCSStorageProfile(Profile):
     :func:`~mountainash_transport.settings.adapters.gcs.build_handler_kwargs`.
     """
 
+    if t.TYPE_CHECKING:
+        # Static view of the fields generated from __spec__ (kept in sync by tests).
+        PROJECT: str
+        BUCKET_NAME: str | None
+        API_ENDPOINT: str | None
+        LOCATION: str | None
+        USER_PROJECT: str | None
+
     __spec__ = GCS_SPEC
 
     def get_connection_url(self) -> str:
@@ -183,7 +191,7 @@ class GCSStorageProfile(Profile):
 
         if client_options_kwargs:
             try:
-                from google.api_core.client_options import (  # type: ignore[import-untyped]
+                from google.api_core.client_options import (
                     ClientOptions,
                 )
 

@@ -8,7 +8,7 @@ path = "src/mountainash_transport/__version__.py"
 packages = ["src/mountainash_transport"]
 
 [build.targets.sdist]
-include = ["/src", "/pyproject.toml", "/hatch.toml", "/requirements-hatch.txt", "/README.md", "/LICENSE"]
+include = ["/src", "/pyproject.toml", "/hatch.toml", "/requirements-hatch.txt", "/README.md", "/LICENSE", "/tools", "/tests/typing", "/docs/typing.md"]
 
 #================
 # Env: build_github
@@ -205,9 +205,26 @@ radon-cc-detail = "radon cc ./src"
 python = "3.12"
 installer = "uv"
 path = ".hatch/mypy"           # own path — see [envs.ruff] note
-dependencies = ["mypy==1.10.1"]
+# Optional SDK extras are installed so their imports are checked, with stubs
+# pinned to the extras' versions. Provision here, not via --install-types.
+features = ["s3", "sftp", "encryption"]
+dependencies = [
+    "mypy==1.10.1",
+    "pytest==8.3.5",
+    "build==1.2.2.post1",
+    "hatchling==1.27.0",
+    "boto3-stubs[s3]==1.34.113",
+    "types-PyYAML==6.0.12.20260906",
+    "types-paramiko==3.4.0.20240423",
+    "google-api-core>=2.11",
+]
 [envs.mypy.scripts]
-check = "mypy --install-types --non-interactive {args:src/mountainash_transport}"
+check = "mypy --warn-unused-ignores {args:src/mountainash_transport tests}"
+qualify = "python tools/qualify_typing.py {args}"
+
+[envs.mypy.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/.."
 
 [envs.default.env-vars]
 UV_CONSTRAINT = "{root}/requirements-hatch.txt"

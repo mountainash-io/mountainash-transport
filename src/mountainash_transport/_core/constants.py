@@ -12,7 +12,7 @@ class _FindMemberMixin(StrEnum):
     """
 
     @classmethod
-    def find_member(cls, v: t.Any) -> t.Optional["_FindMemberMixin"]:
+    def find_member(cls, v: t.Any) -> t.Self | None:
         if v is None:
             return None
         try:

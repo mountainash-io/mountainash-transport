@@ -7,7 +7,7 @@ from typing import Protocol, TypeVar, runtime_checkable
 
 from typing_extensions import Self
 
-C = TypeVar("C")
+C = TypeVar("C", covariant=True)
 
 
 @runtime_checkable

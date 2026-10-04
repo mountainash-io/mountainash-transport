@@ -19,7 +19,7 @@ class S3Connection(ConnectionProtocol):
 
     def connect(self) -> Self:
         try:
-            import boto3  # type: ignore[import-untyped]
+            import boto3
         except ImportError as exc:
             raise TransportConnectionError("boto3 is required for S3 connections") from exc
 
@@ -96,7 +96,9 @@ class S3Connection(ConnectionProtocol):
             extra_args={"RoleSessionName": session_name},
         )
         target = botocore.session.get_session()
-        target._credentials = DeferredRefreshableCredentials(
+        # botocore has no public setter for refreshable credentials; this is
+        # the documented assume-role session recipe.
+        target._credentials = DeferredRefreshableCredentials(  # type: ignore[attr-defined]
             fetcher.fetch_credentials, "assume-role"
         )
         if region:

@@ -53,16 +53,16 @@ class _PairedStream(io.RawIOBase):
     def readable(self) -> bool:
         return True
 
-    def readinto(self, b) -> int:  # type: ignore[override]
+    def readinto(self, b) -> int:
         chunk = self._wrapped.read(len(b))
         n = len(chunk)
         b[:n] = chunk
         return n
 
-    def read(self, size: int = -1) -> bytes:  # type: ignore[override]
+    def read(self, size: int = -1) -> bytes:
         return self._wrapped.read(size)
 
-    def close(self) -> None:  # type: ignore[override]
+    def close(self) -> None:
         try:
             if self._wrapped is not self._source:
                 self._wrapped.close()
