@@ -43,11 +43,22 @@ With sibling checkouts of `mountainash-settings` and `mountainash-auth-client`:
 
 ```sh
 hatch run mypy:check
+hatch run mypy:check-src
+hatch run mypy:check-tests
+hatch run mypy:check-src-untyped
+hatch run mypy:check-tests-untyped
 hatch run mypy:qualify --output /tmp/transport-typing-evidence
 ```
 
 `check` runs mypy with `--warn-unused-ignores` over `src` and `tests` in an
 environment that installs the S3, SFTP and encryption extras plus pinned stubs.
+`check-src` and `check-tests` select source and test targets independently;
+both accept extra mypy flags without replacing their targets. Checking tests
+still follows source imports, so that run can also report source errors.
+`--check-untyped-defs` is opt-in and checks bodies of unannotated functions.
+`check-src-untyped` and `check-tests-untyped` are shortcuts for the respective
+targeted checks with that flag enabled; they also accept extra mypy flags.
+
 `qualify` builds the wheel and sdist, rebuilds a wheel from the sdist, and checks
 each wheel from its own fresh environment outside the checkout: marker presence,
 public exports, positive `assert_type` contracts, every expected-invalid call

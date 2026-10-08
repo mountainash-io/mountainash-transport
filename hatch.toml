@@ -220,6 +220,10 @@ dependencies = [
 ]
 [envs.mypy.scripts]
 check = "mypy --warn-unused-ignores {args:src/mountainash_transport tests}"
+check-src = "mypy --warn-unused-ignores src/mountainash_transport {args}"
+check-tests = "mypy --warn-unused-ignores tests {args}"
+check-src-untyped = "mypy --warn-unused-ignores --check-untyped-defs src/mountainash_transport {args}"
+check-tests-untyped = "mypy --warn-unused-ignores --check-untyped-defs tests {args}"
 qualify = "python tools/qualify_typing.py {args}"
 
 [envs.mypy.env-vars]
