@@ -146,3 +146,20 @@ def test_stream_does_not_replay_partial_body() -> None:
         with _engine(handler).stream("GET", "https://h/f") as response:
             b"".join(response.iter_bytes())
     assert attempts == 1
+
+
+def test_facade_read_refreshes_expired_token_through_sequential_backend() -> None:
+    from mountainash_transport import StorageFacade
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+
+    auth = _RefreshingAuth()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.headers["Authorization"] == "Bearer old":
+            return httpx.Response(401)
+        return httpx.Response(200, content=b"private payload")
+
+    facade = StorageFacade.for_local()
+    facade._backend = HTTPStorageBackend(None, engine=_engine(handler, auth=auth))
+    assert facade.read("https://h/private") == b"private payload"
+    assert auth.refreshes == 1

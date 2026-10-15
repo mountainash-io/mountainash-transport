@@ -139,16 +139,9 @@ def test_tail_and_interior_bytes(case) -> None:
     with _open(backend, path) as h:
         h.seek(-8, io.SEEK_END)
         assert h.read(8) == DATA[-8:]
+        assert store.fetched <= 8 + 1  # HTTP probe fetches one byte
         h.seek(50_000)
         assert h.read(1000) == DATA[50_000:51_000]
-
-
-def test_bytes_fetched_are_bounded(case) -> None:
-    _, store, backend, path, _ = case
-    with _open(backend, path) as h:
-        h.seek(-8, io.SEEK_END)
-        h.read(8)
-    assert store.fetched <= 8 + 1  # HTTP probe fetches 1 byte
 
 
 def test_missing_object_raises_path_not_found(case) -> None:
