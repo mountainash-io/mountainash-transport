@@ -52,6 +52,7 @@ from .registry import STORAGE_REGISTRY, get_spec
 
 if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
+    from mountainash_settings.profiles import Profile
 
     from ..profile_protocol import StorageProfileProtocol
 
@@ -227,7 +228,8 @@ def resolve_storage(
         ) from exc
 
     try:
-        storage_profile = storage_cls.model_validate(storage_params)
+        # Registry also requires Profile inheritance, beyond its storage protocol.
+        storage_profile = t.cast("type[Profile]", storage_cls).model_validate(storage_params)
     except ValidationError as exc:
         if not _sensitive_validation(exc, reference_inputs.get("parameters", {})):
             raise ProfileResolutionError(

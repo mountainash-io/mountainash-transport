@@ -135,6 +135,18 @@ lookups are errors, with no provider-name or environment fallback.
 
 ### Managed HTTP OAuth
 
+HTTP and HTTPS use default connection settings when no storage profile is supplied:
+
+```python
+from mountainash_transport import StorageFacade
+
+url = "https://files.example.com/data.csv"
+data = StorageFacade.from_path(url).read(url)
+```
+
+You can also pass `auth_profile=` without a storage profile. Supply an explicit
+`HTTPStorageProfile` to customize timeouts, headers, or other HTTP settings.
+
 Managed OAuth2 uses a raw token store, separate from the configuration reader.
 The application supplies the OAuth provider and auth profile; auth-client owns
 token acquisition and refresh:

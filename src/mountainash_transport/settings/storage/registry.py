@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing as t
 import warnings
 
 from mountainash_settings.profiles import Registry
@@ -25,17 +24,14 @@ __all__ = [
 STORAGE_REGISTRY = Registry(
     "storage",
     spec_type=StorageProfileSpec,
-    # Runtime-checkable protocol: Registry's issubclass() check accepts it, but
-    # settings annotates profile_type as type[Profile] (tracked in transport #16).
-    profile_type=StorageProfileProtocol,  # type: ignore[arg-type]
+    profile_type=StorageProfileProtocol,
 )
 
 register = STORAGE_REGISTRY.decorator()
 
 
 def get_spec(name: str) -> StorageProfileSpec:
-    # The registry rejects any spec that is not a StorageProfileSpec.
-    return t.cast(StorageProfileSpec, STORAGE_REGISTRY.get_spec(name))
+    return STORAGE_REGISTRY.get_spec(name)
 
 
 def get_descriptor(name: str) -> StorageProfileSpec:
@@ -49,4 +45,4 @@ def get_descriptor(name: str) -> StorageProfileSpec:
 
 
 def get_settings_class(name: str) -> type["StorageProfileProtocol"]:
-    return STORAGE_REGISTRY.get_settings_class(name)  # type: ignore[return-value]
+    return STORAGE_REGISTRY.get_settings_class(name)
