@@ -91,6 +91,138 @@ def test_facade_read_stream_closes_source_on_exit(local_facade, tmp_path):
     assert opened_streams[0].closed, "source stream was not closed after with-block exit"
 
 
+class _FailingUnwrap:
+    """Transform whose unwrap records its input stream then raises."""
+
+    def __init__(self) -> None:
+        self.received: io.IOBase | None = None
+
+    def wrap(self, stream):
+        return stream
+
+    def unwrap(self, stream):
+        self.received = stream
+        raise RuntimeError("unwrap failed")
+
+
+def _track_sources(facade: StorageFacade, monkeypatch) -> list:
+    opened: list = []
+    original = facade._backend.read_to_stream
+
+    def tracking_read(p):
+        s = original(p)
+        opened.append(s)
+        return s
+
+    monkeypatch.setattr(facade._backend, "read_to_stream", tracking_read)
+    return opened
+
+
+def test_read_stream_closes_source_when_transform_construction_fails(
+    local_facade, tmp_path, monkeypatch,
+):
+    path = tmp_path / "data.bin"
+    path.write_bytes(b"payload")
+    opened = _track_sources(local_facade, monkeypatch)
+    failing = _FailingUnwrap()
+
+    with pytest.raises(RuntimeError, match="unwrap failed"):
+        local_facade.read_stream(str(path), pipeline=Pipeline(failing))
+
+    assert failing.received is opened[0]
+    assert opened[0].closed
+
+
+def test_read_stream_closes_built_layers_when_later_transform_fails(
+    local_facade, tmp_path, monkeypatch,
+):
+    """Outer gzip layer is built, inner layer fails: both gzip wrapper and source close."""
+    path = tmp_path / "data.bin.gz"
+    path.write_bytes(gzip.compress(b"payload"))
+    opened = _track_sources(local_facade, monkeypatch)
+    failing = _FailingUnwrap()
+
+    with pytest.raises(RuntimeError, match="unwrap failed"):
+        local_facade.read_stream(str(path), pipeline=Pipeline(Gzip(), failing))
+
+    assert isinstance(failing.received, gzip.GzipFile)
+    assert failing.received.closed
+    assert opened[0].closed
+
+
+def test_read_stream_seeks_plain_local_file(local_facade, tmp_path):
+    path = tmp_path / "plain.bin"
+    path.write_bytes(b"abc")
+    with local_facade.read_stream(str(path)) as s:
+        assert s.seekable()
+        assert s.read(1) == b"a"
+        assert s.tell() == 1
+        assert s.seek(0) == 0
+        assert s.read(1) == b"a"
+
+
+def test_read_stream_seeks_decoded_offsets_through_gzip(local_facade, tmp_path):
+    """Positions refer to decoded bytes, not compressed source offsets."""
+    path = tmp_path / "data.gz"
+    path.write_bytes(gzip.compress(b"hello world"))
+    with local_facade.read_stream(str(path), pipeline=Gzip()) as s:
+        assert s.seekable()
+        assert s.seek(6) == 6
+        assert s.read() == b"world"
+        assert s.tell() == 11
+        assert s.seek(0) == 0
+        assert s.read(5) == b"hello"
+
+
+class _ForwardOnly(io.RawIOBase):
+    def __init__(self, data: bytes) -> None:
+        self._inner = io.BytesIO(data)
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, b) -> int:
+        return self._inner.readinto(b)
+
+
+class _ForwardOnlyTransform:
+    def wrap(self, stream):
+        return stream
+
+    def unwrap(self, stream):
+        return _ForwardOnly(stream.read())
+
+
+def test_read_stream_non_seekable_effective_stream_stays_non_seekable(
+    local_facade, tmp_path, monkeypatch,
+):
+    path = tmp_path / "plain.bin"
+    path.write_bytes(b"abc")
+    opened = _track_sources(local_facade, monkeypatch)
+    with local_facade.read_stream(str(path), pipeline=_ForwardOnlyTransform()) as s:
+        assert not s.seekable()
+        with pytest.raises(io.UnsupportedOperation):
+            s.seek(0)
+        assert s.read() == b"abc"
+    assert opened[0].closed
+
+
+def test_read_stream_malformed_gzip_fails_on_consumption_and_closes(
+    local_facade, tmp_path, monkeypatch,
+):
+    """Opening succeeds; decoding fails during read; the context still closes the source."""
+    path = tmp_path / "bad.gz"
+    path.write_bytes(b"not gzip")
+    opened = _track_sources(local_facade, monkeypatch)
+
+    with pytest.raises(gzip.BadGzipFile):
+        with local_facade.read_stream(str(path), infer=True) as s:
+            s.read()
+
+    assert s.closed
+    assert opened[0].closed
+
+
 def test_facade_write_with_pipeline_compresses(local_facade, tmp_path):
     path = tmp_path / "out.gz"
     local_facade.write(str(path), b"payload", pipeline=Gzip())
