@@ -29,6 +29,9 @@ from mountainash_transport.storage.registry import (
 )
 from mountainash_transport.storage.path_helpers.suffixes import infer_pipeline as _infer_pipeline
 from mountainash_transport._core.transforms import GPG, Gzip, Pipeline, StreamTransform
+from mountainash_transport._core.ranged_io import RangePolicy, RangedReader
+from mountainash_transport._core.transforms.util import materialize
+from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
@@ -105,6 +108,7 @@ class StorageFacade:
     ) -> None:
         from mountainash_transport.connections import create_connection, create_auth_strategy
         from mountainash_auth_client import OAuth2AuthProfile
+        self._provider_type = provider_type
 
         if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
             from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
@@ -267,6 +271,8 @@ class StorageFacade:
         infer: bool = False,
         gpg: GPG | None = None,
         gzip: Gzip | None = None,
+        access: t.Literal["sequential", "random", "buffered"] = "sequential",
+        range_policy: RangePolicy | None = None,
     ) -> BinaryIO:
         """Read file contents and return as a binary stream, optionally through *pipeline*.
 
@@ -297,24 +303,47 @@ class StorageFacade:
         Closing (including on a consumer exception) propagates to the pipeline
         wrapper and the underlying backend stream.
 
-        ``seekable()``/``seek()``/``tell()`` reflect the effective stream after
-        transforms: a plain local file seeks natively; a gzip stream seeks in
-        decoded offsets (backward seeks re-decompress from the start); a
-        non-seekable stream reports ``False`` and raises
-        ``io.UnsupportedOperation``. No buffering is added to make a stream
-        seekable.
+        ``access="sequential"`` streams without whole-object buffering; remote
+        handles are forward-only. ``"random"`` fetches stored byte ranges and
+        rejects transforms. ``"buffered"`` materializes decoded bytes in memory.
+        Local sequential/random handles retain native seekability. Random
+        reads use call policy, then profile RANGE_* settings, then library defaults.
+        See ``docs/read-access-modes.md`` for migration and format tuning.
         """
         self._require(StorageReadProtocol, "read_stream")
+        if access not in ("sequential", "random", "buffered"):
+            raise ValueError(f"Unknown access mode: {access!r}")
+        if range_policy is not None and access != "random":
+            raise ValueError("range_policy requires access='random'")
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
         )
+        if access == "random":
+            if not effective.is_empty():
+                raise ValueError("access='random' cannot be combined with transforms")
+            if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+                return self._backend.read_to_stream(path)
+            self._require(RangedReadProtocol, "random reads")
+            policy = range_policy or RangePolicy.from_profile(getattr(self._backend, "storage_profile", None))
+            source = self._backend.open_ranged(path)
+            try:
+                return t.cast(BinaryIO, RangedReader(source, policy))
+            except BaseException:
+                if source.on_close is not None:
+                    source.on_close()
+                raise
         source_stream = self._backend.read_to_stream(path)
         try:
             wrapped_stream = effective.apply_read(source_stream)
         except BaseException:
             source_stream.close()
             raise
-        return _PairedStream(wrapped_stream, source_stream)  # type: ignore[return-value]
+        paired = _PairedStream(wrapped_stream, source_stream)
+        if access == "buffered":
+            with paired:
+                result, _ = materialize(t.cast(BinaryIO, paired))
+                return result
+        return t.cast(BinaryIO, paired)
 
     # ------------------------------------------------------------------
     # Write operations (StorageWriteProtocol)

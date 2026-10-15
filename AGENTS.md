@@ -97,6 +97,14 @@ Package-local map. The *why* behind each layer lives in the central principles.
 - `materialize(stream, to=...)` — opt-in buffering to recover a known length.
 - `infer_pipeline(path, gpg=..., gzip=...)` / `facade.read(..., infer=True)` — read-only suffix inference (`.gz`/`.gzip` → `Gzip`; `.gpg`/`.asc`/`.pgp` → `GPG`, requires a `gpg=` instance). Parsing stops at the first unknown suffix. No write-side inference.
 
+### Read access modes
+
+`read_stream(access="sequential" | "random" | "buffered")` defaults to native
+forward-only remote streams. Random mode uses `RangedReadProtocol` on HTTP/S3/SFTP
+and native local handles; buffered mode materializes decoded bytes in memory.
+`RangePolicy` precedence is call → profile `RANGE_*` fields → readahead/1 MiB.
+See `docs/read-access-modes.md` for migration, error timing and Parquet tuning.
+
 ### Package structure
 
 ```

@@ -24,6 +24,10 @@ class Pipeline:
     def __init__(self, *transforms: StreamTransform) -> None:
         self._outer_to_inner: tuple[StreamTransform, ...] = transforms
 
+    def is_empty(self) -> bool:
+        """Whether this pipeline leaves stored bytes unchanged."""
+        return not self._outer_to_inner
+
     def apply_read(self, stream: BinaryIO) -> BinaryIO:
         """Strip layers outermost → innermost.
 

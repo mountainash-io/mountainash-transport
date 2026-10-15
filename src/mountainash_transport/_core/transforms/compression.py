@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import gzip
+import io
 from typing import BinaryIO, cast
 
 from ._stream_encoder import GzipCompressingReader
 from .base import StreamTransform
+from mountainash_transport._core.sequential_io import ForwardOnlyReader
 
 
 class Gzip(StreamTransform):
@@ -32,5 +34,7 @@ class Gzip(StreamTransform):
 
     def unwrap(self, stream: BinaryIO) -> BinaryIO:
         """Unwrap *stream* so reads yield gzip-decoded (plaintext) bytes."""
-        # gzip.GzipFile in rb mode consumes the source lazily on .read().
-        return gzip.GzipFile(fileobj=stream, mode="rb")  # type: ignore[return-value]
+        decoded = gzip.GzipFile(fileobj=stream, mode="rb")
+        if stream.seekable():
+            return cast(BinaryIO, decoded)
+        return cast(BinaryIO, io.BufferedReader(ForwardOnlyReader(decoded.read, decoded.close)))

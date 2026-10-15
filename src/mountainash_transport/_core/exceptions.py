@@ -7,6 +7,14 @@ class StorageError(Exception):
     """Base exception for all storage-related errors."""
 
 
+class RangeNotSupportedError(StorageError):
+    """The resource cannot provide byte-range reads."""
+
+
+class ObjectChangedError(StorageError):
+    """A pinned object changed during ranged reading."""
+
+
 class UnsupportedOperationError(StorageError):
     """Raised when a storage backend does not support a requested operation."""
 

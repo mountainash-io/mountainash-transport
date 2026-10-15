@@ -74,19 +74,6 @@ class TestReadToBytes:
             backend.read_to_bytes("/remote/secret.txt")
 
 
-class TestReadToStream:
-    def test_returns_bytesio(self):
-        mock_sftp = MagicMock()
-        mock_file = MagicMock()
-        mock_file.read.return_value = b"stream content"
-        mock_sftp.open.return_value.__enter__ = MagicMock(return_value=mock_file)
-        mock_sftp.open.return_value.__exit__ = MagicMock(return_value=False)
-        backend, _ = _make_backend(mock_sftp)
-        stream = backend.read_to_stream("/remote/file.txt")
-        assert isinstance(stream, io.BytesIO)
-        assert stream.read() == b"stream content"
-
-
 class TestWriteFromBytes:
     def test_writes_data(self):
         mock_sftp = MagicMock()

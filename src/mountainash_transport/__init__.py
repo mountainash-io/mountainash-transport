@@ -4,6 +4,9 @@ from .__version__ import __version__
 
 # Facade — main user API
 from .storage.facade import StorageFacade, copy_between
+from ._core.ranged_io import RangePolicy
+from ._core.exceptions import RangeNotSupportedError, ObjectChangedError
+from .storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 # Registry
 from .storage.registry import get_storage_backend, detect_provider_from_path
@@ -88,6 +91,7 @@ def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_
 
 
 __all__ = [
+    "RangePolicy", "RangeNotSupportedError", "ObjectChangedError", "RangedReadProtocol",
     "__version__",
     "StorageFacade", "copy_between", "storage",
     "get_storage_backend", "detect_provider_from_path",
