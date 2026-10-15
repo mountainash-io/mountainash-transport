@@ -111,3 +111,38 @@ def test_stream_does_not_retry_unsafe_method_with_retryable_status() -> None:
         with _engine(handler).stream("POST", "https://h/f", content=b"x"):
             pass
     assert len(calls) == 1
+
+
+def test_stream_retries_connect_failure_before_yield() -> None:
+    attempts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ConnectError("temporary failure")
+        return httpx.Response(200, content=b"recovered")
+
+    with _engine(handler).stream("GET", "https://h/f") as response:
+        assert b"".join(response.iter_bytes()) == b"recovered"
+    assert attempts == 2
+
+
+def test_stream_does_not_replay_partial_body() -> None:
+    from mountainash_transport._core.http.errors import HttpTransportError
+    attempts = 0
+
+    class Broken(httpx.SyncByteStream):
+        def __iter__(self):
+            yield b"first"
+            raise httpx.ReadError("body interrupted")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(200, stream=Broken())
+
+    with pytest.raises(HttpTransportError):
+        with _engine(handler).stream("GET", "https://h/f") as response:
+            b"".join(response.iter_bytes())
+    assert attempts == 1
