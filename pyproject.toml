@@ -28,7 +28,7 @@ dependencies = [
     "pydantic==2.9.2",
     "pydantic-settings==2.6.1",
     "universal_pathlib==0.2.2",
-    "pyarrow==17.0.0",
+    "pyarrow==23.0.1",
     "boltons==24.0.0",
     "lazy_loader>=0.4",
     # "paramiko==3.4.0",
