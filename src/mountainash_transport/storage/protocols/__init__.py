@@ -7,8 +7,10 @@ from mountainash_transport.storage.protocols.prtcl_enumerate import StorageEnume
 from mountainash_transport.storage.protocols.prtcl_metadata import StorageMetadataProtocol
 from mountainash_transport.storage.protocols.prtcl_read import StorageReadProtocol
 from mountainash_transport.storage.protocols.prtcl_write import StorageWriteProtocol
+from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 __all__ = [
+    "RangedReadProtocol",
     "StorageCopyProtocol",
     "StorageDeleteProtocol",
     "StorageDirectoryProtocol",

@@ -17,6 +17,7 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 |---|---|---|
 | File operations | `StorageFacade` read/write/stream, metadata, delete, copy and directories; capability checks before calling | [Files](examples/#files) |
 | Stream transforms | Composable `Pipeline` of `Gzip` and `GPG`; opt-in suffix inference on read; transforms applied during cross-backend copy | [Stream transforms](examples/#stream-transforms) |
+| Read access modes | Native sequential streams, cached remote byte ranges, or explicit in-memory buffering; Parquet tuning guidance | [Read access modes and migration](docs/read-access-modes.md) |
 | Path dispatch | Scheme-to-provider detection, aliases, strict normalisation and joining | [Paths](examples/#paths) |
 | Profiles and auth | Per-provider storage profiles emitting SDK kwargs; auth profiles paired and validated at connection time; named profiles from configuration | [Profiles and authentication](examples/#profiles-and-authentication) |
 | HTTP transport | `HttpRequestEngine` with retry, timeout and redirect policies and typed errors | [HTTP](examples/#http) |

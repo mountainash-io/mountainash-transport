@@ -479,83 +479,76 @@ class HttpRequestEngine:
         params: dict[str, str] | None = None,
         policy: RequestPolicy | None = None,
     ) -> Iterator[HttpStreamResponse]:
-        """Open a streaming HTTP response as a context manager.
+        """Open a response, retrying and refreshing auth only before yielding.
 
-        No retry logic — single attempt only.
-
-        Parameters
-        ----------
-        method:
-            HTTP method.
-        url:
-            Target URL.
-        headers:
-            Caller-provided headers.
-        content:
-            Request body as bytes.
-        params:
-            URL query parameters.
-        policy:
-            Per-request policy override (only timeout/redirect used).
-
-        Yields
-        ------
-        HttpStreamResponse
-            A streaming response wrapper.
+        Once body consumption starts, failures propagate without replay.
         """
         pol = policy or self._policy
+        retry = pol.retry
         method_upper = method.upper()
+        safe = method_upper in IDEMPOTENT_METHODS or retry.retry_unsafe_methods
         merged_headers = self._merge_headers(headers)
+        refreshed = False
+        attempt = 0
 
-        try:
-            with contextlib.closing(
-                self._send_with_redirects(
-                    method_upper,
-                    url,
-                    headers=merged_headers,
-                    content=content,
-                    params=params,
-                    policy=pol,
-                    stream=True,
+        def delay(response: httpx.Response | None = None) -> float:
+            if response is not None and response.status_code == 429:
+                after = _parse_retry_after(response.headers.get("retry-after"))
+                if after is not None:
+                    return min(after, retry.max_retry_after)
+            value = min(retry.backoff_base * 2 ** (attempt - 1), retry.backoff_max)
+            return random.uniform(0, value) if retry.backoff_jitter else value
+
+        while True:
+            attempt += 1
+            try:
+                response = self._send_with_redirects(
+                    method_upper, url, headers=merged_headers, content=content,
+                    params=params, policy=pol, stream=True,
                 )
-            ) as response:
-                status = response.status_code
-
-                # 3xx not followed
+            except httpx.InvalidURL as exc:
+                raise HttpRequestError(str(exc)) from exc
+            except httpx.HTTPError as exc:
+                mapped = _map_httpx_exception(exc)
+                if (safe and retry.retry_on_transport
+                        and isinstance(mapped, _RETRYABLE_TRANSPORT_TYPES)
+                        and attempt < retry.max_attempts):
+                    time.sleep(delay())
+                    continue
+                raise mapped from exc
+            status = response.status_code
+            if 200 <= status < 300:
+                break
+            try:
+                if (status == 401 and pol.auth_refresh_on_401 and not refreshed
+                        and isinstance(self._auth_strategy, RefreshableAuthStrategy)):
+                    response.close()
+                    refreshed = True
+                    if self._auth_strategy.refresh():
+                        merged_headers = self._merge_headers(headers)
+                        attempt -= 1
+                        continue
+                if (status in retry.retry_on_status and attempt < retry.max_attempts
+                        and (status == 429 or safe)):
+                    pause = delay(response)
+                    response.close()
+                    time.sleep(pause)
+                    continue
                 if 300 <= status < 400:
-                    raise HttpRedirectError(
-                        f"HTTP {status} redirect from {method_upper} {url}"
-                    )
-
-                # 4xx/5xx
-                if status >= 400:
-                    # Read body for error details
-                    response.read()
-                    url_str = str(response.url)
-                    headers_dict = dict(response.headers)
-                    body_preview = response.text[:500] if response.content else None
-                    error_cls = map_status_to_error(status)
-
-                    kwargs: dict[str, t.Any] = dict(
-                        status_code=status,
-                        headers=headers_dict,
-                        body_preview=body_preview,
-                        url=url_str,
-                        method=method_upper,
-                    )
-                    if error_cls.__name__ == "HttpRateLimitError":
-                        kwargs["retry_after"] = _parse_retry_after(
-                            response.headers.get("retry-after")
-                        )
-
-                    raise error_cls(
-                        f"HTTP {status} {method_upper} {url_str}",
-                        **kwargs,
-                    )
-
+                    raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {url}")
+                # Error metadata is available without draining an arbitrary error body.
+                cls = map_status_to_error(status)
+                kwargs: dict[str, t.Any] = dict(
+                    status_code=status, headers=dict(response.headers),
+                    body_preview=None, url=str(response.url), method=method_upper,
+                )
+                if status == 429:
+                    kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
+                raise cls(f"HTTP {status} {method_upper} {url}", **kwargs)
+            finally:
+                response.close()
+        try:
+            with contextlib.closing(response):
                 yield HttpStreamResponse(response)
-
-        except httpx.InvalidURL as exc:
-            raise HttpRequestError(str(exc)) from exc
         except httpx.HTTPError as exc:
             raise _map_httpx_exception(exc) from exc

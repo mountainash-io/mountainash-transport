@@ -50,6 +50,7 @@ python = ["3.12"]
 installer = "uv"
 path = ".hatch/test-github"
 dependencies = [
+    "pyarrow>=16",
     "pytest==8.3.5",
     "pytest-check==2.5.3",
     "pytest-cov==6.1.1",
@@ -79,6 +80,7 @@ python = ["3.12"]
 installer = "uv"
 path = ".hatch/test"
 dependencies = [
+    "pyarrow>=16",
     "coverage[toml]>=6.5",
     "pytest==8.3.5",
     "pytest-asyncio>=0.23.0",

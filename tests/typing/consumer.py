@@ -20,6 +20,7 @@ from mountainash_transport import (
     HttpTransportError,
     PathNotFoundError,
     Pipeline,
+    RangePolicy,
     StorageEntry,
     StorageError,
     StorageFacade,
@@ -40,6 +41,10 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.read("/tmp/sales.csv"), bytes)
     assert_type(storage.read("/tmp/sales.csv.gz", infer=True, gzip=Gzip()), bytes)
     assert_type(storage.read_stream("/tmp/sales.csv"), BinaryIO)
+    assert_type(storage.read_stream("s3://reports/file", access="random",
+                                  range_policy=RangePolicy("none")), BinaryIO)
+    storage.read_stream("/tmp/file", access="mmap")  # type: ignore[arg-type]
+    RangePolicy(cache="invalid")  # type: ignore[arg-type]
     assert_type(storage.metadata("/tmp/sales.csv"), StorageEntry)
     assert_type(storage.list_dir("/tmp"), list[StorageEntry])
     assert_type(storage.list_objects("s3://reports/"), EnumerateResult)
@@ -64,6 +69,8 @@ def profile_contracts() -> None:
     assert_type(s3.FLAVOR, str)
     assert_type(s3.BUCKET, str | None)
     assert_type(s3.CONNECT_TIMEOUT, float | None)
+    assert_type(s3.RANGE_CACHE, str | None)
+    assert_type(s3.RANGE_BLOCK_SIZE, int | None)
     assert_type(s3.to_handler_kwargs(), dict[str, Any])
     assert_type(s3.get_connection_url(), str)
     local = LocalStorageProfile(ROOT_PATH="/srv/reports")

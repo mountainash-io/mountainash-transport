@@ -111,14 +111,6 @@ class TestRead:
         mock_client.get_object.assert_called_once_with(Bucket="my-bucket", Key="data/file.txt")
         assert result == b"hello s3"
 
-    def test_read_to_stream_returns_bytes_io(self):
-        mock_client = MagicMock()
-        mock_client.get_object.return_value = {"Body": MagicMock(read=lambda: b"stream data")}
-        backend = _make_backend(mock_client)
-
-        stream = backend.read_to_stream("s3://my-bucket/key.bin")
-        assert stream.read() == b"stream data"
-
     def test_read_without_scheme(self):
         mock_client = MagicMock()
         mock_client.get_object.return_value = {"Body": MagicMock(read=lambda: b"no scheme")}

@@ -31,6 +31,12 @@ HTTP_SPEC = StorageProfileSpec(
     supports_multipart=False,
     read_only=False,
     parameters=[
+        ParameterSpec(name="RANGE_CACHE", type=t.Optional[str], default=None, tier="advanced",
+                      description="Random-read cache: readahead, blockcache, bytes or none."),
+        ParameterSpec(name="RANGE_BLOCK_SIZE", type=t.Optional[int], default=None, tier="advanced",
+                      description="Random-read cache block/read-ahead size in bytes."),
+        ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Maximum retained blocks for blockcache."),
         ParameterSpec(
             name="TIMEOUT_CONNECT",
             type=float,
@@ -114,6 +120,9 @@ class HTTPStorageProfile(Profile):
     """HTTP/HTTPS provider settings."""
 
     if t.TYPE_CHECKING:
+        RANGE_CACHE: str | None
+        RANGE_BLOCK_SIZE: int | None
+        RANGE_MAX_BLOCKS: int | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         TIMEOUT_CONNECT: float
         TIMEOUT_READ: float
