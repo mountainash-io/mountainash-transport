@@ -13,8 +13,9 @@ class _FakeProvider:
 def _http(): return HTTPStorageProfile()
 
 
+@pytest.mark.parametrize("explicit_profile", [False, True])
 @pytest.mark.parametrize("from_path", [False, True])
-def test_managed_oauth2_threads_strategy_into_engine(monkeypatch, from_path):
+def test_managed_oauth2_threads_strategy_into_engine(monkeypatch, from_path, explicit_profile):
     import mountainash_transport.connections.auth_strategy as mod
     store = MemorySecretStore()
 
@@ -26,7 +27,7 @@ def test_managed_oauth2_threads_strategy_into_engine(monkeypatch, from_path):
     factory = StorageFacade.from_path if from_path else StorageFacade
     target = "https://example.com/file" if from_path else CONST_STORAGE_PROVIDER_TYPE.HTTP
     f = factory(
-        target, _http(),
+        target, _http() if explicit_profile else None,
         auth_profile=OAuth2AuthProfile(),                 # no static token
         oauth_provider=_FakeProvider(), token_store=store,
     )
@@ -34,17 +35,19 @@ def test_managed_oauth2_threads_strategy_into_engine(monkeypatch, from_path):
     assert engine is not None and engine._auth_strategy is not None   # wiring gap regression
 
 
-def test_managed_oauth2_without_provider_fails_closed():
+@pytest.mark.parametrize("explicit_profile", [False, True])
+def test_managed_oauth2_without_provider_fails_closed(explicit_profile):
     with pytest.raises(ValueError):
         StorageFacade(
-            CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+            CONST_STORAGE_PROVIDER_TYPE.HTTP, _http() if explicit_profile else None,
             auth_profile=OAuth2AuthProfile(),             # no static token, no provider
         )
 
 
+@pytest.mark.parametrize("explicit_profile", [False, True])
 @pytest.mark.parametrize("from_path", [False, True])
 @pytest.mark.parametrize("provider", [None, _FakeProvider()])
-def test_fail_closed_does_not_open_a_connection(monkeypatch, from_path, provider):
+def test_fail_closed_does_not_open_a_connection(monkeypatch, from_path, provider, explicit_profile):
     """The fail-closed raise fires BEFORE connect(), so the misconfiguration path
     never opens (and leaks) a client — regression guard for the reorder fix."""
     import mountainash_transport.connections.http as http_mod
@@ -60,16 +63,17 @@ def test_fail_closed_does_not_open_a_connection(monkeypatch, from_path, provider
     target = "https://example.com/file" if from_path else CONST_STORAGE_PROVIDER_TYPE.HTTP
     with pytest.raises(ValueError, match="token_store"):
         factory(
-            target, _http(),
+            target, _http() if explicit_profile else None,
             auth_profile=OAuth2AuthProfile(),             # no static token, no provider
             oauth_provider=provider,
         )
     assert calls["n"] == 0                                # never connected
 
 
-def test_static_token_oauth2_needs_no_strategy():
+@pytest.mark.parametrize("explicit_profile", [False, True])
+def test_static_token_oauth2_needs_no_strategy(explicit_profile):
     f = StorageFacade(
-        CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+        CONST_STORAGE_PROVIDER_TYPE.HTTP, _http() if explicit_profile else None,
         auth_profile=OAuth2AuthProfile(ACCESS_TOKEN="tkn"),   # static token, no provider
     )
     assert f._backend._engine._auth_strategy is None      # authenticated via emitted bearer
@@ -94,7 +98,8 @@ def test_gate_rejects_oauth2_on_s3_without_building_manager(monkeypatch):
     assert built["n"] == 0            # manager never constructed
 
 
-def test_managed_oauth2_no_stored_token_propagates(monkeypatch):
+@pytest.mark.parametrize("explicit_profile", [False, True])
+def test_managed_oauth2_no_stored_token_propagates(monkeypatch, explicit_profile):
     """A managed strategy whose acquire() raises AuthorizationRequired surfaces it on the
     first storage op (non-interactive; no browser)."""
     import mountainash_transport.connections.auth_strategy as mod
@@ -106,9 +111,9 @@ def test_managed_oauth2_no_stored_token_propagates(monkeypatch):
 
     monkeypatch.setattr(mod, "OAuth2TokenManager", lambda *a, **k: _NoTokenMgr())
     f = StorageFacade(
-        CONST_STORAGE_PROVIDER_TYPE.HTTP, _http(),
+        CONST_STORAGE_PROVIDER_TYPE.HTTP, _http() if explicit_profile else None,
         auth_profile=OAuth2AuthProfile(),
         oauth_provider=_FakeProvider(), token_store=MemorySecretStore(),
     )
     with pytest.raises(AuthorizationRequired):
-        f._backend._engine._auth_strategy.get_headers()   # first use triggers acquire()
+        f.read("https://example.com/file")   # first use triggers acquire() before networking

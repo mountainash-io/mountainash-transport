@@ -91,6 +91,11 @@ class StorageFacade:
         from mountainash_transport.connections import create_connection, create_auth_strategy
         from mountainash_auth_client import OAuth2AuthProfile
 
+        if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
+            from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
+
+            storage_profile = HTTPStorageProfile()
+
         connection = None
         strategy = None
         if storage_profile is not None:
