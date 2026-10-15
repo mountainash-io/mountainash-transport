@@ -25,9 +25,24 @@ class Pipeline:
         self._outer_to_inner: tuple[StreamTransform, ...] = transforms
 
     def apply_read(self, stream: BinaryIO) -> BinaryIO:
-        """Strip layers outermost → innermost."""
-        for t in self._outer_to_inner:
-            stream = t.unwrap(stream)
+        """Strip layers outermost → innermost.
+
+        If a layer fails to construct, layers already built here are closed
+        (innermost first) before the error propagates. The input *stream* is
+        not closed; it remains owned by the caller.
+        """
+        built: list[BinaryIO] = []
+        try:
+            for t in self._outer_to_inner:
+                stream = t.unwrap(stream)
+                built.append(stream)
+        except BaseException:
+            for layer in reversed(built):
+                try:
+                    layer.close()
+                except Exception:
+                    pass
+            raise
         return stream
 
     def apply_write(self, stream: BinaryIO) -> BinaryIO:

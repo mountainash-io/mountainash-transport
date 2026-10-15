@@ -43,7 +43,9 @@ class _PairedStream(io.RawIOBase):
     """BinaryIO wrapper that closes both a wrapped stream and its source on close().
 
     Used when a pipeline wraps a backend stream — closing must propagate to
-    both so file descriptors are not leaked.
+    both so file descriptors are not leaked. Seek capabilities are delegated
+    to the effective (wrapped) stream, so positions refer to decoded bytes and
+    a non-seekable effective stream stays non-seekable.
     """
 
     def __init__(self, wrapped: BinaryIO, source: BinaryIO) -> None:
@@ -61,6 +63,19 @@ class _PairedStream(io.RawIOBase):
 
     def read(self, size: int = -1) -> bytes:
         return self._wrapped.read(size)
+
+    def seekable(self) -> bool:
+        return self._wrapped.seekable()
+
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        if not self._wrapped.seekable():
+            raise io.UnsupportedOperation("seek")
+        return self._wrapped.seek(offset, whence)
+
+    def tell(self) -> int:
+        if not self._wrapped.seekable():
+            raise io.UnsupportedOperation("tell")
+        return self._wrapped.tell()
 
     def close(self) -> None:
         try:
@@ -259,16 +274,46 @@ class StorageFacade:
         pipeline via :func:`infer_pipeline`. Raises ``ValueError`` if both
         *infer* and *pipeline* are provided.
 
-        The returned stream should be closed by the caller (context manager
-        recommended). Closing propagates to both the pipeline wrapper and the
-        underlying backend stream so file descriptors are not leaked.
+        Errors can occur at two points:
+
+        - **Opening** (this call): backend open failures and transform
+          construction failures. On a construction failure the source and any
+          already-built transform layers are closed before the original error
+          propagates.
+        - **Consumption** (``read()`` on the returned stream): lazy transforms
+          decode as you read, so e.g. a malformed ``.gz`` opens successfully and
+          raises ``gzip.BadGzipFile`` on read. A successful return does not
+          certify the payload is valid or fully available. Error timing depends
+          on the effective transform/backend: GPG currently buffers internally,
+          so its failures surface while opening. Use :meth:`read` to have all
+          decoding errors raised within one call.
+
+        The caller owns the returned stream and must keep it open for the whole
+        read, ideally with a context manager::
+
+            with facade.read_stream(path, infer=True) as s:
+                data = s.read()
+
+        Closing (including on a consumer exception) propagates to the pipeline
+        wrapper and the underlying backend stream.
+
+        ``seekable()``/``seek()``/``tell()`` reflect the effective stream after
+        transforms: a plain local file seeks natively; a gzip stream seeks in
+        decoded offsets (backward seeks re-decompress from the start); a
+        non-seekable stream reports ``False`` and raises
+        ``io.UnsupportedOperation``. No buffering is added to make a stream
+        seekable.
         """
         self._require(StorageReadProtocol, "read_stream")
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
         )
         source_stream = self._backend.read_to_stream(path)
-        wrapped_stream = effective.apply_read(source_stream)
+        try:
+            wrapped_stream = effective.apply_read(source_stream)
+        except BaseException:
+            source_stream.close()
+            raise
         return _PairedStream(wrapped_stream, source_stream)  # type: ignore[return-value]
 
     # ------------------------------------------------------------------
