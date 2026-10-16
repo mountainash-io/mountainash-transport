@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import errno
 import io
+import typing as t
 
 import pytest
 from unittest.mock import MagicMock
@@ -68,10 +69,13 @@ class TestReadToBytes:
 
     def test_permission_error_raises_storage_error(self):
         mock_sftp = MagicMock()
-        mock_sftp.open.side_effect = PermissionError("denied")
+        original = PermissionError("denied")
+        mock_sftp.open.side_effect = original
         backend, _ = _make_backend(mock_sftp)
-        with pytest.raises(StorageError):
+        from mountainash_transport import PermissionDeniedError
+        with pytest.raises(PermissionDeniedError) as caught:
             backend.read_to_bytes("/remote/secret.txt")
+        assert caught.value.__cause__ is original
 
 
 class TestWriteFromBytes:
@@ -285,3 +289,62 @@ class TestRegistration:
         from mountainash_transport.storage.registry import get_registered_backends
         backends = get_registered_backends()
         assert CONST_STORAGE_PROVIDER_TYPE.SFTP in backends
+
+
+@pytest.mark.parametrize("operation", ["path_exists", "get_size", "get_metadata"])
+def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
+    client = MagicMock()
+    original = EOFError("session ended")
+    client.stat.side_effect = original
+    backend, _ = _make_backend(client)
+    with pytest.raises(StorageConnectionError) as caught:
+        getattr(backend, operation)("/remote/file")
+    assert caught.value.__cause__ is original
+
+
+@pytest.mark.parametrize(
+    ("operation", "native", "extra"),
+    [("read_to_bytes", "open", ()), ("read_to_stream", "open", ()),
+     ("write_from_bytes", "open", (b"x",)), ("list_dir", "listdir_attr", ()),
+     ("mkdir", "mkdir", ()), ("rmdir", "rmdir", ()), ("delete_file", "remove", ())],
+)
+def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.Any, ...]) -> None:
+    from paramiko import SSHException
+    client = MagicMock()
+    original = SSHException("transport failed")
+    getattr(client, native).side_effect = original
+    backend, _ = _make_backend(client)
+    with pytest.raises(StorageConnectionError) as caught:
+        getattr(backend, operation)("/remote/file", *extra)
+    assert caught.value.__cause__ is original
+
+
+@pytest.mark.parametrize("ranged", [False, True])
+@pytest.mark.parametrize("fault", ["read", "close"])
+def test_sftp_late_failure_is_portable(ranged: bool, fault: str) -> None:
+    client = MagicMock()
+    handle = client.open.return_value
+    handle.stat.return_value.st_size = 3
+    handle.read.return_value = b"abc"
+    original = EOFError("late disconnect")
+    getattr(handle, fault).side_effect = original
+    backend, _ = _make_backend(client)
+    source = backend.open_ranged("/file") if ranged else backend.read_to_stream("/file")
+    with pytest.raises(StorageConnectionError) as caught:
+        try:
+            if fault == "read":
+                source.fetch(0, 3) if ranged else source.read(3)
+        finally:
+            source.on_close() if ranged else source.close()
+    assert caught.value.__cause__ is original
+
+
+def test_sftp_caller_input_failure_is_unchanged() -> None:
+    original = EOFError("caller source ended")
+    class Input(io.BytesIO):
+        def read(self, size: int | None = -1) -> bytes:
+            raise original
+    backend, _ = _make_backend()
+    with Input(b"x") as source, pytest.raises(EOFError) as caught:
+        backend.write_from_stream("/destination", source)
+    assert caught.value is original

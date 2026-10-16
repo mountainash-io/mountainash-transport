@@ -2,8 +2,14 @@
 from __future__ import annotations
 
 import errno
+import contextlib
+import io
+import typing as t
 
-from mountainash_transport._core.exceptions import PathNotFoundError, StorageError
+from mountainash_transport._core.exceptions import (
+    AuthenticationError, PathNotFoundError, PermissionDeniedError,
+    StorageConnectionError, StorageError,
+)
 
 
 def _is_not_found(exc: BaseException) -> bool:
@@ -14,19 +20,32 @@ def _is_not_found(exc: BaseException) -> bool:
     return False
 
 
-def _wrap_sftp_error(exc: BaseException, path: str) -> StorageError:
+def _wrap_sftp_error(exc: BaseException, path: str) -> StorageError | None:
+    if isinstance(exc, (StorageError, io.UnsupportedOperation)):
+        return None
     if _is_not_found(exc):
-        return PathNotFoundError(f"Path not found: {path}")
+        return PathNotFoundError(path)
     if isinstance(exc, PermissionError) or (
-        isinstance(exc, IOError) and getattr(exc, "errno", None) == errno.EACCES
+        isinstance(exc, OSError) and exc.errno in (errno.EACCES, errno.EPERM)
     ):
-        return StorageError(f"Permission denied: {path}")
-    if isinstance(exc, IOError) and getattr(exc, "errno", None) in (
-        errno.ENOTDIR,
-        errno.EISDIR,
-    ):
-        return StorageError(f"Invalid path type: {path}")
-    return StorageError(f"SFTP error for {path}: {exc}")
+        return PermissionDeniedError(path)
+    from paramiko import AuthenticationException, SFTPError, SSHException
+    from paramiko.ssh_exception import NoValidConnectionsError
+    if isinstance(exc, AuthenticationException):
+        return AuthenticationError(path)
+    if isinstance(exc, (ConnectionError, TimeoutError, EOFError, SSHException, NoValidConnectionsError)):
+        return StorageConnectionError(f"{path}: {exc}")
+    if isinstance(exc, (OSError, SFTPError)):
+        return StorageError(f"{path}: {exc}")
+    return None
 
 
-__all__ = ["_is_not_found", "_wrap_sftp_error"]
+@contextlib.contextmanager
+def _mapped(path: str) -> t.Iterator[None]:
+    try:
+        yield
+    except Exception as exc:
+        mapped = _wrap_sftp_error(exc, path)
+        if mapped is None or mapped is exc:
+            raise
+        raise mapped from exc
