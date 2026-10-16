@@ -38,6 +38,9 @@ from mountainash_transport.settings.storage.profiles.s3_storage_profile import S
 def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(StorageFacade.from_path("s3://reports/sales.csv"), StorageFacade)
     assert_type(StorageFacade.for_local(), StorageFacade)
+    with StorageFacade.for_local() as owned:
+        assert_type(owned, StorageFacade)
+        assert_type(owned.close(), None)
     assert_type(storage.read("/tmp/sales.csv"), bytes)
     assert_type(storage.read("/tmp/sales.csv.gz", infer=True, gzip=Gzip()), bytes)
     assert_type(storage.read_stream("/tmp/sales.csv"), BinaryIO)

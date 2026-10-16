@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import typing as t
+from types import TracebackType
 
 from typing_extensions import Self
 
@@ -20,26 +21,45 @@ class SFTPConnection(ConnectionProtocol):
         self._sftp: t.Any = None
 
     def connect(self) -> Self:
-        if self._sftp is not None:
-            self._sftp.close()
-            self._sftp = None
-
-        if not self._ssh.is_connected:
-            self._ssh.connect()
-
         try:
-            self._sftp = self._ssh.client.open_sftp()
-        except Exception as exc:
-            raise TransportConnectionError(
-                f"Failed to open SFTP subsystem: {exc}"
-            ) from exc
-
+            self._close_channel()
+            if not self._ssh.is_connected:
+                self._ssh.connect()
+            try:
+                self._sftp = self._ssh.client.open_sftp()
+            except Exception as exc:
+                raise TransportConnectionError(
+                    f"Failed to open SFTP subsystem: {exc}"
+                ) from exc
+        except BaseException as primary:
+            try:
+                self.disconnect()
+            except BaseException as cleanup:
+                primary.add_note(f"Connection cleanup also failed: {cleanup!r}")
+                for note in getattr(cleanup, "__notes__", ()):
+                    primary.add_note(note)
+            raise
         return self
 
+    def _close_channel(self) -> None:
+        channel, self._sftp = self._sftp, None
+        if channel is not None:
+            try:
+                channel.close()
+            except Exception as exc:
+                raise TransportConnectionError(f"Failed to close SFTP channel: {exc}") from exc
+
     def disconnect(self) -> None:
-        if self._sftp is not None:
-            self._sftp.close()
-        self._sftp = None
+        try:
+            self._close_channel()
+        except BaseException as primary:
+            try:
+                self._ssh.disconnect()
+            except BaseException as cleanup:
+                primary.add_note(f"SSH cleanup also failed: {cleanup!r}")
+                for note in getattr(cleanup, "__notes__", ()):
+                    primary.add_note(note)
+            raise
         self._ssh.disconnect()
 
     @property
@@ -53,5 +73,15 @@ class SFTPConnection(ConnectionProtocol):
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: t.Any) -> None:
-        self.disconnect()
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.disconnect()
+        except BaseException as cleanup:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
+            for note in getattr(cleanup, "__notes__", ()):
+                exc_value.add_note(note)

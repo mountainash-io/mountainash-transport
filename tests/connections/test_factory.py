@@ -1,7 +1,6 @@
 """Tests for create_connection() factory."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -121,7 +120,6 @@ class TestCreateConnection:
 
 
 from mountainash_transport.connections.sftp import SFTPConnection
-from mountainash_transport.connections.tunnel import TunnelledConnection
 
 
 class FakeSFTPProfile:
@@ -223,21 +221,3 @@ class TestSftpNoneAllowed:
         assert isinstance(conn, SFTPConnection)
 
 
-class TestCreateTunnelledConnection:
-    @patch("mountainash_transport.connections.tunnel._start_forwarder")
-    def test_factory_creates_tunnelled_connection(self, mock_forwarder):
-        from mountainash_transport.connections import create_tunnelled_connection
-
-        mock_server = MagicMock()
-        mock_server.server_address = ("127.0.0.1", 54321)
-        mock_forwarder.return_value = mock_server
-
-        conn = create_tunnelled_connection(
-            bastion_profile=FakeSFTPProfile(),
-            bastion_auth=None,
-            target_profile=FakeHTTPProfile(),
-            target_auth=None,
-            remote_host="internal.api",
-            remote_port=8080,
-        )
-        assert isinstance(conn, TunnelledConnection)

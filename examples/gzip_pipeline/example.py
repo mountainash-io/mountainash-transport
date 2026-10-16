@@ -10,9 +10,8 @@ SALES = b"region,total\nnorth,120\nsouth,95\n"
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory() as root:
+    with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage:
         first, second = (str(Path(root) / name) for name in ("a.csv.gz", "b.csv.gz"))
-        storage = StorageFacade.for_local()
         pipeline = Pipeline(Gzip())
 
         storage.write(first, SALES, pipeline=pipeline)

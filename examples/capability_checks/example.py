@@ -24,21 +24,23 @@ def supported(storage: StorageFacade) -> list[str]:
 
 
 def main() -> None:
-    local = StorageFacade.from_path("/srv/reports/sales.csv")
-    web = StorageFacade.from_path("https://files.example.com/reports/sales.csv")
-    assert supported(local) == ["read", "write", "metadata", "directory"]
-    assert supported(web) == ["read", "write", "metadata"]
+    with (
+        StorageFacade.from_path("/srv/reports/sales.csv") as local,
+        StorageFacade.from_path("https://files.example.com/reports/sales.csv") as web,
+    ):
+        assert supported(local) == ["read", "write", "metadata", "directory"]
+        assert supported(web) == ["read", "write", "metadata"]
 
-    try:
-        web.list_dir("https://files.example.com/reports/")
-    except UnsupportedOperationError:
-        refused = True
-    else:
-        refused = False
-    assert refused
+        try:
+            web.list_dir("https://files.example.com/reports/")
+        except UnsupportedOperationError:
+            refused = True
+        else:
+            refused = False
+        assert refused
 
-    print(f"local: {', '.join(supported(local))}")
-    print(f"https: {', '.join(supported(web))}; list_dir refused")
+        print(f"local: {', '.join(supported(local))}")
+        print(f"https: {', '.join(supported(web))}; list_dir refused")
 
 
 if __name__ == "__main__":

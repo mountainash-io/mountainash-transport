@@ -125,3 +125,70 @@ class TestSFTPConnectionErrorWrapping:
         conn = SFTPConnection(ssh)
         with pytest.raises(TransportConnectionError, match="Failed to open SFTP subsystem"):
             conn.connect()
+
+
+@pytest.mark.parametrize("connected", [False, True])
+def test_channel_startup_failure_releases_owned_ssh(connected) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    ssh, _ = _make_mock_ssh()
+    ssh.is_connected = connected
+    ssh.client.open_sftp.side_effect = OSError("channel failed")
+    conn = SFTPConnection(ssh)
+    with pytest.raises(TransportConnectionError):
+        conn.connect()
+    ssh.disconnect.assert_called_once()
+    assert conn.client is None
+
+
+@pytest.mark.parametrize("reconnect", [False, True])
+def test_channel_close_failure_still_releases_ssh(reconnect) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    ssh, channel = _make_mock_ssh()
+    ssh.is_connected = True
+    conn = SFTPConnection(ssh).connect()
+    channel.close.side_effect = OSError("channel close failed")
+    with pytest.raises(TransportConnectionError):
+        conn.connect() if reconnect else conn.disconnect()
+    assert conn.client is None
+    ssh.disconnect.assert_called()
+    conn.disconnect()
+    channel.close.assert_called_once()
+    ssh.client.open_sftp.assert_called_once()
+
+
+def test_sftp_context_preserves_body_error() -> None:
+    ssh, channel = _make_mock_ssh()
+    conn = SFTPConnection(ssh).connect()
+    channel.close.side_effect = OSError("cleanup failed")
+    primary = ValueError("body")
+    with pytest.raises(ValueError) as caught:
+        with conn:
+            raise primary
+    assert caught.value is primary
+    assert primary.__notes__
+    ssh.disconnect.assert_called()
+
+
+@pytest.mark.parametrize("body_fails", [False, True])
+def test_both_cleanup_failures_remain_visible(body_fails) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    ssh, channel = _make_mock_ssh()
+    conn = SFTPConnection(ssh).connect()
+    channel.close.side_effect = OSError("channel cleanup fault")
+    ssh.disconnect.side_effect = TransportConnectionError("SSH cleanup fault")
+    primary = ValueError("body fault")
+    with pytest.raises(ValueError if body_fails else TransportConnectionError) as caught:
+        with conn:
+            if body_fails:
+                raise primary
+    if body_fails:
+        assert caught.value is primary
+    diagnostic = repr(caught.value) + str(getattr(caught.value, "__notes__", ()))
+    assert "channel cleanup fault" in diagnostic
+    assert "SSH cleanup fault" in diagnostic
+    assert conn.client is None
+    channel.close.assert_called_once()
+    ssh.disconnect.assert_called_once()

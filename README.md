@@ -74,12 +74,10 @@ from mountainash_transport import Gzip, StorageFacade
 
 with tempfile.TemporaryDirectory() as root:
     path = str(Path(root) / "sales.csv.gz")
-    storage = StorageFacade.from_path(path)  # bare path -> local backend
-
-    storage.write(path, b"region,total\nnorth,120\n", pipeline=Gzip())
-    text = storage.read(path, infer=True).decode()  # .gz suffix -> gunzip
-
-    print(f"{storage.get_size(path)} bytes stored; first row: {text.splitlines()[1]}")
+    with StorageFacade.from_path(path) as storage:  # bare path -> local backend
+        storage.write(path, b"region,total\nnorth,120\n", pipeline=Gzip())
+        text = storage.read(path, infer=True).decode()  # .gz suffix -> gunzip
+        print(f"{storage.get_size(path)} bytes stored; first row: {text.splitlines()[1]}")
 ```
 
 Output:
@@ -102,8 +100,8 @@ from mountainash_transport.settings.storage.profiles.s3_storage_profile import S
 
 profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
 auth = IAMAuthProfile(ROLE_ARN="arn:aws:iam::123456789012:role/reports-reader")
-storage = StorageFacade.from_path("s3://reports/2026/sales.csv", profile, auth_profile=auth)
-data = storage.read("s3://reports/2026/sales.csv")
+with StorageFacade.from_path("s3://reports/2026/sales.csv", profile, auth_profile=auth) as storage:
+    data = storage.read("s3://reports/2026/sales.csv")
 ```
 
 The pairing is validated against the profile's supported auth modes before any
@@ -126,9 +124,10 @@ from mountainash_transport import StorageFacade, resolve_storage
 with FilesystemBackend(Path("/private/config-records")) as config_reader:
     params = SettingsParameters.create(config_files=["profiles.yaml"], secret_store=config_reader)
     profile, auth = resolve_storage("lake", settings_parameters=params)
-    data = StorageFacade.from_path(
+    with StorageFacade.from_path(
         "s3://reports/2026/sales.csv", profile, auth_profile=auth,
-    ).read("s3://reports/2026/sales.csv")
+    ) as storage:
+        data = storage.read("s3://reports/2026/sales.csv")
 ```
 
 A `secret:` reference requires the selected reader; missing records and failed
@@ -142,7 +141,8 @@ HTTP and HTTPS use default connection settings when no storage profile is suppli
 from mountainash_transport import StorageFacade
 
 url = "https://files.example.com/data.csv"
-data = StorageFacade.from_path(url).read(url)
+with StorageFacade.from_path(url) as storage:
+    data = storage.read(url)
 ```
 
 You can also pass `auth_profile=` without a storage profile. Supply an explicit
@@ -159,15 +159,46 @@ from mountainash_transport import StorageFacade
 from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
 
 with FilesystemBackend(Path("/private/oauth-records")) as tokens:
-    storage = StorageFacade.from_path(
+    with StorageFacade.from_path(
         "https://files.example.com/data", HTTPStorageProfile(),
         auth_profile=oauth_auth, oauth_provider=provider, token_store=tokens,
-    )
-    data = storage.read("https://files.example.com/data")
+    ) as storage:
+        data = storage.read("https://files.example.com/data")
 ```
 
 Transport borrows both stores; the application keeps them open until all
 operations finish and owns closure.
+
+## Connection lifetime
+
+A facade owns the connection it creates. Use `with StorageFacade.from_path(...)`
+or call `close()` explicitly. Close is terminal: later I/O and context re-entry
+raise `StorageConnectionError`; `supports()` remains available. Repeated close is
+harmless, including after a cleanup failure. No reliable GC cleanup is promised.
+
+Close sequential/random remote streams before their facade. Closing a stream
+does not close its reusable facade; fully buffered results are independent and
+remain readable after facade close. `copy_between()` borrows both facades and
+requires both to be open; it never closes them. Token stores remain caller-owned.
+
+Construction and context-body errors remain primary if cleanup also fails;
+cleanup failures are attached as exception notes. Explicit close reports cleanup
+failure after attempting remaining owned cleanup. A failed native close is not
+retried by another close call.
+
+Connection objects themselves remain explicitly reconnectable. `connect()`
+releases a previous native client before replacing it; if release fails, that
+attempt raises without creating a replacement. A later explicit connect may
+succeed. SFTP exclusively owns its SSH connection: normal close and failed
+startup release both, while successful channel replacement reuses healthy SSH.
+
+Tunnel disconnect closes its inner connection, listener, accepted sockets and
+SSH connection before waiting for workers. Serving and request workers share a
+one-second wait budget; expiry raises `ConnectionTimeoutError` after those cleanup
+attempts. This bounds worker waiting, not SDK close calls, and cannot kill an
+arbitrarily stuck thread. Background channel/socket cleanup failures are reported
+to the owner, or attached as notes when a body/startup error or timeout is primary.
+
 
 ## Learn more
 

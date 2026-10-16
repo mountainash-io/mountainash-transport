@@ -30,9 +30,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as root:
         path = str(Path(root) / "sales.csv")
-        storage = StorageFacade.from_path(path, archive, auth_profile=archive_auth)
-        storage.write(path, SALES)
-        assert storage.read(path) == SALES
+        with StorageFacade.from_path(path, archive, auth_profile=archive_auth) as storage:
+            storage.write(path, SALES)
+            assert storage.read(path) == SALES
 
     print(f"lake: {lake.get_connection_url()} with {type(lake_auth).__name__}")
     print(f"archive: local with {type(archive_auth).__name__}; wrote and read sales.csv")

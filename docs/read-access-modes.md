@@ -17,13 +17,13 @@ Previously HTTP, S3 and SFTP downloaded whole objects into `BytesIO` before retu
 ```python
 from mountainash_transport import StorageFacade, RangePolicy
 
-facade = StorageFacade.from_path("https://example.org/report.parquet")
-with facade.read_stream(
-    "https://example.org/report.parquet", access="random",
-    range_policy=RangePolicy("readahead", block_size=64 * 1024),
-) as stream:
-    stream.seek(-8, 2)
-    trailer = stream.read(8)
+with StorageFacade.from_path("https://example.org/report.parquet") as facade:
+    with facade.read_stream(
+        "https://example.org/report.parquet", access="random",
+        range_policy=RangePolicy("readahead", block_size=64 * 1024),
+    ) as stream:
+        stream.seek(-8, 2)
+        trailer = stream.read(8)
 ```
 
 Local random reads use a native file handle, not a remote cache. S3 uses HEAD for size and ranged GETs; HTTP probes `bytes=0-0` and validates each response before reading it. SFTP uses a native open handle without prefetch. The default sequential SFTP path also disables unbounded prefetch.
@@ -80,6 +80,11 @@ construction order, then the backend source—not just the final decoder.
 `read()` uses the same ownership path; buffered mode closes the decoding chain
 before returning its independent memory buffer. Cleanup also runs after decoding
 or consumer exceptions.
+
+Keep the facade open until sequential/random remote streams are closed. Closing
+a stream does not close the facade. Fully buffered results own their bytes and
+remain usable after facade close. Facade close itself is terminal: further
+storage operations raise `StorageConnectionError`, while repeated close is a no-op.
 
 All remaining closes are attempted if a layer's `close()` raises. The returned
 handle is still marked closed, and closing it again is a no-op. Cleanup errors

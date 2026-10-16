@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import socket
 import typing as t
+from types import TracebackType
 
 from typing_extensions import Self
 
@@ -44,37 +45,45 @@ class SSHConnection(ConnectionProtocol):
         post_connect = kwargs.pop("_post_connect", {})
 
         client = paramiko.SSHClient()
-        client.load_system_host_keys()
-
-        policy_name = post_connect.get("host_key_policy", "reject")
-        policy_attr = _HOST_KEY_POLICIES.get(policy_name)
-        if policy_attr:
-            client.set_missing_host_key_policy(getattr(paramiko, policy_attr)())
-        else:
-            client.set_missing_host_key_policy(paramiko.RejectPolicy())
-
-        known_hosts = post_connect.get("known_hosts_file")
-        if known_hosts:
-            client.load_host_keys(known_hosts)
-
-        try:
-            client.connect(**kwargs)
-        except socket.timeout as exc:
-            raise ConnectionTimeoutError(f"SSH connection timed out: {exc}") from exc
-        except socket.gaierror as exc:
-            raise TransportConnectionError(f"SSH DNS resolution failed: {exc}") from exc
-        except OSError as exc:
-            raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
-        except Exception as exc:
-            raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
-
         self._client = client
+        try:
+            client.load_system_host_keys()
+            policy_name = post_connect.get("host_key_policy", "reject")
+            policy_attr = _HOST_KEY_POLICIES.get(policy_name)
+            if policy_attr:
+                client.set_missing_host_key_policy(getattr(paramiko, policy_attr)())
+            else:
+                client.set_missing_host_key_policy(paramiko.RejectPolicy())
+
+            known_hosts = post_connect.get("known_hosts_file")
+            if known_hosts:
+                client.load_host_keys(known_hosts)
+
+            try:
+                client.connect(**kwargs)
+            except socket.timeout as exc:
+                raise ConnectionTimeoutError(f"SSH connection timed out: {exc}") from exc
+            except socket.gaierror as exc:
+                raise TransportConnectionError(f"SSH DNS resolution failed: {exc}") from exc
+            except OSError as exc:
+                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+            except Exception as exc:
+                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+        except BaseException as primary:
+            try:
+                self.disconnect()
+            except BaseException as cleanup:
+                primary.add_note(f"Connection cleanup also failed: {cleanup!r}")
+            raise
         return self
 
     def disconnect(self) -> None:
-        if self._client is not None:
-            self._client.close()
-        self._client = None
+        client, self._client = self._client, None
+        if client is not None:
+            try:
+                client.close()
+            except Exception as exc:
+                raise TransportConnectionError(f"Failed to close SSH client: {exc}") from exc
 
     @property
     def client(self) -> t.Any:
@@ -87,5 +96,15 @@ class SSHConnection(ConnectionProtocol):
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: t.Any) -> None:
-        self.disconnect()
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.disconnect()
+        except BaseException as cleanup:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
+            for note in getattr(cleanup, "__notes__", ()):
+                exc_value.add_note(note)

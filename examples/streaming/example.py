@@ -10,9 +10,8 @@ SALES = b"region,total\nnorth,120\nsouth,95\n"
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory() as root:
+    with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage:
         path = str(Path(root) / "sales.csv.gz")
-        storage = StorageFacade.for_local()
         storage.write_stream(path, io.BytesIO(SALES), pipeline=Gzip())
 
         total = 0

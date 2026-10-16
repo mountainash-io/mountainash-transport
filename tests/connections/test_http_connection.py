@@ -108,3 +108,71 @@ class TestHTTPConnectionErrorWrapping:
         conn = HTTPConnection(FAKE_HTTP_KWARGS)
         with pytest.raises(TransportConnectionError):
             conn.connect()
+
+
+def test_reconnect_releases_previous_real_client() -> None:
+    conn = HTTPConnection({"trust_env": False}).connect()
+    first = conn.client
+    assert first is not None
+    try:
+        conn.connect()
+        second = conn.client
+        assert first.is_closed
+        assert second is not None and not second.is_closed
+        conn.disconnect()
+        assert second.is_closed
+    finally:
+        conn.disconnect()
+        first.close()
+
+
+def test_failed_replacement_detaches_old_client(monkeypatch) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    conn = HTTPConnection({"trust_env": False}).connect()
+    first = conn.client
+    assert first is not None
+    native_close = first.close
+    attempts = []
+
+    def fail_close():
+        attempts.append("close")
+        native_close()
+        raise OSError("close failed")
+
+    monkeypatch.setattr(first, "close", fail_close)
+    try:
+        with pytest.raises(TransportConnectionError):
+            conn.connect()
+        assert first.is_closed
+        assert conn.client is None
+        conn.disconnect()
+        assert attempts == ["close"]
+        conn.connect()
+        assert conn.client is not None and not conn.client.is_closed
+    finally:
+        conn.disconnect()
+        native_close()
+
+
+def test_context_preserves_body_error_after_cleanup_failure(monkeypatch) -> None:
+    conn = HTTPConnection({"trust_env": False}).connect()
+    client = conn.client
+    assert client is not None
+    native_close = client.close
+    primary = ValueError("body")
+
+    def fail_close():
+        native_close()
+        raise OSError("close failed")
+
+    monkeypatch.setattr(client, "close", fail_close)
+    try:
+        with pytest.raises(ValueError) as caught:
+            with conn:
+                raise primary
+        assert caught.value is primary
+        assert primary.__notes__
+        assert client.is_closed and conn.client is None
+    finally:
+        native_close()
