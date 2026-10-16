@@ -1,7 +1,6 @@
 """SFTPConnection — decorator over SSHConnection exposing paramiko.SFTPClient."""
 from __future__ import annotations
 
-import contextlib
 import typing as t
 from types import TracebackType
 
@@ -51,9 +50,17 @@ class SFTPConnection(ConnectionProtocol):
                 raise TransportConnectionError(f"Failed to close SFTP channel: {exc}") from exc
 
     def disconnect(self) -> None:
-        with contextlib.ExitStack() as cleanup:
-            cleanup.callback(self._ssh.disconnect)
+        try:
             self._close_channel()
+        except BaseException as primary:
+            try:
+                self._ssh.disconnect()
+            except BaseException as cleanup:
+                primary.add_note(f"SSH cleanup also failed: {cleanup!r}")
+                for note in getattr(cleanup, "__notes__", ()):
+                    primary.add_note(note)
+            raise
+        self._ssh.disconnect()
 
     @property
     def client(self) -> t.Any:

@@ -1,6 +1,7 @@
 """S3Connection behavioral tests."""
 from __future__ import annotations
 
+import typing as t
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -147,10 +148,10 @@ def test_native_client_close_and_failed_replacement(session, monkeypatch) -> Non
     import boto3
     from mountainash_transport.connections.errors import TransportConnectionError
 
-    kwargs = {"region_name": "us-east-1", "aws_access_key_id": "test",
+    kwargs: dict[str, t.Any] = {"region_name": "us-east-1", "aws_access_key_id": "test",
               "aws_secret_access_key": "test"}
     client = boto3.client("s3", **kwargs)
-    config = {"session": kwargs, "client_config": {}} if session else kwargs
+    config: dict[str, t.Any] = {"session": kwargs, "client_config": {}} if session else kwargs
     if session:
         monkeypatch.setattr(boto3, "Session", lambda **kw: MagicMock(client=lambda *a, **k: client))
     else:

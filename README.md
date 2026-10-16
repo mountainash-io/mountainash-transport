@@ -192,6 +192,13 @@ attempt raises without creating a replacement. A later explicit connect may
 succeed. SFTP exclusively owns its SSH connection: normal close and failed
 startup release both, while successful channel replacement reuses healthy SSH.
 
+Tunnel disconnect closes its inner connection, listener, accepted sockets and
+SSH connection before waiting for workers. Serving and request workers share a
+one-second wait budget; expiry raises `ConnectionTimeoutError` after those cleanup
+attempts. This bounds worker waiting, not SDK close calls, and cannot kill an
+arbitrarily stuck thread. Background channel/socket cleanup failures are reported
+to the owner, or attached as notes when a body/startup error or timeout is primary.
+
 
 ## Learn more
 
