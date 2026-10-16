@@ -25,6 +25,9 @@ covers all of `src/mountainash_transport` and `tests`; no test exclusions apply.
   runtime value. A test keeps these declarations in step with each `__spec__`.
 - `HttpRequestEngine.request()` returns `HttpResponse`; HTTP errors form the
   typed `HttpTransportError` hierarchy.
+- `PermissionDeniedError` is an `AuthenticationError` and a `StorageError`,
+  exported from the package root. Catch the permission subtype first when
+  distinguishing access denial from credential rejection.
 
 ## Dynamic boundaries
 

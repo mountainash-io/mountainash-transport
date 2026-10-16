@@ -322,10 +322,12 @@ def test_http_deferred_network_failure(fault: str) -> None:
         assert closed == [True] and stream.closed
 
 
-def test_http_caller_transport_error_keeps_identity() -> None:
+@pytest.mark.parametrize("kind", ["transport", "io", "cancel"])
+def test_http_caller_error_keeps_identity(kind: str) -> None:
     from mountainash_transport._core.http.errors import HttpTransportError
     from mountainash_transport.storage.backends.http import HTTPStorageBackend
-    original = HttpTransportError("caller-owned input")
+    original = {"transport": HttpTransportError("caller"), "io": OSError("caller"),
+                "cancel": KeyboardInterrupt("caller")}[kind]
     class Input(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
             raise original
@@ -333,7 +335,7 @@ def test_http_caller_transport_error_keeps_identity() -> None:
         raise AssertionError("failed input must not send a request")
     with httpx.Client(transport=_transport(handler)) as client, Input(b"x") as source:
         backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
-        with pytest.raises(HttpTransportError) as caught:
+        with pytest.raises(type(original)) as caught:
             backend.write_from_stream("https://example.invalid/file", source)
         assert caught.value is original
 

@@ -11,6 +11,8 @@ from typing import Any, BinaryIO, assert_type
 from mountainash_auth_client import AuthProfile, IAMAuthProfile
 
 from mountainash_transport import (
+    AuthenticationError,
+    PermissionDeniedError,
     ConnectionProtocol,
     EnumerateResult,
     Gzip,
@@ -65,6 +67,8 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
 def error_contracts() -> None:
     assert issubclass(PathNotFoundError, StorageError)
     assert issubclass(HttpNotFoundError, HttpTransportError)
+    permission: AuthenticationError = PermissionDeniedError("access denied")
+    storage_error: StorageError = permission
 
 
 def profile_contracts() -> None:

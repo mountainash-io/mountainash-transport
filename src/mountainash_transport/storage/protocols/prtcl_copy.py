@@ -8,5 +8,5 @@ class StorageCopyProtocol(Protocol):
     """Protocol for copying files within or across storage locations."""
 
     def copy(self, source: str, destination: str) -> None:
-        """Copy a file from source path to destination path."""
+        """Copy a file; backend I/O failures raise typed StorageError subclasses."""
         ...

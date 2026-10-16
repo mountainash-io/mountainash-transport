@@ -169,6 +169,41 @@ with FilesystemBackend(Path("/private/oauth-records")) as tokens:
 Transport borrows both stores; the application keeps them open until all
 operations finish and owns closure.
 
+## Storage errors and strict queries
+
+Implemented Local, S3-family, SFTP and HTTP backends translate their own I/O
+failures into public exceptions, retaining the native exception as `__cause__`.
+The same contract applies when reading, fetching ranges or closing an opened
+stream—not only when opening it.
+
+| Condition | Exception |
+|---|---|
+| Missing resource | `PathNotFoundError` |
+| Missing, invalid or expired credentials | `AuthenticationError` |
+| Access denied | `PermissionDeniedError` |
+| Connection or timeout failure | `StorageConnectionError` |
+| Other backend I/O/service failure | `StorageError` |
+
+`PermissionDeniedError` subclasses `AuthenticationError`: existing broad auth
+handlers still work. Catch permission denial **before** authentication failure
+when distinguishing them. Denial does not prove credentials are valid; an S3
+HEAD denial also does not prove an object is absent. Existing specialised
+errors such as `ObjectChangedError` retain their identity and causes.
+
+**Query migration:** `exists(path)` returns `False` only for established absence.
+It now raises on denied access or operational failure instead of disguising
+those failures as absence. `get_size(path)` returns `None` only after successful
+access with unknown size; zero is valid. Missing size queries raise
+`PathNotFoundError`, including on Local. S3 object queries use HEAD without a
+denied-HEAD fallback to prefix listing; bucket-root checks retain LIST behavior.
+
+Caller input, invalid arguments, transform/decoder failures and cancellation
+are not reclassified as backend failures. A failed write may leave partial
+data; error mapping does not add rollback or retries. Stream cleanup ordering
+and ownership remain unchanged. boto3 managed uploads may close seekable caller
+inputs. Paramiko 3.4.0 suppresses some native final-close failures internally;
+transport translates escaping errors, not failures hidden by the SDK.
+
 ## Connection lifetime
 
 A facade owns the connection it creates. Use `with StorageFacade.from_path(...)`

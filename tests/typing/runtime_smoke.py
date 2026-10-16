@@ -4,7 +4,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from mountainash_transport import Gzip, StorageFacade
+from mountainash_transport import Gzip, PathNotFoundError, StorageFacade
 from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
 
@@ -14,6 +14,13 @@ def main() -> None:
         with StorageFacade.from_path(path) as storage:
             storage.write(path, b"region,total\nnorth,120\n", pipeline=Gzip())
             assert storage.read(path, infer=True) == b"region,total\nnorth,120\n"
+            assert not storage.exists(path + ".missing")
+            try:
+                storage.get_size(path + ".missing")
+            except PathNotFoundError as exc:
+                assert isinstance(exc.__cause__, FileNotFoundError)
+            else:
+                raise AssertionError("missing size was suppressed")
     profile = S3StorageProfile(FLAVOR="r2", ACCOUNT_ID="abc123", BUCKET="reports")
     assert profile.FLAVOR == "r2" and profile.BUCKET == "reports"
     assert profile.get_connection_url() == "https://abc123.r2.cloudflarestorage.com"

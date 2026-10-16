@@ -16,5 +16,5 @@ class StorageEnumerateProtocol(Protocol):
         delimiter: str | None = None,
         max_results: int | None = None,
     ) -> EnumerateResult:
-        """List objects under a prefix, optionally scoped by a delimiter."""
+        """List objects; backend/page failures raise typed StorageError subclasses."""
         ...

@@ -428,3 +428,52 @@ def test_copy_between_forces_stream_when_pipeline_present(local_facade, tmp_path
     )
     assert copy_called["value"] is False  # native copy was NOT used
     assert gzip.decompress(dst_path.read_bytes()) == b"x"
+
+
+def test_mapped_source_close_remains_last_cleanup_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    from importlib import import_module
+    from mountainash_transport import StorageError
+    from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+    from mountainash_transport.storage.backends.s3 import S3StorageBackend
+    from unittest.mock import MagicMock
+    events: list[str] = []
+    original = OSError("native close")
+    class Body(io.BytesIO):
+        def close(self) -> None:
+            if self.closed:
+                return
+            events.append("source")
+            super().close()
+            raise original
+    class Layer:
+        def __init__(self, name: str) -> None:
+            self.name = name
+        def unwrap(self, source: t.BinaryIO) -> t.BinaryIO:
+            name = self.name
+            class Decoded(io.BytesIO):
+                def close(self) -> None:
+                    if self.closed:
+                        return
+                    events.append(name)
+                    super().close()
+                    raise RuntimeError(name)
+            return Decoded(source.read())
+        def wrap(self, source: t.BinaryIO) -> t.BinaryIO:
+            return source
+    body = Body(b"payload")
+    client = MagicMock()
+    client.get_object.return_value = {"Body": body}
+    backend = S3StorageBackend(None)
+    backend._client = client
+    monkeypatch.setattr(import_module("mountainash_transport.storage.facade.facade"),
+                        "get_storage_backend", lambda *args, **kwargs: backend)
+    with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.S3) as facade:
+        stream = facade.read_stream("s3://bucket/key", pipeline=Pipeline(Layer("outer"), Layer("inner")))
+        assert stream.read() == b"payload"
+        with pytest.raises(StorageError) as caught:
+            stream.close()
+        assert caught.value.__cause__ is original
+        assert events == ["inner", "outer", "source"]
+        assert body.closed and stream.closed
+        stream.close()
+        assert events == ["inner", "outer", "source"]
