@@ -186,6 +186,12 @@ cleanup failures are attached as exception notes. Explicit close reports cleanup
 failure after attempting remaining owned cleanup. A failed native close is not
 retried by another close call.
 
+Connection objects themselves remain explicitly reconnectable. `connect()`
+releases a previous native client before replacing it; if release fails, that
+attempt raises without creating a replacement. A later explicit connect may
+succeed. SFTP exclusively owns its SSH connection: normal close and failed
+startup release both, while successful channel replacement reuses healthy SSH.
+
 
 ## Learn more
 

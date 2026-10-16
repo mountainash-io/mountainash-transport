@@ -75,3 +75,20 @@ def test_from_path_raises_for_unrecognised_scheme():
 def test_from_path_raises_for_unknown_scheme():
     with pytest.raises(ValueError):
         StorageFacade.from_path("foobar://cluster/file")
+
+
+def test_sftp_facade_context_closes_channel_and_ssh(monkeypatch) -> None:
+    from unittest.mock import MagicMock
+    import paramiko
+    from mountainash_transport.settings.storage.profiles.sftp_storage_profile import SFTPStorageProfile
+
+    native_ssh = MagicMock()
+    channel = native_ssh.open_sftp.return_value
+    monkeypatch.setattr(paramiko, "SSHClient", lambda: native_ssh)
+    profile = SFTPStorageProfile(HOST="host", USERNAME="user")
+    with StorageFacade.from_path("sftp://host/file", profile) as facade:
+        assert facade._connection is not None and facade._connection.is_connected
+    channel.close.assert_called_once()
+    native_ssh.close.assert_called_once()
+    facade.close()
+    native_ssh.close.assert_called_once()

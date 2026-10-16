@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import typing as t
+from types import TracebackType
 
 from typing_extensions import Self
 
@@ -21,6 +22,7 @@ class HTTPConnection(ConnectionProtocol):
         self._client: httpx.Client | None = None
 
     def connect(self) -> Self:
+        self.disconnect()
         kwargs = dict(self._connect_kwargs)
         try:
             self._client = httpx.Client(**kwargs)
@@ -39,9 +41,12 @@ class HTTPConnection(ConnectionProtocol):
         return self
 
     def disconnect(self) -> None:
-        if self._client is not None:
-            self._client.close()
-        self._client = None
+        client, self._client = self._client, None
+        if client is not None:
+            try:
+                client.close()
+            except Exception as exc:
+                raise TransportConnectionError(f"Failed to close HTTP client: {exc}") from exc
 
     @property
     def client(self) -> httpx.Client | None:
@@ -54,5 +59,15 @@ class HTTPConnection(ConnectionProtocol):
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: t.Any) -> None:
-        self.disconnect()
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.disconnect()
+        except BaseException as cleanup:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
+            for note in getattr(cleanup, "__notes__", ()):
+                exc_value.add_note(note)

@@ -121,6 +121,7 @@ def test_failed_backend_construction_closes_native_client(monkeypatch) -> None:
 @pytest.mark.parametrize("body_fails", [False, True])
 def test_facade_cleanup_failure_preserves_lifetime(monkeypatch, body_fails) -> None:
     import httpx
+    from mountainash_transport.connections.errors import TransportConnectionError
 
     facade = StorageFacade.from_path("http://localhost/file")
     client = facade._backend._connection.client
@@ -135,7 +136,7 @@ def test_facade_cleanup_failure_preserves_lifetime(monkeypatch, body_fails) -> N
     monkeypatch.setattr(httpx.Client, "close", failing_close)
     primary = ValueError("body failed")
     try:
-        with pytest.raises(ValueError if body_fails else RuntimeError) as caught:
+        with pytest.raises(ValueError if body_fails else TransportConnectionError) as caught:
             with facade:
                 if body_fails:
                     raise primary

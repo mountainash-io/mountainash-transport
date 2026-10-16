@@ -256,3 +256,59 @@ class TestSSHConnectionErrorWrapping:
             conn = SSHConnection(FAKE_SSH_KWARGS)
             with pytest.raises(TransportConnectionError, match="paramiko is required"):
                 conn.connect()
+
+
+@pytest.mark.parametrize("stage", ["load_system_host_keys", "load_host_keys", "connect"])
+def test_partial_startup_releases_allocated_client(mock_paramiko, stage) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    client = mock_paramiko.SSHClient.return_value
+    original = OSError("startup failed")
+    getattr(client, stage).side_effect = original
+    conn = SSHConnection({**FAKE_SSH_KWARGS, "_post_connect": {"known_hosts_file": "known-hosts"}})
+    with pytest.raises((OSError, TransportConnectionError)) as caught:
+        conn.connect()
+    assert caught.value is original or caught.value.__cause__ is original
+    client.close.assert_called_once()
+    assert conn.client is None
+
+
+def test_failed_replacement_detaches_ssh_client(mock_paramiko) -> None:
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    first, second = MagicMock(), MagicMock()
+    mock_paramiko.SSHClient.side_effect = [first, second]
+    conn = SSHConnection(FAKE_SSH_KWARGS).connect()
+    first.close.side_effect = OSError("close failed")
+    with pytest.raises(TransportConnectionError):
+        conn.connect()
+    assert conn.client is None
+    conn.disconnect()
+    first.close.assert_called_once()
+    conn.connect()
+    assert conn.client is second
+    conn.disconnect()
+    second.close.assert_called_once()
+
+
+def test_startup_error_survives_failed_ssh_cleanup(mock_paramiko) -> None:
+    client = mock_paramiko.SSHClient.return_value
+    primary = ValueError("invalid host keys")
+    client.load_system_host_keys.side_effect = primary
+    client.close.side_effect = OSError("cleanup failed")
+    with pytest.raises(ValueError) as caught:
+        SSHConnection(FAKE_SSH_KWARGS).connect()
+    assert caught.value is primary
+    assert primary.__notes__
+
+
+def test_ssh_context_preserves_body_error(mock_paramiko) -> None:
+    conn = SSHConnection(FAKE_SSH_KWARGS).connect()
+    mock_paramiko.SSHClient.return_value.close.side_effect = OSError("cleanup failed")
+    primary = ValueError("body")
+    with pytest.raises(ValueError) as caught:
+        with conn:
+            raise primary
+    assert caught.value is primary
+    assert primary.__notes__
+    assert conn.client is None

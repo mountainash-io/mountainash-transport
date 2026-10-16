@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import typing as t
+from types import TracebackType
 
 from typing_extensions import Self
 
@@ -23,6 +24,7 @@ class S3Connection(ConnectionProtocol):
         except ImportError as exc:
             raise TransportConnectionError("boto3 is required for S3 connections") from exc
 
+        self.disconnect()
         try:
             if "client_config" in self._connect_kwargs:
                 self._client = self._build_via_session(boto3)
@@ -106,7 +108,12 @@ class S3Connection(ConnectionProtocol):
         return boto3.Session(botocore_session=target).client("s3", **client_config)
 
     def disconnect(self) -> None:
-        self._client = None
+        client, self._client = self._client, None
+        if client is not None:
+            try:
+                client.close()
+            except Exception as exc:
+                raise TransportConnectionError(f"Failed to close S3 client: {exc}") from exc
 
     @property
     def client(self) -> t.Any:
@@ -119,5 +126,15 @@ class S3Connection(ConnectionProtocol):
     def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args: t.Any) -> None:
-        self.disconnect()
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.disconnect()
+        except BaseException as cleanup:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
+            for note in getattr(cleanup, "__notes__", ()):
+                exc_value.add_note(note)

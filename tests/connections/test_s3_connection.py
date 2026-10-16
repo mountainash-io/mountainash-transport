@@ -48,6 +48,7 @@ class TestS3ConnectionLifecycle:
         conn.disconnect()
         assert conn.client is None
         assert conn.is_connected is False
+        mock_client_fn.return_value.close.assert_called_once()
 
     def test_not_connected_initially(self):
         conn = S3Connection(FAKE_S3_KWARGS)
@@ -139,3 +140,49 @@ class TestS3ConnectionAssumeRole:
             MkSession.return_value._session.get_credentials.return_value = None
             with pytest.raises(TransportConnectionError, match="credentials"):
                 S3Connection(_envelope(role_arn="arn:aws:iam::123:role/r")).connect()
+
+
+@pytest.mark.parametrize("session", [False, True])
+def test_native_client_close_and_failed_replacement(session, monkeypatch) -> None:
+    import boto3
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    kwargs = {"region_name": "us-east-1", "aws_access_key_id": "test",
+              "aws_secret_access_key": "test"}
+    client = boto3.client("s3", **kwargs)
+    config = {"session": kwargs, "client_config": {}} if session else kwargs
+    if session:
+        monkeypatch.setattr(boto3, "Session", lambda **kw: MagicMock(client=lambda *a, **k: client))
+    else:
+        monkeypatch.setattr(boto3, "client", lambda *a, **kw: client)
+    conn = S3Connection(config).connect()
+    native_close = client.close
+    attempts = []
+
+    def fail_close():
+        attempts.append("close")
+        native_close()
+        raise OSError("native close failed")
+
+    monkeypatch.setattr(client, "close", fail_close)
+    try:
+        with pytest.raises(TransportConnectionError):
+            conn.connect()
+        assert conn.client is None
+        conn.disconnect()
+        assert attempts == ["close"]
+    finally:
+        native_close()
+
+
+def test_s3_context_preserves_body_error() -> None:
+    primary = ValueError("body")
+    with patch("boto3.client") as create:
+        create.return_value.close.side_effect = OSError("cleanup failed")
+        conn = S3Connection(FAKE_S3_KWARGS).connect()
+        with pytest.raises(ValueError) as caught:
+            with conn:
+                raise primary
+        assert caught.value is primary
+        assert primary.__notes__
+        assert conn.client is None

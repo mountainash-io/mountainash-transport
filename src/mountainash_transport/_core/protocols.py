@@ -1,7 +1,7 @@
 """Shared protocols — ConnectionProtocol for all connection types."""
 from __future__ import annotations
 
-import typing as t
+from types import TracebackType
 
 from typing import Protocol, TypeVar, runtime_checkable
 
@@ -14,8 +14,10 @@ C = TypeVar("C", covariant=True)
 class ConnectionProtocol(Protocol[C]):
     """Unified connection lifecycle protocol.
 
-    Replaces both StorageConnectionProtocol and ConnectionMixinProtocol.
-    All connections implement this: leaf, OAuth decorated, and tunnelled.
+    Disconnect attempts cleanup of all owned resources, including partial
+    acquisition, and is idempotent even after failure. Explicit connect may
+    reopen a connection; facade close is instead terminal. Context-body errors
+    remain primary if cleanup fails. Decorators exclusively own their children.
     """
 
     def connect(self) -> Self: ...
@@ -30,4 +32,7 @@ class ConnectionProtocol(Protocol[C]):
 
     def __enter__(self) -> Self: ...
 
-    def __exit__(self, *args: t.Any) -> None: ...
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None: ...
