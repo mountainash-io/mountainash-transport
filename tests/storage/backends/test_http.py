@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import typing as t
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -168,6 +169,7 @@ class TestGetMetadata:
         assert meta.etag == '"abc123"'
         assert meta.source == "http"
         assert meta.content_type == "text/plain"
+        assert meta.last_modified == datetime(2026, 5, 7, 12, tzinfo=timezone.utc)
 
     def test_get_metadata_with_content_md5(self):
         from mountainash_transport._core.dataclasses.storage_entry import StorageEntry

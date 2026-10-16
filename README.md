@@ -204,6 +204,26 @@ and ownership remain unchanged. boto3 managed uploads may close seekable caller
 inputs. Paramiko 3.4.0 suppresses some native final-close failures internally;
 transport translates escaping errors, not failures hidden by the SDK.
 
+## Filesystem directory semantics
+
+Local and SFTP `mkdir(path, parents=True)` create missing ancestors and accept
+an existing directory. With `parents=False`, only the final directory is
+created; a missing parent or existing destination raises a storage error.
+Recursive creation is not atomic: ancestors already created remain if a later
+step fails. SFTP preserves remote relative paths and symlink/`..` traversal
+without changing the session's working directory.
+
+Local and SFTP metadata identify directories as `EntryType.DIRECTORY`, following
+symlinks through their native stat operation. If an SFTP server omits mode
+information, metadata retains the `FILE` fallback; it is not proof of a regular
+file. SFTP metadata and listing timestamps are now UTC-aware, matching Local;
+missing timestamps remain `None`. Code comparing these timestamps with naive
+datetimes must supply a timezone.
+
+Directory removal remains backend-specific: Local removes a directory tree;
+SFTP removes an empty directory. This change does not alter removal or
+symlink classification in directory listings.
+
 ## Connection lifetime
 
 A facade owns the connection it creates. Use `with StorageFacade.from_path(...)`

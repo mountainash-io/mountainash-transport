@@ -10,7 +10,7 @@ class StorageMetadataProtocol(Protocol):
     """Retrieve metadata; backend failures raise typed StorageError subclasses."""
 
     def get_metadata(self, path: str) -> StorageEntry:
-        """Retrieve metadata for the file at the given path."""
+        """Retrieve metadata for a file, directory, or object-store resource."""
         ...
 
     def path_exists(self, path: str) -> bool:

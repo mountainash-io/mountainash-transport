@@ -1,9 +1,10 @@
 """SFTPMetadataMixin — metadata operations for SFTP storage backend."""
 from __future__ import annotations
 
-from datetime import datetime
+import stat as stat_module
+from datetime import datetime, timezone
 
-from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 from mountainash_transport._core.exceptions import PathNotFoundError
 
 from ._helpers import _mapped
@@ -31,15 +32,18 @@ class SFTPMetadataMixin:
         mtime = getattr(stat, "st_mtime", None)
         if mtime is not None:
             try:
-                last_modified = datetime.fromtimestamp(mtime)
+                last_modified = datetime.fromtimestamp(mtime, tz=timezone.utc)
             except (ValueError, OSError):
                 pass
 
+        mode = getattr(stat, "st_mode", None)
+        is_dir = mode is not None and stat_module.S_ISDIR(mode)
         return StorageEntry(
             path=path,
             name=name,
             size=getattr(stat, "st_size", None),
             last_modified=last_modified,
+            entry_type=EntryType.DIRECTORY if is_dir else EntryType.FILE,
             source="sftp",
         )
 

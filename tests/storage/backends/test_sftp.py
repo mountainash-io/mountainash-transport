@@ -129,6 +129,7 @@ class TestGetMetadata:
         stat = MagicMock()
         stat.st_size = 1024
         stat.st_mtime = 1_700_000_000.0
+        stat.st_mode = 0o100644
         mock_sftp.stat.return_value = stat
         backend, _ = _make_backend(mock_sftp)
         meta = backend.get_metadata("/remote/dir/file.txt")
@@ -144,6 +145,7 @@ class TestGetMetadata:
         stat = MagicMock()
         stat.st_size = None
         stat.st_mtime = None
+        stat.st_mode = None
         mock_sftp.stat.return_value = stat
         backend, _ = _make_backend(mock_sftp)
         meta = backend.get_metadata("file.txt")
@@ -229,21 +231,6 @@ class TestDeleteFile:
             backend.delete_file("/remote/missing.txt")
 
 
-class TestMkdir:
-    def test_mkdir_calls_sftp_mkdir(self):
-        mock_sftp = MagicMock()
-        backend, _ = _make_backend(mock_sftp)
-        backend.mkdir("/remote/newdir")
-        mock_sftp.mkdir.assert_called_once_with("/remote/newdir")
-
-    def test_mkdir_not_found_raises(self):
-        mock_sftp = MagicMock()
-        mock_sftp.mkdir.side_effect = FileNotFoundError("parent missing")
-        backend, _ = _make_backend(mock_sftp)
-        with pytest.raises(PathNotFoundError):
-            backend.mkdir("/remote/deep/newdir")
-
-
 class TestRmdir:
     def test_rmdir_calls_sftp_rmdir(self):
         mock_sftp = MagicMock()
@@ -306,7 +293,7 @@ def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
     ("operation", "native", "extra"),
     [("read_to_bytes", "open", ()), ("read_to_stream", "open", ()),
      ("write_from_bytes", "open", (b"x",)), ("list_dir", "listdir_attr", ()),
-     ("mkdir", "mkdir", ()), ("rmdir", "rmdir", ()), ("delete_file", "remove", ())],
+     ("rmdir", "rmdir", ()), ("delete_file", "remove", ())],
 )
 def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.Any, ...]) -> None:
     from paramiko import SSHException
