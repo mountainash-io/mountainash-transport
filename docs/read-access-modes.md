@@ -75,6 +75,23 @@ with facade.read_stream(path, access="random",
 
 Random opens can fail during the probe/HEAD/stat, and subsequent reads can fail during range fetches. Sequential errors may occur during consumption. Buffered mode consumes everything before returning, so decode/transfer errors occur within `read_stream`. HTTP retry and OAuth refresh apply before a response is yielded; no body is replayed after consumption starts.
 
+Closing a facade read stream closes every constructed transform layer in reverse
+construction order, then the backend source—not just the final decoder.
+`read()` uses the same ownership path; buffered mode closes the decoding chain
+before returning its independent memory buffer. Cleanup also runs after decoding
+or consumer exceptions.
+
+All remaining closes are attempted if a layer's `close()` raises. The returned
+handle is still marked closed, and closing it again is a no-op. Cleanup errors
+propagate (the last one wins, with earlier errors chained); construction failures
+retain their original exception even if cleanup fails.
+
+For direct `Pipeline.apply_read(source)` callers, the returned stream owns the
+distinct layers it constructed, **not** the supplied source. Close the source
+separately. Empty or identity-only pipelines return the source unchanged.
+Transforms should leave borrowed inputs open; layers already closed by a
+cascading transform are not explicitly closed again.
+
 Entering a context does not validate the entire payload:
 
 ```python

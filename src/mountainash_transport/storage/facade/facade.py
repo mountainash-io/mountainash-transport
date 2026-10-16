@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import typing as t
 from typing import BinaryIO
@@ -31,6 +32,7 @@ from mountainash_transport.storage.path_helpers.suffixes import infer_pipeline a
 from mountainash_transport._core.transforms import GPG, Gzip, Pipeline, StreamTransform
 from mountainash_transport._core.ranged_io import RangePolicy, RangedReader
 from mountainash_transport._core.transforms.util import materialize
+from mountainash_transport._core.transforms.pipeline import _ReadStream, _close_if_open
 from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
@@ -40,53 +42,6 @@ def _has_static_token(auth_profile: t.Any) -> bool:
     """Return True if *auth_profile* carries a non-empty static ACCESS_TOKEN."""
     tok = getattr(auth_profile, "ACCESS_TOKEN", None)
     return bool(tok.get_secret_value()) if tok is not None else False
-
-
-class _PairedStream(io.RawIOBase):
-    """BinaryIO wrapper that closes both a wrapped stream and its source on close().
-
-    Used when a pipeline wraps a backend stream — closing must propagate to
-    both so file descriptors are not leaked. Seek capabilities are delegated
-    to the effective (wrapped) stream, so positions refer to decoded bytes and
-    a non-seekable effective stream stays non-seekable.
-    """
-
-    def __init__(self, wrapped: BinaryIO, source: BinaryIO) -> None:
-        self._wrapped = wrapped
-        self._source = source
-
-    def readable(self) -> bool:
-        return True
-
-    def readinto(self, b) -> int:
-        chunk = self._wrapped.read(len(b))
-        n = len(chunk)
-        b[:n] = chunk
-        return n
-
-    def read(self, size: int = -1) -> bytes:
-        return self._wrapped.read(size)
-
-    def seekable(self) -> bool:
-        return self._wrapped.seekable()
-
-    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
-        if not self._wrapped.seekable():
-            raise io.UnsupportedOperation("seek")
-        return self._wrapped.seek(offset, whence)
-
-    def tell(self) -> int:
-        if not self._wrapped.seekable():
-            raise io.UnsupportedOperation("tell")
-        return self._wrapped.tell()
-
-    def close(self) -> None:
-        try:
-            if self._wrapped is not self._source:
-                self._wrapped.close()
-        finally:
-            self._source.close()
-            super().close()
 
 
 class StorageFacade:
@@ -249,19 +204,10 @@ class StorageFacade:
         *infer* and *pipeline* are provided.
         """
         self._require(StorageReadProtocol, "read")
-        effective = self._resolve_pipeline(
+        with self.read_stream(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
-        )
-        source_stream = self._backend.read_to_stream(path)
-        try:
-            wrapped_stream = effective.apply_read(source_stream)
-            try:
-                return wrapped_stream.read()
-            finally:
-                if wrapped_stream is not source_stream:
-                    wrapped_stream.close()
-        finally:
-            source_stream.close()
+        ) as stream:
+            return stream.read()
 
     def read_stream(
         self,
@@ -300,8 +246,9 @@ class StorageFacade:
             with facade.read_stream(path, infer=True) as s:
                 data = s.read()
 
-        Closing (including on a consumer exception) propagates to the pipeline
-        wrapper and the underlying backend stream.
+        Closing (including on a consumer exception) unwinds every constructed
+        transform layer in reverse construction order, then the backend stream.
+        All closes are attempted even if one raises; repeated close is a no-op.
 
         ``access="sequential"`` streams without whole-object buffering; remote
         handles are forward-only. ``"random"`` fetches stored byte ranges and
@@ -333,17 +280,24 @@ class StorageFacade:
                     source.on_close()
                 raise
         source_stream = self._backend.read_to_stream(path)
+        cleanup = contextlib.ExitStack()
+        cleanup.callback(_close_if_open, source_stream)
         try:
             wrapped_stream = effective.apply_read(source_stream)
+            if wrapped_stream is not source_stream:
+                cleanup.callback(_close_if_open, wrapped_stream)
+            owned = _ReadStream(wrapped_stream, cleanup)
         except BaseException:
-            source_stream.close()
+            try:
+                cleanup.close()
+            except Exception:
+                pass
             raise
-        paired = _PairedStream(wrapped_stream, source_stream)
         if access == "buffered":
-            with paired:
-                result, _ = materialize(t.cast(BinaryIO, paired))
+            with owned:
+                result, _ = materialize(t.cast(BinaryIO, owned))
                 return result
-        return t.cast(BinaryIO, paired)
+        return t.cast(BinaryIO, owned)
 
     # ------------------------------------------------------------------
     # Write operations (StorageWriteProtocol)
