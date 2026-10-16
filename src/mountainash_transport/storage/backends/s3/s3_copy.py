@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .s3_path import parse_s3_path
+from ._helpers import _mapped
 
 from mountainash_transport.storage.protocols import StorageCopyProtocol
 
@@ -19,8 +20,9 @@ class S3CopyMixin(StorageCopyProtocol):
         """
         src_bucket, src_key = parse_s3_path(source)
         dst_bucket, dst_key = parse_s3_path(destination)
-        self._client.copy_object(  # type: ignore[attr-defined]
-            Bucket=dst_bucket,
-            Key=dst_key,
-            CopySource={"Bucket": src_bucket, "Key": src_key},
-        )
+        with _mapped(destination):
+            self._client.copy_object(  # type: ignore[attr-defined]
+                Bucket=dst_bucket,
+                Key=dst_key,
+                CopySource={"Bucket": src_bucket, "Key": src_key},
+            )

@@ -4,8 +4,9 @@ from __future__ import annotations
 from datetime import datetime
 
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+from mountainash_transport._core.exceptions import PathNotFoundError
 
-from ._helpers import _wrap_sftp_error
+from ._helpers import _mapped
 
 
 class SFTPMetadataMixin:
@@ -14,17 +15,16 @@ class SFTPMetadataMixin:
     def path_exists(self, path: str) -> bool:
         sftp = self._get_client()  # type: ignore[attr-defined]
         try:
-            sftp.stat(path)
+            with _mapped(path):
+                sftp.stat(path)
             return True
-        except (FileNotFoundError, IOError):
+        except PathNotFoundError:
             return False
 
     def get_metadata(self, path: str) -> StorageEntry:
         sftp = self._get_client()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             stat = sftp.stat(path)
-        except (FileNotFoundError, IOError, PermissionError) as exc:
-            raise _wrap_sftp_error(exc, path) from exc
 
         name = path.rsplit("/", 1)[-1] if "/" in path else path
         last_modified = None
@@ -45,8 +45,6 @@ class SFTPMetadataMixin:
 
     def get_size(self, path: str) -> int | None:
         sftp = self._get_client()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             stat = sftp.stat(path)
             return getattr(stat, "st_size", None)
-        except (FileNotFoundError, IOError, PermissionError) as exc:
-            raise _wrap_sftp_error(exc, path) from exc

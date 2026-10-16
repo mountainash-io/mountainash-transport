@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .s3_path import parse_s3_path
+from ._helpers import _mapped
 
 from mountainash_transport.storage.protocols import StorageDeleteProtocol
 
@@ -16,4 +17,5 @@ class S3DeleteMixin(StorageDeleteProtocol):
             path: S3 path in the form ``s3://bucket/key`` or ``bucket/key``.
         """
         bucket, key = parse_s3_path(path)
-        self._client.delete_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
+        with _mapped(path):
+            self._client.delete_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]

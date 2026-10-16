@@ -8,5 +8,5 @@ class StorageDeleteProtocol(Protocol):
     """Protocol for deleting files from storage."""
 
     def delete_file(self, path: str) -> None:
-        """Delete the file at the given path."""
+        """Delete a file with backend-native idempotence and typed I/O failures."""
         ...

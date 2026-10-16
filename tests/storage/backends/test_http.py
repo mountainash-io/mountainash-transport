@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import typing as t
 
 import httpx
 import pytest
@@ -258,3 +259,96 @@ class TestHTTPBackendProfileKwargs:
         profile = MagicMock()
         backend = HTTPStorageBackend(profile, connection=conn)
         assert isinstance(backend._engine, HttpRequestEngine)
+
+
+@pytest.mark.parametrize("operation", [
+    "read_to_bytes", "read_to_stream", "path_exists", "get_size", "get_metadata",
+    "write_from_bytes", "write_from_stream",
+])
+def test_http_denial_is_distinct_from_credentials(operation: str) -> None:
+    from mountainash_transport import PermissionDeniedError
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    with httpx.Client(transport=_transport(lambda request: httpx.Response(403))) as client:
+        backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
+        extra: tuple[bytes | io.BytesIO, ...] = (b"x",) if operation == "write_from_bytes" else ()
+        with io.BytesIO(b"x") as source:
+            if operation == "write_from_stream":
+                extra = (source,)
+            with pytest.raises(PermissionDeniedError) as caught:
+                getattr(backend, operation)("https://example.invalid/file", *extra)
+        assert isinstance(caught.value, AuthenticationError)
+        assert caught.value.__cause__ is not None
+
+
+@pytest.mark.parametrize("original", [httpx.ReadError("reset"), httpx.ConnectTimeout("timeout")])
+def test_http_native_connection_failure(original: Exception) -> None:
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise original
+    policy = RequestPolicy(retry=RetryPolicy(max_attempts=1, retry_on_transport=False))
+    with httpx.Client(transport=_transport(handler)) as client:
+        backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client, policy=policy))
+        with pytest.raises(StorageConnectionError) as caught:
+            backend.get_size("https://example.invalid/file")
+        cause = caught.value.__cause__
+        assert cause is not None and cause.__cause__ is original
+
+
+@pytest.mark.parametrize("fault", ["read", "close"])
+def test_http_deferred_network_failure(fault: str) -> None:
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    original = httpx.ReadError("late network failure")
+    closed: list[bool] = []
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> t.Iterator[bytes]:
+            yield b"abc"
+            if fault == "read":
+                raise original
+        def close(self) -> None:
+            closed.append(True)
+            if fault == "close":
+                raise original
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, stream=Body())
+    with httpx.Client(transport=_transport(handler)) as client:
+        backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
+        stream = backend.read_to_stream("https://example.invalid/file")
+        with pytest.raises(StorageConnectionError) as caught:
+            try:
+                if fault == "read":
+                    stream.read()
+            finally:
+                stream.close()
+        cause = caught.value.__cause__
+        assert cause is not None and (cause is original or cause.__cause__ is original)
+        assert closed == [True] and stream.closed
+
+
+@pytest.mark.parametrize("kind", ["transport", "io", "cancel"])
+def test_http_caller_error_keeps_identity(kind: str) -> None:
+    from mountainash_transport._core.http.errors import HttpTransportError
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    original = {"transport": HttpTransportError("caller"), "io": OSError("caller"),
+                "cancel": KeyboardInterrupt("caller")}[kind]
+    class Input(io.BytesIO):
+        def read(self, size: int | None = -1) -> bytes:
+            raise original
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("failed input must not send a request")
+    with httpx.Client(transport=_transport(handler)) as client, Input(b"x") as source:
+        backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
+        with pytest.raises(type(original)) as caught:
+            backend.write_from_stream("https://example.invalid/file", source)
+        assert caught.value is original
+
+
+@pytest.mark.parametrize("operation", ["get_metadata", "get_size"])
+def test_http_bad_size_is_backend_metadata_failure(operation: str) -> None:
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, headers={"Content-Length": "not-an-integer"})
+    with httpx.Client(transport=_transport(handler)) as client:
+        backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
+        with pytest.raises(StorageError) as caught:
+            getattr(backend, operation)("https://example.invalid/file")
+        assert isinstance(caught.value.__cause__, ValueError)

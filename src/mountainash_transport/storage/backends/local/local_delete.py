@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from mountainash_transport._core.exceptions import PathNotFoundError
+from ._helpers import _mapped
 
 
 class LocalDeleteMixin:
@@ -16,6 +16,5 @@ class LocalDeleteMixin:
         Raises:
             PathNotFoundError: if the path does not exist.
         """
-        if not os.path.exists(path):
-            raise PathNotFoundError(f"Path not found: {path!r}")
-        os.remove(path)
+        with _mapped(path):
+            os.remove(path)

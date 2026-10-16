@@ -3,19 +3,11 @@ from __future__ import annotations
 
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
+import typing as t
 
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
-from mountainash_transport._core.exceptions import (
-    AuthenticationError,
-    PathNotFoundError,
-    StorageError,
-)
-from mountainash_transport._core.http.errors import (
-    HttpAuthenticationError,
-    HttpForbiddenError,
-    HttpNotFoundError,
-    HttpTransportError,
-)
+from mountainash_transport._core.exceptions import PathNotFoundError, StorageError
+from ._helpers import _mapped
 from mountainash_transport.storage.protocols import StorageMetadataProtocol
 
 
@@ -24,6 +16,14 @@ def _filename_from_url(url: str) -> str:
     parsed = urlparse(url)
     path = parsed.path.rstrip("/")
     return path.rsplit("/", 1)[-1] if "/" in path else path
+
+
+def _size(headers: t.Mapping[str, str], path: str) -> int | None:
+    value = headers.get("content-length")
+    try:
+        return int(value) if value else None
+    except ValueError as exc:
+        raise StorageError(f"Invalid Content-Length for {path}") from exc
 
 
 class HTTPMetadataMixin(StorageMetadataProtocol):
@@ -40,14 +40,11 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
         """
         engine = self._get_engine()  # type: ignore[attr-defined]
         try:
-            engine.request("HEAD", path)
+            with _mapped(path):
+                engine.request("HEAD", path)
             return True
-        except HttpNotFoundError:
+        except PathNotFoundError:
             return False
-        except (HttpAuthenticationError, HttpForbiddenError) as exc:
-            raise AuthenticationError(path) from exc
-        except HttpTransportError as exc:
-            raise StorageError(str(exc)) from exc
 
     def get_metadata(self, path: str) -> StorageEntry:
         """Retrieve metadata for a resource via HTTP HEAD.
@@ -59,18 +56,11 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
             A :class:`StorageEntry` populated from response headers.
         """
         engine = self._get_engine()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             response = engine.request("HEAD", path)
-        except HttpNotFoundError as exc:
-            raise PathNotFoundError(path) from exc
-        except (HttpAuthenticationError, HttpForbiddenError) as exc:
-            raise AuthenticationError(path) from exc
-        except HttpTransportError as exc:
-            raise StorageError(str(exc)) from exc
 
         headers = response.headers
-        size_str = headers.get("content-length")
-        size = int(size_str) if size_str else None
+        size = _size(headers, path)
         etag = headers.get("etag", "")
         content_type = headers.get("content-type", "")
         content_md5 = headers.get("content-md5", "")
@@ -105,13 +95,6 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
             File size in bytes, or None if the header is absent.
         """
         engine = self._get_engine()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             response = engine.request("HEAD", path)
-        except HttpNotFoundError as exc:
-            raise PathNotFoundError(path) from exc
-        except (HttpAuthenticationError, HttpForbiddenError) as exc:
-            raise AuthenticationError(path) from exc
-        except HttpTransportError as exc:
-            raise StorageError(str(exc)) from exc
-        size_str = response.headers.get("content-length")
-        return int(size_str) if size_str else None
+        return _size(response.headers, path)

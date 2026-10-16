@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from typing import BinaryIO
+import typing as t
+
+from mountainash_transport._core.stream_errors import _CallerInput
+from ._helpers import _mapped
 
 from .s3_path import parse_s3_path
 
@@ -19,7 +23,8 @@ class S3WriteMixin(StorageWriteProtocol):
             data: Bytes to upload.
         """
         bucket, key = parse_s3_path(path)
-        self._client.put_object(Bucket=bucket, Key=key, Body=data)  # type: ignore[attr-defined]
+        with _mapped(path):
+            self._client.put_object(Bucket=bucket, Key=key, Body=data)  # type: ignore[attr-defined]
 
     def write_from_stream(self, path: str, stream: BinaryIO) -> None:
         """Upload from a binary stream using boto3's multipart-aware upload_fileobj.
@@ -32,4 +37,13 @@ class S3WriteMixin(StorageWriteProtocol):
             stream: Binary stream to read from.
         """
         bucket, key = parse_s3_path(path)
-        self._client.upload_fileobj(stream, bucket, key)  # type: ignore[attr-defined]
+        guarded = _CallerInput(stream)
+        try:
+            with _mapped(path):
+                self._client.upload_fileobj(t.cast(BinaryIO, guarded), bucket, key)  # type: ignore[attr-defined]
+            return
+        except BaseException as exc:
+            original = guarded.original_in(exc)
+            if original is None or original[0] is exc:
+                raise
+        raise original[0].with_traceback(original[1])

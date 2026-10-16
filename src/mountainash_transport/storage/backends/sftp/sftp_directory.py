@@ -6,7 +6,7 @@ from datetime import datetime
 
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
-from ._helpers import _wrap_sftp_error
+from ._helpers import _mapped
 
 
 class SFTPDirectoryMixin:
@@ -14,10 +14,8 @@ class SFTPDirectoryMixin:
 
     def list_dir(self, path: str) -> list[StorageEntry]:
         sftp = self._get_client()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             entries = sftp.listdir_attr(path)
-        except (FileNotFoundError, IOError, PermissionError) as exc:
-            raise _wrap_sftp_error(exc, path) from exc
 
         results: list[StorageEntry] = []
         for attr in entries:
@@ -44,14 +42,10 @@ class SFTPDirectoryMixin:
 
     def mkdir(self, path: str, *, parents: bool = True) -> None:
         sftp = self._get_client()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             sftp.mkdir(path)
-        except (FileNotFoundError, IOError, PermissionError) as exc:
-            raise _wrap_sftp_error(exc, path) from exc
 
     def rmdir(self, path: str) -> None:
         sftp = self._get_client()  # type: ignore[attr-defined]
-        try:
+        with _mapped(path):
             sftp.rmdir(path)
-        except (FileNotFoundError, IOError, PermissionError) as exc:
-            raise _wrap_sftp_error(exc, path) from exc

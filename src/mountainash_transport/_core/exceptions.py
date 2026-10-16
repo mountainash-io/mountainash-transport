@@ -32,7 +32,11 @@ class PathNotFoundError(StorageError):
 
 
 class AuthenticationError(StorageError):
-    """Raised when authentication with a storage backend fails."""
+    """Missing, invalid or expired credentials; also the base for access denial."""
+
+
+class PermissionDeniedError(AuthenticationError):
+    """Access was denied; this does not establish valid credentials."""
 
 
 class TransformError(StorageError):

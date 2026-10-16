@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import os
+import stat as stat_module
 from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import (
     EntryType,
     StorageEntry,
 )
+
+from ._helpers import _mapped
 
 
 class LocalListMixin:
@@ -19,28 +22,30 @@ class LocalListMixin:
         Symlinks are resolved via stat(). Broken symlinks are skipped.
         """
         results: list[StorageEntry] = []
-        if not os.path.isdir(path):
-            return results
-
-        for entry in os.scandir(path):
+        with _mapped(path):
             try:
-                is_dir = entry.is_dir(follow_symlinks=True)
-                is_file = entry.is_file(follow_symlinks=True)
-            except OSError:
-                continue
-
-            if not is_dir and not is_file:
-                continue
-
-            stat = entry.stat(follow_symlinks=True)
-            results.append(
-                StorageEntry(
-                    path=os.path.abspath(entry.path),
-                    name=entry.name,
-                    size=stat.st_size if is_file else None,
-                    last_modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
-                    entry_type=EntryType.DIRECTORY if is_dir else EntryType.FILE,
-                    source="local",
-                )
-            )
+                if not stat_module.S_ISDIR(os.stat(path).st_mode):
+                    return results
+            except (FileNotFoundError, NotADirectoryError):
+                return results
+            with os.scandir(path) as entries:
+                for entry in entries:
+                    try:
+                        is_dir = entry.is_dir(follow_symlinks=True)
+                        is_file = entry.is_file(follow_symlinks=True)
+                    except (FileNotFoundError, NotADirectoryError):
+                        continue
+                    if not is_dir and not is_file:
+                        continue
+                    stat = entry.stat(follow_symlinks=True)
+                    results.append(
+                        StorageEntry(
+                            path=os.path.abspath(entry.path),
+                            name=entry.name,
+                            size=stat.st_size if is_file else None,
+                            last_modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+                            entry_type=EntryType.DIRECTORY if is_dir else EntryType.FILE,
+                            source="local",
+                        )
+                    )
         return results

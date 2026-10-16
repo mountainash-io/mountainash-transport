@@ -406,7 +406,7 @@ class StorageFacade:
     # ------------------------------------------------------------------
 
     def exists(self, path: str) -> bool:
-        """Return True if *path* exists on the backend."""
+        """Return False only for established absence; backend failures raise."""
         self._require(StorageMetadataProtocol, "exists")
         return self._backend.path_exists(path)
 
@@ -416,7 +416,10 @@ class StorageFacade:
         return self._backend.get_metadata(path)
 
     def get_size(self, path: str) -> int | None:
-        """Return the size in bytes of the file at *path*, or None if unknown."""
+        """Return size or None for present-but-unknown size; missing raises.
+
+        Operational failures raise typed storage errors, never None.
+        """
         self._require(StorageMetadataProtocol, "get_size")
         return self._backend.get_size(path)
 

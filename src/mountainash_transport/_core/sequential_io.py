@@ -29,7 +29,7 @@ class ForwardOnlyReader(io.RawIOBase):
             data = self._read(len(b))
         except Exception as exc:
             mapped = self._map_error(exc) if self._map_error else None
-            if mapped is not None:
+            if mapped is not None and mapped is not exc:
                 raise mapped from exc
             raise
         b[:len(data)] = data
@@ -39,6 +39,11 @@ class ForwardOnlyReader(io.RawIOBase):
         if not self.closed:
             try:
                 self._close()
+            except Exception as exc:
+                mapped = self._map_error(exc) if self._map_error else None
+                if mapped is not None and mapped is not exc:
+                    raise mapped from exc
+                raise
             finally:
                 super().close()
 

@@ -26,7 +26,7 @@ with StorageFacade.from_path("https://example.org/report.parquet") as facade:
         trailer = stream.read(8)
 ```
 
-Local random reads use a native file handle, not a remote cache. S3 uses HEAD for size and ranged GETs; HTTP probes `bytes=0-0` and validates each response before reading it. SFTP uses a native open handle without prefetch. The default sequential SFTP path also disables unbounded prefetch.
+Local random reads use a native-backed seekable handle, not a remote cache or a guaranteed concrete Python file class. Supported binary operations (including `readinto`, `seek`, `tell` and native `fileno` in random mode) remain available. Local backend I/O errors are translated when opening, consuming or closing the handle; caller argument errors remain native. Local `exists()` returns `False` only for absence, and missing `get_size()` raises `PathNotFoundError`; denied access raises `PermissionDeniedError`, including on queries. S3 uses HEAD for size and ranged GETs; HTTP probes `bytes=0-0` and validates each response before reading it. SFTP uses a native open handle without prefetch. The default sequential SFTP path also disables unbounded prefetch.
 
 ## Cache policy and precedence
 

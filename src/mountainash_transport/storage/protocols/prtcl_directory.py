@@ -7,7 +7,10 @@ from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 
 @runtime_checkable
 class StorageDirectoryProtocol(Protocol):
-    """Protocol for managing directories in storage."""
+    """Manage directories, translating backend I/O into StorageError subclasses.
+
+    Existing missing-path and recursion semantics remain backend-specific.
+    """
 
     def list_dir(self, path: str) -> list[StorageEntry]:
         """List the direct children of a directory, returning StorageEntry objects."""
