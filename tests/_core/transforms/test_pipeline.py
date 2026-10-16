@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import typing as t
 from typing import BinaryIO
 
 import pytest
@@ -139,3 +140,16 @@ def test_failed_pipeline_does_not_close_identity_input() -> None:
         with pytest.raises(RuntimeError, match="construction"):
             Pipeline(Identity(), Failing()).apply_read(source)
         assert not source.closed
+
+
+def test_owned_reader_readinto_handles_short_read_eof_and_closed_stream() -> None:
+    with io.BytesIO(b"[X]data") as source:
+        raw = t.cast(io.RawIOBase, Pipeline(_RecordingTransform(b"[X]")).apply_read(source))
+        with io.BufferedReader(raw) as result:
+            buffer = bytearray(b"------")
+            assert result.readinto(buffer) == 4
+            assert buffer == b"data--"
+            assert result.readinto(buffer) == 0
+            assert buffer == b"data--"
+        with pytest.raises(ValueError, match="closed"):
+            raw.readinto(buffer)

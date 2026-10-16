@@ -152,6 +152,39 @@ def test_read_stream_closes_built_layers_when_later_transform_fails(
     assert opened[0].closed
 
 
+@pytest.mark.parametrize("failing_close", ["layer", "source"])
+def test_construction_error_survives_cleanup_failure(
+    local_facade: StorageFacade, monkeypatch: pytest.MonkeyPatch, failing_close: str,
+) -> None:
+    events: list[str] = []
+
+    class Handle(io.BytesIO):
+        def __init__(self, name: str) -> None:
+            super().__init__(b"payload")
+            self.name = name
+
+        def close(self) -> None:
+            events.append(self.name)
+            super().close()
+            if self.name == failing_close:
+                raise ValueError("cleanup failed")
+
+    source, layer = Handle("source"), Handle("layer")
+
+    class Transform:
+        def wrap(self, stream: t.BinaryIO) -> t.BinaryIO:
+            return stream
+
+        def unwrap(self, stream: t.BinaryIO) -> t.BinaryIO:
+            return layer
+
+    monkeypatch.setattr(local_facade._backend, "read_to_stream", lambda path: source)
+    with pytest.raises(RuntimeError, match="unwrap failed"):
+        local_facade.read_stream("unused", pipeline=Pipeline(Transform(), _FailingUnwrap()))
+    assert events == ["layer", "source"]
+    assert layer.closed and source.closed
+
+
 def test_read_stream_seeks_plain_local_file(local_facade, tmp_path):
     path = tmp_path / "plain.bin"
     path.write_bytes(b"abc")
