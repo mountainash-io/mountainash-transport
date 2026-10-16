@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport.storage.protocols import StorageMetadataProtocol
+from mountainash_transport._core.exceptions import PathNotFoundError
+
+from ._helpers import _mapped
 
 from .s3_path import parse_s3_path
 
@@ -27,7 +30,8 @@ class S3MetadataMixin(StorageMetadataProtocol):
 
     def get_metadata(self, path: str) -> StorageEntry:
         bucket, key = parse_s3_path(path)
-        response = self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
+        with _mapped(path):
+            response = self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
         name = key.rsplit("/", 1)[-1] if "/" in key else key
         checksum, checksum_algorithm = _pick_checksum(response)
         return StorageEntry(
@@ -46,25 +50,18 @@ class S3MetadataMixin(StorageMetadataProtocol):
 
     def path_exists(self, path: str) -> bool:
         bucket, key = parse_s3_path(path)
-        if not key:
-            response = self._client.list_objects_v2(Bucket=bucket, MaxKeys=1)  # type: ignore[attr-defined]
-            return response.get("ResponseMetadata", {}).get("HTTPStatusCode", 404) == 200
         try:
-            self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
+            with _mapped(path):
+                if not key:
+                    response = self._client.list_objects_v2(Bucket=bucket, MaxKeys=1)  # type: ignore[attr-defined]
+                    return response.get("ResponseMetadata", {}).get("HTTPStatusCode", 404) == 200
+                self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
             return True
-        except Exception as exc:
-            error_code = ""
-            response_attr = getattr(exc, "response", None)
-            if isinstance(response_attr, dict):
-                error_code = response_attr.get("Error", {}).get("Code", "")
-            if error_code in ("404", "NoSuchKey"):
-                return False
-            list_response = self._client.list_objects_v2(  # type: ignore[attr-defined]
-                Bucket=bucket, Prefix=key, MaxKeys=1
-            )
-            return bool(list_response.get("Contents"))
+        except PathNotFoundError:
+            return False
 
     def get_size(self, path: str) -> int | None:
         bucket, key = parse_s3_path(path)
-        response = self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
+        with _mapped(path):
+            response = self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
         return response.get("ContentLength")

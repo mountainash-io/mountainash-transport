@@ -69,3 +69,31 @@ def test_readers_close_once() -> None:
     b = IterBytesReader(iter(()), close=lambda: closed.append("b"))
     a.close(); a.close(); b.close(); b.close()
     assert closed == ["a", "b"]
+
+
+def test_deferred_close_maps_error_and_remains_closed() -> None:
+    from mountainash_transport import StorageError
+    original = OSError("close failed")
+    closes: list[bool] = []
+    def close() -> None:
+        closes.append(True)
+        raise original
+    reader = ForwardOnlyReader(lambda n: b"", close, lambda exc: StorageError("backend"))
+    with pytest.raises(StorageError) as caught:
+        reader.close()
+    assert caught.value.__cause__ is original
+    assert reader.closed
+    reader.close()
+    assert closes == [True]
+
+
+def test_existing_public_error_is_not_self_chained() -> None:
+    from mountainash_transport import ObjectChangedError
+    original = ObjectChangedError("changed")
+    def read(n: int) -> bytes:
+        raise original
+    with ForwardOnlyReader(read, lambda: None, lambda exc: exc) as reader:
+        with pytest.raises(ObjectChangedError) as caught:
+            reader.read(1)
+    assert caught.value is original
+    assert caught.value.__cause__ is None
