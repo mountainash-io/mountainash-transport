@@ -1,8 +1,10 @@
 """Facade integration tests for the pipeline= kwarg."""
 from __future__ import annotations
 
+import contextlib
 import gzip
 import io
+import typing as t
 from pathlib import Path
 
 import pytest
@@ -150,6 +152,39 @@ def test_read_stream_closes_built_layers_when_later_transform_fails(
     assert opened[0].closed
 
 
+@pytest.mark.parametrize("failing_close", ["layer", "source"])
+def test_construction_error_survives_cleanup_failure(
+    local_facade: StorageFacade, monkeypatch: pytest.MonkeyPatch, failing_close: str,
+) -> None:
+    events: list[str] = []
+
+    class Handle(io.BytesIO):
+        def __init__(self, name: str) -> None:
+            super().__init__(b"payload")
+            self.name = name
+
+        def close(self) -> None:
+            events.append(self.name)
+            super().close()
+            if self.name == failing_close:
+                raise ValueError("cleanup failed")
+
+    source, layer = Handle("source"), Handle("layer")
+
+    class Transform:
+        def wrap(self, stream: t.BinaryIO) -> t.BinaryIO:
+            return stream
+
+        def unwrap(self, stream: t.BinaryIO) -> t.BinaryIO:
+            return layer
+
+    monkeypatch.setattr(local_facade._backend, "read_to_stream", lambda path: source)
+    with pytest.raises(RuntimeError, match="unwrap failed"):
+        local_facade.read_stream("unused", pipeline=Pipeline(Transform(), _FailingUnwrap()))
+    assert events == ["layer", "source"]
+    assert layer.closed and source.closed
+
+
 def test_read_stream_seeks_plain_local_file(local_facade, tmp_path):
     path = tmp_path / "plain.bin"
     path.write_bytes(b"abc")
@@ -221,6 +256,90 @@ def test_read_stream_malformed_gzip_fails_on_consumption_and_closes(
 
     assert s.closed
     assert opened[0].closed
+
+
+@pytest.mark.parametrize("access", ["read", "sequential", "buffered"])
+@pytest.mark.parametrize("malformed", [False, True])
+def test_nested_gzip_closes_every_decoder(
+    local_facade: StorageFacade, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    access: str, malformed: bool,
+) -> None:
+    """Keep decoders alive so GC cannot mask a missed explicit close."""
+    decoders: list[t.BinaryIO] = []
+
+    class TrackedGzip(Gzip):
+        def unwrap(self, source: t.BinaryIO) -> t.BinaryIO:
+            decoder = super().unwrap(source)
+            decoders.append(decoder)
+            return decoder
+
+    path = tmp_path / "nested.gz.gz"
+    inner_bytes = b"not gzip" if malformed else gzip.compress(b"payload")
+    path.write_bytes(gzip.compress(inner_bytes))
+    sources = _track_sources(local_facade, monkeypatch)
+    pipeline = Pipeline(TrackedGzip(), TrackedGzip())
+    try:
+        with pytest.raises(gzip.BadGzipFile) if malformed else contextlib.nullcontext():
+            if access == "read":
+                assert local_facade.read(str(path), pipeline=pipeline) == b"payload"
+            else:
+                with local_facade.read_stream(
+                    str(path), pipeline=pipeline, access=access,  # type: ignore[arg-type]
+                ) as stream:
+                    assert stream.read() == b"payload"
+        assert all(decoder.closed for decoder in decoders)
+        assert sources[0].closed
+    finally:
+        for decoder in reversed(decoders):
+            decoder.close()
+
+
+@pytest.mark.parametrize("failure", ["consumer", "inner", "outer", "source"])
+def test_stream_close_unwinds_all_layers_even_when_close_raises(
+    local_facade: StorageFacade, monkeypatch: pytest.MonkeyPatch, failure: str,
+) -> None:
+    events: list[str] = []
+    handles: list[io.BytesIO] = []
+
+    class OwnedBytes(io.BytesIO):
+        def __init__(self, name: str, data: bytes) -> None:
+            super().__init__(data)
+            self.name = name
+            handles.append(self)
+
+        def close(self) -> None:
+            events.append(self.name)
+            super().close()
+            if self.name == failure:
+                raise RuntimeError(failure)
+
+    class Layer:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def unwrap(self, source: t.BinaryIO) -> t.BinaryIO:
+            return OwnedBytes(self.name, source.read())
+
+        def wrap(self, source: t.BinaryIO) -> t.BinaryIO:
+            return source
+
+    source = OwnedBytes("source", b"payload")
+    monkeypatch.setattr(local_facade._backend, "read_to_stream", lambda path: source)
+    stream = local_facade.read_stream("unused", pipeline=Pipeline(Layer("outer"), Layer("inner")))
+    try:
+        with pytest.raises(RuntimeError, match=failure):
+            with stream:
+                assert stream.read() == b"payload"
+                if failure == "consumer":
+                    raise RuntimeError("consumer")
+        assert events == ["inner", "outer", "source"]
+        assert stream.closed
+        assert all(handle.closed for handle in handles)
+        stream.close()
+        assert events == ["inner", "outer", "source"]
+    finally:
+        for handle in handles:
+            io.BytesIO.close(handle)
 
 
 def test_facade_write_with_pipeline_compresses(local_facade, tmp_path):

@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import io
+import typing as t
 from typing import BinaryIO
+
+import pytest
 
 from mountainash_transport._core.transforms import Pipeline
 
@@ -82,3 +85,71 @@ def test_pipeline_roundtrip_is_symmetric():
     encoded = pipeline.apply_write(io.BytesIO(original)).read()
     decoded = pipeline.apply_read(io.BytesIO(encoded)).read()
     assert decoded == original
+
+
+def test_read_pipeline_owns_unique_layers_but_not_the_input() -> None:
+    source = io.BytesIO(b"payload")
+    layers: list[io.BytesIO] = []
+    closes: list[int] = []
+
+    class Layer(io.BytesIO):
+        def close(self) -> None:
+            closes.append(id(self))
+            super().close()
+
+    class Transform:
+        def wrap(self, stream: BinaryIO) -> BinaryIO:
+            return stream
+
+        def unwrap(self, stream: BinaryIO) -> BinaryIO:
+            layer = Layer(stream.read())
+            layers.append(layer)
+            return layer
+
+    class Identity(Transform):
+        def unwrap(self, stream: BinaryIO) -> BinaryIO:
+            return stream
+
+    pipeline = Pipeline(Identity(), Transform(), Identity(), Transform())
+    try:
+        with pipeline.apply_read(source) as result:
+            assert result.read() == b"payload"
+        result.close()
+        assert all(layer.closed for layer in layers)
+        assert closes == [id(layer) for layer in reversed(layers)]
+        assert not source.closed
+    finally:
+        for layer in layers:
+            io.BytesIO.close(layer)
+        source.close()
+
+
+def test_failed_pipeline_does_not_close_identity_input() -> None:
+    class Identity:
+        def wrap(self, stream: BinaryIO) -> BinaryIO:
+            return stream
+
+        def unwrap(self, stream: BinaryIO) -> BinaryIO:
+            return stream
+
+    class Failing(Identity):
+        def unwrap(self, stream: BinaryIO) -> BinaryIO:
+            raise RuntimeError("construction")
+
+    with io.BytesIO(b"payload") as source:
+        with pytest.raises(RuntimeError, match="construction"):
+            Pipeline(Identity(), Failing()).apply_read(source)
+        assert not source.closed
+
+
+def test_owned_reader_readinto_handles_short_read_eof_and_closed_stream() -> None:
+    with io.BytesIO(b"[X]data") as source:
+        raw = t.cast(io.RawIOBase, Pipeline(_RecordingTransform(b"[X]")).apply_read(source))
+        with io.BufferedReader(raw) as result:
+            buffer = bytearray(b"------")
+            assert result.readinto(buffer) == 4
+            assert buffer == b"data--"
+            assert result.readinto(buffer) == 0
+            assert buffer == b"data--"
+        with pytest.raises(ValueError, match="closed"):
+            raw.readinto(buffer)
