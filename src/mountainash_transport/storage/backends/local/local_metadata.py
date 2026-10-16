@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import os
+import stat as stat_module
 from datetime import datetime, timezone
 
-from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
 from ._helpers import _mapped
 
@@ -21,6 +22,7 @@ class LocalMetadataMixin:
             name=os.path.basename(path),
             size=stat.st_size,
             last_modified=last_modified,
+            entry_type=EntryType.DIRECTORY if stat_module.S_ISDIR(stat.st_mode) else EntryType.FILE,
             storage_class="local",
             source="local",
         )

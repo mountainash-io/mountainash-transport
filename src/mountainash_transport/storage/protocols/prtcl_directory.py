@@ -9,7 +9,7 @@ from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 class StorageDirectoryProtocol(Protocol):
     """Manage directories, translating backend I/O into StorageError subclasses.
 
-    Existing missing-path and recursion semantics remain backend-specific.
+    Removal's missing-path and recursion semantics remain backend-specific.
     """
 
     def list_dir(self, path: str) -> list[StorageEntry]:
@@ -17,7 +17,12 @@ class StorageDirectoryProtocol(Protocol):
         ...
 
     def mkdir(self, path: str, *, parents: bool = True) -> None:
-        """Create a directory at the given path, optionally creating parent directories."""
+        """Create a directory.
+
+        With parents=True, create missing ancestors and accept an existing
+        directory. With parents=False, create only the final directory and
+        fail if its parent is missing or the destination already exists.
+        """
         ...
 
     def rmdir(self, path: str) -> None:

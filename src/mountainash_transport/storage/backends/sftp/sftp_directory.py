@@ -1,12 +1,14 @@
 """SFTPDirectoryMixin — directory operations for SFTP storage backend."""
 from __future__ import annotations
 
+import errno
+import posixpath
 import stat as stat_module
-from datetime import datetime
+from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
-from ._helpers import _mapped
+from ._helpers import _is_not_found, _mapped
 
 
 class SFTPDirectoryMixin:
@@ -24,7 +26,7 @@ class SFTPDirectoryMixin:
             last_modified = None
             if mtime is not None:
                 try:
-                    last_modified = datetime.fromtimestamp(mtime)
+                    last_modified = datetime.fromtimestamp(mtime, tz=timezone.utc)
                 except (ValueError, OSError):
                     pass
             child_path = f"{path.rstrip('/')}/{attr.filename}"
@@ -43,7 +45,47 @@ class SFTPDirectoryMixin:
     def mkdir(self, path: str, *, parents: bool = True) -> None:
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
-            sftp.mkdir(path)
+            if not parents or not path:
+                sftp.mkdir(path)
+                return
+
+            # Keep remote spelling, especially symlink/.. traversal. Do not chdir.
+            paths = [path]
+            parent = posixpath.dirname(path.rstrip("/"))
+            while parent and parent != paths[-1]:
+                paths.append(parent)
+                parent = posixpath.dirname(parent)
+            for directory in reversed(paths):
+                try:
+                    attrs = sftp.stat(directory)
+                except OSError as error:
+                    if not _is_not_found(error):
+                        raise
+                else:
+                    if attrs.st_mode is None:
+                        # Missing ancestor modes must not prevent native creation.
+                        if directory != path:
+                            continue
+                    elif stat_module.S_ISDIR(attrs.st_mode):
+                        continue
+                    else:
+                        raise NotADirectoryError(errno.ENOTDIR, "Not a directory", directory)
+
+                try:
+                    sftp.mkdir(directory)
+                except OSError as error:
+                    # SFTP v3 may return generic FAILURE rather than EEXIST.
+                    # Typed transport/auth failures are never race evidence.
+                    if type(error) is not OSError and not isinstance(error, FileExistsError):
+                        raise
+                    if error.errno not in (None, errno.EEXIST):
+                        raise
+                    try:
+                        attrs = sftp.stat(directory)
+                    except OSError:
+                        raise error
+                    if attrs.st_mode is None or not stat_module.S_ISDIR(attrs.st_mode):
+                        raise
 
     def rmdir(self, path: str) -> None:
         sftp = self._get_client()  # type: ignore[attr-defined]
