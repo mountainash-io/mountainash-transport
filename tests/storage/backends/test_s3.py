@@ -497,7 +497,9 @@ def test_s3_structured_failure_categories(code: str, status: int, category: str)
     import mountainash_transport as transport
     client = MagicMock()
     original = ClientError({"Error": {"Code": code},
-                            "ResponseMetadata": {"HTTPStatusCode": status}}, "HeadObject")
+                            "ResponseMetadata": {"HTTPStatusCode": status, "RequestId": "request",
+                                                 "HostId": "host", "HTTPHeaders": {}, "RetryAttempts": 0}},
+                           "HeadObject")
     client.head_object.side_effect = original
     with pytest.raises(getattr(transport, category)) as caught:
         _make_backend(client).get_metadata("s3://bucket/key")
@@ -611,10 +613,11 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
         def upload(source: t.BinaryIO, bucket: str, key: str) -> None:
             native_upload(source, bucket, key,
                           Config=TransferConfig(multipart_threshold=1, max_concurrency=1))
-        client.upload_fileobj = upload
         backend = _make_backend()
         backend._client = client
-        with Stubber(client) as stub, io.BytesIO(b"x" * (6 * 1024 * 1024)) as source:
+        with Stubber(client) as stub, patch.object(client, "upload_fileobj", upload), io.BytesIO(
+            b"x" * (6 * 1024 * 1024)
+        ) as source:
             stub.add_response("create_multipart_upload", {"UploadId": "upload"})
             stub.add_client_error("upload_part", service_error_code="AccessDenied", http_status_code=403)
             stub.add_response("abort_multipart_upload", {})

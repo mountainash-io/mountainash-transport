@@ -270,7 +270,7 @@ def test_http_denial_is_distinct_from_credentials(operation: str) -> None:
     from mountainash_transport.storage.backends.http import HTTPStorageBackend
     with httpx.Client(transport=_transport(lambda request: httpx.Response(403))) as client:
         backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
-        extra = (b"x",) if operation == "write_from_bytes" else ()
+        extra: tuple[bytes | io.BytesIO, ...] = (b"x",) if operation == "write_from_bytes" else ()
         with io.BytesIO(b"x") as source:
             if operation == "write_from_stream":
                 extra = (source,)
@@ -290,7 +290,8 @@ def test_http_native_connection_failure(original: Exception) -> None:
         backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client, policy=policy))
         with pytest.raises(StorageConnectionError) as caught:
             backend.get_size("https://example.invalid/file")
-        assert caught.value.__cause__.__cause__ is original
+        cause = caught.value.__cause__
+        assert cause is not None and cause.__cause__ is original
 
 
 @pytest.mark.parametrize("fault", ["read", "close"])
@@ -318,7 +319,8 @@ def test_http_deferred_network_failure(fault: str) -> None:
                     stream.read()
             finally:
                 stream.close()
-        assert caught.value.__cause__ is original or caught.value.__cause__.__cause__ is original
+        cause = caught.value.__cause__
+        assert cause is not None and (cause is original or cause.__cause__ is original)
         assert closed == [True] and stream.closed
 
 

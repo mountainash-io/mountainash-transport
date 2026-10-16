@@ -380,7 +380,7 @@ def test_native_reader_capabilities_and_argument_errors(
         assert list(stream) == [b"second\n"]
         stream.seek(0)
         buffer = bytearray(3)
-        assert stream.readinto(buffer) == 3 and buffer == b"abc"
+        assert t.cast(io.BufferedIOBase, stream).readinto(buffer) == 3 and buffer == b"abc"
         assert stream.tell() == 3
         with pytest.raises(OSError) as caught:
             stream.seek(-1)
@@ -389,3 +389,31 @@ def test_native_reader_capabilities_and_argument_errors(
             stream.seek(0, 99)
     with pytest.raises(ValueError):
         stream.read()
+
+
+@pytest.mark.parametrize("operation", ["write_from_bytes", "write_from_stream"])
+@pytest.mark.parametrize("fault", ["write", "close"])
+def test_local_destination_failure_after_open(
+    backend: LocalStorageBackend, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    operation: str, fault: str,
+) -> None:
+    from mountainash_transport import StorageError
+    original = OSError(errno.EIO, "destination failed")
+    class Destination(io.BytesIO):
+        def write(self, data: t.Any) -> int:
+            if fault == "write":
+                raise original
+            return super().write(data)
+        def close(self) -> None:
+            super().close()
+            if fault == "close":
+                raise original
+    destination = Destination()
+    with io.BytesIO(b"payload") as source, monkeypatch.context() as patch:
+        patch.setattr("builtins.open", lambda *args, **kwargs: destination)
+        with pytest.raises(StorageError) as caught:
+            getattr(backend, operation)(
+                str(tmp_path / "destination"), b"payload" if operation == "write_from_bytes" else source,
+            )
+    assert caught.value.__cause__ is original
+    assert destination.closed
