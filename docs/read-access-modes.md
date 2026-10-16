@@ -83,7 +83,7 @@ or consumer exceptions.
 
 All remaining closes are attempted if a layer's `close()` raises. The returned
 handle is still marked closed, and closing it again is a no-op. Cleanup errors
-propagate (the last one wins, with earlier errors chained); construction failures
+propagate (the last one wins); construction failures
 retain their original exception even if cleanup fails.
 
 For direct `Pipeline.apply_read(source)` callers, the returned stream owns the
