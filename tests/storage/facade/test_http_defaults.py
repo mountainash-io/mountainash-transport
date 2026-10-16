@@ -44,10 +44,7 @@ def close_facade() -> t.Iterator[t.Callable[[StorageFacade], None]]:
     facades: list[StorageFacade] = []
     yield facades.append
     for facade in facades:
-        # Public facade lifecycle is tracked separately in backlog #2.
-        connection = facade._backend._connection
-        if connection is not None:
-            connection.disconnect()
+        facade.close()
 
 
 @pytest.mark.parametrize("direct", [False, True])
@@ -90,3 +87,80 @@ def test_http_missing_resource(
     close_facade(facade)
     with pytest.raises(PathNotFoundError):
         facade.read(url + "/missing.csv")
+
+
+def test_failed_backend_construction_closes_native_client(monkeypatch) -> None:
+    import httpx
+    from mountainash_transport.storage.facade import facade as module
+
+    clients: list[httpx.Client] = []
+    real_client = httpx.Client
+
+    def capture(**kwargs):
+        client = real_client(**kwargs)
+        clients.append(client)
+        return client
+
+    primary = RuntimeError("backend construction failed")
+
+    def fail(*args, **kwargs):
+        raise primary
+
+    monkeypatch.setattr(httpx, "Client", capture)
+    monkeypatch.setattr(module, "get_storage_backend", fail)
+    try:
+        with pytest.raises(RuntimeError) as caught:
+            StorageFacade.from_path("http://localhost/file")
+        assert caught.value is primary
+        assert clients[0].is_closed
+    finally:
+        for client in clients:
+            client.close()
+
+
+@pytest.mark.parametrize("body_fails", [False, True])
+def test_facade_cleanup_failure_preserves_lifetime(monkeypatch, body_fails) -> None:
+    import httpx
+
+    facade = StorageFacade.from_path("http://localhost/file")
+    client = facade._backend._connection.client
+    native_close = httpx.Client.close
+    attempts = []
+
+    def failing_close(self):
+        attempts.append(self)
+        native_close(self)
+        raise RuntimeError("cleanup failed")
+
+    monkeypatch.setattr(httpx.Client, "close", failing_close)
+    primary = ValueError("body failed")
+    try:
+        with pytest.raises(ValueError if body_fails else RuntimeError) as caught:
+            with facade:
+                if body_fails:
+                    raise primary
+        assert client.is_closed
+        if body_fails:
+            assert caught.value is primary
+            assert primary.__notes__
+        facade.close()
+        assert attempts == [client]
+    finally:
+        native_close(client)
+
+
+def test_closed_copy_destination_does_not_fetch_http(http_server, tmp_path) -> None:
+    from mountainash_transport import copy_between
+    from mountainash_transport._core.exceptions import StorageConnectionError
+
+    url, requests = http_server
+    destination = StorageFacade.for_local()
+    destination.close()
+    with StorageFacade.from_path(url) as source:
+        client = source._backend._connection.client
+        with pytest.raises(StorageConnectionError):
+            copy_between(url + "/data.csv", str(tmp_path / "copy"), source, destination)
+        assert requests == []
+        assert source.read(url + "/data.csv") == b"name,value\nalpha,1\n"
+    assert client.is_closed
+    assert not (tmp_path / "copy").exists()

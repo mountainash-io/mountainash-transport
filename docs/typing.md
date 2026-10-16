@@ -12,6 +12,8 @@ covers all of `src/mountainash_transport` and `tests`; no test exclusions apply.
   `read_stream()` a `BinaryIO`, `metadata()` a `StorageEntry`, `list_dir()` a
   `list[StorageEntry]`, `list_objects()` an `EnumerateResult`. Wrong argument
   types (a non-`str` path, `str` data, a non-transform pipeline) are rejected.
+- `StorageFacade` is a context manager whose `__enter__()` returns `Self`;
+  `close()` returns `None` and ends the facade's I/O lifetime.
 - `Pipeline`, `Gzip`, `GPG`, `infer_pipeline()` and `copy_between()` are typed;
   `infer_pipeline()` returns `tuple[Pipeline | None, str]`.
 - `resolve_storage()` returns `tuple[StorageProfileProtocol, AuthProfile]`,

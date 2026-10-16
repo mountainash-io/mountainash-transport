@@ -267,3 +267,51 @@ class TestCopyBetween:
         # Data must have arrived correctly
         result_facade = StorageFacade.for_local()
         assert result_facade.read(dst_path) == data
+
+
+def test_local_context_closes_terminally(tmp_path) -> None:
+    from mountainash_transport._core.exceptions import StorageConnectionError
+
+    path = str(tmp_path / "payload")
+    with StorageFacade.for_local() as facade:
+        facade.write(path, b"kept")
+        assert facade.read(path) == b"kept"
+    facade.close()
+    for operation in (lambda: facade.read(path), lambda: facade.delete(path), facade.__enter__):
+        with pytest.raises(StorageConnectionError):
+            operation()
+    assert (tmp_path / "payload").read_bytes() == b"kept"
+    assert facade.supports(StorageReadProtocol)
+
+
+@pytest.mark.parametrize("closed_endpoint", ["source", "destination"])
+@pytest.mark.parametrize("transformed", [False, True])
+def test_copy_rejects_closed_endpoint_without_writing(tmp_path, closed_endpoint, transformed) -> None:
+    from mountainash_transport import Gzip
+    from mountainash_transport._core.exceptions import StorageConnectionError
+
+    src, dst = tmp_path / "source", tmp_path / "destination"
+    src.write_bytes(b"new")
+    dst.write_bytes(b"keep")
+    source, destination = StorageFacade.for_local(), StorageFacade.for_local()
+    (source if closed_endpoint == "source" else destination).close()
+    try:
+        with pytest.raises(StorageConnectionError):
+            copy_between(str(src), str(dst), source, destination,
+                         destination_pipeline=Gzip() if transformed else None)
+        assert dst.read_bytes() == b"keep"
+        assert src.read_bytes() == b"new"
+    finally:
+        source.close()
+        destination.close()
+
+
+def test_buffered_stream_outlives_facade(tmp_path) -> None:
+    path = tmp_path / "payload"
+    path.write_bytes(b"independent")
+    with StorageFacade.for_local() as facade:
+        stream = facade.read_stream(str(path), access="buffered")
+    with stream:
+        assert stream.read() == b"independent"
+        stream.seek(0)
+        assert stream.read(3) == b"ind"

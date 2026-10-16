@@ -23,9 +23,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as root:
         path = str(Path(root) / "sales.csv.gz")
-        storage = StorageFacade.from_path(path)
-        storage.write(path, SALES, pipeline=Gzip())
-        assert storage.read(path, infer=True) == SALES
+        with StorageFacade.from_path(path) as storage:
+            storage.write(path, SALES, pipeline=Gzip())
+            assert storage.read(path, infer=True) == SALES
 
     print(f"sales.csv.gz -> {stripped.rsplit('/', 1)[-1]}; .gpg requires key material")
 

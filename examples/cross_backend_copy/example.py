@@ -12,18 +12,20 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as landing, tempfile.TemporaryDirectory() as archive:
         source_path = str(Path(landing) / "sales.csv")
         archived_path = str(Path(archive) / "sales.csv.gz")
-        source = StorageFacade.from_path(source_path)
-        destination = StorageFacade.from_path(archived_path)
-        source.write(source_path, SALES)
+        with (
+            StorageFacade.from_path(source_path) as source,
+            StorageFacade.from_path(archived_path) as destination,
+        ):
+            source.write(source_path, SALES)
 
-        copy_between(
-            source_path, archived_path, source, destination,
-            destination_pipeline=Gzip(),
-        )
+            copy_between(
+                source_path, archived_path, source, destination,
+                destination_pipeline=Gzip(),
+            )
 
-        assert destination.read(archived_path) != SALES
-        assert destination.read(archived_path, infer=True) == SALES
-        print(f"copied {len(SALES)} bytes; archived {destination.get_size(archived_path)} gzip bytes")
+            assert destination.read(archived_path) != SALES
+            assert destination.read(archived_path, infer=True) == SALES
+            print(f"copied {len(SALES)} bytes; archived {destination.get_size(archived_path)} gzip bytes")
 
 
 if __name__ == "__main__":

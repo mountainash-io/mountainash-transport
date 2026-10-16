@@ -27,6 +27,8 @@ def copy_between(
     Native same-backend copy is used only when both pipelines are None.
     Any pipeline argument forces a stream-through copy.
     """
+    source_facade._ensure_open()
+    destination_facade._ensure_open()
     if (
         source_pipeline is None
         and destination_pipeline is None

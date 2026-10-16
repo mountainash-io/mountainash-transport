@@ -9,9 +9,8 @@ SALES = b"region,total\nnorth,120\nsouth,95\n"
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory() as root:
+    with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage:
         reports = str(Path(root) / "reports" / "2026")
-        storage = StorageFacade.for_local()
 
         storage.mkdir(reports)  # parents=True by default
         storage.write(f"{reports}/sales.csv", SALES)

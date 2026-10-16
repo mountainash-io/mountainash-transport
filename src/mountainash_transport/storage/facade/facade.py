@@ -7,13 +7,15 @@ from __future__ import annotations
 import contextlib
 import io
 import typing as t
+from types import TracebackType
 from typing import BinaryIO
 
 from mountainash_settings.secrets import ClearableSecretStore
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
-from mountainash_transport._core.exceptions import UnsupportedOperationError
+from mountainash_transport._core.exceptions import StorageConnectionError, UnsupportedOperationError
+from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
@@ -70,32 +72,75 @@ class StorageFacade:
 
             storage_profile = HTTPStorageProfile()
 
-        connection = None
+        self._closed = False
+        self._connection: ConnectionProtocol[t.Any] | None = None
         strategy = None
-        if storage_profile is not None:
-            connection = create_connection(storage_profile, auth_profile)   # gate runs FIRST
-            strategy = create_auth_strategy(
-                auth_profile, oauth_provider=oauth_provider, token_store=token_store,
-            )
-            # fail-closed: managed OAuth2 (no static token) must have a strategy.
-            # Checked BEFORE connect() so a misconfiguration never opens (and then
-            # leaks) an unclosed client on the raise path.
-            if (
-                isinstance(auth_profile, OAuth2AuthProfile)
-                and strategy is None
-                and not _has_static_token(auth_profile)
-            ):
-                raise ValueError(
-                    "OAuth2 profile has no static ACCESS_TOKEN and no oauth_provider; "
-                    "supply oauth_provider + token_store for the managed flow, "
-                    "or set a static ACCESS_TOKEN."
+        try:
+            if storage_profile is not None:
+                self._connection = create_connection(storage_profile, auth_profile)
+                strategy = create_auth_strategy(
+                    auth_profile, oauth_provider=oauth_provider, token_store=token_store,
                 )
-            connection.connect()
+                # Validate managed OAuth before opening the connection.
+                if (
+                    isinstance(auth_profile, OAuth2AuthProfile)
+                    and strategy is None
+                    and not _has_static_token(auth_profile)
+                ):
+                    raise ValueError(
+                        "OAuth2 profile has no static ACCESS_TOKEN and no oauth_provider; "
+                        "supply oauth_provider + token_store for the managed flow, "
+                        "or set a static ACCESS_TOKEN."
+                    )
+                self._connection.connect()
 
-        backend_kwargs: dict[str, t.Any] = {"connection": connection}
-        if strategy is not None:
-            backend_kwargs["auth_strategy"] = strategy
-        self._backend = get_storage_backend(provider_type, storage_profile, **backend_kwargs)
+            backend_kwargs: dict[str, t.Any] = {"connection": self._connection}
+            if strategy is not None:
+                backend_kwargs["auth_strategy"] = strategy
+            self._backend = get_storage_backend(provider_type, storage_profile, **backend_kwargs)
+        except BaseException as primary:
+            try:
+                self.close()
+            except BaseException as cleanup:
+                primary.add_note(f"Facade cleanup also failed: {cleanup!r}")
+                for note in getattr(cleanup, "__notes__", ()):
+                    primary.add_note(note)
+            raise
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise StorageConnectionError("StorageFacade is closed")
+
+    def close(self) -> None:
+        """Disconnect the owned connection; further I/O is forbidden.
+
+        All returned streams remain caller-owned. Close remote sequential and
+        random streams before their facade. Repeated close is a no-op, even
+        when the first cleanup attempt failed.
+        """
+        if self._closed:
+            return
+        self._closed = True
+        connection, self._connection = self._connection, None
+        if connection is not None:
+            connection.disconnect()
+
+    def __enter__(self) -> t.Self:
+        self._ensure_open()
+        return self
+
+    def __exit__(
+        self, exc_type: type[BaseException] | None,
+        exc_value: BaseException | None, traceback: TracebackType | None,
+    ) -> None:
+        try:
+            self.close()
+        except BaseException as cleanup:
+            if exc_value is None:
+                raise
+            exc_value.add_note(f"Facade cleanup also failed: {cleanup!r}")
+            for note in getattr(cleanup, "__notes__", ()):
+                exc_value.add_note(note)
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -149,6 +194,7 @@ class StorageFacade:
 
     def _require(self, protocol: type, operation: str) -> None:
         """Raise UnsupportedOperationError if the backend lacks *protocol*."""
+        self._ensure_open()
         if not isinstance(self._backend, protocol):
             raise UnsupportedOperationError(
                 f"{type(self._backend).__name__} does not support '{operation}'"
