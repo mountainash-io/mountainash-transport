@@ -627,3 +627,17 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
             assert type(caught.value) is PermissionDeniedError
             assert isinstance(caught.value.__cause__, ClientError)
             stub.assert_no_pending_responses()
+
+
+def test_s3_endpoint_rejection_is_an_argument_error() -> None:
+    import boto3
+    from botocore.exceptions import EndpointResolutionError
+    with closing(boto3.client("s3", region_name="us-east-1", aws_access_key_id="dummy",
+                              aws_secret_access_key="dummy")) as client:
+        def must_not_send(**kwargs: t.Any) -> t.NoReturn:
+            raise AssertionError("invalid endpoint must fail before network I/O")
+        client.meta.events.register("before-send.s3.HeadObject", must_not_send)
+        backend = _make_backend()
+        backend._client = client
+        with pytest.raises(EndpointResolutionError):
+            backend.get_size("s3://bucket--x-s3/key")

@@ -417,3 +417,17 @@ def test_local_destination_failure_after_open(
             )
     assert caught.value.__cause__ is original
     assert destination.closed
+
+
+@pytest.mark.parametrize("hardlink", [False, True])
+def test_same_file_copy_retains_native_refusal(
+    backend: LocalStorageBackend, tmp_path: Path, hardlink: bool,
+) -> None:
+    source = tmp_path / "source"
+    source.write_bytes(b"unchanged")
+    destination = tmp_path / "alias" if hardlink else source
+    if hardlink:
+        destination.hardlink_to(source)
+    with pytest.raises(shutil.SameFileError):
+        backend.copy(str(source), str(destination))
+    assert source.read_bytes() == b"unchanged"

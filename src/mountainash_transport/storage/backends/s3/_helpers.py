@@ -16,7 +16,14 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
         return None
     from botocore import exceptions as errors
 
-    if isinstance(exc, errors.ParamValidationError):
+    if isinstance(exc, (
+        errors.ParamValidationError, errors.ValidationError, errors.BaseEndpointResolverError,
+        errors.EndpointResolutionError, errors.InvalidHostLabelError, errors.InvalidDNSNameError,
+        errors.UnsupportedS3ConfigurationError, errors.UnsupportedS3AccesspointConfigurationError,
+        errors.UnsupportedS3ArnError, errors.UnsupportedOutpostResourceError,
+        errors.UnknownSignatureVersionError, errors.UnsupportedSignatureVersionError,
+        errors.UnseekableStreamError,
+    )):
         return None
     if isinstance(exc, errors.ClientError):
         response = exc.response

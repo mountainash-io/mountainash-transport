@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import shutil
 import typing as t
 
 from mountainash_transport._core.exceptions import (
@@ -11,7 +12,7 @@ from mountainash_transport._core.exceptions import (
 
 
 def _map_local_error(exc: Exception, path: str) -> StorageError | None:
-    if isinstance(exc, (StorageError, io.UnsupportedOperation)):
+    if isinstance(exc, (StorageError, io.UnsupportedOperation, shutil.SameFileError)):
         return None
     if isinstance(exc, FileNotFoundError):
         return PathNotFoundError(path)
