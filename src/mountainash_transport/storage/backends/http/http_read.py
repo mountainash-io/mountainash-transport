@@ -6,43 +6,17 @@ import io
 import re
 import typing as t
 
-import httpx
-
 from mountainash_transport._core.exceptions import (
-    AuthenticationError, ObjectChangedError, PathNotFoundError,
     RangeNotSupportedError, StorageError,
 )
-from mountainash_transport._core.http.errors import (
-    HttpAuthenticationError, HttpClientError, HttpForbiddenError,
-    HttpNotFoundError, HttpTransportError,
-)
+from mountainash_transport._core.http.errors import HttpClientError
 from mountainash_transport._core.http.response import HttpStreamResponse
 from mountainash_transport._core.ranged_io import RangedSource, strong_etag
 from mountainash_transport._core.sequential_io import IterBytesReader
 from mountainash_transport.storage.protocols import StorageReadProtocol
+from ._helpers import _map_error, _mapped
 
 
-def _map_error(exc: Exception, path: str) -> Exception | None:
-    if isinstance(exc, HttpNotFoundError):
-        return PathNotFoundError(path)
-    if isinstance(exc, (HttpAuthenticationError, HttpForbiddenError)):
-        return AuthenticationError(path)
-    if isinstance(exc, HttpClientError) and exc.status_code == 412:
-        return ObjectChangedError(path)
-    if isinstance(exc, (HttpTransportError, httpx.HTTPError)):
-        return StorageError(f"{path}: {exc}")
-    return None
-
-
-@contextlib.contextmanager
-def _mapped(path: str) -> t.Iterator[None]:
-    try:
-        yield
-    except Exception as exc:
-        mapped = _map_error(exc, path)
-        if mapped is not None:
-            raise mapped from exc
-        raise
 
 
 def _range_headers(response: HttpStreamResponse) -> tuple[int, int, int]:
