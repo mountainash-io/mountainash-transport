@@ -376,13 +376,13 @@ def test_worker_unregistered_during_stop_is_still_joined(rig, monkeypatch) -> No
 
 
 
-@pytest.mark.parametrize("cleanup_error", [False, True])
+@pytest.mark.parametrize("cleanup_error", ["none", "channel", "inner"])
 @pytest.mark.parametrize("worker", ["serving", "request"])
 def test_stalled_worker_reports_timeout_after_other_cleanup(rig, monkeypatch, worker, cleanup_error) -> None:
     rig.connection.connect()
-    if cleanup_error:
+    if cleanup_error != "none":
         assert rig.connection.client.get("/").content == b"payload"
-        rig.channel_close_error = True
+        setattr(rig, f"{cleanup_error}_close_error", True)
     entered, release = threading.Event(), threading.Event()
     rig.gates.append(release)
     if worker == "serving":
@@ -416,8 +416,8 @@ def test_stalled_worker_reports_timeout_after_other_cleanup(rig, monkeypatch, wo
     try:
         assert finished.wait(2.5), "disconnect blocked on the stalled worker"
         assert len(errors) == 1 and isinstance(errors[0], ConnectionTimeoutError)
-        if cleanup_error:
-            assert "channel cleanup failed" in str(errors[0].__notes__)
+        if cleanup_error != "none":
+            assert f"{cleanup_error} cleanup failed" in str(errors[0].__notes__)
         assert not rig.ssh.is_connected
         assert all(server.socket.fileno() == -1 for server in rig.servers)
         assert all(sock.fileno() == -1 for sock in rig.accepted)
@@ -639,4 +639,17 @@ def test_cleanup_cancellation_is_not_wrapped(rig, monkeypatch, boundary) -> None
     with pytest.raises(KeyboardInterrupt) as caught:
         rig.connection.disconnect()
     assert caught.value is cancellation
+    rig.assert_released()
+
+
+def test_context_retains_inner_and_ssh_cleanup_failures(rig) -> None:
+    primary = ValueError("body fault")
+    with pytest.raises(ValueError) as caught:
+        with rig.connection:
+            rig.connection.connect()
+            rig.inner_close_error = rig.ssh_close_error = True
+            raise primary
+    assert caught.value is primary
+    assert "inner cleanup failed" in str(primary.__notes__)
+    assert "SSH cleanup failed" in str(primary.__notes__)
     rig.assert_released()
