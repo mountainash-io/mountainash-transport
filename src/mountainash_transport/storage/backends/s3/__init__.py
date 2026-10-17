@@ -55,7 +55,7 @@ class S3StorageBackend(
 
         self.storage_profile = storage_profile
         self._connection = connection
-        self._client: t.Any = None
+        self._client: t.Any = connection.client if connection is not None and connection.is_connected else None
 
     def connect(self) -> None:
         """Delegate to injected S3Connection, or raise if none provided."""

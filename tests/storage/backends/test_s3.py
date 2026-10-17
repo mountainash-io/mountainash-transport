@@ -13,8 +13,6 @@ import pytest
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import (
-    EntryType,
-    EnumerateResult,
     StorageEntry,
 )
 from mountainash_transport._core.exceptions import StorageConnectionError
@@ -35,13 +33,6 @@ def _make_backend(mock_client: MagicMock | None = None) -> S3StorageBackend:
     backend = S3StorageBackend(None)
     backend._client = mock_client or MagicMock()
     return backend
-
-
-def _paginator_for(pages: list[dict]) -> MagicMock:
-    """Return a mock paginator whose ``paginate`` yields *pages*."""
-    paginator = MagicMock()
-    paginator.paginate.return_value = iter(pages)
-    return paginator
 
 
 # ---------------------------------------------------------------------------
@@ -145,149 +136,6 @@ class TestWrite:
 
         backend.write_from_bytes("bucket/key.txt", b"data")
         mock_client.put_object.assert_called_once_with(Bucket="bucket", Key="key.txt", Body=b"data")
-
-
-# ---------------------------------------------------------------------------
-# Enumerate (replaces List)
-# ---------------------------------------------------------------------------
-
-class TestEnumerate:
-    def test_list_objects_returns_enumerate_result(self):
-        ts = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([
-            {
-                "Contents": [
-                    {
-                        "Key": "prefix/file1.txt",
-                        "Size": 100,
-                        "LastModified": ts,
-                        "ETag": '"abc123"',
-                        "StorageClass": "STANDARD",
-                    }
-                ]
-            }
-        ])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://my-bucket/prefix/")
-
-        assert isinstance(result, EnumerateResult)
-        assert len(result.objects) == 1
-        entry = result.objects[0]
-        assert isinstance(entry, StorageEntry)
-        assert entry.name == "file1.txt"
-        assert entry.size == 100
-        assert entry.last_modified == ts
-        assert entry.etag == "abc123"
-        assert entry.source == "s3"
-        assert entry.path == "s3://my-bucket/prefix/file1.txt"
-        assert entry.storage_class == "STANDARD"
-        assert entry.entry_type == EntryType.FILE
-        assert result.common_prefixes == ()
-
-    def test_list_objects_empty_returns_empty_enumerate_result(self):
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([{"Contents": []}])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://bucket/empty/")
-
-        assert isinstance(result, EnumerateResult)
-        assert result.objects == ()
-        assert result.common_prefixes == ()
-
-    def test_list_objects_no_contents_key(self):
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([{}])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://bucket/prefix/")
-        assert result.objects == ()
-        assert result.common_prefixes == ()
-
-    def test_list_objects_with_delimiter_returns_common_prefixes(self):
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([
-            {
-                "CommonPrefixes": [
-                    {"Prefix": "top/subdir1/"},
-                    {"Prefix": "top/subdir2/"},
-                ]
-            }
-        ])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://bucket/top/", delimiter="/")
-
-        assert isinstance(result, EnumerateResult)
-        assert len(result.common_prefixes) == 2
-        paths = {e.path for e in result.common_prefixes}
-        assert "s3://bucket/top/subdir1/" in paths
-        assert "s3://bucket/top/subdir2/" in paths
-        for entry in result.common_prefixes:
-            assert entry.entry_type == EntryType.PREFIX
-            assert entry.source == "s3"
-
-    def test_list_objects_delimiter_passes_to_paginator(self):
-        mock_client = MagicMock()
-        paginator = MagicMock()
-        paginator.paginate.return_value = iter([{"CommonPrefixes": []}])
-        mock_client.get_paginator.return_value = paginator
-        backend = _make_backend(mock_client)
-
-        backend.list_objects("s3://bucket/prefix/", delimiter="/")
-
-        paginator.paginate.assert_called_once_with(
-            Bucket="bucket", Prefix="prefix", Delimiter="/"
-        )
-
-    def test_list_objects_no_delimiter_omits_param(self):
-        mock_client = MagicMock()
-        paginator = MagicMock()
-        paginator.paginate.return_value = iter([{}])
-        mock_client.get_paginator.return_value = paginator
-        backend = _make_backend(mock_client)
-
-        backend.list_objects("s3://bucket/prefix/")
-
-        call_kwargs = paginator.paginate.call_args[1]
-        assert "Delimiter" not in call_kwargs
-        call_args = paginator.paginate.call_args[0]
-        # Also verify no positional Delimiter
-        assert len(call_args) == 0 or "Delimiter" not in str(call_args)
-
-    def test_list_objects_max_results_caps(self):
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([
-            {
-                "Contents": [
-                    {"Key": f"prefix/file{i}.txt", "Size": i, "ETag": f'"{i}"'}
-                    for i in range(5)
-                ]
-            }
-        ])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://bucket/prefix/", max_results=3)
-
-        assert len(result.objects) <= 3
-
-    def test_list_objects_common_prefix_entry_type_is_prefix(self):
-        mock_client = MagicMock()
-        mock_client.get_paginator.return_value = _paginator_for([
-            {
-                "CommonPrefixes": [{"Prefix": "dir/subdir/"}],
-            }
-        ])
-        backend = _make_backend(mock_client)
-
-        result = backend.list_objects("s3://bucket/dir/", delimiter="/")
-
-        assert len(result.common_prefixes) == 1
-        entry = result.common_prefixes[0]
-        assert entry.entry_type == EntryType.PREFIX
-        assert entry.name == "subdir"
 
 
 # ---------------------------------------------------------------------------

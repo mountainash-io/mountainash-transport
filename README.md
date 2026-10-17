@@ -297,6 +297,27 @@ with TemporaryDirectory() as directory:
         assert result.common_prefixes == ()
 ```
 
+## S3 object-prefix enumeration
+
+S3 has objects and literal key prefixes, not directories. A prefix `reports/`
+excludes `reports-old` but still selects deeper keys such as `reports/sub/b.csv`.
+`reports/a.csv` can select the exact key, `reports/a.csv.bak` and
+`reports/a.csv/chunk`; `reports/a.csv/` selects only keys below that slash.
+Delimiter `"/"` groups matching keys into common prefixes; it does not turn
+selection into exact-file lookup. Slash-ending marker objects remain objects.
+
+Enumeration preserves trailing/repeated slashes and dot-like key components in
+both URL and bare bucket/key forms. This corrects earlier URL normalization that
+could broaden selection. Other operations' path parsing is unchanged.
+Public S3 facade construction now binds the already-connected SDK client without
+opening another connection.
+
+S3 limits count objects and common prefixes together, but do not promise early
+pagination termination or the filesystem backends' no-I/O zero limit. Existing
+service restrictions remain: S3 Express supports slash-terminated prefixes and
+the `"/"` delimiter. A missing prefix returns an empty result; missing/denied
+buckets raise typed errors.
+
 ## Connection lifetime
 
 A facade owns the connection it creates. Use `with StorageFacade.from_path(...)`
