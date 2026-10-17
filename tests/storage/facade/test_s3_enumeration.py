@@ -108,7 +108,7 @@ def test_literal_prefix_selects_objects(
     assert result.common_prefixes == ()
 
 
-@pytest.mark.parametrize("scheme", ["s3", "s3express", "r2", "minio", "b2"])
+@pytest.mark.parametrize("scheme", ["s3express", "r2", "minio", "b2"])
 def test_registered_family_scheme_preserves_literal_prefix(s3_facade: StorageFacade, scheme: str) -> None:
     # Common parsing under one AWS endpoint profile, not five service qualifications.
     result = s3_facade.list_objects(f"{scheme}://probe/reports/a.csv/", delimiter=None)

@@ -395,7 +395,11 @@ class StorageFacade:
         delimiter: str | None = "/",
         max_results: int | None = None,
     ) -> EnumerateResult:
-        """Bucket-store listing. Requires StorageEnumerateProtocol."""
+        """Enumerate an exact Local/SFTP path or literal S3 key prefix.
+
+        The default "/" delimiter groups immediate children; None recurses.
+        Requires StorageEnumerateProtocol.
+        """
         self._require(StorageEnumerateProtocol, "list_objects")
         return self._backend.list_objects(prefix, delimiter=delimiter, max_results=max_results)
 

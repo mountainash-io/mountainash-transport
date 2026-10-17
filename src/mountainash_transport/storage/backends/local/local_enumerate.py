@@ -51,7 +51,10 @@ class LocalEnumerateMixin:
                 raise
             # Anchor relative paths without collapsing native symlink/.. traversal.
             drive, tail = os.path.splitdrive(prefix)
-            root = os.path.join(os.path.abspath(drive or os.curdir), tail)
+            if os.path.isabs(prefix) and (drive or os.name != "nt"):
+                root = prefix
+            else:
+                root = os.path.join(os.path.abspath(drive or os.curdir), tail)
             if stat.S_ISREG(attrs.st_mode):
                 return EnumerateResult((_entry(root, attrs, EntryType.FILE),), ())
             pending = [root] if stat.S_ISDIR(attrs.st_mode) else []

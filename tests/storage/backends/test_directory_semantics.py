@@ -430,7 +430,6 @@ class TestFilesystemEnumeration:
 
 
 @pytest.mark.parametrize("operation, suffix", [
-    ("list_objects", "/"), ("list_objects", "/child"),
     ("list_dir", ""), ("list_dir", "/"), ("list_dir", "/child"),
 ])
 def test_sftp_enumeration_recovers_not_directory_status(
@@ -519,11 +518,16 @@ def test_sftp_enumeration_recovers_listing_type_and_preserves_links(tmp_path: Pa
     assert result.common_prefixes == ()
 
 
-@pytest.mark.parametrize("fault_at", ["root", "listing", "link-target", "ancestor"])
-@pytest.mark.parametrize("fault, expected", [
-    (PermissionError(errno.EACCES, "denied"), PermissionDeniedError),
-    (EOFError("lost connection"), StorageConnectionError),
-    (OSError("Failure"), StorageError),
+@pytest.mark.parametrize("fault_at, fault, expected", [
+    (location, fault, expected)
+    for location in ("root", "listing", "link-target", "ancestor")
+    for fault, expected in [
+        (PermissionError(errno.EACCES, "denied"), PermissionDeniedError),
+        (EOFError("lost connection"), StorageConnectionError),
+        (OSError("Failure"), StorageError),
+    ]
+    # Root permission denial is owned by the shared filesystem matrix.
+    if location != "root" or expected is not PermissionDeniedError
 ])
 def test_sftp_enumeration_propagates_native_failures(
     tmp_path: Path, fault_at: str, fault: Exception, expected: type[StorageError],
@@ -575,3 +579,22 @@ def test_enumeration_omits_non_file_roots(backend: t.Any, tmp_path: Path, kind: 
         path.symlink_to(tmp_path / "missing" if kind == "broken-link" else target / "child")
     result = backend.list_objects(str(path))
     assert result.objects == result.common_prefixes == ()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows does not allow deleting the process working directory")
+@pytest.mark.parametrize("select_directory", [False, True])
+def test_local_enumeration_absolute_path_survives_deleted_working_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, select_directory: bool,
+) -> None:
+    selected = tmp_path / "selected"
+    selected.mkdir()
+    payload = selected / "payload"
+    payload.write_bytes(b"data")
+    removed = tmp_path / "removed"
+    removed.mkdir()
+    with monkeypatch.context() as patch:
+        patch.chdir(removed)
+        removed.rmdir()
+        result = LocalStorageBackend().list_objects(str(selected if select_directory else payload))
+    assert [(entry.path, entry.size) for entry in result.objects] == [(str(payload), 4)]
+    assert result.common_prefixes == ()

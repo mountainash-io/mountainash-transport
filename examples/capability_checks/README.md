@@ -11,7 +11,7 @@ python examples/capability_checks/example.py
 Expected output:
 
 ```text
-local: read, write, metadata, directory
+local: read, write, metadata, directory, enumerate
 https: read, write, metadata; list_dir refused
 ```
 
