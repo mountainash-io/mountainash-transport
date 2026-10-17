@@ -242,16 +242,18 @@ The **`S3WriteMixin`** uploads objects using two different boto3 APIs depending 
 
 ```python
 class S3WriteMixin:
-    def write_from_bytes(self, path: str, data: bytes) -> None:
+    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
         bucket, key = parse_s3_path(path)
         self._client.put_object(Bucket=bucket, Key=key, Body=data)
 
-    def write_from_stream(self, path: str, stream: BinaryIO) -> None:
+    def write_from_stream(self, path: str, stream: BinaryIO, *, create_parents: bool = True) -> None:
         bucket, key = parse_s3_path(path)
         self._client.upload_fileobj(stream, bucket, key)
 ```
 
 The `write_from_bytes` method uses `put_object` -- a single HTTP PUT request suitable for objects up to 5 GB. The `write_from_stream` method uses `upload_fileobj`, which automatically uses multipart upload for large objects (splitting them into parts and uploading in parallel) while using a single PUT for small ones. This means callers do not need to manage multipart upload logic themselves.
+
+Both methods accept `create_parents` as a no-op for every S3 flavor: object keys do not have directory parents.
 
 <!-- concept:67 -->
 ## S3ListMixin

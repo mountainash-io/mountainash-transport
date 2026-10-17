@@ -89,6 +89,30 @@ Output:
 `from_path()` picks the backend from the scheme, so the same calls work with
 `s3://reports/2026/sales.csv.gz` once a profile and credentials are supplied.
 
+## Write parent directories
+
+`write()` and `write_stream()` accept keyword-only `create_parents=True`,
+including when a `pipeline` is supplied:
+
+```python
+storage.write(path, data, create_parents=False)
+storage.write_stream(path, source, pipeline=Gzip(), create_parents=False)
+```
+
+- **Local and SFTP:** the default recursively creates missing parent directories.
+  With `False`, the backend opens the destination without creating or checking
+  parents first. A missing parent raises `PathNotFoundError`; an existing parent
+  permits the write.
+- **S3 family and HTTP:** either value is accepted and ignored; object keys and
+  HTTP resources have no directory-parent operations.
+
+**Migration:** SFTP writes now create parents by default, matching Local.
+Pass `create_parents=False` to retain SFTP's previous missing-parent failure.
+This controls directory creation, not atomic file replacement: a write can still
+partially modify a destination, and concurrent filesystem changes remain possible.
+Custom `StorageWriteProtocol` backends must accept the keyword on both
+`write_from_bytes()` and `write_from_stream()`.
+
 ## Connecting to remote stores
 
 Pass a storage profile and an auth profile. Profiles never embed credentials:

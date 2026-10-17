@@ -355,15 +355,21 @@ class StorageFacade:
         data: bytes,
         *,
         pipeline: Pipeline | StreamTransform | None = None,
+        create_parents: bool = True,
     ) -> None:
-        """Write bytes data to a file at *path*, optionally through *pipeline*."""
+        """Write bytes, optionally transformed, creating directory parents by default.
+
+        With ``create_parents=False``, Local/SFTP open the destination without
+        creating or pre-checking parents; a missing parent raises PathNotFoundError.
+        S3 and HTTP ignore this option. This does not make file writes atomic.
+        """
         self._require(StorageWriteProtocol, "write")
         if pipeline is None:
-            self._backend.write_from_bytes(path, data)
+            self._backend.write_from_bytes(path, data, create_parents=create_parents)
             return
         source = io.BytesIO(data)
         encoded = self._coerce_pipeline(pipeline).apply_write(source)
-        self._backend.write_from_stream(path, encoded)
+        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     def write_stream(
         self,
@@ -371,11 +377,12 @@ class StorageFacade:
         stream: BinaryIO,
         *,
         pipeline: Pipeline | StreamTransform | None = None,
+        create_parents: bool = True,
     ) -> None:
-        """Write data from a binary stream, optionally through *pipeline*."""
+        """Write a stream with the same parent-creation policy as :meth:`write`."""
         self._require(StorageWriteProtocol, "write_stream")
         encoded = self._coerce_pipeline(pipeline).apply_write(stream)
-        self._backend.write_from_stream(path, encoded)
+        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Enumerate operations (StorageEnumerateProtocol)

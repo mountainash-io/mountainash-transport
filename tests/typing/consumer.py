@@ -56,6 +56,10 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.get_size("/tmp/sales.csv"), int | None)
     assert_type(storage.supports(StorageReadProtocol), bool)
     assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), None)
+    assert_type(storage.write("/tmp/sales.csv", data, create_parents=False), None)
+    with storage.read_stream("/tmp/source") as source:
+        assert_type(storage.write_stream("/tmp/destination", source, create_parents=False), None)
+    storage.write("/tmp/sales.csv", data, create_parents="false")  # type: ignore[arg-type]
     assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), None)
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 

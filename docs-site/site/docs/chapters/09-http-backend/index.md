@@ -254,6 +254,8 @@ The two-layer approach means that callers never need to handle httpx-specific ex
 
 While the HTTP backend is primarily read-oriented, it also implements the `StorageWriteProtocol` through `write_from_bytes()` and `write_from_stream()` methods. Both methods issue HTTP PUT requests to the target URL. This enables writing to HTTP endpoints that accept PUT-based uploads, such as WebDAV servers, pre-signed S3 URLs, or custom upload APIs.
 
+Both methods accept keyword-only `create_parents=True`. Either value is ignored: HTTP resources have no directory-parent operations.
+
 The `write_from_bytes()` method sends the raw bytes as the request body:
 
 ```python
