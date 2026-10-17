@@ -214,7 +214,9 @@ facade.write("s3://bucket/reports/q1.csv", csv_bytes)
 facade.write("s3://bucket/reports/q1.csv.gz", csv_bytes, pipeline=Gzip())
 ```
 
-Without a pipeline, the method calls `backend.write_from_bytes(path, data)` directly -- the simplest path. With a pipeline, it wraps the bytes in a `BytesIO` stream, applies `pipeline.apply_write()` to encode (compress, encrypt), and calls `backend.write_from_stream()` with the encoded stream.
+Without a pipeline, the method calls `backend.write_from_bytes(path, data, create_parents=create_parents)`. With a pipeline, it wraps the bytes in a `BytesIO` stream, applies `pipeline.apply_write()` to encode them, and passes the same parent policy to `backend.write_from_stream()`.
+
+`create_parents=True` is the default: Local and SFTP recursively create missing parent directories. Pass `False` to open the destination without creating or pre-checking parents; missing parents raise `PathNotFoundError`. S3 and HTTP ignore this option. SFTP previously did not create parents, so callers needing that behaviour must now pass `False`. The option does not provide atomic file replacement.
 
 The write method does not support `infer=True` for suffix-based pipeline inference. This is intentional -- inferring transforms on write is dangerous because it could silently double-compress data that is already compressed. Write-side transform inference requires explicit opt-in through a future API.
 
@@ -229,6 +231,8 @@ with open("local-report.csv", "rb") as f:
 ```
 
 Like `write`, it supports an optional pipeline parameter for encoding the stream before upload. The method applies `pipeline.apply_write()` to the input stream and passes the result to `backend.write_from_stream()`. The S3 backend's `write_from_stream` uses boto3's `upload_fileobj`, which handles multipart uploads automatically for large streams.
+
+`write_stream()` accepts the same keyword-only `create_parents=True` policy as `write()`, including when a pipeline is supplied.
 
 <!-- concept:26 -->
 ## List Files Method

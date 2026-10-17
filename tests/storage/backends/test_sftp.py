@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import errno
 import io
+import stat
 import typing as t
 
 import pytest
@@ -76,29 +77,6 @@ class TestReadToBytes:
         with pytest.raises(PermissionDeniedError) as caught:
             backend.read_to_bytes("/remote/secret.txt")
         assert caught.value.__cause__ is original
-
-
-class TestWriteFromBytes:
-    def test_writes_data(self):
-        mock_sftp = MagicMock()
-        mock_file = MagicMock()
-        mock_sftp.open.return_value.__enter__ = MagicMock(return_value=mock_file)
-        mock_sftp.open.return_value.__exit__ = MagicMock(return_value=False)
-        backend, _ = _make_backend(mock_sftp)
-        backend.write_from_bytes("/remote/out.bin", b"payload")
-        mock_sftp.open.assert_called_once_with("/remote/out.bin", "wb")
-        mock_file.write.assert_called_once_with(b"payload")
-
-
-class TestWriteFromStream:
-    def test_writes_stream_content(self):
-        mock_sftp = MagicMock()
-        mock_file = MagicMock()
-        mock_sftp.open.return_value.__enter__ = MagicMock(return_value=mock_file)
-        mock_sftp.open.return_value.__exit__ = MagicMock(return_value=False)
-        backend, _ = _make_backend(mock_sftp)
-        backend.write_from_stream("/remote/out.bin", io.BytesIO(b"streamed"))
-        mock_file.write.assert_called_once_with(b"streamed")
 
 
 class TestPathExists:
@@ -298,6 +276,7 @@ def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
 def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.Any, ...]) -> None:
     from paramiko import SSHException
     client = MagicMock()
+    client.stat.return_value.st_mode = stat.S_IFDIR | 0o755
     original = SSHException("transport failed")
     getattr(client, native).side_effect = original
     backend, _ = _make_backend(client)

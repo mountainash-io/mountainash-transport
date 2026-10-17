@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import errno
+import gzip
+import io
 import os
 import typing as t
 from datetime import datetime, timezone
@@ -16,6 +18,7 @@ from mountainash_transport import PathNotFoundError, PermissionDeniedError, Stor
 from mountainash_transport._core.dataclasses.storage_entry import EntryType
 from mountainash_transport.storage.backends.local import LocalStorageBackend
 from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
+from mountainash_transport import Gzip, StorageFacade
 
 
 class _FilesystemSFTP:
@@ -27,6 +30,9 @@ class _FilesystemSFTP:
     def mkdir(self, path: str) -> None:
         os.mkdir(path)
 
+    def open(self, path: str, mode: str) -> t.BinaryIO:
+        return t.cast(t.BinaryIO, open(path, mode))
+
     def listdir_attr(self, path: str) -> list[SFTPAttributes]:
         return [SFTPAttributes.from_stat(os.stat(os.path.join(path, name)), name) for name in os.listdir(path)]
 
@@ -36,6 +42,39 @@ def backend(request: pytest.FixtureRequest) -> LocalStorageBackend | SFTPStorage
     if request.param == "local":
         return LocalStorageBackend()
     return SFTPStorageBackend(connection=SimpleNamespace(client=_FilesystemSFTP()))
+
+
+@pytest.mark.parametrize("mode", ["bytes", "stream", "gzip"])
+@pytest.mark.parametrize("create_parents", [None, True, False])
+@pytest.mark.parametrize("parent_exists", [False, True])
+def test_write_parent_policy(
+    backend: t.Any, tmp_path: Path, mode: str,
+    create_parents: bool | None, parent_exists: bool,
+) -> None:
+    """A disabled policy must not recreate missing parents on any write route."""
+    path = tmp_path / "missing/nested/payload"
+    if parent_exists:
+        path.parent.mkdir(parents=True)
+    options: dict[str, t.Any] = {}
+    if create_parents is not None:
+        options["create_parents"] = create_parents
+    with StorageFacade.for_local() as facade:
+        facade._backend = backend
+
+        def write() -> None:
+            if mode == "stream":
+                facade.write_stream(str(path), io.BytesIO(b"payload"), **options)
+            else:
+                facade.write(str(path), b"payload", pipeline=Gzip() if mode == "gzip" else None, **options)
+
+        if create_parents is False and not parent_exists:
+            with pytest.raises(PathNotFoundError):
+                write()
+            assert not (tmp_path / "missing").exists()
+        else:
+            write()
+            stored = path.read_bytes()
+            assert (gzip.decompress(stored) if mode == "gzip" else stored) == b"payload"
 
 
 @pytest.mark.parametrize("relative", [False, True])
