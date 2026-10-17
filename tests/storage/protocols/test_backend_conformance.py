@@ -14,6 +14,7 @@ EXPECTED_PROTOCOLS = {
         StorageReadProtocol, StorageWriteProtocol,
         StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol, StorageDirectoryProtocol,
+        StorageEnumerateProtocol,
     },
     CONST_STORAGE_PROVIDER_TYPE.S3: {
         StorageReadProtocol, StorageWriteProtocol,

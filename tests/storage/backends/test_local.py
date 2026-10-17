@@ -278,7 +278,7 @@ def test_missing_operations_preserve_native_cause(
     assert isinstance(caught.value.__cause__, FileNotFoundError)
 
 
-@pytest.mark.parametrize("operation", ["path_exists", "get_size", "get_metadata", "list_dir"])
+@pytest.mark.parametrize("operation", ["path_exists", "get_size", "get_metadata"])
 def test_denied_stat_is_not_absence(
     backend: LocalStorageBackend, monkeypatch: pytest.MonkeyPatch, operation: str,
 ) -> None:

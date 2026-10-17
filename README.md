@@ -28,9 +28,9 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 Operations follow the backend's capability protocols; unsupported calls raise
 `UnsupportedOperationError`.
 
-| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Prefix listing |
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Object enumeration |
 |---|---|---|---|---|---|---|---|---|
-| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Yes |
 | S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
 | SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
 | HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | |
@@ -247,6 +247,46 @@ datetimes must supply a timezone.
 Directory removal remains backend-specific: Local removes a directory tree;
 SFTP removes an empty directory. This change does not alter removal or
 symlink classification in directory listings.
+
+### Exact-path object enumeration
+
+Local `list_objects(path, delimiter=None)` returns a selected regular file or
+recursively enumerates the files beneath a selected directory. It never matches
+similarly named siblings: `reports` does not select `reports-old`. With
+`delimiter="/"`, immediate files are returned in `objects` and immediate
+directories (including empty ones) in `common_prefixes`. The facade defaults to
+`"/"`; backend/protocol calls default to `None`.
+
+Confirmed missing paths return an empty enumeration. A trailing separator still
+requires a directory: `file/` and `file/child` raise `StorageError`.
+**Local listing migration:** `list_dir(file)` now raises a mapped not-directory
+error and `list_dir(missing)` raises `PathNotFoundError`, rather than returning
+an empty list.
+
+`max_results` caps objects and common prefixes combined; zero performs no native
+I/O. Negative limits and delimiters other than `None` or `"/"` raise `ValueError`.
+Results have no sorting or stable limited-subset guarantee. Local result paths
+are absolute, preserving aliases and native `link/..` resolution.
+
+Explicitly selected directory links are followed. Discovered directory links
+are not recursively followed, but appear as common prefixes in `"/"` mode;
+Windows directory junctions follow the same rule. Valid file links are included,
+broken links and special files are omitted, and access/traversal failures raise
+rather than returning partial results.
+
+```python
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from mountainash_transport import StorageFacade
+
+with TemporaryDirectory() as directory:
+    path = Path(directory) / "report.csv"
+    path.write_bytes(b"data")
+    with StorageFacade.for_local() as storage:
+        result = storage.list_objects(str(path))
+        assert [(entry.path, entry.size) for entry in result.objects] == [(str(path), 4)]
+        assert result.common_prefixes == ()
+```
 
 ## Connection lifetime
 

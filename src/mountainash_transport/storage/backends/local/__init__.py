@@ -9,6 +9,7 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 from .local_copy import LocalCopyMixin
 from .local_delete import LocalDeleteMixin
 from .local_directory import LocalDirectoryMixin
+from .local_enumerate import LocalEnumerateMixin
 from .local_list import LocalListMixin
 from .local_metadata import LocalMetadataMixin
 from .local_read import LocalReadMixin
@@ -20,6 +21,7 @@ class LocalStorageBackend(
     LocalReadMixin,
     LocalWriteMixin,
     LocalListMixin,
+    LocalEnumerateMixin,
     LocalDeleteMixin,
     LocalMetadataMixin,
     LocalCopyMixin,

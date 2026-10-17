@@ -235,3 +235,188 @@ def test_sftp_mkdir_does_not_hide_failure_after_server_creation(
         backend.mkdir(str(path))
     assert caught.value.__cause__ is original
     assert path.is_dir()  # Failure does not imply rollback.
+
+
+@pytest.fixture
+def enumeration_tree(tmp_path: Path) -> Path:
+    root = tmp_path / "reports"
+    (root / "sub").mkdir(parents=True)
+    (root / "empty").mkdir()
+    (root / "a.csv").write_bytes(b"abc")
+    (root / "a.csv.bak").write_bytes(b"backup")
+    (root / "sub/b.csv").write_bytes(b"nested")
+    (tmp_path / "reports-old").mkdir()
+    (tmp_path / "reports-old/c.csv").write_bytes(b"sibling")
+    os.utime(root / "a.csv", (1700000000, 1700000000))
+    return root
+
+
+@pytest.mark.parametrize("backend", ["local"], indirect=True)
+class TestFilesystemEnumeration:
+    @pytest.mark.parametrize("selection, delimiter, files, prefixes", [
+        ("", None, {"a.csv", "a.csv.bak", "sub/b.csv"}, set()),
+        ("/", "/", {"a.csv", "a.csv.bak"}, {"sub", "empty"}),
+        ("/sub", None, {"sub/b.csv"}, set()),
+        ("/a.csv", None, {"a.csv"}, set()),
+        ("/a.csv", "/", {"a.csv"}, set()),
+        ("/absent/deep", None, set(), set()),
+        ("/empty", None, set(), set()),
+    ])
+    def test_enumeration_selects_exact_path(
+        self, backend: t.Any, enumeration_tree: Path, selection: str,
+        delimiter: str | None, files: set[str], prefixes: set[str],
+    ) -> None:
+        root = enumeration_tree
+        result = backend.list_objects(str(root) + selection, delimiter=delimiter)
+        assert {entry.path for entry in result.objects} == {str(root / name) for name in files}
+        assert {entry.path for entry in result.common_prefixes} == {str(root / name) for name in prefixes}
+        assert all(entry.entry_type == EntryType.FILE for entry in result.objects)
+        assert all(entry.entry_type == EntryType.PREFIX for entry in result.common_prefixes)
+        if "a.csv" in files:
+            entry = next(entry for entry in result.objects if entry.name == "a.csv")
+            assert entry.size == 3
+            assert entry.last_modified == datetime(2023, 11, 14, 22, 13, 20, tzinfo=timezone.utc)
+            assert entry.source == ("local" if isinstance(backend, LocalStorageBackend) else "sftp")
+
+    @pytest.mark.parametrize("suffix", ["/", "/child"])
+    def test_enumeration_file_component_is_not_absence(
+        self, backend: t.Any, enumeration_tree: Path, suffix: str,
+    ) -> None:
+        with pytest.raises(StorageError) as caught:
+            backend.list_objects(str(enumeration_tree / "a.csv") + suffix)
+        assert not isinstance(caught.value, PathNotFoundError)
+        assert isinstance(caught.value.__cause__, NotADirectoryError)
+
+    @pytest.mark.parametrize("selection, expected", [
+        ("a.csv", StorageError), ("absent", PathNotFoundError),
+    ])
+    def test_list_dir_requires_existing_directory(
+        self, backend: t.Any, enumeration_tree: Path, selection: str, expected: type[StorageError],
+    ) -> None:
+        with pytest.raises(expected) as caught:
+            backend.list_dir(str(enumeration_tree / selection))
+        if selection == "a.csv":
+            assert not isinstance(caught.value, PathNotFoundError)
+            assert isinstance(caught.value.__cause__, NotADirectoryError)
+
+    @pytest.mark.parametrize("delimiter", [None, "/"])
+    @pytest.mark.parametrize("limit", [1, 2, 3, 8])
+    def test_enumeration_caps_both_collections(
+        self, backend: t.Any, enumeration_tree: Path, delimiter: str | None, limit: int,
+    ) -> None:
+        result = backend.list_objects(str(enumeration_tree), delimiter=delimiter, max_results=limit)
+        entries = result.objects + result.common_prefixes
+        allowed = {"a.csv", "a.csv.bak", "sub/b.csv"} if delimiter is None else {
+            "a.csv", "a.csv.bak", "sub", "empty",
+        }
+        assert len(entries) == min(limit, len(allowed))
+        assert len({entry.path for entry in entries}) == len(entries)
+        assert {entry.path for entry in entries} <= {str(enumeration_tree / name) for name in allowed}
+
+    @pytest.mark.parametrize("options", [{"delimiter": ":"}, {"max_results": -1}])
+    def test_enumeration_rejects_unsupported_arguments(self, backend: t.Any, options: dict[str, t.Any]) -> None:
+        with pytest.raises(ValueError):
+            backend.list_objects("missing", **options)
+
+    def test_enumeration_zero_avoids_native_io(
+        self, backend: t.Any, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def unexpected(*args: t.Any, **kwargs: t.Any) -> t.NoReturn:
+            raise AssertionError("zero-result enumeration performed native I/O")
+
+        with monkeypatch.context() as patch:
+            if isinstance(backend, LocalStorageBackend):
+                patch.setattr(os, "stat", unexpected)
+                patch.setattr(os, "scandir", unexpected)
+            else:
+                patch.setattr(backend._get_client(), "stat", unexpected)
+                patch.setattr(backend._get_client(), "listdir_attr", unexpected)
+            result = backend.list_objects("missing", max_results=0)
+        assert result.objects == result.common_prefixes == ()
+
+    @pytest.mark.parametrize("limited", [False, True])
+    def test_enumeration_does_not_hide_child_failure_or_traverse_after_limit(
+        self, backend: t.Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, limited: bool,
+    ) -> None:
+        (tmp_path / "first").write_bytes(b"first")
+        denied = tmp_path / "denied"
+        denied.mkdir()
+        owner, method = (os, "scandir") if isinstance(backend, LocalStorageBackend) else (
+            backend._get_client(), "listdir_attr",
+        )
+        original = getattr(owner, method)
+        fault = PermissionError(errno.EACCES, "denied", str(denied))
+
+        def listing(path: str) -> t.Any:
+            if path == str(denied):
+                raise fault
+            return original(path)
+
+        monkeypatch.setattr(owner, method, listing)
+        if limited:
+            result = backend.list_objects(str(tmp_path), max_results=1)
+            assert [entry.path for entry in result.objects] == [str(tmp_path / "first")]
+            assert result.common_prefixes == ()
+        else:
+            with pytest.raises(PermissionDeniedError) as caught:
+                backend.list_objects(str(tmp_path))
+            assert caught.value.__cause__ is fault
+
+    @pytest.mark.parametrize("delimiter", [None, "/"])
+    def test_enumeration_link_policy(
+        self, backend: t.Any, tmp_path: Path, delimiter: str | None,
+    ) -> None:
+        root = tmp_path / "selected"
+        root.mkdir()
+        target = tmp_path / "target"
+        target.mkdir()
+        (target / "payload").write_bytes(b"target")
+        (root / "directory-link").symlink_to(target, target_is_directory=True)
+        (root / "file-link").symlink_to(target / "payload")
+        (root / "broken-link").symlink_to(target / "absent")
+        if hasattr(os, "mkfifo"):
+            os.mkfifo(root / "fifo")
+        result = backend.list_objects(str(root), delimiter=delimiter)
+        assert [(entry.path, entry.size) for entry in result.objects] == [(str(root / "file-link"), 6)]
+        assert [entry.path for entry in result.common_prefixes] == (
+            [str(root / "directory-link")] if delimiter == "/" else []
+        )
+        selected = backend.list_objects(str(root / "directory-link"), delimiter=delimiter)
+        assert [entry.path for entry in selected.objects] == [str(root / "directory-link/payload")]
+        assert Path(selected.objects[0].path).read_bytes() == b"target"
+
+    def test_enumeration_preserves_native_relative_alias_parent(
+        self, backend: t.Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        (tmp_path / "target/inner").mkdir(parents=True)
+        (tmp_path / "target/payload").write_bytes(b"right")
+        (tmp_path / "payload").write_bytes(b"wrong")
+        (tmp_path / "link").symlink_to(tmp_path / "target/inner", target_is_directory=True)
+        monkeypatch.chdir(tmp_path)
+        result = backend.list_objects("link/../payload")
+        expected = os.path.join(str(tmp_path), "link/../payload") if isinstance(
+            backend, LocalStorageBackend,
+        ) else "link/../payload"
+        assert [entry.path for entry in result.objects] == [expected]
+        assert Path(result.objects[0].path).read_bytes() == b"right"
+
+    @pytest.mark.parametrize("operation", ["list_dir", "list_objects"])
+    def test_enumeration_root_denial_is_not_absence(
+        self, backend: t.Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, operation: str,
+    ) -> None:
+        if isinstance(backend, LocalStorageBackend):
+            owner, method = os, "stat" if operation == "list_objects" else "scandir"
+        else:
+            owner, method = backend._get_client(), "stat" if operation == "list_objects" else "listdir_attr"
+        native = getattr(owner, method)
+        fault = PermissionError(errno.EACCES, "denied")
+
+        def denied(path: t.Any, *args: t.Any, **kwargs: t.Any) -> t.Any:
+            if path == str(tmp_path):
+                raise fault
+            return native(path, *args, **kwargs)
+
+        monkeypatch.setattr(owner, method, denied)
+        with pytest.raises(PermissionDeniedError) as caught:
+            getattr(backend, operation)(str(tmp_path))
+        assert caught.value.__cause__ is fault
