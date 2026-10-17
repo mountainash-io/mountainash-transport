@@ -32,7 +32,7 @@ class StorageEntry:
 
 @dataclass(frozen=True, slots=True)
 class EnumerateResult:
-    """Structured return type for object-store listings."""
+    """Selected files/objects and grouped prefixes, sharing one result limit."""
 
     objects: tuple[StorageEntry, ...]
     common_prefixes: tuple[StorageEntry, ...]

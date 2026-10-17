@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import stat as stat_module
 from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import (
@@ -23,11 +22,6 @@ class LocalListMixin:
         """
         results: list[StorageEntry] = []
         with _mapped(path):
-            try:
-                if not stat_module.S_ISDIR(os.stat(path).st_mode):
-                    return results
-            except (FileNotFoundError, NotADirectoryError):
-                return results
             with os.scandir(path) as entries:
                 for entry in entries:
                     try:

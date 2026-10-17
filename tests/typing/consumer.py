@@ -35,6 +35,9 @@ from mountainash_transport import (
 )
 from mountainash_transport.settings.storage.profiles.local_storage_profile import LocalStorageProfile
 from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.storage.backends.local import LocalStorageBackend
+from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
+from mountainash_transport.storage.protocols import StorageEnumerateProtocol
 
 
 def facade_contracts(storage: StorageFacade, data: bytes) -> None:
@@ -53,6 +56,7 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.metadata("/tmp/sales.csv"), StorageEntry)
     assert_type(storage.list_dir("/tmp"), list[StorageEntry])
     assert_type(storage.list_objects("s3://reports/"), EnumerateResult)
+    storage.list_objects("/tmp", max_results="one")  # type: ignore[arg-type]
     assert_type(storage.get_size("/tmp/sales.csv"), int | None)
     assert_type(storage.supports(StorageReadProtocol), bool)
     assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), None)
@@ -66,6 +70,13 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     storage.read(123)  # type: ignore[arg-type]
     storage.write("/tmp/sales.csv", "not bytes")  # type: ignore[arg-type]
     storage.read("/tmp/sales.csv", pipeline="gzip")  # type: ignore[arg-type]
+
+
+def filesystem_enumeration_contracts(local: LocalStorageBackend, sftp: SFTPStorageBackend) -> None:
+    local_enumerator: StorageEnumerateProtocol = local
+    sftp_enumerator: StorageEnumerateProtocol = sftp
+    assert_type(local.list_objects("/tmp", delimiter=None, max_results=1), EnumerateResult)
+    assert_type(sftp.list_objects("reports", delimiter="/", max_results=1), EnumerateResult)
 
 
 def error_contracts() -> None:

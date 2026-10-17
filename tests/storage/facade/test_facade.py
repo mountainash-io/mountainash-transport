@@ -127,11 +127,6 @@ class TestListDir:
         assert len(results) == 1
         assert isinstance(results[0], StorageEntry)
 
-    def test_list_objects_raises_for_local(self, local_facade):
-        from mountainash_transport._core.exceptions import UnsupportedOperationError
-        with pytest.raises(UnsupportedOperationError):
-            local_facade.list_objects("some/prefix")
-
 
 class TestCopy:
     def test_copy_creates_destination(self, local_facade, tmp_dir):

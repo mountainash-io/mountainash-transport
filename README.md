@@ -28,11 +28,11 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 Operations follow the backend's capability protocols; unsupported calls raise
 `UnsupportedOperationError`.
 
-| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Prefix listing |
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Object enumeration |
 |---|---|---|---|---|---|---|---|---|
-| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Yes |
 | S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
-| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | Yes |
 | HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | |
 
 Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and
@@ -247,6 +247,76 @@ datetimes must supply a timezone.
 Directory removal remains backend-specific: Local removes a directory tree;
 SFTP removes an empty directory. This change does not alter removal or
 symlink classification in directory listings.
+
+### Exact-path object enumeration
+
+Local/SFTP `list_objects(path, delimiter=None)` returns a selected regular file or
+recursively enumerates the files beneath a selected directory. It never matches
+similarly named siblings: `reports` does not select `reports-old`. With
+`delimiter="/"`, immediate files are returned in `objects` and immediate
+directories (including empty ones) in `common_prefixes`. The facade defaults to
+`"/"`; backend/protocol calls default to `None`.
+
+Confirmed missing paths return an empty enumeration. A trailing separator still
+requires a directory: `file/` and `file/child` raise `StorageError`.
+**Local listing migration:** `list_dir(file)` now raises a mapped not-directory
+error and `list_dir(missing)` raises `PathNotFoundError`, rather than returning
+an empty list.
+SFTP applies the same directory-only rule, recovering not-directory failures
+when the server reports them as “no such file.”
+
+`max_results` caps objects and common prefixes combined; zero performs no native
+I/O. Negative limits and delimiters other than `None` or `"/"` raise `ValueError`.
+Results have no sorting or stable limited-subset guarantee. Local result paths
+are absolute; SFTP retains relative/absolute POSIX path spelling. Both preserve
+aliases and native `link/..` resolution without changing the working directory.
+
+Explicitly selected directory links are followed. Discovered directory links
+are not recursively followed, but appear as common prefixes in `"/"` mode;
+Windows directory junctions follow the same rule. Valid file links are included,
+broken links and special files are omitted, and access/traversal failures raise
+rather than returning partial results.
+
+SFTP recovers unavailable listing types with native LSTAT. If required type
+information remains unavailable at the root, an entry, a link target or an
+ancestor checked after an ambiguous failure, enumeration raises `StorageError`.
+Optional size/time fields remain `None` when absent. This does not change the
+existing missing-mode fallback in metadata or successful `list_dir` formatting.
+
+```python
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from mountainash_transport import StorageFacade
+
+with TemporaryDirectory() as directory:
+    path = Path(directory) / "report.csv"
+    path.write_bytes(b"data")
+    with StorageFacade.for_local() as storage:
+        result = storage.list_objects(str(path))
+        assert [(entry.path, entry.size) for entry in result.objects] == [(str(path), 4)]
+        assert result.common_prefixes == ()
+```
+
+## S3 object-prefix enumeration
+
+S3 has objects and literal key prefixes, not directories. A prefix `reports/`
+excludes `reports-old` but still selects deeper keys such as `reports/sub/b.csv`.
+`reports/a.csv` can select the exact key, `reports/a.csv.bak` and
+`reports/a.csv/chunk`; `reports/a.csv/` selects only keys below that slash.
+Delimiter `"/"` groups matching keys into common prefixes; it does not turn
+selection into exact-file lookup. Slash-ending marker objects remain objects.
+
+Enumeration preserves trailing/repeated slashes and dot-like key components in
+both URL and bare bucket/key forms. This corrects earlier URL normalization that
+could broaden selection. Other operations' path parsing is unchanged.
+Public S3 facade construction now binds the already-connected SDK client without
+opening another connection.
+
+S3 limits count objects and common prefixes together, but do not promise early
+pagination termination or the filesystem backends' no-I/O zero limit. Existing
+service restrictions remain: S3 Express supports slash-terminated prefixes and
+the `"/"` delimiter. A missing prefix returns an empty result; missing/denied
+buckets raise typed errors.
 
 ## Connection lifetime
 

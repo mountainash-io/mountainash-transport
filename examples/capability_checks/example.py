@@ -28,9 +28,6 @@ def main() -> None:
         StorageFacade.from_path("/srv/reports/sales.csv") as local,
         StorageFacade.from_path("https://files.example.com/reports/sales.csv") as web,
     ):
-        assert supported(local) == ["read", "write", "metadata", "directory"]
-        assert supported(web) == ["read", "write", "metadata"]
-
         try:
             web.list_dir("https://files.example.com/reports/")
         except UnsupportedOperationError:

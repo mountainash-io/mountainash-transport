@@ -7,7 +7,7 @@ from mountainash_transport._core.dataclasses.storage_entry import EnumerateResul
 
 @runtime_checkable
 class StorageEnumerateProtocol(Protocol):
-    """Protocol for object-store-style enumeration with prefix/delimiter semantics."""
+    """Enumerate filesystem paths or object-store prefixes into shared results."""
 
     def list_objects(
         self,
@@ -16,5 +16,10 @@ class StorageEnumerateProtocol(Protocol):
         delimiter: str | None = None,
         max_results: int | None = None,
     ) -> EnumerateResult:
-        """List objects; backend/page failures raise typed StorageError subclasses."""
+        """List selected files/objects and common prefixes.
+
+        Local/SFTP select an exact path; S3 selects literal key prefixes.
+        None recurses; "/" groups immediate children. Backend/page failures
+        raise typed StorageError subclasses rather than partial results.
+        """
         ...

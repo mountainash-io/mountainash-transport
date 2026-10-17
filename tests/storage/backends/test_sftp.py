@@ -189,6 +189,7 @@ class TestListDir:
     def test_list_dir_path_not_found(self):
         mock_sftp = MagicMock()
         mock_sftp.listdir_attr.side_effect = FileNotFoundError("no such dir")
+        mock_sftp.stat.side_effect = FileNotFoundError("no such dir")
         backend, _ = _make_backend(mock_sftp)
         with pytest.raises(PathNotFoundError):
             backend.list_dir("/remote/missing")

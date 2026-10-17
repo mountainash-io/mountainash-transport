@@ -1,6 +1,8 @@
 """S3EnumerateMixin — object enumeration for S3-family backends."""
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from mountainash_transport._core.dataclasses.storage_entry import (
     EntryType,
     EnumerateResult,
@@ -23,6 +25,9 @@ class S3EnumerateMixin(StorageEnumerateProtocol):
         max_results: int | None = None,
     ) -> EnumerateResult:
         bucket, key_prefix = parse_s3_path(prefix)
+        parsed = urlsplit(prefix)
+        if parsed.scheme:
+            key_prefix = parsed.path.removeprefix("/")
         objects: list[StorageEntry] = []
         common_prefixes: list[StorageEntry] = []
 
