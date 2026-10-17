@@ -25,7 +25,14 @@ class _FilesystemSFTP:
     """Only the SDK boundary is substituted; filesystem effects remain real."""
 
     def stat(self, path: str) -> SFTPAttributes:
-        return SFTPAttributes.from_stat(os.stat(path))
+        try:
+            return SFTPAttributes.from_stat(os.stat(path))
+        except NotADirectoryError:
+            # SFTP v3 reports both ENOENT and ENOTDIR as NO_SUCH_FILE.
+            raise FileNotFoundError(errno.ENOENT, "No such file") from None
+
+    def lstat(self, path: str) -> SFTPAttributes:
+        return SFTPAttributes.from_stat(os.lstat(path))
 
     def mkdir(self, path: str) -> None:
         os.mkdir(path)
@@ -34,7 +41,7 @@ class _FilesystemSFTP:
         return t.cast(t.BinaryIO, open(path, mode))
 
     def listdir_attr(self, path: str) -> list[SFTPAttributes]:
-        return [SFTPAttributes.from_stat(os.stat(os.path.join(path, name)), name) for name in os.listdir(path)]
+        return [SFTPAttributes.from_stat(os.lstat(os.path.join(path, name)), name) for name in os.listdir(path)]
 
 
 @pytest.fixture(params=["local", "sftp"])
@@ -251,7 +258,6 @@ def enumeration_tree(tmp_path: Path) -> Path:
     return root
 
 
-@pytest.mark.parametrize("backend", ["local"], indirect=True)
 class TestFilesystemEnumeration:
     @pytest.mark.parametrize("selection, delimiter, files, prefixes", [
         ("", None, {"a.csv", "a.csv.bak", "sub/b.csv"}, set()),
@@ -374,6 +380,7 @@ class TestFilesystemEnumeration:
         (root / "directory-link").symlink_to(target, target_is_directory=True)
         (root / "file-link").symlink_to(target / "payload")
         (root / "broken-link").symlink_to(target / "absent")
+        (root / "broken-component-link").symlink_to(target / "payload/child")
         if hasattr(os, "mkfifo"):
             os.mkfifo(root / "fifo")
         result = backend.list_objects(str(root), delimiter=delimiter)
@@ -420,3 +427,151 @@ class TestFilesystemEnumeration:
         with pytest.raises(PermissionDeniedError) as caught:
             getattr(backend, operation)(str(tmp_path))
         assert caught.value.__cause__ is fault
+
+
+@pytest.mark.parametrize("operation, suffix", [
+    ("list_objects", "/"), ("list_objects", "/child"),
+    ("list_dir", ""), ("list_dir", "/"), ("list_dir", "/child"),
+])
+def test_sftp_enumeration_recovers_not_directory_status(
+    tmp_path: Path, operation: str, suffix: str,
+) -> None:
+    path = tmp_path / "file"
+    path.write_bytes(b"payload")
+    native = _FilesystemSFTP()
+    client = MagicMock(wraps=native)
+
+    def protocol_call(method: str, name: str) -> t.Any:
+        try:
+            return getattr(native, method)(name)
+        except NotADirectoryError:
+            # Paramiko SFTPServer.convert_errno conflates these two errno values.
+            raise FileNotFoundError(errno.ENOENT, "No such file") from None
+
+    client.stat.side_effect = lambda name: protocol_call("stat", name)
+    client.listdir_attr.side_effect = lambda name: protocol_call("listdir_attr", name)
+    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    with pytest.raises(StorageError) as caught:
+        getattr(backend, operation)(str(path) + suffix)
+    assert not isinstance(caught.value, PathNotFoundError)
+    assert isinstance(caught.value.__cause__, NotADirectoryError)
+
+
+@pytest.mark.parametrize("location", ["root", "entry", "link-target", "ancestor"])
+@pytest.mark.parametrize("mode", [None, 0o644])
+def test_sftp_enumeration_requires_native_file_type(
+    tmp_path: Path, location: str, mode: int | None,
+) -> None:
+    root = tmp_path / "selected"
+    root.mkdir()
+    (root / "first").write_bytes(b"valid")
+    unknown = root / "unknown"
+    unknown.write_bytes(b"unknown")
+    link = root / "link"
+    link.symlink_to(unknown)
+    native = _FilesystemSFTP()
+    client = MagicMock(wraps=native)
+    affected = str(root if location in ("root", "ancestor") else link if location == "link-target" else unknown)
+
+    def attributes(method: str, path: str) -> SFTPAttributes:
+        attrs = getattr(native, method)(path)
+        if path == affected:
+            attrs.st_mode = mode
+        return t.cast(SFTPAttributes, attrs)
+
+    def listing(path: str) -> list[SFTPAttributes]:
+        entries = native.listdir_attr(path)
+        if location == "entry":
+            for attrs in entries:
+                if attrs.filename == "unknown":
+                    attrs.st_mode = mode
+        return entries
+
+    client.stat.side_effect = lambda path: attributes("stat", path)
+    client.lstat.side_effect = lambda path: attributes("lstat", path)
+    client.listdir_attr.side_effect = listing
+    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    selection = str(root / "absent") if location == "ancestor" else str(root)
+    with pytest.raises(StorageError) as caught:
+        backend.list_objects(selection)
+    assert type(caught.value) is StorageError
+    assert not isinstance(caught.value.__cause__, TypeError)
+
+
+def test_sftp_enumeration_recovers_listing_type_and_preserves_links(tmp_path: Path) -> None:
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real/payload").write_bytes(b"nested")
+    (tmp_path / "directory-link").symlink_to(tmp_path / "real", target_is_directory=True)
+    (tmp_path / "file-link").symlink_to(tmp_path / "real/payload")
+    native = _FilesystemSFTP()
+    client = MagicMock(wraps=native)
+
+    def missing_modes(path: str) -> list[SFTPAttributes]:
+        entries = native.listdir_attr(path)
+        for attrs in entries:
+            attrs.st_mode = None
+        return entries
+
+    client.listdir_attr.side_effect = missing_modes
+    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    result = backend.list_objects(str(tmp_path))
+    assert {entry.path for entry in result.objects} == {str(tmp_path / "real/payload"), str(tmp_path / "file-link")}
+    assert result.common_prefixes == ()
+
+
+@pytest.mark.parametrize("fault_at", ["root", "listing", "link-target", "ancestor"])
+@pytest.mark.parametrize("fault, expected", [
+    (PermissionError(errno.EACCES, "denied"), PermissionDeniedError),
+    (EOFError("lost connection"), StorageConnectionError),
+    (OSError("Failure"), StorageError),
+])
+def test_sftp_enumeration_propagates_native_failures(
+    tmp_path: Path, fault_at: str, fault: Exception, expected: type[StorageError],
+) -> None:
+    (tmp_path / "file").write_bytes(b"payload")
+    (tmp_path / "link").symlink_to(tmp_path / "file")
+    native = _FilesystemSFTP()
+    client = MagicMock(wraps=native)
+    affected = str(tmp_path / "link") if fault_at == "link-target" else str(tmp_path)
+
+    def fail(path: str) -> SFTPAttributes:
+        if path == affected:
+            raise fault
+        return native.stat(path)
+
+    if fault_at == "listing":
+        client.listdir_attr.side_effect = fault
+    else:
+        client.stat.side_effect = fail
+    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    selection = str(tmp_path / "absent") if fault_at == "ancestor" else str(tmp_path)
+    with pytest.raises(expected) as caught:
+        backend.list_objects(selection)
+    assert caught.value.__cause__ is fault
+
+
+def test_sftp_enumeration_preserves_optional_file_metadata(tmp_path: Path) -> None:
+    path = tmp_path / "file"
+    path.write_bytes(b"payload")
+    attrs = SFTPAttributes.from_stat(path.stat())
+    attrs.st_size = attrs.st_mtime = None
+    client = MagicMock()
+    client.stat.return_value = attrs
+    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    result = backend.list_objects(str(path))
+    assert [(entry.path, entry.size, entry.last_modified) for entry in result.objects] == [(str(path), None, None)]
+
+
+@pytest.mark.parametrize("kind", ["broken-link", "broken-component-link", "fifo"])
+def test_enumeration_omits_non_file_roots(backend: t.Any, tmp_path: Path, kind: str) -> None:
+    path = tmp_path / "selected"
+    if kind == "fifo":
+        if not hasattr(os, "mkfifo"):
+            pytest.skip("native FIFO creation is unavailable")
+        os.mkfifo(path)
+    else:
+        target = tmp_path / "target"
+        target.write_bytes(b"file")
+        path.symlink_to(tmp_path / "missing" if kind == "broken-link" else target / "child")
+    result = backend.list_objects(str(path))
+    assert result.objects == result.common_prefixes == ()

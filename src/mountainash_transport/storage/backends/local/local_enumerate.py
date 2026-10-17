@@ -45,6 +45,10 @@ class LocalEnumerateMixin:
                 attrs = os.stat(prefix)
             except FileNotFoundError:
                 return EnumerateResult((), ())
+            except NotADirectoryError:
+                if os.path.islink(prefix):
+                    return EnumerateResult((), ())
+                raise
             # Anchor relative paths without collapsing native symlink/.. traversal.
             drive, tail = os.path.splitdrive(prefix)
             root = os.path.join(os.path.abspath(drive or os.curdir), tail)
@@ -57,7 +61,7 @@ class LocalEnumerateMixin:
                         linked = child.is_symlink()
                         try:
                             attrs = child.stat()
-                        except FileNotFoundError:
+                        except (FileNotFoundError, NotADirectoryError):
                             if linked:
                                 continue
                             raise

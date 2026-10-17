@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
-from ._helpers import _is_not_found, _mapped
+from ._helpers import _check_not_directory, _is_not_found, _mapped
 
 
 class SFTPDirectoryMixin:
@@ -17,7 +17,12 @@ class SFTPDirectoryMixin:
     def list_dir(self, path: str) -> list[StorageEntry]:
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
-            entries = sftp.listdir_attr(path)
+            try:
+                entries = sftp.listdir_attr(path)
+            except OSError as error:
+                if _is_not_found(error):
+                    _check_not_directory(sftp, path)
+                raise
 
         results: list[StorageEntry] = []
         for attr in entries:

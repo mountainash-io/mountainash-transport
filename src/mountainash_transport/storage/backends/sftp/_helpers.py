@@ -4,6 +4,8 @@ from __future__ import annotations
 import errno
 import contextlib
 import io
+import posixpath
+import stat
 import typing as t
 
 from mountainash_transport._core.exceptions import (
@@ -49,3 +51,30 @@ def _mapped(path: str) -> t.Iterator[None]:
         if mapped is None or mapped is exc:
             raise
         raise mapped from exc
+
+
+def _require_file_type(mode: int | None, path: str) -> int:
+    """Keep unavailable type distinct from known special-file types."""
+    kind = stat.S_IFMT(mode) if mode is not None else 0
+    if not kind:
+        raise StorageError(f"{path}: SFTP server did not supply file type information")
+    return kind
+
+
+def _check_not_directory(client: t.Any, path: str) -> None:
+    """Recover ENOTDIR after SFTP v3 reports ambiguous NO_SUCH_FILE."""
+    candidate = path.rstrip("/") or ("/" if path.startswith("/") else ".")
+    while True:
+        try:
+            attrs = client.stat(candidate)
+        except OSError as error:
+            if not _is_not_found(error):
+                raise
+        else:
+            if _require_file_type(attrs.st_mode, candidate) != stat.S_IFDIR:
+                raise NotADirectoryError(errno.ENOTDIR, "Not a directory", candidate)
+            return
+        parent = posixpath.dirname(candidate)
+        if not parent or parent == candidate:
+            return
+        candidate = parent

@@ -11,6 +11,7 @@ from mountainash_transport.storage.registry import register_storage_backend
 from ._helpers import _is_not_found, _wrap_sftp_error
 from .sftp_delete import SFTPDeleteMixin
 from .sftp_directory import SFTPDirectoryMixin
+from .sftp_enumerate import SFTPEnumerateMixin
 from .sftp_metadata import SFTPMetadataMixin
 from .sftp_read import SFTPReadMixin
 from .sftp_write import SFTPWriteMixin
@@ -23,6 +24,7 @@ class SFTPStorageBackend(
     SFTPDeleteMixin,
     SFTPMetadataMixin,
     SFTPDirectoryMixin,
+    SFTPEnumerateMixin,
 ):
     """SFTP storage backend — implements Read, Write, List, Delete, Metadata."""
 

@@ -32,7 +32,7 @@ Operations follow the backend's capability protocols; unsupported calls raise
 |---|---|---|---|---|---|---|---|---|
 | Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Yes |
 | S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
-| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | Yes |
 | HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | |
 
 Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and
@@ -250,7 +250,7 @@ symlink classification in directory listings.
 
 ### Exact-path object enumeration
 
-Local `list_objects(path, delimiter=None)` returns a selected regular file or
+Local/SFTP `list_objects(path, delimiter=None)` returns a selected regular file or
 recursively enumerates the files beneath a selected directory. It never matches
 similarly named siblings: `reports` does not select `reports-old`. With
 `delimiter="/"`, immediate files are returned in `objects` and immediate
@@ -262,17 +262,26 @@ requires a directory: `file/` and `file/child` raise `StorageError`.
 **Local listing migration:** `list_dir(file)` now raises a mapped not-directory
 error and `list_dir(missing)` raises `PathNotFoundError`, rather than returning
 an empty list.
+SFTP applies the same directory-only rule, recovering not-directory failures
+when the server reports them as “no such file.”
 
 `max_results` caps objects and common prefixes combined; zero performs no native
 I/O. Negative limits and delimiters other than `None` or `"/"` raise `ValueError`.
 Results have no sorting or stable limited-subset guarantee. Local result paths
-are absolute, preserving aliases and native `link/..` resolution.
+are absolute; SFTP retains relative/absolute POSIX path spelling. Both preserve
+aliases and native `link/..` resolution without changing the working directory.
 
 Explicitly selected directory links are followed. Discovered directory links
 are not recursively followed, but appear as common prefixes in `"/"` mode;
 Windows directory junctions follow the same rule. Valid file links are included,
 broken links and special files are omitted, and access/traversal failures raise
 rather than returning partial results.
+
+SFTP recovers unavailable listing types with native LSTAT. If required type
+information remains unavailable at the root, an entry, a link target or an
+ancestor checked after an ambiguous failure, enumeration raises `StorageError`.
+Optional size/time fields remain `None` when absent. This does not change the
+existing missing-mode fallback in metadata or successful `list_dir` formatting.
 
 ```python
 from pathlib import Path
