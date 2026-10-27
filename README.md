@@ -1,7 +1,7 @@
 # mountainash-transport
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
-[![License: Proprietary](https://img.shields.io/badge/license-proprietary-lightgrey)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 One file API across storage systems: read, write, stream, list, copy and delete
 on local disk, S3-compatible stores, SFTP and HTTP(S) with the same calls. The
@@ -398,4 +398,4 @@ to `mountainash-auth-client`.
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE).
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE).
