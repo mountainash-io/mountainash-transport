@@ -89,6 +89,12 @@ Output:
 `from_path()` picks the backend from the scheme, so the same calls work with
 `s3://reports/2026/sales.csv.gz` once a profile and credentials are supplied.
 
+Gzip decoding is bounded. `Gzip(max_decompressed_bytes=...)` defaults to 1 GiB
+of decoded output. Reading or seeking past the limit raises `TransformError`
+before the excess bytes are held in memory, which protects against decompression
+bombs. For trusted data, pass a larger value, or `None` to remove the bound,
+for example `storage.read(path, infer=True, gzip=Gzip(max_decompressed_bytes=None))`.
+
 ## Write parent directories
 
 `write()` and `write_stream()` accept keyword-only `create_parents=True`,
