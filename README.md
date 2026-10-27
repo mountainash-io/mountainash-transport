@@ -199,6 +199,22 @@ with FilesystemBackend(Path("/private/oauth-records")) as tokens:
 Transport borrows both stores; the application keeps them open until all
 operations finish and owns closure.
 
+### SFTP host-key verification
+
+SFTP/SSH connections check the server's key against the system known-hosts and
+`KNOWN_HOSTS_FILE`. `HOST_KEY_POLICY` controls a host whose key is not known:
+
+| Value | Behaviour | Security |
+|---|---|---|
+| `reject` (default) | Refuse the connection | Verified hosts only |
+| `warn` | Log a warning and connect; key not saved | No verification; man-in-the-middle possible on every connection |
+| `auto_add` | Accept and remember the key for this client | Trust on first use; man-in-the-middle possible on first contact |
+
+Use `warn` or `auto_add` only on trusted networks or in CI. Any other value,
+including the former `ignore`, raises a validation error naming the allowed
+values. **Migration:** `ignore` previously behaved as `reject`; remove it or set
+`reject`.
+
 ## Storage errors and strict queries
 
 Implemented Local, S3-family, SFTP and HTTP backends translate their own I/O
