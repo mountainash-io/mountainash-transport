@@ -46,16 +46,15 @@ class TestSFTPConstruction:
         s = _make()
         assert s.HOST_KEY_POLICY == "reject"
 
-    @pytest.mark.parametrize(
-        "policy", ["reject", "warn", "auto_add", "ignore"]
-    )
+    @pytest.mark.parametrize("policy", ["reject", "warn", "auto_add"])
     def test_valid_host_key_policies_accepted(self, policy):
         s = _make(HOST_KEY_POLICY=policy)
         assert s.HOST_KEY_POLICY == policy
 
-    def test_invalid_host_key_policy_rejected(self):
-        with pytest.raises(Exception):
-            _make(HOST_KEY_POLICY="bogus")
+    @pytest.mark.parametrize("policy", ["ignore", "bogus", "Reject", ""])
+    def test_invalid_host_key_policy_rejected(self, policy):
+        with pytest.raises(Exception, match="auto_add.*reject.*warn"):
+            _make(HOST_KEY_POLICY=policy)
 
 
 @pytest.mark.unit

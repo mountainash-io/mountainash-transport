@@ -136,20 +136,29 @@ class TestSSHConnectionAuth:
 
 
 class TestSSHConnectionHostKeyPolicy:
-    def test_auto_add_policy_set(self, mock_paramiko):
+    @pytest.mark.parametrize(
+        ("policy", "paramiko_class"),
+        [("reject", "RejectPolicy"), ("warn", "WarningPolicy"), ("auto_add", "AutoAddPolicy")],
+    )
+    def test_each_policy_maps_to_paramiko_policy(self, mock_paramiko, policy, paramiko_class):
         mock_client = MagicMock()
         mock_paramiko.SSHClient.return_value = mock_client
-        mock_paramiko.AutoAddPolicy = MagicMock
-        mock_paramiko.RejectPolicy = MagicMock
+        for name in ("RejectPolicy", "WarningPolicy", "AutoAddPolicy"):
+            setattr(mock_paramiko, name, type(name, (), {}))
 
-        kwargs = {**FAKE_SSH_KWARGS, "_post_connect": {"host_key_policy": "auto_add"}}
-        conn = SSHConnection(kwargs)
-        conn.connect()
+        kwargs = {**FAKE_SSH_KWARGS, "_post_connect": {"host_key_policy": policy}}
+        SSHConnection(kwargs).connect()
 
         mock_client.set_missing_host_key_policy.assert_called_once()
-        # The policy passed should be an AutoAddPolicy instance
         policy_arg = mock_client.set_missing_host_key_policy.call_args[0][0]
-        assert isinstance(policy_arg, mock_paramiko.AutoAddPolicy)
+        assert type(policy_arg) is getattr(mock_paramiko, paramiko_class)
+
+    @pytest.mark.parametrize("policy", ["ignore", "bogus"])
+    def test_unknown_policy_raises_without_connecting(self, mock_paramiko, policy):
+        kwargs = {**FAKE_SSH_KWARGS, "_post_connect": {"host_key_policy": policy}}
+        with pytest.raises(ValueError, match="auto_add.*reject.*warn"):
+            SSHConnection(kwargs).connect()
+        mock_paramiko.SSHClient.return_value.connect.assert_not_called()
 
     def test_reject_policy_set_by_default(self, mock_paramiko):
         mock_client = MagicMock()

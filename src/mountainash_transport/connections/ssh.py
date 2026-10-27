@@ -43,17 +43,19 @@ class SSHConnection(ConnectionProtocol):
         kwargs = dict(self._connect_kwargs)
 
         post_connect = kwargs.pop("_post_connect", {})
+        policy_name = post_connect.get("host_key_policy", "reject")
+        policy_attr = _HOST_KEY_POLICIES.get(policy_name)
+        if policy_attr is None:
+            raise ValueError(
+                f"Invalid host_key_policy: {policy_name!r}. Must be one of "
+                f"{sorted(_HOST_KEY_POLICIES)}."
+            )
 
         client = paramiko.SSHClient()
         self._client = client
         try:
             client.load_system_host_keys()
-            policy_name = post_connect.get("host_key_policy", "reject")
-            policy_attr = _HOST_KEY_POLICIES.get(policy_name)
-            if policy_attr:
-                client.set_missing_host_key_policy(getattr(paramiko, policy_attr)())
-            else:
-                client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            client.set_missing_host_key_policy(getattr(paramiko, policy_attr)())
 
             known_hosts = post_connect.get("known_hosts_file")
             if known_hosts:

@@ -28,9 +28,14 @@ from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 __all__ = ["SFTP_SPEC", "SFTPStorageProfile"]
 
 
-_VALID_HOST_KEY_POLICIES: frozenset[str] = frozenset(
-    {"reject", "warn", "auto_add", "ignore"}
-)
+# Missing-host-key policies (host not in system or KNOWN_HOSTS_FILE keys):
+#   reject   - refuse the connection (default; secure).
+#   warn     - log a warning and connect; the key is not saved, so every
+#              connection to that host is unauthenticated.
+#   auto_add - trust on first use: accept and remember the key for this client.
+# warn/auto_add allow man-in-the-middle on first contact; use only on trusted
+# networks or CI. Must stay in sync with connections/ssh.py.
+_VALID_HOST_KEY_POLICIES: frozenset[str] = frozenset({"reject", "warn", "auto_add"})
 
 
 
@@ -157,8 +162,11 @@ SFTP_SPEC = StorageProfileSpec(
             default="reject",
             validator=_validate_host_key_policy,
             description=(
-                "Missing-host-key policy: reject | warn | auto_add | ignore. "
-                "Applied via ``SSHClient.set_missing_host_key_policy(...)``."
+                "Missing-host-key policy: reject (default; refuse unknown hosts) | "
+                "warn (log and connect without verifying) | auto_add (trust on "
+                "first use). warn/auto_add permit man-in-the-middle on first "
+                "contact; use only on trusted networks or CI. Applied via "
+                "``SSHClient.set_missing_host_key_policy(...)``."
             ),
         ),
     ],
