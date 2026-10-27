@@ -72,3 +72,71 @@ def test_gzip_mtime_none_uses_current_time():
     header_mtime = struct.unpack("<I", encoded[4:8])[0]
     assert before <= header_mtime <= after
     assert header_mtime != 0
+
+
+class TestDecompressionLimit:
+    """Backlog 385: gzip unwrap is bounded by max_decompressed_bytes."""
+
+    BOMB = gzip.compress(b"\0" * (64 * 1024 * 1024))
+    LIMIT = 1024 * 1024
+
+    class _NoSeek(io.RawIOBase):
+        def __init__(self, data: bytes) -> None:
+            self._inner = io.BytesIO(data)
+
+        def readable(self) -> bool:
+            return True
+
+        def readinto(self, b) -> int:
+            return self._inner.readinto(b)
+
+    def _sources(self):
+        return [io.BytesIO(self.BOMB), io.BufferedReader(self._NoSeek(self.BOMB))]
+
+    def test_read_all_over_limit_raises_without_large_allocation(self):
+        import tracemalloc
+
+        from mountainash_transport import TransformError
+
+        for src in self._sources():
+            tracemalloc.start()
+            with pytest.raises(TransformError, match="max_decompressed_bytes"):
+                Gzip(max_decompressed_bytes=self.LIMIT).unwrap(src).read()
+            _, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            assert peak < 16 * 1024 * 1024
+
+    def test_chunked_reads_and_lines_over_limit_raise(self):
+        from mountainash_transport import TransformError
+
+        with pytest.raises(TransformError):
+            s = Gzip(max_decompressed_bytes=self.LIMIT).unwrap(io.BytesIO(self.BOMB))
+            while s.read(4096):
+                pass
+        with pytest.raises(TransformError):
+            Gzip(max_decompressed_bytes=self.LIMIT).unwrap(io.BytesIO(self.BOMB)).readline()
+
+    def test_seek_past_limit_raises(self):
+        from mountainash_transport import TransformError
+
+        s = Gzip(max_decompressed_bytes=self.LIMIT).unwrap(io.BytesIO(self.BOMB))
+        with pytest.raises(TransformError):
+            s.seek(2 * self.LIMIT)
+
+    def test_exact_limit_and_none_allowed(self):
+        data = b"x" * 5000
+        assert Gzip(max_decompressed_bytes=5000).unwrap(io.BytesIO(gzip.compress(data))).read() == data
+        assert len(Gzip(max_decompressed_bytes=None).unwrap(io.BytesIO(self.BOMB)).read()) == 64 * 1024 * 1024
+
+    def test_default_is_bounded(self):
+        assert Gzip().max_decompressed_bytes == 1024**3
+
+    def test_facade_read_with_inferred_gzip_raises(self, tmp_path):
+        from mountainash_transport import TransformError
+        from mountainash_transport.storage.facade import StorageFacade
+
+        p = tmp_path / "bomb.csv.gz"
+        p.write_bytes(self.BOMB)
+        facade = StorageFacade.for_local()
+        with pytest.raises(TransformError):
+            facade.read(str(p), infer=True, gzip=Gzip(max_decompressed_bytes=self.LIMIT))
