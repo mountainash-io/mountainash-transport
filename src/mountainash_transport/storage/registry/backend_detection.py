@@ -1,7 +1,7 @@
 # storage_registry/backend_detection.py
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from mountainash_transport.storage.path_helpers.scheme import SCHEMES
+from mountainash_transport._schemes import SCHEMES
 from mountainash_transport.storage.path_helpers.storage_path import StoragePath
 
 

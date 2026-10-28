@@ -1,4 +1,4 @@
-"""Canonical URL-scheme registry for storage paths.
+"""Canonical URL-scheme registry for storage paths (stdlib + constants only).
 
 Parses paths; does not imply a backend exists for the scheme.
 Entries here are decoupled from `storage_registry` / `storage_backends`.

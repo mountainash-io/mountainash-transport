@@ -13,7 +13,8 @@ from urllib.parse import urlparse, urlunparse
 
 from upath import UPath
 
-from .scheme import SCHEMES, _ALIAS_TO_CANONICAL
+from mountainash_transport import location
+from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
 # Return type for normalize: UPath for schemes fsspec supports,
 # _GenericSchemePath (str subclass) for schemes that only the registry
@@ -51,19 +52,7 @@ class StoragePath:
         Case-insensitive; aliases resolved. Returns None (not KeyError) for
         schemes not registered in SCHEMES.
         """
-        if path is None:
-            return ""
-        text = str(path)
-        if not text:
-            return ""
-        raw_scheme = urlparse(text).scheme.lower()
-        if not raw_scheme:
-            return ""
-        if raw_scheme in SCHEMES:
-            return raw_scheme
-        if raw_scheme in _ALIAS_TO_CANONICAL:
-            return _ALIAS_TO_CANONICAL[raw_scheme]
-        return None
+        return location.identify_scheme(str(path)) if path else ""
 
     @classmethod
     def to_str(cls, path: Union[str, UPath, None]) -> Optional[str]:

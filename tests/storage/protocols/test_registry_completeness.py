@@ -10,7 +10,7 @@ from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.exceptions import BackendNotImplementedError
 from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY
 from mountainash_transport.storage.registry import get_registered_backends, get_storage_backend
-from mountainash_transport.storage.path_helpers.scheme import SCHEMES
+from mountainash_transport._schemes import SCHEMES
 import mountainash_transport.storage.backends  # noqa: F401 — trigger registrations
 
 

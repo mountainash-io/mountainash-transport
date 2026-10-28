@@ -87,7 +87,7 @@ Package-local map. The *why* behind each layer lives in the central principles.
 - **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all but enumerate), `s3` (flavor-dispatched; all but directory), `sftp` (read/write/delete/metadata/directory). Other profiled providers have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`.
 - **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `cross_backend` copy.
 - **Registry** (`storage/registry/`): `get_storage_backend`, `get_registered_backends`, `detect_provider_from_path`.
-- **Path helpers** (`storage/path_helpers/`): `StoragePath`, `SchemeSpec`, suffixes, S3 paths.
+- **Path helpers** (`storage/path_helpers/`): `StoragePath`, suffixes, S3 paths. The scheme registry (`SchemeSpec`, `SCHEMES`) lives in `_schemes.py`; `location.py` owns confinement.
 
 ### Stream transforms (`_core/transforms/`)
 

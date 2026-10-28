@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from upath import UPath
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
-from .scheme import SCHEMES
+from mountainash_transport._schemes import SCHEMES
 from .storage_path import StoragePath
 
 # S3-compatible provider types; the family scheme set is DERIVED from SCHEMES so it
