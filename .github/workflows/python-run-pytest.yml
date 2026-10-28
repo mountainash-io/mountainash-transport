@@ -29,9 +29,6 @@ permissions:
 
 jobs:
   test:
-    permissions:
-      contents: read
-      id-token: write
     runs-on: ubuntu-24.04
     steps:
       - name: Set dependency branch variables
@@ -97,7 +94,39 @@ jobs:
       - name: Run coverage tests
         run: hatch run test_github:test-cov
 
+      - name: Upload coverage and test results as artifacts
+        if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codecov-inputs
+          path: |
+            coverage.xml
+            junit.xml
+          if-no-files-found: warn
+          retention-days: 1
+
+  # Codecov OIDC needs id-token: write, which must never be granted to
+  # pull_request jobs; uploads therefore run only on push/dispatch.
+  codecov-upload:
+    needs: test
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download coverage and test results
+        uses: actions/download-artifact@v4
+        with:
+          name: codecov-inputs
+
       - name: Upload coverage reports to Codecov
+        if: ${{ needs.test.result == 'success' }}
         uses: codecov/codecov-action@v5
         with:
           use_oidc: true
@@ -107,7 +136,6 @@ jobs:
           verbose: true
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
         with:
           report_type: test_results

@@ -181,6 +181,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: wheels-repository
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Add verified wheel on a release branch
         env:
@@ -191,6 +192,7 @@ jobs:
           WHEEL_PATH: ${{ runner.temp }}/mountainash-publish/dist/${{ steps.metadata.outputs.wheel-name }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           branch="release/${DISTRIBUTION}-${VERSION}-${RUN_ID}-${RUN_ATTEMPT}"
           git -C "$WHEELS_REPOSITORY" config user.name "mountainash-ci[bot]"
@@ -199,7 +201,10 @@ jobs:
           install -D --mode=0644 "$WHEEL_PATH" "$WHEELS_REPOSITORY/$DISTRIBUTION/$WHEEL_NAME"
           git -C "$WHEELS_REPOSITORY" add -- "$DISTRIBUTION/$WHEEL_NAME"
           git -C "$WHEELS_REPOSITORY" commit -m "Add $WHEEL_NAME"
-          git -C "$WHEELS_REPOSITORY" push --set-upstream origin "$branch"
+          auth_header=$(printf 'x-access-token:%s' "$APP_TOKEN" | base64 --wrap=0)
+          git -C "$WHEELS_REPOSITORY" \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" \
+            push --set-upstream origin "$branch"
           printf 'branch=%s\n' "$branch" >> "$GITHUB_OUTPUT"
         id: wheels-branch
 

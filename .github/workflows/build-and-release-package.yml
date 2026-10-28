@@ -183,9 +183,14 @@ jobs:
         env:
           RELEASE_ROOT: ${{ runner.temp }}/mountainash-release
           PACKAGE_DISTRIBUTION: mountainash-transport
+          SOURCE_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           env -i PATH="$PATH" HOME="$RELEASE_ROOT/home" PIP_CONFIG_FILE=/dev/null \
-            python -I - "$RELEASE_ROOT/dist" "$RELEASE_ROOT/evidence" "$PACKAGE_DISTRIBUTION" <<'PY'
+            python -I - "$RELEASE_ROOT/dist" "$RELEASE_ROOT/evidence" "$PACKAGE_DISTRIBUTION" \
+              "$SOURCE_SHA" "$REPOSITORY" "$RUN_ID" "$RUN_ATTEMPT" <<'PY'
           import hashlib
           import json
           import re
@@ -195,7 +200,8 @@ jobs:
           from pathlib import Path
           from packaging.version import Version
 
-          dist, evidence, expected_distribution = map(Path, sys.argv[1:])
+          dist, evidence, expected_distribution = map(Path, sys.argv[1:4])
+          source_sha, repository, run_id, run_attempt = sys.argv[4:8]
           wheel, = dist.glob('*.whl')
           sdist, = dist.glob('*.tar.gz')
           with zipfile.ZipFile(wheel) as archive:
@@ -213,10 +219,10 @@ jobs:
           release = {
               'distribution': canonical_name,
               'version': metadata['Version'],
-              'source_sha': '${{ github.sha }}',
-              'repository': '${{ github.repository }}',
-              'run_id': '${{ github.run_id }}',
-              'run_attempt': '${{ github.run_attempt }}',
+              'source_sha': source_sha,
+              'repository': repository,
+              'run_id': run_id,
+              'run_attempt': run_attempt,
               'files': files,
               'prerelease': Version(metadata['Version']).is_prerelease,
               'dependency_files': {
