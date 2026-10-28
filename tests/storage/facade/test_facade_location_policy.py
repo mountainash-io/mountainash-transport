@@ -169,3 +169,21 @@ def test_inactive_policy_from_path_malformed_url_not_policy_error(pol):
     with pytest.raises(ValueError) as ei:
         StorageFacade.from_path("https://[bad", policy=pol)
     assert not isinstance(ei.value, LocationNotAllowed)
+
+
+def test_policy_free_classification_propagates_value_error():
+    from mountainash_transport.storage.path_helpers import StoragePath
+    from mountainash_transport.storage.registry.backend_detection import detect_provider_from_path
+
+    for fn in (StoragePath.identify_scheme, detect_provider_from_path):
+        with pytest.raises(ValueError) as ei:
+            fn("https://[bad")
+        assert not isinstance(ei.value, LocationNotAllowed)
+
+
+def test_active_policy_malformed_url_sanitized_no_secret():
+    from mountainash_transport.location import require_known_scheme
+
+    with pytest.raises(LocationNotAllowed) as ei:
+        require_known_scheme("https://user:s3cret@[bad", LocationPolicy())
+    assert "s3cret" not in str(ei.value)

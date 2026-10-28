@@ -252,10 +252,6 @@ class StorageFacade:
         """
         if policy is not None and policy.active:
             require_known_scheme(path, policy)
-        else:
-            from urllib.parse import urlparse
-
-            urlparse(str(path))  # pre-policy behaviour: malformed URLs raise ValueError
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,

@@ -44,13 +44,18 @@ def _redact(location: str) -> str:
     return text if at < 0 else text[:start] + text[at + 1:]
 
 def _split(location: str) -> SplitResult:
+    return urlsplit(location)  # ValueError propagates; enforcement boundaries sanitize it
+
+def _sanitized(fn, location: str):
+    """Run *fn* for an active-policy boundary, mapping parse ValueError to a sanitized error."""
     try:
-        return urlsplit(location)
-    except ValueError:
+        return fn()
+    except ValueError as exc:
+        if isinstance(exc, LocationNotAllowed):
+            raise
         failed = True
     if failed:
         raise LocationNotAllowed(location, "invalid location") from None
-    raise AssertionError  # pragma: no cover
 
 def _norm_host(host: str) -> str | None:
     try:
@@ -93,7 +98,10 @@ def url_host(location: str) -> str:
     return normalized
 
 def require_known_scheme(location: str, policy: LocationPolicy | None) -> str | None:
-    scheme = identify_scheme(location)
+    if policy is not None and policy.active:
+        scheme = _sanitized(lambda: identify_scheme(location), location)
+    else:
+        scheme = identify_scheme(location)
     if scheme is None and policy is not None and policy.active:
         raise LocationNotAllowed(location, "unknown scheme")
     return scheme
@@ -111,9 +119,9 @@ def _resolve(path: str) -> str:
     return os.path.join(_resolve(head), tail)
 
 def confine_local(location: str, policy: LocationPolicy | None, *, tree: bool = False) -> str:
-    path = local_path(location)
     if policy is None or not policy.active or policy.root is None:
-        return path
+        return local_path(location)
+    path = _sanitized(lambda: local_path(location), location)
     root = os.path.realpath(policy.root)
     effective = _resolve(os.path.join(root, path))
     if not Path(effective).is_relative_to(root):

@@ -116,9 +116,7 @@ def test_error_redacts_userinfo_and_names_location():
 BAD = "https://user:secret@exam\uff0fple.com/x"
 
 @pytest.mark.parametrize("call", [
-    lambda: identify_scheme(BAD),
     lambda: url_host(BAD),
-    lambda: local_path(BAD),
     lambda: require_known_scheme(BAD, LocationPolicy()),
     lambda: confine_local(BAD, LocationPolicy(root="/r")),
 ])
@@ -156,10 +154,9 @@ def test_constructor_redacts_urllib_view(loc):
     "ht\ttps://user:secret@exam\uff0fple.com/x",
 ])
 @pytest.mark.parametrize("call", [
-    lambda loc: identify_scheme(loc),
     lambda loc: url_host(loc),
     lambda loc: require_known_scheme(loc, LocationPolicy()),
-], ids=["identify_scheme", "url_host", "require_known_scheme"])
+], ids=["url_host", "require_known_scheme"])
 def test_malformed_forms_rejected_without_leak(loc, call):
     with pytest.raises(LocationNotAllowed) as e:
         call(loc)
