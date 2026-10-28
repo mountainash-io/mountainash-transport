@@ -21,7 +21,8 @@ class LocationPolicy:
 
 class LocationNotAllowed(StorageError):
     def __init__(self, location: str, reason: str) -> None:
-        self.location = _redact(location); self.reason = reason
+        self.location = _redact(location)
+        self.reason = reason
         super().__init__(f"location not allowed: {self.location} ({reason})")
 
 _C0_OR_SPACE = "".join(chr(c) for c in range(0x21)) 
@@ -135,7 +136,8 @@ def _check_tree(top: str, root: str) -> None:
     for dirpath, dirnames, filenames in os.walk(top, followlinks=True):
         real = os.path.realpath(dirpath)
         if real in seen:
-            dirnames[:] = []; continue
+            dirnames[:] = []
+            continue
         seen.add(real)
         for name in (*dirnames, *filenames):
             entry = os.path.join(dirpath, name)
