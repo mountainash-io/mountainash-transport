@@ -36,3 +36,12 @@ def test_storage_factory_survives_submodule_import_order():
 def test_lazy_exports_are_real_objects():
     _run("import mountainash_transport as t; from mountainash_transport.storage.protocols import StorageReadProtocol; "
          "assert t.StorageReadProtocol is StorageReadProtocol; assert isinstance(t.StorageFacade.for_local(), t.StorageFacade)")
+
+
+def test_caller_registration_before_first_lookup_wins():
+    _run("from mountainash_transport.storage.registry.registry import register_storage_backend, get_storage_backend; "
+         "from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as C\n"
+         "@register_storage_backend(C.LOCAL)\n"
+         "class Custom:\n"
+         "    def __init__(self, profile, connection=None): pass\n"
+         "assert type(get_storage_backend(C.LOCAL, None)) is Custom")

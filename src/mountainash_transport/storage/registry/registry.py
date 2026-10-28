@@ -30,6 +30,9 @@ def _accepts_auth_strategy(cls: type) -> bool:
 def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Callable[[type], type]:
     """Decorator that registers a backend class for a provider type."""
     def decorator(cls: type) -> type:
+        # Built-ins load first so a caller's registration always overrides them.
+        # During the built-ins' own import this is a no-op (module already in sys.modules).
+        ensure_backends_loaded()
         _backend_registry[provider_type] = cls
         return cls
     return decorator
