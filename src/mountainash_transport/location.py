@@ -4,7 +4,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import SplitResult, unquote, urlsplit
 from mountainash_transport._core.exceptions import StorageError
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
@@ -25,17 +25,40 @@ class LocationNotAllowed(StorageError):
         super().__init__(f"location not allowed: {self.location} ({reason})")
 
 def _redact(location: str) -> str:
-    parts = urlsplit(location)
-    if "@" not in parts.netloc:
+    """Strip userinfo without urllib, so it cannot raise or echo the netloc."""
+    start = location.find("://")
+    if start < 0:
         return location
-    return parts._replace(netloc=parts.netloc.rsplit("@", 1)[1]).geturl()
+    start += 3
+    end = len(location)
+    for ch in "/?#":
+        i = location.find(ch, start)
+        if i != -1:
+            end = min(end, i)
+    at = location.rfind("@", start, end)
+    return location if at < 0 else location[:start] + location[at + 1:]
+
+def _split(location: str) -> SplitResult:
+    try:
+        return urlsplit(location)
+    except ValueError:
+        failed = True
+    if failed:
+        raise LocationNotAllowed(location, "invalid location") from None
+    raise AssertionError  # pragma: no cover
+
+def _norm_host(host: str) -> str | None:
+    try:
+        return host.encode("idna").decode("ascii").lower()
+    except UnicodeError:
+        return None
 
 def identify_scheme(location: str) -> str | None:
     if os.name == "nt" and len(location) > 2 and location[1] == ":" and location[2] in "\\/":
         return ""                                   # drive path (spec §1 rule 3; not CI-verified)
     if os.name == "nt" and location.startswith("\\\\"):
         return ""                                   # UNC
-    scheme = urlsplit(location).scheme.lower()
+    scheme = _split(location).scheme.lower()
     if not scheme:
         return ""
     if scheme == "file":
@@ -46,7 +69,7 @@ def identify_scheme(location: str) -> str | None:
 def local_path(location: str) -> str:
     if identify_scheme(location) != "file":
         return location
-    parts = urlsplit(location)
+    parts = _split(location)
     if parts.netloc not in ("", "localhost") or parts.query or parts.fragment:
         raise LocationNotAllowed(location, "invalid file URI")
     path = unquote(parts.path)
@@ -55,8 +78,14 @@ def local_path(location: str) -> str:
     return path
 
 def url_host(location: str) -> str:
-    host = urlsplit(location).hostname or ""
-    return host.encode("idna").decode("ascii").lower() if host else ""
+    try:
+        host = urlsplit(location).hostname or ""
+    except ValueError:
+        host = None
+    normalized = _norm_host(host) if host else ""
+    if host is None or normalized is None:
+        raise LocationNotAllowed(location, "invalid location") from None
+    return normalized
 
 def require_known_scheme(location: str, policy: LocationPolicy | None) -> str | None:
     scheme = identify_scheme(location)
@@ -103,13 +132,18 @@ def _check_tree(top: str, root: str) -> None:
 def allow_remote(scheme: str, host: str, policy: LocationPolicy | None, *, profile_host: str | None = None) -> None:
     if policy is None or not policy.active:
         return
+    want = _norm_host(host)
+    prof = _norm_host(profile_host) if profile_host is not None else None
+    allowed = policy.allowed_remote.get(scheme)
+    entries = None if allowed is None else {_norm_host(h) for h in allowed}
+    if want is None or (profile_host is not None and prof is None) or (entries is not None and None in entries):
+        raise LocationNotAllowed(f"{scheme}://{host}", "invalid location")
     if profile_host is not None:
-        if host == profile_host.lower():
+        if want == prof:
             return
         reason = "profile host mismatch"
     else:
         reason = "remote not allowed"
-    allowed = policy.allowed_remote.get(scheme)
-    if allowed is not None and (not allowed or host in allowed):
+    if entries is not None and (not entries or want in entries):
         return
     raise LocationNotAllowed(f"{scheme}://{host}", reason)

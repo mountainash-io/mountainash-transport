@@ -111,3 +111,32 @@ def test_error_redacts_userinfo_and_names_location():
     e = LocationNotAllowed("https://user:secret@h.example/p", "remote not allowed")
     assert "secret" not in str(e) and "h.example/p" in str(e) and e.reason == "remote not allowed"
 
+
+
+BAD = "https://user:secret@exam\uff0fple.com/x"
+
+@pytest.mark.parametrize("call", [
+    lambda: identify_scheme(BAD),
+    lambda: url_host(BAD),
+    lambda: local_path(BAD),
+    lambda: require_known_scheme(BAD, LocationPolicy()),
+    lambda: confine_local(BAD, LocationPolicy(root="/r")),
+])
+def test_malformed_credential_authority_is_redacted_and_uncaused(call):
+    with pytest.raises(LocationNotAllowed) as e: call()
+    assert e.value.reason == "invalid location" and "secret" not in str(e.value) and "secret" not in e.value.location
+    assert e.value.__cause__ is None and e.value.__suppress_context__
+
+def test_error_constructor_never_raises_on_malformed_authority():
+    assert "secret" not in str(LocationNotAllowed(BAD, "x"))
+
+def test_host_normalization_both_sides():
+    pol = LocationPolicy(allowed_remote={"https": frozenset({"DATA.Example.COM", "bücher.example"})})
+    allow_remote("https", url_host("https://data.example.com/x"), pol)
+    allow_remote("https", url_host("https://xn--bcher-kva.example/x"), pol)
+    allow_remote("https", url_host("https://BÜCHER.example/x"), pol)
+    allow_remote("sftp", url_host("sftp://xn--bcher-kva.example/p"), LocationPolicy(), profile_host="bücher.example")
+    allow_remote("sftp", url_host("sftp://bücher.example/p"), LocationPolicy(), profile_host="XN--BCHER-KVA.example")
+    with pytest.raises(LocationNotAllowed) as e:
+        allow_remote("sftp", "other.example", LocationPolicy(), profile_host="bücher.example")
+    assert e.value.reason == "profile host mismatch"
