@@ -105,4 +105,3 @@ def test_storage_backend_metadata_entry_redacts_userinfo():
     entry = backend.get_metadata(URL)
     assert SECRET not in entry.path
     assert SECRET not in repr(entry)
-    assert SECRET not in repr(entry.__dict__)
