@@ -76,7 +76,7 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
                 pass
 
         return StorageEntry(
-            path=path,
+            path=redact_userinfo(path),
             name=_filename_from_url(path),
             size=size,
             last_modified=last_modified,

@@ -98,3 +98,11 @@ def test_storage_backend_invalid_content_length_redacts_userinfo():
     with pytest.raises(StorageError) as ei:
         backend.get_metadata(URL)
     _assert_clean(ei.value)
+
+
+def test_storage_backend_metadata_entry_redacts_userinfo():
+    backend = _backend(lambda r: httpx.Response(200, headers={"content-length": "3"}))
+    entry = backend.get_metadata(URL)
+    assert SECRET not in entry.path
+    assert SECRET not in repr(entry)
+    assert SECRET not in repr(entry.__dict__)
