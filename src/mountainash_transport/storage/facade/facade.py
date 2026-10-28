@@ -151,6 +151,8 @@ class StorageFacade:
         provider = self._provider_type
         if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
+        if self._policy is None or not self._policy.active:
+            return path
         if provider in _S3_FAMILY:
             if not self._profile_any:
                 from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path

@@ -133,3 +133,22 @@ def test_unknown_scheme_rejected_at_operation_time(fake_backend, bucket):
     fac = StorageFacade.from_path("s3://bucket-a/k", _s3(bucket), policy=LocationPolicy())
     with pytest.raises(LocationNotAllowed) as e: fac.read("hf://user:secret@host/x")
     assert "secret" not in str(e.value) and fake_backend == []
+
+
+@pytest.mark.parametrize("policy", [None, LocationPolicy(allow_unconfined=True)])
+def test_invalid_s3_path_keeps_value_error_when_policy_inactive(fake_backend, policy):
+    from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+    fac = StorageFacade.from_path("s3://b/k", policy=policy)
+    fac._backend.read_to_bytes = fac._backend.read_to_stream = lambda path: parse_s3_path(path)
+    with pytest.raises(ValueError) as e:
+        fac.read("s3://")
+    assert not isinstance(e.value, LocationNotAllowed)
+
+
+def test_http_backend_rejects_location_check_with_injected_engine():
+    import httpx
+    from mountainash_transport._core.http.engine import HttpRequestEngine
+    from mountainash_transport.storage.backends.http import HTTPStorageBackend
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as c:
+        with pytest.raises(ValueError, match="location_check cannot be combined"):
+            HTTPStorageBackend(engine=HttpRequestEngine(c), location_check=lambda u: None)
