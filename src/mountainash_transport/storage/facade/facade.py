@@ -39,13 +39,19 @@ from mountainash_transport._core.transforms.pipeline import _ReadStream, _close_
 from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
-from mountainash_transport.location import LocationNotAllowed, LocationPolicy, confine_local
+from mountainash_transport.location import (
+    LocationNotAllowed, LocationPolicy, allow_remote, confine_local, identify_scheme,
+    require_known_scheme, url_host,
+)
+from mountainash_transport._schemes import SCHEMES
 
 _S3_FAMILY = frozenset({
     CONST_STORAGE_PROVIDER_TYPE.S3, CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS,
     CONST_STORAGE_PROVIDER_TYPE.MINIO, CONST_STORAGE_PROVIDER_TYPE.R2,
     CONST_STORAGE_PROVIDER_TYPE.B2,
 })
+
+_PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider in _S3_FAMILY}
 
 
 def _has_static_token(auth_profile: t.Any) -> bool:
@@ -125,6 +131,8 @@ class StorageFacade:
                 self._connection.connect()
 
             backend_kwargs: dict[str, t.Any] = {"connection": self._connection}
+            if provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP and self._policy is not None and self._policy.active:
+                backend_kwargs["location_check"] = self._check
             if strategy is not None:
                 backend_kwargs["auth_strategy"] = strategy
             self._backend = get_storage_backend(provider_type, storage_profile, **backend_kwargs)
@@ -139,8 +147,24 @@ class StorageFacade:
 
     def _check(self, path: str) -> str:
         """Return the path the backend must use, enforcing the location policy."""
-        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+        require_known_scheme(path, self._policy)
+        provider = self._provider_type
+        if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
+        if provider in _S3_FAMILY:
+            if not self._profile_any:
+                from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+                try:
+                    bucket, _ = parse_s3_path(path)
+                except ValueError:
+                    raise LocationNotAllowed(path, "invalid location") from None
+                allow_remote(_PROVIDER_SCHEME[provider], bucket.lower(), self._policy,
+                             profile_host=self._profile_host)
+        elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
+            if identify_scheme(path) == "sftp":
+                allow_remote("sftp", url_host(path), self._policy, profile_host=self._profile_host)
+        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP:
+            allow_remote(identify_scheme(path), url_host(path), self._policy)
         return path
 
     def _ensure_open(self) -> None:
@@ -215,6 +239,7 @@ class StorageFacade:
         Raises:
             ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
+        require_known_scheme(path, policy)
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,

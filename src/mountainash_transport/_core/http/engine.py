@@ -157,6 +157,9 @@ class HttpRequestEngine:
         defaults is used.
     auth_strategy:
         Optional auth strategy for injecting credentials into request headers.
+    location_check:
+        Optional callable invoked with every request URL (including redirect
+        and auth-flow requests) before it is sent; it raises to refuse.
     """
 
     def __init__(
@@ -164,7 +167,10 @@ class HttpRequestEngine:
         client: httpx.Client,
         policy: RequestPolicy | None = None,
         auth_strategy: AuthStrategy | None = None,
+        *,
+        location_check: t.Callable[[str], None] | None = None,
     ) -> None:
+        self._location_check = location_check
         self._client = client
         self._policy = policy or RequestPolicy()
         self._auth_strategy = auth_strategy
@@ -237,6 +243,8 @@ class HttpRequestEngine:
             with contextlib.closing(auth.sync_auth_flow(request)) as auth_flow:
                 request = next(auth_flow)
                 while True:
+                    if self._location_check is not None:
+                        self._location_check(str(request.url))
                     response = self._client.send(
                         request,
                         stream=True,

@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from mountainash_transport._core.http.engine import HttpRequestEngine
+from mountainash_transport.location import LocationNotAllowed
 from mountainash_transport._core.http.errors import HttpRedirectError, HttpTimeoutError
 from mountainash_transport._core.http.policy import (
     RedirectPolicy,
@@ -280,3 +281,42 @@ def test_redirected_response_closes_when_body_read_fails(fetch):
             fetch(engine, "https://example.test/start")
         assert intermediate.closed
         assert final.closed
+
+
+def _deny_evil(url):
+    if "evil.example" in url:
+        raise LocationNotAllowed(url, "remote not allowed")
+
+
+def test_location_check_stops_redirect_before_second_send():
+    sent = []
+
+    def handler(request):
+        sent.append(request)
+        return httpx.Response(302, headers={"Location": "http://evil.example/x"})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        engine = HttpRequestEngine(client, location_check=_deny_evil)
+        with pytest.raises(LocationNotAllowed):
+            engine.request("GET", "http://good.example/a")
+    assert [str(r.url) for r in sent] == ["http://good.example/a"]
+
+
+def test_location_check_stops_auth_flow_request_to_other_host():
+    sent = []
+
+    class Hop(httpx.Auth):
+        def auth_flow(self, request):
+            response = yield request
+            if response.status_code == 401:
+                yield httpx.Request("GET", "http://evil.example/token")
+
+    def handler(request):
+        sent.append(request)
+        return httpx.Response(401)
+
+    with httpx.Client(transport=httpx.MockTransport(handler), auth=Hop()) as client:
+        engine = HttpRequestEngine(client, location_check=_deny_evil)
+        with pytest.raises(LocationNotAllowed):
+            engine.request("GET", "http://good.example/a")
+    assert [str(r.url) for r in sent] == ["http://good.example/a"]

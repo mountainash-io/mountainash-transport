@@ -49,6 +49,7 @@ def get_storage_backend(
     *,
     connection: t.Any = None,
     auth_strategy: t.Any = None,
+    location_check: t.Callable[[str], None] | None = None,
 ) -> t.Any:
     """Instantiate and return a backend for the given provider type.
 
@@ -67,6 +68,7 @@ def get_storage_backend(
         storage_profile: Optional profile forwarded to the backend constructor.
         connection: Optional pre-built connection object forwarded to the backend.
         auth_strategy: Optional auth strategy forwarded to the backend constructor (HTTP backends only).
+        location_check: Optional per-request location check forwarded to the backend (HTTP only).
 
     Returns:
         An instantiated backend object.
@@ -91,6 +93,8 @@ def get_storage_backend(
                     "currently only supported by the HTTP backend."
                 )
             kwargs["auth_strategy"] = auth_strategy
+        if location_check is not None:
+            kwargs["location_check"] = location_check
         return cls(storage_profile, **kwargs)
 
     # Build the implemented-providers list for error messages
