@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import typing as t
 from types import TracebackType
 from typing import BinaryIO
@@ -38,6 +39,13 @@ from mountainash_transport._core.transforms.pipeline import _ReadStream, _close_
 from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedReadProtocol
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.location import LocationNotAllowed, LocationPolicy, confine_local
+
+_S3_FAMILY = frozenset({
+    CONST_STORAGE_PROVIDER_TYPE.S3, CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS,
+    CONST_STORAGE_PROVIDER_TYPE.MINIO, CONST_STORAGE_PROVIDER_TYPE.R2,
+    CONST_STORAGE_PROVIDER_TYPE.B2,
+})
 
 
 def _has_static_token(auth_profile: t.Any) -> bool:
@@ -62,10 +70,32 @@ class StorageFacade:
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
         token_store: ClearableSecretStore | None = None,
+        policy: LocationPolicy | None = None,
     ) -> None:
         from mountainash_transport.connections import create_connection, create_auth_strategy
         from mountainash_auth_client import OAuth2AuthProfile
         self._provider_type = provider_type
+        self._storage_profile = storage_profile
+
+        declared = None
+        if provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and storage_profile is not None:
+            declared = getattr(storage_profile, "ROOT_PATH", None)
+            if declared and getattr(storage_profile, "CREATE_PATH", False):
+                os.makedirs(declared, exist_ok=True)
+        self._policy = (policy or LocationPolicy()).with_declared_root(declared) if declared else policy
+
+        # Profile permission comes only from a caller-supplied profile.
+        self._profile_host: str | None = None
+        self._profile_any = False
+        if storage_profile is not None:
+            if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
+                self._profile_host = getattr(storage_profile, "HOST", None)
+            elif provider_type in _S3_FAMILY:
+                bucket = getattr(storage_profile, "BUCKET", None)
+                if bucket:
+                    self._profile_host = bucket
+                else:
+                    self._profile_any = True
 
         if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
             from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
@@ -107,6 +137,12 @@ class StorageFacade:
                     primary.add_note(note)
             raise
 
+    def _check(self, path: str) -> str:
+        """Return the path the backend must use, enforcing the location policy."""
+        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+            return confine_local(path, self._policy)
+        return path
+
     def _ensure_open(self) -> None:
         if self._closed:
             raise StorageConnectionError("StorageFacade is closed")
@@ -147,9 +183,9 @@ class StorageFacade:
     # ------------------------------------------------------------------
 
     @classmethod
-    def for_local(cls) -> StorageFacade:
+    def for_local(cls, *, policy: LocationPolicy | None = None) -> StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
-        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, storage_profile=None)
+        return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, storage_profile=None, policy=policy)
 
     @classmethod
     def from_path(
@@ -160,6 +196,7 @@ class StorageFacade:
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
         token_store: ClearableSecretStore | None = None,
+        policy: LocationPolicy | None = None,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
@@ -181,7 +218,7 @@ class StorageFacade:
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,
-            oauth_provider=oauth_provider, token_store=token_store,
+            oauth_provider=oauth_provider, token_store=token_store, policy=policy,
         )
 
     # ------------------------------------------------------------------
@@ -311,6 +348,7 @@ class StorageFacade:
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
         )
+        path = self._check(path)
         if access == "random":
             if not effective.is_empty():
                 raise ValueError("access='random' cannot be combined with transforms")
@@ -364,6 +402,7 @@ class StorageFacade:
         S3 and HTTP ignore this option. This does not make file writes atomic.
         """
         self._require(StorageWriteProtocol, "write")
+        path = self._check(path)
         if pipeline is None:
             self._backend.write_from_bytes(path, data, create_parents=create_parents)
             return
@@ -381,6 +420,7 @@ class StorageFacade:
     ) -> None:
         """Write a stream with the same parent-creation policy as :meth:`write`."""
         self._require(StorageWriteProtocol, "write_stream")
+        path = self._check(path)
         encoded = self._coerce_pipeline(pipeline).apply_write(stream)
         self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
@@ -401,6 +441,7 @@ class StorageFacade:
         Requires StorageEnumerateProtocol.
         """
         self._require(StorageEnumerateProtocol, "list_objects")
+        prefix = self._check(prefix)
         return self._backend.list_objects(prefix, delimiter=delimiter, max_results=max_results)
 
     # ------------------------------------------------------------------
@@ -410,6 +451,7 @@ class StorageFacade:
     def delete(self, path: str) -> None:
         """Delete the file at *path*."""
         self._require(StorageDeleteProtocol, "delete")
+        path = self._check(path)
         self._backend.delete_file(path)
 
     # ------------------------------------------------------------------
@@ -419,11 +461,13 @@ class StorageFacade:
     def exists(self, path: str) -> bool:
         """Return False only for established absence; backend failures raise."""
         self._require(StorageMetadataProtocol, "exists")
+        path = self._check(path)
         return self._backend.path_exists(path)
 
     def metadata(self, path: str) -> StorageEntry:
         """Return metadata for the resource at *path*."""
         self._require(StorageMetadataProtocol, "metadata")
+        path = self._check(path)
         return self._backend.get_metadata(path)
 
     def get_size(self, path: str) -> int | None:
@@ -432,6 +476,7 @@ class StorageFacade:
         Operational failures raise typed storage errors, never None.
         """
         self._require(StorageMetadataProtocol, "get_size")
+        path = self._check(path)
         return self._backend.get_size(path)
 
     # ------------------------------------------------------------------
@@ -441,7 +486,14 @@ class StorageFacade:
     def copy(self, source: str, destination: str) -> None:
         """Copy file from *source* to *destination* within the same backend."""
         self._require(StorageCopyProtocol, "copy")
-        self._backend.copy(source, destination)
+        src = self._check(source)
+        dst = self._check(destination)
+        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and os.path.isdir(dst):
+            final = self._check(os.path.join(dst, os.path.basename(src)))
+            if os.path.isdir(final):
+                raise LocationNotAllowed(destination, "copy destination is a directory")
+            dst = final
+        self._backend.copy(src, dst)
 
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)
@@ -450,14 +502,17 @@ class StorageFacade:
     def list_dir(self, path: str) -> list[StorageEntry]:
         """Filesystem listing. Requires StorageDirectoryProtocol."""
         self._require(StorageDirectoryProtocol, "list_dir")
+        path = self._check(path)
         return self._backend.list_dir(path)
 
     def mkdir(self, path: str, parents: bool = True) -> None:
         """Create a directory at *path*, optionally creating parent directories."""
         self._require(StorageDirectoryProtocol, "mkdir")
+        path = self._check(path)
         self._backend.mkdir(path, parents=parents)
 
     def rmdir(self, path: str) -> None:
         """Remove the directory at *path*."""
         self._require(StorageDirectoryProtocol, "rmdir")
+        path = self._check(path)
         self._backend.rmdir(path)

@@ -62,7 +62,7 @@ Package-local map. The *why* behind each layer lives in the central principles.
 |`SFTPStorageProfile`|SFTP (paramiko)|—|
 |`FTPStorageProfile`|FTP + FTPS|`USE_TLS: bool`|
 |`SMBStorageProfile`|SMB|—|
-|`LocalStorageProfile`|Local filesystem + NFS/CIFS (pre-mount)|`MOUNT_SPEC: Optional[dict]`|
+|`LocalStorageProfile`|Local filesystem (`ROOT_PATH` confines)|`ROOT_PATH: Optional[str]`|
 |`GitHubStorageProfile`|GitHub (read-only, fsspec-backed)|—|
 |`HTTPStorageProfile`|HTTP/HTTPS (httpx)|—|
 
