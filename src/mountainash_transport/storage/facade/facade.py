@@ -88,15 +88,16 @@ class StorageFacade:
             declared = getattr(storage_profile, "ROOT_PATH", None)
         self._policy = (policy or LocationPolicy()).with_declared_root(declared) if declared else policy
         if declared and getattr(storage_profile, "CREATE_PATH", False):
+            target = declared if os.path.isabs(declared) else os.path.join(os.getcwd(), declared)
             if self._policy is None or not self._policy.active or self._policy.root == declared:
-                os.makedirs(declared, exist_ok=True)
+                os.makedirs(target, exist_ok=True)
             else:
                 try:
-                    confine_local(declared, self._policy)
+                    confine_local(target, self._policy)
                 except LocationNotAllowed:
                     pass
                 else:
-                    os.makedirs(declared, exist_ok=True)
+                    os.makedirs(target, exist_ok=True)
 
         # Profile permission comes only from a caller-supplied profile.
         self._profile_host: str | None = None
@@ -156,8 +157,6 @@ class StorageFacade:
     def _check(self, path: str) -> str:
         """Return the path the backend must use, enforcing the location policy."""
         if self._policy is None or not self._policy.active:
-            if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
-                return confine_local(path, None)
             return path
         require_known_scheme(path, self._policy)
         provider = self._provider_type
@@ -251,7 +250,12 @@ class StorageFacade:
         Raises:
             ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
-        require_known_scheme(path, policy)
+        if policy is not None and policy.active:
+            require_known_scheme(path, policy)
+        else:
+            from urllib.parse import urlparse
+
+            urlparse(str(path))  # pre-policy behaviour: malformed URLs raise ValueError
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,

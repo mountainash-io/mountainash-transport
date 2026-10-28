@@ -145,3 +145,27 @@ def test_denied_credential_url_with_gpg_suffix_does_not_leak():
     with pytest.raises(LocationNotAllowed) as ei:
         fac.read_stream(url, infer=True)
     assert "secret" not in str(ei.value)
+
+
+def test_create_path_relative_root_created_nowhere_outside_caller_root(tmp_path, monkeypatch):
+    safe = tmp_path / "safe"; safe.mkdir()
+    work = tmp_path / "work"; work.mkdir()
+    monkeypatch.chdir(work)
+    StorageFacade(LOCAL, local_profile(ROOT_PATH="outside/new", CREATE_PATH=True),
+                  policy=LocationPolicy(root=str(safe)))
+    assert not (work / "outside").exists()
+    assert not (safe / "outside").exists()
+
+
+@pytest.mark.parametrize("pol", _INACTIVE)
+def test_inactive_policy_check_is_identity_for_local(pol):
+    fac = StorageFacade.for_local(policy=pol)
+    for p in ("file:///x", "file://otherhost/x", "rel/x"):
+        assert fac._check(p) == p
+
+
+@pytest.mark.parametrize("pol", _INACTIVE)
+def test_inactive_policy_from_path_malformed_url_not_policy_error(pol):
+    with pytest.raises(ValueError) as ei:
+        StorageFacade.from_path("https://[bad", policy=pol)
+    assert not isinstance(ei.value, LocationNotAllowed)
