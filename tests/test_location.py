@@ -140,3 +140,20 @@ def test_host_normalization_both_sides():
     with pytest.raises(LocationNotAllowed) as e:
         allow_remote("sftp", "other.example", LocationPolicy(), profile_host="bücher.example")
     assert e.value.reason == "profile host mismatch"
+
+
+@pytest.mark.parametrize("loc", [
+    "//user:secret@example.com/x",
+    "https:\n//user:secret@exam\uff0fple.com/x",
+    "ht\ttps://user:secret@exam\uff0fple.com/x",
+    "  https://user:secret@example.com/x",
+])
+def test_redaction_mirrors_urllib_view(loc):
+    assert "secret" not in str(LocationNotAllowed(loc, "x"))
+    for call in (lambda: identify_scheme(loc), lambda: url_host(loc),
+                 lambda: require_known_scheme(loc, LocationPolicy())):
+        try:
+            call()
+        except LocationNotAllowed as e:
+            assert "secret" not in str(e) and "secret" not in e.location
+            assert e.__cause__ is None and e.__suppress_context__

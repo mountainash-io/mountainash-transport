@@ -24,19 +24,24 @@ class LocationNotAllowed(StorageError):
         self.location = _redact(location); self.reason = reason
         super().__init__(f"location not allowed: {self.location} ({reason})")
 
+_C0_OR_SPACE = "".join(chr(c) for c in range(0x21)) 
+
 def _redact(location: str) -> str:
-    """Strip userinfo without urllib, so it cannot raise or echo the netloc."""
-    start = location.find("://")
+    """Strip userinfo without urllib, mirroring what urllib sees; never raises."""
+    text = location.strip(_C0_OR_SPACE)
+    for ch in "\t\r\n":
+        text = text.replace(ch, "")
+    start = text.find("//")
     if start < 0:
-        return location
-    start += 3
-    end = len(location)
+        return text
+    start += 2
+    end = len(text)
     for ch in "/?#":
-        i = location.find(ch, start)
+        i = text.find(ch, start)
         if i != -1:
             end = min(end, i)
-    at = location.rfind("@", start, end)
-    return location if at < 0 else location[:start] + location[at + 1:]
+    at = text.rfind("@", start, end)
+    return text if at < 0 else text[:start] + text[at + 1:]
 
 def _split(location: str) -> SplitResult:
     try:
