@@ -7,7 +7,7 @@ import typing as t
 
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport._core.exceptions import PathNotFoundError, StorageError
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.http.redact import _safe_cause, redact_userinfo
 
 from ._helpers import _mapped
 from mountainash_transport.storage.protocols import StorageMetadataProtocol
@@ -25,7 +25,7 @@ def _size(headers: t.Mapping[str, str], path: str) -> int | None:
     try:
         return int(value) if value else None
     except ValueError as exc:
-        raise StorageError(f"Invalid Content-Length for {redact_userinfo(path)}") from exc
+        raise StorageError(f"Invalid Content-Length for {redact_userinfo(path)}") from _safe_cause(exc)
 
 
 class HTTPMetadataMixin(StorageMetadataProtocol):

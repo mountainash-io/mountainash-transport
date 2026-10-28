@@ -13,7 +13,7 @@ import json
 import typing as t
 from dataclasses import dataclass
 
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.http.redact import _safe_cause, redact_userinfo
 from mountainash_transport._core.http.errors import HttpDecodeError
 
 if t.TYPE_CHECKING:
@@ -67,7 +67,7 @@ class HttpResponse:
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise HttpDecodeError(
                 f"Failed to decode response body as JSON: {exc}"
-            ) from exc
+            ) from _safe_cause(exc)
 
 
 class HttpStreamResponse:
