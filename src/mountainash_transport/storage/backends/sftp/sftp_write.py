@@ -4,7 +4,7 @@ from __future__ import annotations
 import posixpath
 import typing as t
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _remote_path
 
 
 class SFTPWriteMixin:
@@ -12,6 +12,7 @@ class SFTPWriteMixin:
 
     def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
         """Write bytes, optionally creating remote parent directories."""
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         parent = posixpath.dirname(path)
         if create_parents and parent:
             self.mkdir(parent, parents=True)  # type: ignore[attr-defined]
