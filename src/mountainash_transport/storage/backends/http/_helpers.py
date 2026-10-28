@@ -10,6 +10,7 @@ from mountainash_transport._core.exceptions import (
     AuthenticationError, ObjectChangedError, PathNotFoundError,
     PermissionDeniedError, StorageConnectionError, StorageError,
 )
+from mountainash_transport._core.http.redact import redact_userinfo
 from mountainash_transport._core.http.errors import (
     HttpAuthenticationError, HttpClientError, HttpConnectionError,
     HttpForbiddenError, HttpNotFoundError, HttpRequestError,
@@ -18,6 +19,7 @@ from mountainash_transport._core.http.errors import (
 
 
 def _map_error(exc: Exception, path: str) -> StorageError | None:
+    path = redact_userinfo(path)
     if isinstance(exc, (StorageError, HttpRequestError, httpx.InvalidURL,
                         httpx.UnsupportedProtocol, httpx.LocalProtocolError)):
         return None
@@ -39,9 +41,9 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
         if isinstance(current, (HttpConnectionError, HttpTimeoutError,
                                 httpx.NetworkError, httpx.TimeoutException,
                                 httpx.ProxyError, ConnectionError, TimeoutError)):
-            return StorageConnectionError(f"{path}: {exc}")
+            return StorageConnectionError(f"{path}: {redact_userinfo(str(exc))}")
         current = current.__cause__
-    return StorageError(f"{path}: {exc}")
+    return StorageError(f"{path}: {redact_userinfo(str(exc))}")
 
 
 @contextlib.contextmanager

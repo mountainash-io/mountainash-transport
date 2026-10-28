@@ -31,6 +31,7 @@ from mountainash_transport._core.http.errors import (
     HttpTransportError,
     map_status_to_error,
 )
+from mountainash_transport._core.http.redact import redact_userinfo
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse
 
@@ -277,7 +278,7 @@ class HttpRequestEngine:
     def _raise_for_status(response: httpx.Response) -> None:
         """Raise the appropriate transport error for a non-2xx response."""
         status = response.status_code
-        url = str(response.url)
+        url = redact_userinfo(str(response.url))
         method = response.request.method
         headers_dict = dict(response.headers)
         body_preview = response.text[:500] if response.content else None
@@ -298,7 +299,7 @@ class HttpRequestEngine:
             )
 
         raise error_cls(
-            f"HTTP {status} {method} {url}",
+            f"HTTP {status} {method} {redact_userinfo(url)}",
             **kwargs,
         )
 
@@ -369,7 +370,7 @@ class HttpRequestEngine:
                     policy=pol,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(str(exc)) from exc
+                raise HttpRequestError(redact_userinfo(str(exc))) from exc
             except httpx.HTTPError as exc:
                 transport_exc = _map_httpx_exception(exc)
 
@@ -401,7 +402,7 @@ class HttpRequestEngine:
                     status_code=status,
                     headers=dict(response.headers),
                     content=response.content,
-                    url=str(response.url),
+                    url=redact_userinfo(str(response.url)),
                     method=method_upper,
                 )
 
@@ -439,7 +440,7 @@ class HttpRequestEngine:
             # 3xx not followed
             if 300 <= status < 400:
                 raise HttpRedirectError(
-                    f"HTTP {status} redirect from {method_upper} {url}"
+                    f"HTTP {status} redirect from {method_upper} {redact_userinfo(url)}"
                 )
 
             # Other retryable status codes
@@ -507,7 +508,7 @@ class HttpRequestEngine:
                     params=params, policy=pol, stream=True,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(str(exc)) from exc
+                raise HttpRequestError(redact_userinfo(str(exc))) from exc
             except httpx.HTTPError as exc:
                 mapped = _map_httpx_exception(exc)
                 if (safe and retry.retry_on_transport
@@ -535,16 +536,16 @@ class HttpRequestEngine:
                     time.sleep(pause)
                     continue
                 if 300 <= status < 400:
-                    raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {url}")
+                    raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {redact_userinfo(url)}")
                 # Error metadata is available without draining an arbitrary error body.
                 cls = map_status_to_error(status)
                 kwargs: dict[str, t.Any] = dict(
                     status_code=status, headers=dict(response.headers),
-                    body_preview=None, url=str(response.url), method=method_upper,
+                    body_preview=None, url=redact_userinfo(str(response.url)), method=method_upper,
                 )
                 if status == 429:
                     kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
-                raise cls(f"HTTP {status} {method_upper} {url}", **kwargs)
+                raise cls(f"HTTP {status} {method_upper} {redact_userinfo(url)}", **kwargs)
             finally:
                 response.close()
         try:

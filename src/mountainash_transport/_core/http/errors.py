@@ -30,9 +30,20 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_transport._core.http.redact import redact_userinfo
+
 
 class HttpTransportError(Exception):
-    """Base class for all HTTP transport exceptions."""
+    """Base class for all HTTP transport exceptions.
+
+    String arguments are stripped of URL userinfo so credentials embedded in a
+    request URL never reach ``str(exc)``, ``repr(exc)`` or ``exc.args``.
+    """
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(
+            *(redact_userinfo(a) if isinstance(a, str) else a for a in args)
+        )
 
 
 class HttpResponseError(HttpTransportError):
@@ -68,7 +79,7 @@ class HttpResponseError(HttpTransportError):
         self.status_code = status_code
         self.headers = headers
         self.body_preview = body_preview
-        self.url = url
+        self.url = redact_userinfo(url) if url is not None else None
         self.method = method
 
 

@@ -13,6 +13,7 @@ import json
 import typing as t
 from dataclasses import dataclass
 
+from mountainash_transport._core.http.redact import redact_userinfo
 from mountainash_transport._core.http.errors import HttpDecodeError
 
 if t.TYPE_CHECKING:
@@ -103,7 +104,7 @@ class HttpStreamResponse:
     @property
     def url(self) -> str:
         """Final request URL as a string."""
-        return str(self._response.url)
+        return redact_userinfo(str(self._response.url))
 
     @property
     def method(self) -> str:
