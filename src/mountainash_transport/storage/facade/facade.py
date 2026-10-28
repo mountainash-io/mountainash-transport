@@ -86,9 +86,17 @@ class StorageFacade:
         declared = None
         if provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and storage_profile is not None:
             declared = getattr(storage_profile, "ROOT_PATH", None)
-            if declared and getattr(storage_profile, "CREATE_PATH", False):
-                os.makedirs(declared, exist_ok=True)
         self._policy = (policy or LocationPolicy()).with_declared_root(declared) if declared else policy
+        if declared and getattr(storage_profile, "CREATE_PATH", False):
+            if self._policy is None or not self._policy.active or self._policy.root == declared:
+                os.makedirs(declared, exist_ok=True)
+            else:
+                try:
+                    confine_local(declared, self._policy)
+                except LocationNotAllowed:
+                    pass
+                else:
+                    os.makedirs(declared, exist_ok=True)
 
         # Profile permission comes only from a caller-supplied profile.
         self._profile_host: str | None = None
@@ -147,12 +155,14 @@ class StorageFacade:
 
     def _check(self, path: str) -> str:
         """Return the path the backend must use, enforcing the location policy."""
+        if self._policy is None or not self._policy.active:
+            if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+                return confine_local(path, None)
+            return path
         require_known_scheme(path, self._policy)
         provider = self._provider_type
         if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
-        if self._policy is None or not self._policy.active:
-            return path
         if provider in _S3_FAMILY:
             if not self._profile_any:
                 from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
@@ -372,10 +382,11 @@ class StorageFacade:
             raise ValueError(f"Unknown access mode: {access!r}")
         if range_policy is not None and access != "random":
             raise ValueError("range_policy requires access='random'")
+        checked = self._check(path)
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
         )
-        path = self._check(path)
+        path = checked
         if access == "random":
             if not effective.is_empty():
                 raise ValueError("access='random' cannot be combined with transforms")
@@ -515,7 +526,10 @@ class StorageFacade:
         self._require(StorageCopyProtocol, "copy")
         src = self._check(source)
         dst = self._check(destination)
-        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and os.path.isdir(dst):
+        if (
+            self._policy is not None and self._policy.active
+            and self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and os.path.isdir(dst)
+        ):
             final = self._check(os.path.join(dst, os.path.basename(src)))
             if os.path.isdir(final):
                 raise LocationNotAllowed(destination, "copy destination is a directory")

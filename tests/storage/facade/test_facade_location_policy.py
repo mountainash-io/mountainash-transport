@@ -94,3 +94,54 @@ def test_create_path_creates_root(tmp_path):
     root = tmp_path / "new-root"
     StorageFacade(LOCAL, local_profile(ROOT_PATH=str(root), CREATE_PATH=True))
     assert root.is_dir()
+
+
+def test_create_path_not_created_outside_caller_root(tmp_path):
+    safe = tmp_path / "safe"; safe.mkdir()
+    outside = tmp_path / "outside" / "new"
+    StorageFacade(LOCAL, local_profile(ROOT_PATH=str(outside), CREATE_PATH=True),
+                  policy=LocationPolicy(root=str(safe)))
+    assert not outside.exists()
+
+
+def test_create_path_created_inside_caller_root(tmp_path):
+    safe = tmp_path / "safe"; safe.mkdir()
+    inside = safe / "new"
+    StorageFacade(LOCAL, local_profile(ROOT_PATH=str(inside), CREATE_PATH=True),
+                  policy=LocationPolicy(root=str(safe)))
+    assert inside.is_dir()
+
+
+_INACTIVE = [None, LocationPolicy(allow_unconfined=True)]
+
+
+@pytest.mark.parametrize("pol", _INACTIVE)
+def test_copy_into_dir_derived_dir_not_policy_error_when_inactive(dirs, pol):
+    a, _, _ = dirs
+    (a / "dst" / "f.csv").mkdir(parents=True)
+    fac = StorageFacade.for_local(policy=pol)
+    try:
+        fac.copy(str(a / "f.csv"), str(a / "dst"))
+    except LocationNotAllowed:
+        pytest.fail("policy error with no active policy")
+    except Exception:
+        pass
+
+
+@pytest.mark.parametrize("pol", _INACTIVE)
+def test_malformed_url_not_policy_error_when_inactive(pol):
+    fac = StorageFacade.from_path("https://example.com/x", policy=pol)
+    try:
+        fac.exists("https://[bad")
+    except LocationNotAllowed:
+        pytest.fail("policy error with no active policy")
+    except Exception:
+        pass
+
+
+def test_denied_credential_url_with_gpg_suffix_does_not_leak():
+    url = "https://user:secret@denied.example/data.csv.gpg"
+    fac = StorageFacade.from_path(url, policy=LocationPolicy())
+    with pytest.raises(LocationNotAllowed) as ei:
+        fac.read_stream(url, infer=True)
+    assert "secret" not in str(ei.value)
