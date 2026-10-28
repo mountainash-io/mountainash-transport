@@ -35,6 +35,11 @@ def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Ca
     return decorator
 
 
+def ensure_backends_loaded() -> None:
+    """Import the backends package so its decorators register (cached after first import)."""
+    import mountainash_transport.storage.backends  # noqa: F401
+
+
 def get_storage_backend(
     provider_type: CONST_STORAGE_PROVIDER_TYPE,
     storage_profile: StorageProfileProtocol | None,
@@ -67,6 +72,7 @@ def get_storage_backend(
         BackendNotImplementedError: If the provider exists but has no backend.
         ValueError: If the provider_type is not a recognised enum member.
     """
+    ensure_backends_loaded()
     # Step 1 — registered backend found
     cls = _backend_registry.get(provider_type)
     if cls is not None:
@@ -110,6 +116,7 @@ def get_storage_backend(
 
 def get_registered_backends() -> dict[CONST_STORAGE_PROVIDER_TYPE, type]:
     """Return a copy of all registered backends."""
+    ensure_backends_loaded()
     return dict(_backend_registry)
 
 
