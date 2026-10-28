@@ -247,7 +247,7 @@ Caller input, invalid arguments, transform/decoder failures and cancellation
 are not reclassified as backend failures. A failed write may leave partial
 data; error mapping does not add rollback or retries. Stream cleanup ordering
 and ownership remain unchanged. boto3 managed uploads may close seekable caller
-inputs. Paramiko 3.4.0 suppresses some native final-close failures internally;
+inputs. Paramiko suppresses some native final-close failures internally;
 transport translates escaping errors, not failures hidden by the SDK.
 
 ## Filesystem directory semantics

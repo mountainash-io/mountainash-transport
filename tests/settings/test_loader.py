@@ -350,11 +350,12 @@ def test_resolved_validation_failure_has_no_value_or_exception_chain(
         block = {"provider": "s3", "parameters": {"FLAVOR": "secret:private.value"}}
     else:
         block = {
-            "provider": "gcs",
-            "parameters": {"PROJECT": "test-project"},
+            "provider": "azure_storage",
+            "parameters": {"ACCOUNT_NAME": "testaccount"},
             "auth": {
-                "mode": "service_account",
-                "parameters": {"INFO": "secret:private.value"},
+                "mode": "azure_ad",
+                # MANAGED_IDENTITY is a bool, so the resolved string is invalid.
+                "parameters": {"MANAGED_IDENTITY": "secret:private.value"},
             },
         }
     if from_file:
