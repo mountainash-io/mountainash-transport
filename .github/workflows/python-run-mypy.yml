@@ -111,7 +111,7 @@ jobs:
           "$runner" -c 'import os, sys; print(sys.version); assert ".".join(map(str, sys.version_info[:2])) == os.environ["EXPECTED_PYTHON"]' | tee "$RUNNER_TEMP/typing-source-evidence/python.log"
           # Same pins as the hatch mypy environment.
           "$runner" -m pip install 'build==1.2.2.post1' 'hatchling==1.27.0' 'mypy==1.10.1' 'pytest==8.3.5' \
-            'boto3-stubs[s3]==1.34.113' 'types-PyYAML==6.0.12.20260906' 'types-paramiko==3.4.0.20240423' \
+            'boto3-stubs[s3]==1.43.117' 'types-PyYAML==6.0.12.20260906' 'types-paramiko==5.0.0.20261021' \
             'google-api-core>=2.11' \
             ./temp/mountainash-settings ./temp/mountainash-auth-client -e '.[s3,sftp,encryption]' 2>&1 | tee "$RUNNER_TEMP/typing-source-evidence/install.log"
           "$runner" -m pip freeze > "$RUNNER_TEMP/typing-source-evidence/dependencies.log"
