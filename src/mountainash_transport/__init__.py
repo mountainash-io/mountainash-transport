@@ -17,7 +17,103 @@ from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from . import storage as _storage_pkg  # noqa: F401
 
 if t.TYPE_CHECKING:
-    from .storage.facade import StorageFacade
+    # Static view of the lazy exports below; runtime stays lazy (PEP 562).
+    from .storage.facade import (
+        StorageFacade as StorageFacade,
+        copy_between as copy_between,
+    )
+    from ._core.ranged_io import RangePolicy as RangePolicy
+    from ._core.exceptions import (
+        RangeNotSupportedError as RangeNotSupportedError,
+        ObjectChangedError as ObjectChangedError,
+        StorageError as StorageError,
+        UnsupportedOperationError as UnsupportedOperationError,
+        StorageConnectionError as StorageConnectionError,
+        PathNotFoundError as PathNotFoundError,
+        AuthenticationError as AuthenticationError,
+        PermissionDeniedError as PermissionDeniedError,
+        TransformError as TransformError,
+        BackendNotImplementedError as BackendNotImplementedError,
+        ProfileResolutionError as ProfileResolutionError,
+        ProfileNotFoundError as ProfileNotFoundError,
+    )
+    from .storage.protocols.prtcl_ranged_read import RangedReadProtocol as RangedReadProtocol
+    from .storage.registry import (
+        get_storage_backend as get_storage_backend,
+        detect_provider_from_path as detect_provider_from_path,
+    )
+    from .storage.protocols import (
+        StorageReadProtocol as StorageReadProtocol,
+        StorageWriteProtocol as StorageWriteProtocol,
+        StorageEnumerateProtocol as StorageEnumerateProtocol,
+        StorageDeleteProtocol as StorageDeleteProtocol,
+        StorageMetadataProtocol as StorageMetadataProtocol,
+        StorageCopyProtocol as StorageCopyProtocol,
+        StorageDirectoryProtocol as StorageDirectoryProtocol,
+    )
+    from ._core.protocols import ConnectionProtocol as ConnectionProtocol
+    from .settings.profile_protocol import (
+        ProfileProtocol as ProfileProtocol,
+        StorageProfileProtocol as StorageProfileProtocol,
+    )
+    from .settings import (
+        AuthBlock as AuthBlock,
+        StorageProfileBlock as StorageProfileBlock,
+        StorageProfilesSettings as StorageProfilesSettings,
+        resolve_storage as resolve_storage,
+    )
+    from .connections.errors import TransportConnectionError as TransportConnectionError
+    from .connections import (
+        SSHConnection as SSHConnection,
+        SFTPConnection as SFTPConnection,
+        TunnelledConnection as TunnelledConnection,
+        create_connection as create_connection,
+        create_tunnelled_connection as create_tunnelled_connection,
+    )
+    from ._core.dataclasses.storage_entry import (
+        EntryType as EntryType,
+        EnumerateResult as EnumerateResult,
+        StorageEntry as StorageEntry,
+    )
+    from ._core.transforms import (
+        Pipeline as Pipeline,
+        StreamTransform as StreamTransform,
+        Gzip as Gzip,
+        GPG as GPG,
+    )
+    from ._core.http import (
+        HttpRequestEngine as HttpRequestEngine,
+        RequestPolicy as RequestPolicy,
+        RetryPolicy as RetryPolicy,
+        TimeoutPolicy as TimeoutPolicy,
+        RedirectPolicy as RedirectPolicy,
+        HttpResponse as HttpResponse,
+        HttpStreamResponse as HttpStreamResponse,
+        SAFE_METHODS as SAFE_METHODS,
+        IDEMPOTENT_METHODS as IDEMPOTENT_METHODS,
+        HttpTransportError as HttpTransportError,
+        HttpResponseError as HttpResponseError,
+        HttpClientError as HttpClientError,
+        HttpServerError as HttpServerError,
+        HttpNotFoundError as HttpNotFoundError,
+        HttpAuthenticationError as HttpAuthenticationError,
+        HttpForbiddenError as HttpForbiddenError,
+        HttpRateLimitError as HttpRateLimitError,
+        HttpConflictError as HttpConflictError,
+        HttpBadGatewayError as HttpBadGatewayError,
+        HttpServiceUnavailableError as HttpServiceUnavailableError,
+        HttpGatewayTimeoutError as HttpGatewayTimeoutError,
+        HttpConnectionError as HttpConnectionError,
+        HttpTimeoutError as HttpTimeoutError,
+        HttpRedirectError as HttpRedirectError,
+        HttpProtocolError as HttpProtocolError,
+        HttpRequestError as HttpRequestError,
+        HttpDecodeError as HttpDecodeError,
+    )
+    from .storage.path_helpers import (
+        StoragePath as StoragePath,
+        infer_pipeline as infer_pipeline,
+    )
 
 
 def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,

@@ -158,7 +158,7 @@ class StorageFacade:
         """Return the path the backend must use, enforcing the location policy."""
         if self._policy is None or not self._policy.active:
             return path
-        require_known_scheme(path, self._policy)
+        scheme = require_known_scheme(path, self._policy)
         provider = self._provider_type
         if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
@@ -174,8 +174,8 @@ class StorageFacade:
         elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
             if identify_scheme(path) == "sftp":
                 allow_remote("sftp", url_host(path), self._policy, profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP:
-            allow_remote(identify_scheme(path), url_host(path), self._policy)
+        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP and scheme is not None:
+            allow_remote(scheme, url_host(path), self._policy)
         return path
 
     def _ensure_open(self) -> None:
