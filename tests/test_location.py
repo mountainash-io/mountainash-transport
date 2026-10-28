@@ -144,16 +144,24 @@ def test_host_normalization_both_sides():
 
 @pytest.mark.parametrize("loc", [
     "//user:secret@example.com/x",
+    "  https://user:secret@example.com/x",
     "https:\n//user:secret@exam\uff0fple.com/x",
     "ht\ttps://user:secret@exam\uff0fple.com/x",
-    "  https://user:secret@example.com/x",
 ])
-def test_redaction_mirrors_urllib_view(loc):
+def test_constructor_redacts_urllib_view(loc):
     assert "secret" not in str(LocationNotAllowed(loc, "x"))
-    for call in (lambda: identify_scheme(loc), lambda: url_host(loc),
-                 lambda: require_known_scheme(loc, LocationPolicy())):
-        try:
-            call()
-        except LocationNotAllowed as e:
-            assert "secret" not in str(e) and "secret" not in e.location
-            assert e.__cause__ is None and e.__suppress_context__
+
+@pytest.mark.parametrize("loc", [
+    "https:\n//user:secret@exam\uff0fple.com/x",
+    "ht\ttps://user:secret@exam\uff0fple.com/x",
+])
+@pytest.mark.parametrize("call", [
+    lambda loc: identify_scheme(loc),
+    lambda loc: url_host(loc),
+    lambda loc: require_known_scheme(loc, LocationPolicy()),
+], ids=["identify_scheme", "url_host", "require_known_scheme"])
+def test_malformed_forms_rejected_without_leak(loc, call):
+    with pytest.raises(LocationNotAllowed) as e:
+        call(loc)
+    assert "secret" not in str(e.value) and "secret" not in e.value.location
+    assert e.value.__cause__ is None and e.value.__context__ is None
