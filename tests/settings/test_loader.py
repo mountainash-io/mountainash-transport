@@ -277,12 +277,6 @@ def test_nested_references_resolve_once():
                 "provider": "local",
                 "parameters": {
                     "ROOT_PATH": "secret:values.root",
-                    "MOUNT_SPEC": {
-                        "options": [
-                            "secret:values.option",
-                            {"nested": "secret:values.option"},
-                        ]
-                    },
                 },
             },
             "lake": {
@@ -298,11 +292,10 @@ def test_nested_references_resolve_once():
     )
     profile, _ = resolve_storage("nested", settings_parameters=params)
     assert profile.ROOT_PATH == "/resolved/root"
-    assert profile.MOUNT_SPEC == {"options": ["resolved", {"nested": "resolved"}]}
-    assert reader.reads == ["values", "values", "values", "values"]
+    assert reader.reads == ["values", "values"]
     _, auth = resolve_storage("lake", settings_parameters=params)
     assert auth.SECRET_ACCESS_KEY.get_secret_value() == "/resolved/root"
-    assert reader.reads == ["values"] * 8
+    assert reader.reads == ["values"] * 4
 
 
 def test_reader_errors_propagate_unchanged():

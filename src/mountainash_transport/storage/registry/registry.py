@@ -30,9 +30,17 @@ def _accepts_auth_strategy(cls: type) -> bool:
 def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Callable[[type], type]:
     """Decorator that registers a backend class for a provider type."""
     def decorator(cls: type) -> type:
+        # Built-ins load first so a caller's registration always overrides them.
+        # During the built-ins' own import this is a no-op (module already in sys.modules).
+        ensure_backends_loaded()
         _backend_registry[provider_type] = cls
         return cls
     return decorator
+
+
+def ensure_backends_loaded() -> None:
+    """Import the backends package so its decorators register (cached after first import)."""
+    import mountainash_transport.storage.backends  # noqa: F401
 
 
 def get_storage_backend(
@@ -41,6 +49,7 @@ def get_storage_backend(
     *,
     connection: t.Any = None,
     auth_strategy: t.Any = None,
+    location_check: t.Callable[[str], None] | None = None,
 ) -> t.Any:
     """Instantiate and return a backend for the given provider type.
 
@@ -59,6 +68,7 @@ def get_storage_backend(
         storage_profile: Optional profile forwarded to the backend constructor.
         connection: Optional pre-built connection object forwarded to the backend.
         auth_strategy: Optional auth strategy forwarded to the backend constructor (HTTP backends only).
+        location_check: Optional per-request location check forwarded to the backend (HTTP only).
 
     Returns:
         An instantiated backend object.
@@ -67,6 +77,7 @@ def get_storage_backend(
         BackendNotImplementedError: If the provider exists but has no backend.
         ValueError: If the provider_type is not a recognised enum member.
     """
+    ensure_backends_loaded()
     # Step 1 — registered backend found
     cls = _backend_registry.get(provider_type)
     if cls is not None:
@@ -82,6 +93,8 @@ def get_storage_backend(
                     "currently only supported by the HTTP backend."
                 )
             kwargs["auth_strategy"] = auth_strategy
+        if location_check is not None:
+            kwargs["location_check"] = location_check
         return cls(storage_profile, **kwargs)
 
     # Build the implemented-providers list for error messages
@@ -110,6 +123,7 @@ def get_storage_backend(
 
 def get_registered_backends() -> dict[CONST_STORAGE_PROVIDER_TYPE, type]:
     """Return a copy of all registered backends."""
+    ensure_backends_loaded()
     return dict(_backend_registry)
 
 

@@ -1,4 +1,4 @@
-"""Tests for LocalStorageProfile — local filesystem + NFS/CIFS fold-in."""
+"""Tests for LocalStorageProfile."""
 
 from __future__ import annotations
 
@@ -41,51 +41,6 @@ class TestLocalBasic:
         s = _make(ROOT_PATH="/tmp/new", CREATE_PATH=True)
         kw = s.to_handler_kwargs()
         assert kw["create_path"] is True
-
-
-@pytest.mark.unit
-class TestLocalMountSpecNone:
-    def test_no_mount_spec_means_no_mount_kwargs(self):
-        s = _make(ROOT_PATH="/tmp/files")
-        kw = s.to_handler_kwargs()
-        assert "mount_spec" not in kw
-
-    def test_mount_spec_none_mount_type_also_omitted(self):
-        s = _make(
-            ROOT_PATH="/tmp",
-            MOUNT_SPEC={"mount_type": "none"},
-        )
-        kw = s.to_handler_kwargs()
-        # 'none' is not a real mount type — should not surface in kwargs.
-        assert "mount_spec" not in kw
-
-
-@pytest.mark.unit
-class TestLocalMountSpecNFS:
-    def test_nfs_mount_spec_surfaces_in_handler_kwargs(self):
-        spec = {
-            "mount_type": "nfs",
-            "server": "nfs.example",
-            "export_path": "/srv/shared",
-            "options": {"vers": "4.2", "sec": "sys"},
-        }
-        s = _make(ROOT_PATH="/mnt/share", MOUNT_SPEC=spec)
-        kw = s.to_handler_kwargs()
-        assert kw["mount_spec"] == spec
-
-
-@pytest.mark.unit
-class TestLocalMountSpecCIFS:
-    def test_cifs_mount_spec_surfaces_in_handler_kwargs(self):
-        spec = {
-            "mount_type": "cifs",
-            "server": "file.corp",
-            "export_path": "/shared",
-            "options": {"vers": "3.0"},
-        }
-        s = _make(ROOT_PATH="/mnt/cifs", MOUNT_SPEC=spec)
-        kw = s.to_handler_kwargs()
-        assert kw["mount_spec"] == spec
 
 
 @pytest.mark.unit

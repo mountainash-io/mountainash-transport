@@ -11,8 +11,7 @@ settings classes, plus HTTP/HTTPS:
 * SFTP → :class:`SFTPStorageProfile` (paramiko SFTP subsystem)
 * FTP / FTPS → :class:`FTPSettings` (discriminated by ``USE_TLS``)
 * SMB / CIFS → :class:`SMBSettings`
-* Local + NFS + CIFS mounts → :class:`LocalSettings` (NFS / CIFS drive
-  a pre-mount step via ``MOUNT_SPEC``)
+* Local filesystem → :class:`LocalSettings` (``ROOT_PATH`` confines the facade)
 * GitHub repository read → :class:`GitHubRepoSettings` (scope-cut)
 * HTTP / HTTPS → :class:`HTTPSettings` (httpx-backed)
 """

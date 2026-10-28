@@ -34,7 +34,13 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
         auth_strategy: AuthStrategy | None = None,
         policy: RequestPolicy | None = None,
         engine: HttpRequestEngine | None = None,
+        location_check: t.Callable[[str], None] | None = None,
     ) -> None:
+        if engine is not None and location_check is not None:
+            raise ValueError(
+                "location_check cannot be combined with an injected engine; "
+                "construct the engine with location_check"
+            )
         self._connection = connection
         self.storage_profile = storage_profile
         self._engine: HttpRequestEngine | None = None
@@ -51,6 +57,7 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
                 client=client,
                 auth_strategy=auth_strategy,
                 policy=policy or RequestPolicy(),
+                location_check=location_check,
             )
 
     def _get_engine(self) -> HttpRequestEngine:

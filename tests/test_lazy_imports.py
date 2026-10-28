@@ -11,3 +11,37 @@ def test_top_level_import_stays_light():
         "assert not heavy, f'heavy imports at top level: {heavy}'"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def _run(code):
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_location_module_import_is_stdlib_only():
+    _run("import sys; before=set(sys.modules); import mountainash_transport.location; "
+         "new={m.split('.')[0] for m in set(sys.modules)-before}; "
+         "bad=new-set(sys.stdlib_module_names)-{'mountainash_transport'}; assert not bad, bad")
+
+
+def test_backends_register_on_first_lookup_after_lazy_import():
+    _run("from mountainash_transport.storage.facade.facade import StorageFacade; "
+         "StorageFacade.for_local()")
+
+
+def test_storage_factory_survives_submodule_import_order():
+    _run("from mountainash_transport import StorageFacade; import mountainash_transport.storage.facade; "
+         "from mountainash_transport import storage; f = storage(); assert f.__class__.__name__ == 'StorageFacade'")
+
+
+def test_lazy_exports_are_real_objects():
+    _run("import mountainash_transport as t; from mountainash_transport.storage.protocols import StorageReadProtocol; "
+         "assert t.StorageReadProtocol is StorageReadProtocol; assert isinstance(t.StorageFacade.for_local(), t.StorageFacade)")
+
+
+def test_caller_registration_before_first_lookup_wins():
+    _run("from mountainash_transport.storage.registry.registry import register_storage_backend, get_storage_backend; "
+         "from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as C\n"
+         "@register_storage_backend(C.LOCAL)\n"
+         "class Custom:\n"
+         "    def __init__(self, profile, connection=None): pass\n"
+         "assert type(get_storage_backend(C.LOCAL, None)) is Custom")

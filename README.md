@@ -340,6 +340,33 @@ service restrictions remain: S3 Express supports slash-terminated prefixes and
 the `"/"` delimiter. A missing prefix returns an empty result; missing/denied
 buckets raise typed errors.
 
+## Location policy
+
+Pass a `LocationPolicy` (`from mountainash_transport.location import LocationPolicy`)
+to `StorageFacade` / `StorageFacade.from_path` / `for_local` to confine what a
+facade may touch.
+
+- **`root`** confines local paths: symlinks and `..` are resolved and anything
+  outside the root raises `LocationNotAllowed`. A local profile's `ROOT_PATH`
+  now confines too (it becomes the root when the policy sets none).
+  `MOUNT_SPEC` has been removed.
+- **`allowed_remote`** maps a scheme to the hosts (or S3 buckets) it may reach,
+  e.g. `{"http": frozenset({"api.example.com"})}`. HTTP is refused unless listed;
+  every request is checked, including redirects and auth-flow follow-ups,
+  before it is sent.
+- **Profile permission.** A caller-supplied SFTP profile permits its own `HOST`;
+  an S3-family profile with a `BUCKET` permits only that bucket, and one with no
+  `BUCKET` permits any bucket at its endpoint. A profile never widens
+  `allowed_remote` for other hosts.
+- **`allow_unconfined=True`** opts out explicitly. With no policy, behaviour is
+  unchanged.
+- Unknown URL schemes are refused with a redacted error (credentials are never
+  echoed).
+
+Limits: the check is on the host name, so DNS rebinding is not defended
+against, and managed-OAuth token endpoints are not covered by the policy.
+See the path-confinement design spec for the full threat model.
+
 ## Connection lifetime
 
 A facade owns the connection it creates. Use `with StorageFacade.from_path(...)`
