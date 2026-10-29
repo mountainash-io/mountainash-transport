@@ -1,0 +1,86 @@
+{
+  "id": "mountainash_transport._core.extras",
+  "path": "src/mountainash_transport/_core/extras.py",
+  "summary": "Converts ModuleNotFoundError for packages of the [http] dependency stack into a typed MissingExtraError naming the extra to install. HTTP_STACK lists the top-level module names covered (mountainash_settings, mountainash_auth_client, pydantic, upath, httpx, fsspec). Any other import failure, including a missing backend SDK or a partial-import ImportError, is re-raised unchanged.",
+  "role": "integration",
+  "visibility": "internal",
+  "stability": "evolving",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [],
+  "key_functions": [
+    "raise_for_missing_extra(feature: str, extra: str, exc: ImportError) -> NoReturn — raise MissingExtraError (with .extra, .feature, chained from exc) when exc is a ModuleNotFoundError for an HTTP_STACK module; otherwise re-raise exc"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.exceptions"
+  ],
+  "dependents": [
+    "mountainash_transport._core.http",
+    "mountainash_transport.connections",
+    "mountainash_transport.settings",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.path_helpers"
+  ],
+  "extension_points": [
+    "Subpackages that need the [http] stack wrap their imports in try/except ImportError and call raise_for_missing_extra(feature, 'http', exc); used by _core/http, connections, settings, settings profiles, path_helpers and s3_path"
+  ],
+  "lifecycle_notes": [
+    "Fires at import time of an [http]-dependent subpackage, which (through the lazy root) means on first attribute access of a root name such as StorageFacade remote paths, StoragePath or create_connection"
+  ],
+  "documentation_hooks": [
+    "Installation/extras page: what MissingExtraError looks like and how to fix it",
+    "Maintainer note: how to make a new subpackage base-install safe (guard imports, call raise_for_missing_extra, keep tests/test_slim_install.py green)"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/_core/test_extras.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "Only HTTP_STACK modules are converted: missing boto3, paramiko or python-gnupg are re-raised as plain ModuleNotFoundError even though the extra parameter is free-form, so [s3]/[sftp]/[encryption] absence does not yield MissingExtraError through this helper (tests/_core/test_extras.py asserts boto3 is not converted)",
+    "HTTP_STACK must be kept in step with the [http] extra in pyproject.toml by hand; a new dependency added to [http] but not to HTTP_STACK leaks a raw ModuleNotFoundError"
+  ],
+  "open_questions": [
+    "Is the conversion intentionally limited to the [http] stack, or should backend-SDK extras ([s3], [sftp], [encryption]) also map to MissingExtraError with a per-extra module set?"
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/extras.py",
+      "detail": "HTTP_STACK frozenset and raise_for_missing_extra implementation"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/test_extras.py",
+      "detail": "stack modules convert; boto3, pydantic_core and partial ImportError are not converted"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "one of several [http]-dependent packages guarding imports with this helper"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/extras.py",
+      "detail": "single recent commit 8bf57eb (feature #33 slim base install) -> evolving"
+    },
+    {
+      "kind": "doc",
+      "path": "AGENTS.md",
+      "detail": "Dependencies section: missing extras raise MissingExtraError (_core/extras.py)"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

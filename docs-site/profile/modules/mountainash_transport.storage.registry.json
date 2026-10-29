@@ -1,0 +1,117 @@
+{
+  "dependencies": [
+    "mountainash_transport",
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._schemes",
+    "mountainash_transport.location",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.backends"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.storage.registry",
+  "path": "src/mountainash_transport/storage/registry/",
+  "summary": "Backend registry and path-to-provider detection. register_storage_backend(provider_type) is a class decorator that maps a CONST_STORAGE_PROVIDER_TYPE to a backend class; get_storage_backend instantiates the registered class with the profile, connection and optional auth_strategy/location_check, and raises BackendNotImplementedError for known-but-unimplemented providers. detect_provider_from_path maps a path's scheme (via location.identify_scheme and the SCHEMES table) to a provider type. Built-in backends (local, S3 family, SFTP, HTTP) load lazily on first lookup, and caller registrations override them.",
+  "role": "orchestration",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "get_storage_backend",
+    "detect_provider_from_path",
+    "register_storage_backend",
+    "get_registered_backends",
+    "clear_registry"
+  ],
+  "key_classes": [],
+  "key_functions": [
+    "register_storage_backend(provider_type) -> Callable[[type], type] — decorator; loads built-ins first so caller registration wins",
+    "get_storage_backend(provider_type, storage_profile, *, connection=None, auth_strategy=None, location_check=None) — instantiate backend; BackendNotImplementedError for enum members without a backend, ValueError for unknown values",
+    "get_registered_backends() -> dict[CONST_STORAGE_PROVIDER_TYPE, type] — copy of the registry (README support matrix must match)",
+    "detect_provider_from_path(path) -> CONST_STORAGE_PROVIDER_TYPE — scheme dispatch; '' (bare/empty path) maps to local; ValueError for unknown schemes or schemes with no provider",
+    "ensure_backends_loaded() — imports storage.backends so decorators run",
+    "clear_registry() — empties the registry (testing only)"
+  ],
+  "extension_points": [
+    "Register a custom backend class for any CONST_STORAGE_PROVIDER_TYPE with @register_storage_backend; it overrides the built-in",
+    "Backend constructors receive (storage_profile, connection=..., [auth_strategy=...], [location_check=...]); accepting auth_strategy (explicitly or via **kwargs) is required for managed OAuth2",
+    "Implement the storage.protocols capability protocols a la carte; the facade checks them with isinstance"
+  ],
+  "lifecycle_notes": [
+    "Base-install safe: backends package imports no SDK at import time (enforced by tests/test_slim_install.py)",
+    "Backends are stateless handlers; connection lifecycle belongs to connections/ and the facade",
+    "auth_strategy forwarding is guarded: a backend whose ctor cannot accept it raises BackendNotImplementedError rather than TypeError (only HTTP accepts it today)"
+  ],
+  "documentation_hooks": [
+    "Backend support matrix generated from get_registered_backends()",
+    "Extending: writing and registering a custom storage backend",
+    "Path dispatch: scheme -> provider mapping and error cases",
+    "Architecture: profile registry vs backend registry and the implemented-flag drift test"
+  ],
+  "examples": [
+    "examples/path_dispatch/example.py — detect_provider_from_path over bare, s3, r2, https etc. paths"
+  ],
+  "tests": [
+    "tests/storage/registry/test_registry.py",
+    "tests/storage/registry/test_backend_detection.py",
+    "tests/storage/registry/test_backend_not_implemented.py",
+    "tests/storage/registry/test_auth_strategy_forwarding.py",
+    "tests/storage/protocols/test_registry_completeness.py",
+    "tests/storage/protocols/test_backend_conformance.py",
+    "tests/test_slim_install.py",
+    "tests/test_lazy_imports.py"
+  ],
+  "risks": [
+    "clear_registry() empties the dict, but ensure_backends_loaded() will not re-register built-ins because the backends package is already in sys.modules; after clear_registry the built-ins are gone for the rest of the process (tests snapshot and restore _backend_registry manually instead)",
+    "The registry is process-global mutable state: a third-party registration silently replaces a built-in backend for every facade in the process",
+    "detect_provider_from_path and get_storage_backend raise ValueError for unknown schemes/types rather than a StorageError subclass"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "get_storage_backend and detect_provider_from_path are root exports"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/registry/registry.py",
+      "detail": "register_storage_backend calls ensure_backends_loaded() before registering (caller wins)"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/registry/test_auth_strategy_forwarding.py",
+      "detail": "Fixture snapshots/restores reg._backend_registry rather than relying on clear_registry"
+    },
+    {
+      "kind": "example",
+      "path": "examples/path_dispatch/example.py",
+      "detail": "User recipe calls detect_provider_from_path"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/registry",
+      "detail": "Five commits 2026-10-28/29 (lazy loading, caller-wins, location_check, base install): evolving"
+    }
+  ]
+}

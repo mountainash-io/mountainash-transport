@@ -1,0 +1,137 @@
+{
+  "id": "mountainash_transport.storage.backends.local",
+  "path": "src/mountainash_transport/storage/backends/local/",
+  "summary": "LocalStorageBackend, registered for CONST_STORAGE_PROVIDER_TYPE.LOCAL, composes eight stdlib-only mixins over os/shutil. It implements StorageReadProtocol (LocalReadMixin), StorageWriteProtocol (LocalWriteMixin), StorageEnumerateProtocol (LocalEnumerateMixin), StorageDeleteProtocol (LocalDeleteMixin), StorageMetadataProtocol (LocalMetadataMixin), StorageCopyProtocol (LocalCopyMixin) and StorageDirectoryProtocol (list_dir from LocalListMixin plus mkdir/rmdir from LocalDirectoryMixin); it does not implement RangedReadProtocol. OSErrors are mapped to PathNotFoundError, PermissionDeniedError, StorageConnectionError or StorageError at native call boundaries.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "LocalStorageBackend",
+    "LocalReadMixin",
+    "LocalWriteMixin",
+    "LocalListMixin",
+    "LocalDeleteMixin",
+    "LocalMetadataMixin",
+    "LocalCopyMixin",
+    "LocalDirectoryMixin"
+  ],
+  "key_classes": [
+    "LocalStorageBackend — registered local filesystem backend; connect/disconnect are no-ops, is_connected always True",
+    "LocalReadMixin — StorageReadProtocol: read_to_bytes, read_to_stream returning a native-backed seekable _LocalReader",
+    "LocalWriteMixin — StorageWriteProtocol: bytes and 64 KiB-chunked stream writes, optional parent creation",
+    "LocalEnumerateMixin — StorageEnumerateProtocol: exact-path list_objects, recursive or '/'-grouped, skips directory symlinks/junctions when recursing (not in local __all__)",
+    "LocalListMixin — list_dir half of StorageDirectoryProtocol; resolves symlinks, skips broken ones",
+    "LocalDirectoryMixin — mkdir/rmdir half of StorageDirectoryProtocol; rmdir removes the whole tree (shutil.rmtree)",
+    "LocalDeleteMixin — StorageDeleteProtocol: os.remove; missing path raises PathNotFoundError",
+    "LocalMetadataMixin — StorageMetadataProtocol: os.stat-based get_metadata, path_exists, get_size",
+    "LocalCopyMixin — StorageCopyProtocol: shutil.copy2 with destination parent creation",
+    "_LocalReader — private wrapper preserving the native handle's capabilities (seek, readinto, fileno) while mapping OSErrors"
+  ],
+  "key_functions": [
+    "_helpers._map_local_error(exc, path) -> StorageError | None — OSError classification; leaves io.UnsupportedOperation and shutil.SameFileError native",
+    "_helpers._mapped(path) — context manager applying the mapping"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.backends"
+  ],
+  "extension_points": [
+    "Mixins are plain classes satisfying protocols structurally; they can be recomposed or subclassed to build a custom filesystem-like backend.",
+    "Re-registering CONST_STORAGE_PROVIDER_TYPE.LOCAL with @register_storage_backend overrides this backend."
+  ],
+  "lifecycle_notes": [
+    "No connection: StorageFacade passes connection=None; the backend holds storage_profile but confinement (ROOT_PATH / LocationPolicy) is enforced by the facade, not here.",
+    "Pure stdlib; available on the base install without extras.",
+    "read_to_stream hands ownership of an open file to the caller; facade random mode returns this same handle instead of a ranged reader.",
+    "Writes are not atomic; a failed stream write can leave a partial file."
+  ],
+  "documentation_hooks": [
+    "Support matrix row: Local = Read, Write, Enumerate, Delete, Metadata, Copy, Directory; random access via native seekable handle rather than RangedReadProtocol.",
+    "Directory semantics divergence: local rmdir is recursive, SFTP rmdir requires an empty directory.",
+    "Exact-path enumeration rules (no sibling prefix match, '/' grouping, symlink handling, missing path -> empty result).",
+    "Local error mapping and the list_dir migration note (file -> not-directory error, missing -> PathNotFoundError)."
+  ],
+  "examples": [
+    "examples/local_files/example.py — write, read, metadata, exists, get_size and delete on the local backend",
+    "examples/directories/example.py — mkdir, copy, list_dir, delete and rmdir on the local backend",
+    "examples/streaming/example.py — gzip write_stream and streamed read on local files",
+    "examples/capability_checks/example.py — lists local capabilities via supports()"
+  ],
+  "tests": [
+    "tests/storage/backends/test_local.py",
+    "tests/storage/backends/test_directory_semantics.py",
+    "tests/storage/protocols/test_backend_conformance.py",
+    "tests/storage/cross_backend/test_read_write.py",
+    "tests/storage/cross_backend/test_list.py",
+    "tests/storage/cross_backend/test_delete.py",
+    "tests/storage/cross_backend/test_metadata.py",
+    "tests/storage/facade/test_facade_location_policy.py",
+    "tests/storage/facade/test_read_access_modes.py"
+  ],
+  "risks": [
+    "LocalDirectoryMixin.rmdir uses shutil.rmtree and deletes non-empty trees, unlike SFTP's empty-only rmdir; the protocol leaves this backend-specific (README.md documents it).",
+    "LocalDirectoryMixin.mkdir declares `parents` as positional-or-keyword while StorageDirectoryProtocol declares it keyword-only; runtime_checkable isinstance does not detect signature drift.",
+    "local __all__ omits LocalEnumerateMixin even though LocalStorageBackend composes it, so star-imports and docs driven by __all__ miss enumeration.",
+    "StorageDirectoryProtocol support is split across two mixins (LocalListMixin.list_dir and LocalDirectoryMixin.mkdir/rmdir); neither alone satisfies the protocol.",
+    "LocalCopyMixin.copy with an existing directory destination copies into it (shutil.copy2); the facade only guards this when a LocationPolicy is active.",
+    "AGENTS.md says local supports 'all but enumerate', contradicting code and tests."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/local/__init__.py",
+      "detail": "@register_storage_backend(LOCAL) class LocalStorageBackend(LocalReadMixin, LocalWriteMixin, LocalListMixin, LocalEnumerateMixin, LocalDeleteMixin, LocalMetadataMixin, LocalCopyMixin, LocalDirectoryMixin)."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/local/local_enumerate.py",
+      "detail": "LocalEnumerateMixin.list_objects matches StorageEnumerateProtocol."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/local/local_directory.py",
+      "detail": "rmdir -> shutil.rmtree; mkdir(path, parents=True) positional."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/local/local_list.py",
+      "detail": "LocalListMixin.list_dir supplies the remaining StorageDirectoryProtocol method."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "LOCAL expected set includes all seven storage protocols."
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Directory removal backend-specific: Local removes a tree; SFTP removes an empty directory."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/backends/local",
+      "detail": "Enumeration and parent-creation policy added 2026-10-17; error mapping 2026-10-16; evolving."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

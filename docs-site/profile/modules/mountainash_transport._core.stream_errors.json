@@ -1,0 +1,78 @@
+{
+  "id": "mountainash_transport._core.stream_errors",
+  "path": "src/mountainash_transport/_core/stream_errors.py",
+  "summary": "Provides _CallerInput, a proxy around a caller-supplied input stream used during uploads. It delegates every attribute unchanged while recording exceptions raised by the caller's stream. original_in() walks an exception's __cause__/__context__ chain to find a recorded caller error, so write backends can re-raise the caller's own exception instead of reclassifying it as a backend failure.",
+  "role": "io",
+  "visibility": "private",
+  "stability": "evolving",
+  "audiences": [
+    "maintainers"
+  ],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [
+    "_CallerInput(source) — attribute-delegating proxy that records exceptions raised by caller-owned stream methods for one transfer"
+  ],
+  "key_functions": [
+    "_CallerInput.original_in(error) -> (exception, traceback) | None — search error's cause/context graph for a recorded caller exception"
+  ],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.s3"
+  ],
+  "extension_points": [
+    "Write backends that hand a caller stream to an SDK which may wrap its exceptions (boto3 managed upload, httpx) should wrap the stream in _CallerInput and consult original_in() before mapping errors"
+  ],
+  "lifecycle_notes": [
+    "One instance per transfer; recorded errors are retained only for that transfer",
+    "Records BaseException, including KeyboardInterrupt and attribute lookup failures"
+  ],
+  "documentation_hooks": [
+    "README 'Storage errors' contract: caller input failures are not reclassified as backend failures",
+    "Maintainer note on preserving caller exception identity across SDK-managed uploads"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/storage/backends/test_s3.py",
+    "tests/storage/backends/test_http.py"
+  ],
+  "risks": [
+    "No dedicated unit test file; behaviour is covered only through S3 and HTTP backend tests (test_s3_managed_upload_preserves_colliding_caller_error, test_s3_wrapped_input_failure_restores_caller_cause, test_http_caller_error_keeps_identity)",
+    "Proxying via __getattr__ means isinstance checks and dunder protocol lookups (e.g. iteration) on the proxy do not reach the source stream; SDKs that type-check inputs may behave differently",
+    "Matching uses object identity; an SDK that re-creates rather than wraps the exception defeats recovery"
+  ],
+  "open_questions": [
+    "SFTP has a caller-input test (tests/storage/backends/test_sftp.py::test_sftp_caller_input_failure_is_unchanged) but does not use _CallerInput; is that intentional because paramiko does not wrap caller errors?"
+  ],
+  "evidence": [
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_write.py",
+      "detail": "wraps the upload stream in _CallerInput and calls original_in on failure"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/http/http_write.py",
+      "detail": "same pattern for HTTP writes"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/backends/test_s3.py",
+      "detail": "caller-error identity tests for managed uploads"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/stream_errors.py",
+      "detail": "single commit 6fa3c54 -> evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "id": "mountainash_transport.storage.backends.s3",
+  "path": "src/mountainash_transport/storage/backends/s3/",
+  "summary": "S3StorageBackend is one boto3-based class registered for five provider types (S3, S3EXPRESS, R2, MINIO, B2); flavor differences are resolved by S3Connection, not here. It implements StorageReadProtocol (S3ReadMixin), StorageWriteProtocol (S3WriteMixin), StorageEnumerateProtocol (S3EnumerateMixin), StorageDeleteProtocol (S3DeleteMixin), StorageMetadataProtocol (S3MetadataMixin), StorageCopyProtocol (S3CopyMixin, server-side copy_object) and, structurally via S3ReadMixin.open_ranged, RangedReadProtocol. StorageDirectoryProtocol is intentionally not implemented. botocore errors are mapped to typed StorageError subclasses.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture",
+    "broader-hype"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "S3StorageBackend",
+    "R2StorageBackend",
+    "S3ExpressStorageBackend",
+    "MinIOStorageBackend",
+    "B2StorageBackend",
+    "S3ReadMixin",
+    "S3WriteMixin",
+    "S3EnumerateMixin",
+    "S3DeleteMixin",
+    "S3MetadataMixin",
+    "S3CopyMixin"
+  ],
+  "key_classes": [
+    "S3StorageBackend — unified S3-family backend over an injected S3Connection's boto3 client; connect/disconnect/is_connected manage the cached client",
+    "S3ReadMixin — StorageReadProtocol: get_object reads, forward-only stream, plus open_ranged (HEAD for size, ranged GET with IfMatch on strong ETag)",
+    "S3WriteMixin — StorageWriteProtocol: put_object for bytes, upload_fileobj (multipart-aware, non-buffering) for streams; create_parents ignored",
+    "S3EnumerateMixin — StorageEnumerateProtocol: list_objects_v2 paginator, literal key prefixes, optional delimiter, CommonPrefixes as PREFIX entries",
+    "S3DeleteMixin — StorageDeleteProtocol: delete_object",
+    "S3MetadataMixin — StorageMetadataProtocol: head_object metadata with checksum preference SHA256 > CRC32C > CRC32 > SHA1; bucket-root existence via list_objects_v2",
+    "S3CopyMixin — StorageCopyProtocol: server-side copy_object within the same client",
+    "R2StorageBackend / S3ExpressStorageBackend / MinIOStorageBackend / B2StorageBackend — backwards-compatible aliases of S3StorageBackend"
+  ],
+  "key_functions": [
+    "s3_path.parse_s3_path(path) -> tuple[str, str] — accepts s3://bucket/key or bucket/key; raises MissingExtraError without [http] and ValueError on invalid paths",
+    "_helpers._map_error(exc, path) -> StorageError | None — ClientError code/status, credential, connection and botocore errors to typed errors; SDK validation errors stay native"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.extras",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.sequential_io",
+    "mountainash_transport._core.stream_errors",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.protocols",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.backends",
+    "mountainash_transport.storage.facade"
+  ],
+  "extension_points": [
+    "Mixins explicitly subclass the storage protocols and expect self._client; they can be recomposed for another boto3-compatible store.",
+    "New S3-compatible flavors are added via S3StorageProfile FLAVOR and S3Connection plus another @register_storage_backend line, not a new class."
+  ],
+  "lifecycle_notes": [
+    "Client is borrowed from the injected S3Connection: bound at __init__ if already connected, else via connect(); disconnect() only drops the cached reference and does not close the connection (facade owns it).",
+    "botocore is imported lazily inside _map_error and path parsing needs the [http] stack; actual use needs the [s3] extra.",
+    "read_to_stream returns a forward-only stream the caller must close; open_ranged issues one HEAD then a GET per range."
+  ],
+  "documentation_hooks": [
+    "Support matrix row: S3 family = Read, Write, Enumerate, Delete, Metadata, Copy, RangedRead; no Directory.",
+    "S3 flavors guide: one backend class, five registrations, flavor resolved by connection.",
+    "S3 prefix enumeration semantics and max_results behaviour (no early pagination termination).",
+    "Random access on S3 (HEAD + ranged GET, If-Match ETag pinning, ObjectChangedError).",
+    "Checksum reporting in StorageEntry metadata.",
+    "Error mapping table for botocore ClientError codes."
+  ],
+  "examples": [
+    "examples/storage_profiles/README.md — S3StorageProfile flavors that select this backend",
+    "examples/path_dispatch/README.md — s3:// and related schemes dispatching to the S3 family"
+  ],
+  "tests": [
+    "tests/storage/backends/test_s3.py",
+    "tests/storage/backends/test_ranged_conformance.py",
+    "tests/storage/backends/test_read_initialization.py",
+    "tests/storage/backends/test_sequential_reads.py",
+    "tests/storage/cross_backend/test_read_write.py",
+    "tests/storage/facade/test_s3_enumeration.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/storage/path_helpers/test_s3.py",
+    "tests/_core/transforms/test_facade_integration.py",
+    "tests/storage/protocols/test_backend_conformance.py"
+  ],
+  "risks": [
+    "S3EnumerateMixin.list_objects consumes all pages before applying max_results, so a small limit on a large prefix still lists everything (README.md acknowledges no early pagination termination).",
+    "S3CopyMixin.copy uses a single copy_object call; AWS documents a 5 GB limit for CopyObject, and no multipart copy fallback exists here (limit not verified in this repo).",
+    "Native copy only works within one client/credential set; cross-account or cross-flavor copies go through copy_between's stream path.",
+    "RangedReadProtocol support is structural (open_ranged on S3ReadMixin) and not mentioned in the S3StorageBackend docstring.",
+    "Module docstring and alias comment refer to 'deleted storage_backends.r2' shim modules; no such modules exist under src/, and no test imports the aliases."
+  ],
+  "open_questions": [
+    "Are the R2/S3Express/MinIO/B2 StorageBackend aliases still a supported public surface, or deprecated candidates for removal?"
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/s3/__init__.py",
+      "detail": "Five @register_storage_backend decorators on S3StorageBackend(S3ReadMixin, S3WriteMixin, S3EnumerateMixin, S3DeleteMixin, S3MetadataMixin, S3CopyMixin); docstring states Directory intentionally not implemented."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_read.py",
+      "detail": "S3ReadMixin(StorageReadProtocol) also defines open_ranged."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_copy.py",
+      "detail": "S3CopyMixin(StorageCopyProtocol) calls copy_object once."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_enumerate.py",
+      "detail": "Paginates fully then truncates to max_results."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "S3/R2/S3EXPRESS etc. expected Read/Write/Enumerate/Delete/Metadata/Copy."
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "S3 object-prefix enumeration section documents literal prefixes and no early pagination termination."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/backends/s3",
+      "detail": "Ranged reads 2026-10-15, error mapping 2026-10-16, slim-install 2026-10-29; evolving."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

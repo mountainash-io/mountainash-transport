@@ -1,0 +1,175 @@
+{
+  "id": "mountainash_transport._core.http",
+  "path": "src/mountainash_transport/_core/http/",
+  "summary": "HTTP transport foundation: HttpRequestEngine wraps an httpx.Client and applies a RequestPolicy (retry with exponential backoff and jitter, per-phase timeouts, request-local redirect limits, one auth refresh on 401) to buffered and streaming requests. It maps httpx exceptions and non-2xx statuses to a typed HttpTransportError hierarchy that is independent of StorageError, and redacts URL userinfo from error messages, response URLs and displayed exception chains. Policies, responses and errors are stdlib-only; only the engine needs httpx and is resolved lazily behind the [http] extra.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "HttpRequestEngine",
+    "RequestPolicy",
+    "RetryPolicy",
+    "TimeoutPolicy",
+    "RedirectPolicy",
+    "HttpResponse",
+    "HttpStreamResponse",
+    "SAFE_METHODS",
+    "IDEMPOTENT_METHODS",
+    "HttpTransportError",
+    "HttpResponseError",
+    "HttpClientError",
+    "HttpServerError",
+    "HttpNotFoundError",
+    "HttpAuthenticationError",
+    "HttpForbiddenError",
+    "HttpRateLimitError",
+    "HttpConflictError",
+    "HttpBadGatewayError",
+    "HttpServiceUnavailableError",
+    "HttpGatewayTimeoutError",
+    "HttpConnectionError",
+    "HttpTimeoutError",
+    "HttpRedirectError",
+    "HttpProtocolError",
+    "HttpRequestError",
+    "HttpDecodeError",
+    "map_status_to_error (module __all__ only, not root)"
+  ],
+  "key_classes": [
+    "HttpRequestEngine — executes requests over an injected httpx.Client with retry, 401 auth refresh, Retry-After handling, redirect limits, location checks and error mapping",
+    "RequestPolicy — frozen composite of retry/timeout/redirect policies plus auth_refresh_on_401; with_timeout/with_retry/with_redirect derive copies",
+    "RetryPolicy — frozen retry settings (max_attempts=3, backoff, retry_on_status=(429,500,502,503,504), retry_unsafe_methods=False, max_retry_after=120s)",
+    "TimeoutPolicy — frozen per-phase timeouts (connect/read/write/pool)",
+    "RedirectPolicy — frozen follow_redirects/max_redirects (default 10), enforced per call",
+    "HttpResponse — frozen fully-buffered response with .text and .json() (raises HttpDecodeError)",
+    "HttpStreamResponse — wrapper over a streaming httpx.Response exposing iter_bytes/iter_text/read/close and a redacted url",
+    "HttpTransportError — base of the HTTP error tree; string args are userinfo-redacted",
+    "HttpResponseError — status-bearing error with status_code, headers, body_preview, url, method; HttpRateLimitError adds retry_after",
+    "AuthStrategy / RefreshableAuthStrategy — runtime-checkable protocols (auth_protocol.py) for credential injection and refresh consumed by the engine"
+  ],
+  "key_functions": [
+    "HttpRequestEngine.request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None) -> HttpResponse — buffered request with retries and error mapping",
+    "HttpRequestEngine.stream(method, url, *, headers=None, content=None, params=None, policy=None) -> ContextManager[HttpStreamResponse] — retries/refreshes only before yielding; no replay once body consumption starts",
+    "map_status_to_error(status_code) -> type[HttpResponseError] — most specific error class for a 4xx/5xx code; ValueError otherwise",
+    "redact_userinfo(text) -> str — replace scheme://userinfo@ with scheme://***@ (redact.py, not exported)"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.extras"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.http"
+  ],
+  "extension_points": [
+    "Implement RefreshableAuthStrategy (apply/refresh/get_headers) to supply live-refreshing auth headers; connections.auth_strategy.OAuth2RefreshableAuthStrategy is the in-tree implementation",
+    "Pass location_check=callable(url) to HttpRequestEngine to veto any outgoing request, including redirects and auth-flow follow-ups",
+    "Override behaviour per call via policy=RequestPolicy(...) or derive with RequestPolicy.with_* helpers",
+    "Inject a pre-built httpx.Client (custom transport, e.g. httpx.MockTransport, proxies, TLS) — the engine never constructs its own client"
+  ],
+  "lifecycle_notes": [
+    "The engine borrows the httpx.Client; it never closes it. Client lifetime belongs to HTTPConnection or the caller.",
+    "HttpRequestEngine is resolved by module __getattr__; importing it without httpx raises MissingExtraError naming [http]. Policies, responses and errors import on a base install.",
+    "stream() closes the httpx response when the context exits; errors raised during body consumption are mapped but never retried.",
+    "Client-level auth (client.auth) drives the auth flow; individual sends use a no-op auth so httpx-stripped Authorization headers on cross-origin redirects are not reapplied.",
+    "Retries on 429 ignore method safety; other retryable statuses and transport errors require an idempotent method (or retry_unsafe_methods) and a replayable body. A 401 refresh retry does not count against max_attempts."
+  ],
+  "documentation_hooks": [
+    "HTTP engine guide: retry, timeout and redirect policies with defaults table",
+    "HTTP error hierarchy reference and status-code mapping table",
+    "Streaming responses: retry/refresh-before-yield semantics",
+    "Security note: URL userinfo redaction scope and limits (display only, not secret erasure)",
+    "Extending auth: RefreshableAuthStrategy seam",
+    "LocationPolicy enforcement on every HTTP send including redirects"
+  ],
+  "examples": [
+    "examples/http_engine/example.py — retry on a transient 503 and typed HttpNotFoundError without retry, via httpx.MockTransport",
+    "examples/http_engine/README.md — recipe narrative and expected output"
+  ],
+  "tests": [
+    "tests/_core/http/test_engine.py",
+    "tests/_core/http/test_engine_stream_retry.py",
+    "tests/_core/http/test_errors.py",
+    "tests/_core/http/test_policy.py",
+    "tests/_core/http/test_redirects.py",
+    "tests/_core/http/test_response.py",
+    "tests/_core/http/test_url_userinfo_redaction.py",
+    "tests/_core/test_auth_protocol_relocation.py",
+    "tests/storage/backends/test_http.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/test_slim_install.py",
+    "tests/test_public_api.py"
+  ],
+  "risks": [
+    "HttpTransportError does not subclass StorageError (errors.py docstring); callers using the engine directly must catch the HTTP hierarchy, while facade users see StorageError translations — two error vocabularies for HTTP.",
+    "request(stream=...) reads a stream body into bytes up front but still gates retries on stream.seekable(), so a non-seekable stream body is never retried even though the bytes are already buffered (engine.py _is_body_replayable/_resolve_body).",
+    "stream() accepts only content=bytes, not a stream body, and sets body_preview=None on error responses, unlike request().",
+    "Userinfo redaction is display-only: hidden __context__, request objects and traceback locals can still hold credentials; query-string tokens are not redacted (README 'Storage errors').",
+    "map_status_to_error raises ValueError for non-4xx/5xx codes; a 1xx final status reaching _raise_for_status would surface as ValueError rather than an HTTP error.",
+    "Backoff uses time.sleep in the calling thread; large backoff_max/max_retry_after values block callers."
+  ],
+  "open_questions": [
+    "Should map_status_to_error (in module __all__) be exported from the package root or treated as internal?",
+    "Should request() treat a fully-read stream body as replayable for retries?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Root __all__ and _LAZY export HttpRequestEngine, policies, responses, method sets and all 18 HTTP error classes from ._core.http"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/http/__init__.py",
+      "detail": "__getattr__ lazily imports engine and calls raise_for_missing_extra('HttpRequestEngine','http')"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/http/engine.py",
+      "detail": "_send_with_redirects enforces per-call max_redirects and location_check on every request; request()/stream() retry logic"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/http/errors.py",
+      "detail": "Docstring states hierarchy is independent of StorageError; HttpTransportError redacts string args"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/http/__init__.py",
+      "detail": "HTTPStorageBackend constructs HttpRequestEngine from the connection client with auth_strategy and location_check"
+    },
+    {
+      "kind": "example",
+      "path": "examples/http_engine/example.py",
+      "detail": "Public usage of HttpRequestEngine, RequestPolicy, RetryPolicy, HttpNotFoundError"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "Typed contract: request() returns HttpResponse; HTTP errors form typed hierarchy"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_slim_install.py",
+      "detail": "HttpNotFoundError/RetryPolicy import on base install; HttpRequestEngine raises MissingExtraError"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/http",
+      "detail": "Recent commits are security/robustness fixes (redaction, location policy, slim install) on a stable surface; tests are extensive"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

@@ -1,76 +1,150 @@
 {
   "audience": "maintainers",
-  "summary": "mountainash-transport follows a protocol-driven backend architecture where eight protocols define the storage contract, backends implement them a la carte, and the facade dispatches via isinstance checks. The settings pipeline flows from spec-driven profiles through typed adapters to SDK kwargs. Understanding these patterns and their invariants is key to maintaining and extending the package confidently.",
-  "use_cases": [
-    "Add a new storage provider by creating a settings class, adapter, backend, and registry entry",
-    "Diagnose dispatch issues by tracing the scheme-to-provider-to-backend chain",
-    "Verify protocol conformance across all backends after modifying protocol signatures",
-    "Extend the settings pipeline with new authentication modes or provider-specific parameters",
-    "Maintain and evolve the S3 flavor dispatch as new S3-compatible services emerge"
-  ],
+  "summary": "Maintainers need the invariants behind connection lifecycle, protocol conformance and registry dispatch, the base-install versus optional-extra boundary, the stream I/O internals, and the known drift between code, AGENTS.md and docstrings.",
   "concepts": [
     {
-      "name": "Protocol-driven backend contract",
-      "module_ids": ["mountainash_utils_files.storage_protocols"],
-      "description": "Eight runtime-checkable protocols define what a backend can do. Backends opt into protocols individually, and automated conformance tests verify alignment. This contract is the primary design invariant for the entire storage layer."
+      "name": "Connection lifecycle invariants",
+      "module_ids": [
+        "mountainash_transport._core.protocols",
+        "mountainash_transport.connections",
+        "mountainash_transport.connections.tunnel",
+        "mountainash_transport.connections.ssh"
+      ],
+      "recommended_docs": [
+        "connection-lifecycle-notes"
+      ],
+      "evidence": [
+        "src/mountainash_transport/_core/protocols.py",
+        "tests/connections"
+      ]
     },
     {
-      "name": "Backend registration and dispatch",
-      "module_ids": ["mountainash_utils_files.storage_registry"],
-      "description": "The @register_storage_backend decorator maps provider types to backend classes. Path-to-provider detection resolves URL schemes to provider types, completing the dispatch chain from user input to concrete backend."
+      "name": "Protocol conformance and backend registration",
+      "module_ids": [
+        "mountainash_transport.storage.protocols",
+        "mountainash_transport.storage.registry",
+        "mountainash_transport.storage.backends"
+      ],
+      "recommended_docs": [
+        "conformance-testing-notes"
+      ],
+      "evidence": [
+        "tests/storage/protocols/test_backend_conformance.py",
+        "src/mountainash_transport/storage/backends/__init__.py"
+      ]
     },
     {
-      "name": "Mixin composition pattern",
-      "module_ids": ["mountainash_utils_files.storage_backends.local", "mountainash_utils_files.storage_backends.s3"],
-      "description": "Local and S3 backends compose from per-protocol mixins, making it possible to add or modify protocol support in isolation. New backends can follow the same pattern by combining existing mixins with custom implementations."
+      "name": "Base install versus optional extras",
+      "module_ids": [
+        "mountainash_transport",
+        "mountainash_transport._core.extras",
+        "mountainash_transport.settings"
+      ],
+      "recommended_docs": [
+        "packaging-and-extras-notes"
+      ],
+      "evidence": [
+        "pyproject.toml",
+        "src/mountainash_transport/_core/extras.py"
+      ]
     },
     {
-      "name": "Settings pipeline: Profile to Adapter to SDK kwargs",
-      "module_ids": ["mountainash_utils_files.settings.profile", "mountainash_utils_files.settings.adapters"],
-      "description": "StorageProfile holds typed configuration fields. The to_handler_kwargs() method delegates to a provider-specific __adapter__ module that translates profile values into the exact kwargs the underlying SDK expects. Adding a new provider means writing one adapter function."
+      "name": "Stream I/O internals",
+      "module_ids": [
+        "mountainash_transport._core.sequential_io",
+        "mountainash_transport._core.ranged_io",
+        "mountainash_transport._core.stream_errors",
+        "mountainash_transport._core.transforms._stream_encoder"
+      ],
+      "recommended_docs": [
+        "stream-internals-notes"
+      ],
+      "evidence": [
+        "docs/read-access-modes.md",
+        "src/mountainash_transport/_core/ranged_io.py"
+      ]
     },
     {
-      "name": "Spec-driven provider settings",
-      "module_ids": ["mountainash_utils_files.settings.descriptor", "mountainash_utils_files.settings.registry", "mountainash_utils_files.settings.providers"],
-      "description": "StorageDescriptor declares provider metadata, required parameters, and supported authentication modes. The registry uses these specs for provider resolution, and new providers are added by defining a descriptor and decorating the settings class with @register."
+      "name": "HTTP engine retry, policy and redaction",
+      "module_ids": [
+        "mountainash_transport._core.http",
+        "mountainash_transport.connections.http"
+      ],
+      "recommended_docs": [
+        "http-engine-internals"
+      ],
+      "evidence": [
+        "src/mountainash_transport/_core/http/engine.py",
+        "tests/_core/http"
+      ]
     },
     {
-      "name": "S3 flavor dispatch",
-      "module_ids": ["mountainash_utils_files.storage_backends.s3", "mountainash_utils_files.settings.providers"],
-      "description": "The S3 backend handles multiple S3-compatible providers through a FLAVOR discriminator that maps to provider-specific endpoint and region handling. Five provider types share one backend class, registered five times via stacked decorators."
+      "name": "Scheme identification in three places",
+      "module_ids": [
+        "mountainash_transport._schemes",
+        "mountainash_transport.location",
+        "mountainash_transport.storage.path_helpers"
+      ],
+      "recommended_docs": [
+        "scheme-dispatch-notes"
+      ],
+      "evidence": [
+        "src/mountainash_transport/_schemes.py",
+        "src/mountainash_transport/location.py",
+        "src/mountainash_transport/storage/path_helpers/storage_path.py"
+      ]
     },
     {
-      "name": "Stream transform pipeline internals",
-      "module_ids": ["mountainash_utils_files.storage_transforms"],
-      "description": "The Pipeline class manages ordered transform application. apply_read and apply_write apply transforms in reversed order relative to each other, matching the outermost-first convention of stacked file extensions."
+      "name": "Settings pipeline and provider registry",
+      "module_ids": [
+        "mountainash_transport.settings",
+        "mountainash_transport.settings.storage.profiles",
+        "mountainash_transport.settings.storage.registry",
+        "mountainash_transport.settings.storage.loader"
+      ],
+      "recommended_docs": [
+        "settings-pipeline-notes"
+      ],
+      "evidence": [
+        "src/mountainash_transport/settings/storage/registry.py",
+        "tests/settings"
+      ]
     },
     {
-      "name": "Scheme registry and path dispatch",
-      "module_ids": ["mountainash_utils_files.path_helpers"],
-      "description": "The SCHEMES registry maps URL schemes to provider types with support for aliases and placeholder schemes for future backends. This is the entry point for all path-driven dispatch and the place to register new URL scheme support."
-    },
-    {
-      "name": "Test architecture",
-      "module_ids": [],
-      "description": "Tests are organized into protocol alignment tests (conformance and completeness verification), per-provider settings tests, and unit tests for core modules. The protocol alignment suite is the primary safety net for backend changes."
-    },
-    {
-      "name": "Cleanup opportunities",
-      "module_ids": ["mountainash_utils_files.settings.utils", "mountainash_utils_files.settings.templates"],
-      "description": "The settings.utils module contains partially commented-out code, and settings.templates may be eligible for removal after inlining. These are candidates for future cleanup to reduce maintenance surface."
+      "name": "Dead code and cleanup candidates",
+      "module_ids": [
+        "mountainash_transport.settings.utils.secrets",
+        "mountainash_transport._core.constants"
+      ],
+      "recommended_docs": [
+        "cleanup-backlog"
+      ],
+      "evidence": [
+        "src/mountainash_transport/settings/utils/secrets.py",
+        "src/mountainash_transport/_core/constants.py"
+      ]
     }
   ],
   "featured_modules": [
-    "mountainash_utils_files.storage_protocols",
-    "mountainash_utils_files.storage_registry",
-    "mountainash_utils_files.storage_backends.local",
-    "mountainash_utils_files.storage_backends.s3",
-    "mountainash_utils_files.storage_backends.http",
-    "mountainash_utils_files.settings.profile",
-    "mountainash_utils_files.settings.adapters",
-    "mountainash_utils_files.settings.providers",
-    "mountainash_utils_files.storage_transforms"
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections",
+    "mountainash_transport.storage.protocols",
+    "mountainash_transport.storage.registry",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport._core.http",
+    "mountainash_transport._core.extras",
+    "mountainash_transport.settings.storage.registry"
   ],
   "hidden_or_internal_modules": [],
-  "open_questions": []
+  "documentation_plan": [
+    "Update AGENTS.md: GitHubRepoStorageProfile/github_repo naming; local and SFTP both implement Enumerate; add RangedRead to the support matrix.",
+    "Document MissingExtraError scope (only [http]-stack modules are translated; boto3/paramiko/gnupg are not).",
+    "Record backend divergences: rmdir recursion (local) vs empty-only (SFTP); SFTP write buffers whole stream; S3 copy single copy_object; S3 enumerate truncates after full listing.",
+    "Document clear_registry() irreversibility with ensure_backends_loaded().",
+    "Reconcile to_handler_kwargs 'deprecated shim' docstrings with ProfileProtocol requiring it."
+  ],
+  "open_questions": [
+    "Remove settings/utils/secrets.py and the five unreferenced enums in _core/constants.py?",
+    "Should connections/auth_strategy.py (auth-client to HTTP engine bridge) be its own module boundary?"
+  ]
 }

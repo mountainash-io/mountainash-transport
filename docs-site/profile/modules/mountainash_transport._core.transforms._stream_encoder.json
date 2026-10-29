@@ -1,0 +1,77 @@
+{
+  "id": "mountainash_transport._core.transforms._stream_encoder",
+  "path": "src/mountainash_transport/_core/transforms/_stream_encoder.py",
+  "summary": "Private helper providing GzipCompressingReader, a RawIOBase adapter that lazily produces an RFC 1952 gzip member (header, raw deflate, CRC32/size trailer) as the consumer reads, so Gzip.wrap can compress a stream without draining it. A fixed mtime (default 0) yields byte-identical output for identical input.",
+  "role": "io",
+  "visibility": "private",
+  "stability": "stable",
+  "audiences": [
+    "maintainers"
+  ],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [
+    "GzipCompressingReader — read-side lazy gzip encoder over a source BinaryIO (level, mtime, chunk_size=64 KiB)"
+  ],
+  "key_functions": [
+    "_gzip_header(mtime) -> bytes — minimal RFC 1952 header with OS=unknown and no flags"
+  ],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport._core.transforms"
+  ],
+  "extension_points": [
+    "None; pattern (RawIOBase reader that fills an internal buffer from a codec) is the template for future streaming encoders"
+  ],
+  "lifecycle_notes": [
+    "Construction reads nothing from the source; the first fill emits the header and compresses the first chunk.",
+    "close() closes the wrapped source, then itself.",
+    "Uses zlib.compressobj with -MAX_WBITS (raw deflate); CRC and size are tracked modulo 2**32 per RFC 1952."
+  ],
+  "documentation_hooks": [
+    "Maintainer note: gzip write-path laziness and reproducibility (mtime=0)",
+    "Contributor template for adding a streaming encoder"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/_core/transforms/test_gzip.py"
+  ],
+  "risks": [
+    "close() closes the source stream it was given, contradicting the read-side convention that transforms leave borrowed inputs open (docs/read-access-modes.md); a caller passing its own file to Gzip.wrap will find it closed.",
+    "No direct unit tests; coverage is indirect through Gzip tests (lazy wrap, reproducibility, round trip).",
+    "readinto lacks a type annotation, inconsistent with the 'annotate all functions' code-style rule in AGENTS.md."
+  ],
+  "open_questions": [
+    "Is the source-closing behaviour of GzipCompressingReader.close() intentional for the write path?"
+  ],
+  "evidence": [
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/_core/transforms/compression.py",
+      "detail": "Only consumer: Gzip.wrap returns GzipCompressingReader(stream, level, mtime)"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/transforms/_stream_encoder.py",
+      "detail": "close() calls self._source.close() before super().close()"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/transforms/test_gzip.py",
+      "detail": "test_gzip_wrap_is_lazy and test_gzip_mtime_zero_is_reproducible exercise the encoder indirectly"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/transforms/_stream_encoder.py",
+      "detail": "Only typing/doc touch-ups since June 2026 reorganisation"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

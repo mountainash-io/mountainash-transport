@@ -1,0 +1,102 @@
+{
+  "id": "mountainash_transport._core.ranged_io",
+  "path": "src/mountainash_transport/_core/ranged_io.py",
+  "summary": "Implements random-access reads over remote objects for read_stream(access='random'). RangePolicy is a frozen, validated cache policy (readahead, blockcache, bytes or none; block_size; max_blocks) with from_profile() resolving per-field RANGE_* profile settings against library defaults. RangedSource is a backend-supplied description of one object (size, a half-open range fetch callable, optional on_close). RangedReader is a seekable io.RawIOBase that serves reads through an fsspec cache, performs no I/O on seek, and rejects short range responses.",
+  "role": "io",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "RangePolicy"
+  ],
+  "key_classes": [
+    "RangePolicy(cache='readahead', block_size=1 MiB, max_blocks=32) — frozen, validated range-cache policy; public",
+    "RangedSource(size, fetch, on_close=None) — backend-to-reader contract for one object; returned by RangedReadProtocol implementations",
+    "RangedReader(source, policy) — seekable RawIOBase over an fsspec cache; owns source.on_close"
+  ],
+  "key_functions": [
+    "RangePolicy.from_profile(profile) -> RangePolicy — build a policy from a profile's RANGE_CACHE/RANGE_BLOCK_SIZE/RANGE_MAX_BLOCKS, each overriding defaults individually",
+    "strong_etag(value) -> str | None — return the ETag only if it is strong (not W/), for If-Match pinning"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.exceptions"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.protocols"
+  ],
+  "extension_points": [
+    "A backend gains random-access support by implementing RangedReadProtocol and returning a RangedSource (size + fetch(start, end) + optional on_close); the facade wraps it in RangedReader",
+    "Cache strategies are the fsspec caches registry entries named by RangePolicy.cache"
+  ],
+  "lifecycle_notes": [
+    "fsspec is imported inside RangedReader.__init__, so the module imports on a base install; constructing a reader needs the [http] stack",
+    "Precedence: caller range_policy replaces the profile policy entirely; otherwise profile RANGE_* fields override defaults field by field (docs/read-access-modes.md)",
+    "RangedReader.close() calls source.on_close once, then drops the cache; repeated close is a no-op",
+    "Handles are not safe for concurrent seek/read"
+  ],
+  "documentation_hooks": [
+    "docs/read-access-modes.md: random mode, cache policies, precedence and Parquet tuning table",
+    "Backend author guide: implementing RangedReadProtocol and RangedSource",
+    "Consistency note: strong ETags pinned with If-Match, weak/missing ETags give no guarantee"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/_core/test_ranged_io.py",
+    "tests/storage/backends/test_ranged_conformance.py",
+    "tests/storage/backends/test_read_initialization.py",
+    "tests/storage/facade/test_read_access_modes.py",
+    "tests/storage/facade/test_parquet_consumer.py"
+  ],
+  "risks": [
+    "RangedReader.read calls self._cache._fetch, a private fsspec API; an fsspec release that renames it breaks random mode",
+    "A large caller read(n) allocates n bytes; cache settings do not bound result size (documented)",
+    "max_blocks is silently ignored for caches other than blockcache",
+    "No runnable example in examples/ covers random access; the only usage samples are in docs/read-access-modes.md"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "RangePolicy lazily re-exported in root __all__"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "facade constructs RangedReader(source, policy) with range_policy or RangePolicy.from_profile"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/protocols/prtcl_ranged_read.py",
+      "detail": "RangedReadProtocol returns RangedSource"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/read-access-modes.md",
+      "detail": "documents RangePolicy defaults, caches, precedence and error behaviour"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/ranged_io.py",
+      "detail": "introduced in be6ea2f and touched in feature #33 (069044a, be3e7b4) -> evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

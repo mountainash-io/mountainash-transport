@@ -1,0 +1,125 @@
+{
+  "dependencies": [
+    "mountainash_transport._core.extras",
+    "mountainash_transport.settings.storage.loader"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.connections",
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.settings.storage.registry",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.registry"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.settings",
+  "path": "src/mountainash_transport/settings/",
+  "summary": "Profile infrastructure package. Defines the runtime-checkable ProfileProtocol (to_handler_kwargs) and its storage refinement StorageProfileProtocol (adds get_connection_url), plus StorageProfileSpec, a frozen ProfileSpec subclass carrying storage metadata (sdk_package, handler_module/handler_class, streaming/multipart/read_only flags, default_auth, supported_auth, implemented). The package __init__ eagerly exposes only the stdlib-only protocols and lazily resolves the spec and loader names, raising MissingExtraError naming [http] when those dependencies are absent.",
+  "role": "protocol",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "ProfileProtocol",
+    "StorageProfileProtocol",
+    "ParameterSpec",
+    "StorageProfileSpec",
+    "AuthBlock",
+    "StorageProfileBlock",
+    "StorageProfilesSettings",
+    "resolve_storage"
+  ],
+  "key_classes": [
+    "ProfileProtocol — runtime-checkable base contract: to_handler_kwargs() -> dict[str, Any] of SDK-ready config (no credentials)",
+    "StorageProfileProtocol — storage refinement adding get_connection_url() for diagnostics/logging; the type the facade, registry and resolve_storage accept/return",
+    "StorageProfileSpec — frozen kw_only dataclass extending mountainash_settings ProfileSpec with storage metadata: sdk_package, handler_module, handler_class, supports_streaming, supports_multipart, read_only, default_auth, supported_auth, implemented"
+  ],
+  "key_functions": [
+    "__getattr__(name) — PEP 562 lazy loader for spec/loader names; converts ImportError into MissingExtraError for the [http] extra"
+  ],
+  "extension_points": [
+    "Implement ProfileProtocol/StorageProfileProtocol structurally (runtime_checkable) to supply a custom profile to StorageFacade or get_storage_backend",
+    "Declare a StorageProfileSpec as a Profile subclass's __spec__ and decorate with settings.storage.registry.register to add a provider profile",
+    "ProfileProtocol is documented as the base for future messaging/connection profile families (settings/messaging/ is a docstring-only placeholder)"
+  ],
+  "lifecycle_notes": [
+    "profile_protocol.py is stdlib-only and importable on a base install; profile_spec.py imports mountainash_auth_client and mountainash_settings and therefore needs [http]",
+    "Spec and loader names are resolved lazily on attribute access; the root package re-exports ProfileProtocol, StorageProfileProtocol, resolve_storage, StorageProfilesSettings, StorageProfileBlock and AuthBlock through its own lazy table",
+    "StorageProfileSpec.implemented must equal whether a backend is registered for spec.provider_type (pinned by a drift test)"
+  ],
+  "documentation_hooks": [
+    "Profile + auth separation: what a storage profile is and why it never carries credentials",
+    "Typing contract: StorageProfileProtocol exposes only to_handler_kwargs() and get_connection_url(); narrow to a concrete class to read fields",
+    "Reference table of StorageProfileSpec metadata fields and their meaning",
+    "Extras matrix: which settings names work on a base install vs need [http]"
+  ],
+  "examples": [
+    "examples/storage_profiles/example.py — inspects a StorageProfileSpec (parameters, supported_auth) obtained via the registry"
+  ],
+  "tests": [
+    "tests/settings/test_profile_protocol.py",
+    "tests/settings/test_profile_spec.py",
+    "tests/test_public_api.py",
+    "tests/test_slim_install.py",
+    "tests/typing/consumer.py",
+    "tests/storage/protocols/test_registry_completeness.py"
+  ],
+  "risks": [
+    "StorageProfileSpec's docstring documents every extra field except 'implemented', which is the field the registry drift test treats as the single source of truth",
+    "handler_module/handler_class are descriptive metadata only: backend dispatch goes through storage.registry.register_storage_backend, so these strings can name non-existent modules (e.g. storage.backends.gcs/azure/ftp/smb/github) without any failure",
+    "profile_spec.py places its explanatory docstring after the imports, so it is not the module __doc__"
+  ],
+  "open_questions": [
+    "Should handler_module/handler_class be validated against, or derived from, the backend registry, or removed as redundant metadata?",
+    "Is ParameterSpec (re-exported from mountainash_settings) intended to be part of this package's public settings surface?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Root __all__ and _LAZY export ProfileProtocol, StorageProfileProtocol, resolve_storage, StorageProfilesSettings, StorageProfileBlock, AuthBlock from .settings"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/profile_spec.py",
+      "detail": "StorageProfileSpec dataclass fields including implemented: bool = True"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/__init__.py",
+      "detail": "_LAZY table and raise_for_missing_extra('storage profiles','http', exc)"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_registry_completeness.py",
+      "detail": "Asserts spec.implemented == (provider_type in get_registered_backends())"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "Documents StorageProfileProtocol dynamic boundary"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/settings/profile_spec.py",
+      "detail": "Last changed 2026-07-04 (caecf2c); low churn supports 'stable'"
+    }
+  ]
+}

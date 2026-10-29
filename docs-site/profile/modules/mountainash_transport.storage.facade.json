@@ -1,0 +1,164 @@
+{
+  "id": "mountainash_transport.storage.facade",
+  "path": "src/mountainash_transport/storage/facade/",
+  "summary": "StorageFacade is the main user entry point: it builds and owns a connection from a storage profile and auth profile, resolves a backend from the registry, and dispatches read/write/enumerate/delete/metadata/copy/directory calls after checking the backend implements the matching protocol (UnsupportedOperationError otherwise). It enforces LocationPolicy confinement on every path, applies stream-transform pipelines, and offers sequential, random (RangedReadProtocol) and buffered read modes. The package re-exports StorageFacade and copy_between.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture",
+    "broader-hype"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageFacade",
+    "copy_between"
+  ],
+  "key_classes": [
+    "StorageFacade — protocol-checked dispatch to a registered backend with owned connection, location policy and transform pipelines"
+  ],
+  "key_functions": [
+    "StorageFacade(provider_type, storage_profile=None, *, auth_profile=None, oauth_provider=None, token_store=None, policy=None) — creates connection and backend; closes on construction failure",
+    "StorageFacade.from_path(path, storage_profile=None, *, auth_profile=None, oauth_provider=None, token_store=None, policy=None) — infers provider from the path scheme",
+    "StorageFacade.for_local(*, policy=None) — local filesystem facade",
+    "StorageFacade.supports(protocol) -> bool — isinstance check against a runtime_checkable protocol",
+    "StorageFacade.read(path, *, pipeline=None, infer=False, gpg=None, gzip=None) -> bytes",
+    "StorageFacade.read_stream(path, *, pipeline=None, infer=False, gpg=None, gzip=None, access='sequential'|'random'|'buffered', range_policy=None) -> BinaryIO",
+    "StorageFacade.write(path, data, *, pipeline=None, create_parents=True) / write_stream(path, stream, *, pipeline=None, create_parents=True)",
+    "StorageFacade.list_objects(prefix, *, delimiter='/', max_results=None) -> EnumerateResult",
+    "StorageFacade.delete(path), exists(path), metadata(path), get_size(path)",
+    "StorageFacade.copy(source, destination) — same-backend copy (StorageCopyProtocol)",
+    "StorageFacade.list_dir(path), mkdir(path, parents=True), rmdir(path) — StorageDirectoryProtocol",
+    "StorageFacade.close() / context manager — terminal close of the owned connection"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.protocols",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.transforms",
+    "mountainash_transport._core.transforms.pipeline",
+    "mountainash_transport._schemes",
+    "mountainash_transport.connections",
+    "mountainash_transport.location",
+    "mountainash_transport.settings",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.facade.cross_backend",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.protocols",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.facade.cross_backend"
+  ],
+  "extension_points": [
+    "Any backend registered with @register_storage_backend becomes usable through the facade; operations light up according to the storage protocols the backend satisfies.",
+    "Transforms plug in via Pipeline/StreamTransform arguments; read-side suffix inference via infer=True.",
+    "LocationPolicy (policy=) and profile ROOT_PATH constrain reachable paths; RangePolicy tunes random reads."
+  ],
+  "lifecycle_notes": [
+    "The facade owns the connection it creates; close() is terminal and idempotent; later I/O raises StorageConnectionError while supports() stays available.",
+    "Returned sequential/random streams are caller-owned and should be closed before the facade; buffered results are independent.",
+    "Construction connects immediately (create_connection + connect); cleanup errors during failed construction are attached as exception notes.",
+    "HTTP without a profile instantiates HTTPStorageProfile, which requires the [http] extra; local use needs only the base install.",
+    "A LOCAL profile with ROOT_PATH and CREATE_PATH creates that directory at construction time.",
+    "Random access on LOCAL returns the native seekable handle instead of going through RangedReadProtocol."
+  ],
+  "documentation_hooks": [
+    "Getting started / quick start: from_path, context manager, read/write.",
+    "Capability model: supports(), UnsupportedOperationError, mapping of facade methods to storage protocols and the backend support matrix.",
+    "Read access modes (sequential/random/buffered) and RangePolicy precedence.",
+    "Transforms on read/write and suffix inference.",
+    "Location policy and path confinement for local and remote providers.",
+    "Connection lifetime and stream ownership.",
+    "Auth: auth_profile, managed OAuth2 (oauth_provider + token_store)."
+  ],
+  "examples": [
+    "examples/local_files/example.py — basic facade read/write/metadata/delete",
+    "examples/directories/example.py — facade directory operations and same-backend copy",
+    "examples/capability_checks/example.py — supports() and UnsupportedOperationError",
+    "examples/gzip_pipeline/example.py — pipeline=Gzip() on write and read",
+    "examples/suffix_inference/example.py — read(..., infer=True)",
+    "examples/streaming/example.py — write_stream and read_stream",
+    "examples/cross_backend_copy/example.py — copy_between with destination_pipeline",
+    "examples/named_profiles/example.py — facade built from resolved named profiles"
+  ],
+  "tests": [
+    "tests/storage/facade/test_facade.py",
+    "tests/storage/facade/test_facade_infer.py",
+    "tests/storage/facade/test_facade_location_policy.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/storage/facade/test_from_path.py",
+    "tests/storage/facade/test_http_defaults.py",
+    "tests/storage/facade/test_oauth_facade.py",
+    "tests/storage/facade/test_parquet_consumer.py",
+    "tests/storage/facade/test_read_access_modes.py",
+    "tests/storage/facade/test_s3_enumeration.py",
+    "tests/storage/cross_backend/test_read_write.py",
+    "tests/storage/cross_backend/test_list.py",
+    "tests/storage/cross_backend/test_delete.py",
+    "tests/storage/cross_backend/test_metadata.py",
+    "tests/_core/transforms/test_facade_integration.py",
+    "tests/test_public_api.py",
+    "tests/test_lazy_imports.py",
+    "tests/typing/consumer.py"
+  ],
+  "risks": [
+    "from_path docstring documents parameters named `profile` and `auth`, but the signature uses storage_profile and auth_profile, and policy is undocumented.",
+    "supports() and _require use isinstance on runtime_checkable protocols, which checks method presence only, not signatures (e.g. local mkdir's positional `parents`).",
+    "Facade list_objects defaults delimiter='/' while backend/protocol list_objects default to None (recursive); documented in README.md but easy to miss.",
+    "write(create_parents=False) semantics differ by backend: Local/SFTP enforce it, S3/HTTP ignore it.",
+    "facade.py changed in 18 commits since 2026-08 (confinement, policy, slim install), so behaviour details may still shift."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "StorageFacade and copy_between in root __all__ via lazy _LAZY mapping to .storage.facade."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "Each operation calls self._require(<Protocol>, name) then self._check(path) before delegating to the backend."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "read_stream access='random' on LOCAL returns read_to_stream; otherwise requires RangedReadProtocol."
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Connection lifetime section: facade owns its connection, close is terminal, copy_between borrows both facades."
+    },
+    {
+      "kind": "doc",
+      "path": "docs/read-access-modes.md",
+      "detail": "Documents read_stream access modes and RangePolicy precedence."
+    },
+    {
+      "kind": "example",
+      "path": "examples/capability_checks/example.py",
+      "detail": "Demonstrates supports() and UnsupportedOperationError on HTTP list_dir."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "18 commits since 2026-08 including location policy and slim-install work; evolving."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

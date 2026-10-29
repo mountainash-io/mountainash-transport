@@ -1,0 +1,94 @@
+{
+  "dependencies": [
+    "mountainash_transport.settings",
+    "mountainash_transport.settings.storage.profiles"
+  ],
+  "dependents": [
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport.settings.storage.profiles"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.settings.storage.registry",
+  "path": "src/mountainash_transport/settings/storage/registry.py",
+  "summary": "Module-level STORAGE_REGISTRY: a mountainash_settings.profiles.Registry named 'storage', constrained to StorageProfileSpec specs and StorageProfileProtocol profile classes. It exposes the register decorator used by every provider profile and lookup helpers get_spec(name) and get_settings_class(name); get_descriptor is a deprecated alias of get_spec. The module imports the profiles package at the bottom so the registry is populated on import.",
+  "role": "api-builder",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "medium",
+  "public_api": [
+    "STORAGE_REGISTRY",
+    "register",
+    "get_spec",
+    "get_settings_class",
+    "get_descriptor"
+  ],
+  "key_classes": [
+    "STORAGE_REGISTRY (mountainash_settings Registry instance) — maps provider keys ('s3','local','sftp','http','gcs','azure_storage','ftp','smb','github_repo') to StorageProfileSpec and profile class"
+  ],
+  "key_functions": [
+    "register — STORAGE_REGISTRY.decorator(); reads cls.__spec__ and registers the class",
+    "get_spec(name) -> StorageProfileSpec — spec lookup by provider key (KeyError if unknown)",
+    "get_settings_class(name) -> type[StorageProfileProtocol] — profile class lookup",
+    "get_descriptor(name) — deprecated alias emitting DeprecationWarning"
+  ],
+  "extension_points": [
+    "Decorate a Profile subclass carrying a StorageProfileSpec __spec__ with @register to make it discoverable by resolve_storage and registry lookups"
+  ],
+  "lifecycle_notes": [
+    "Populated on import via a bottom-of-module 'from . import profiles'; that import must stay last because profile modules import register from here",
+    "Requires [http] (mountainash_settings); the registry is distinct from storage.registry, which maps provider types to backend classes"
+  ],
+  "documentation_hooks": [
+    "Discovering providers: list STORAGE_REGISTRY.specs and inspect spec.parameters / supported_auth",
+    "Two registries explained: profile registry (settings.storage.registry) vs backend registry (storage.registry)"
+  ],
+  "examples": [
+    "examples/storage_profiles/example.py — get_spec('s3') and get_settings_class('s3') round-trip"
+  ],
+  "tests": [
+    "tests/settings/storage/test_registry.py",
+    "tests/storage/protocols/test_registry_completeness.py"
+  ],
+  "risks": [
+    "get_descriptor's DeprecationWarning promises removal 'before mountainash-transport 26.6.0' but the package version is 0.1.0 and the date in the message has passed, so the removal deadline is not meaningful",
+    "Module docstring sits after the imports and is not the module __doc__",
+    "Import cycle with profiles/ is load-order sensitive (documented by a comment)"
+  ],
+  "open_questions": [
+    "Is this module part of the documented public surface? It is not exported from the package root, but the user-facing storage_profiles example imports get_spec/get_settings_class from it directly."
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/storage/registry.py",
+      "detail": "STORAGE_REGISTRY = Registry('storage', spec_type=StorageProfileSpec, profile_type=StorageProfileProtocol)"
+    },
+    {
+      "kind": "example",
+      "path": "examples/storage_profiles/example.py",
+      "detail": "Imports get_settings_class, get_spec from settings.storage.registry"
+    },
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Not re-exported from root __all__ (basis for semi-public)"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/settings/storage/registry.py",
+      "detail": "Recent change be3e7b4 only moved population-on-import; API otherwise steady"
+    }
+  ]
+}

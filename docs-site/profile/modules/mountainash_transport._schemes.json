@@ -1,0 +1,85 @@
+{
+  "id": "mountainash_transport._schemes",
+  "path": "src/mountainash_transport/_schemes.py",
+  "summary": "Holds the canonical URL-scheme registry for storage paths. SCHEMES maps each canonical lowercase scheme (including '' for bare local paths) to a frozen SchemeSpec carrying aliases (gcs for gs, az for azure), a strict flag controlling mixed-case rejection, and the CONST_STORAGE_PROVIDER_TYPE it routes to. _ALIAS_TO_CANONICAL is derived from the aliases. Recognising a scheme does not imply a backend exists for it.",
+  "role": "model",
+  "visibility": "private",
+  "stability": "stable",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "reference-only",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [
+    "SchemeSpec(scheme, aliases=(), strict=True, provider=None) — frozen metadata for a canonical URL scheme"
+  ],
+  "key_functions": [],
+  "dependencies": [
+    "mountainash_transport._core.constants"
+  ],
+  "dependents": [
+    "mountainash_transport.location",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "Add a SchemeSpec entry to SCHEMES (and aliases) to make a new URL scheme recognised by location.identify_scheme, StoragePath, detect_provider_from_path and the facade; a backend must be registered separately"
+  ],
+  "lifecycle_notes": [
+    "Stdlib + _core.constants only, so location.py and backend detection work on a base install"
+  ],
+  "documentation_hooks": [
+    "Supported schemes reference table (scheme, aliases, provider, backend status) for the path dispatch page",
+    "Maintainer checklist for adding a provider/scheme"
+  ],
+  "examples": [
+    "examples/path_dispatch/example.py — demonstrates scheme-to-provider detection that this table drives"
+  ],
+  "tests": [
+    "tests/storage/path_helpers/test_scheme.py",
+    "tests/storage/protocols/test_registry_completeness.py"
+  ],
+  "risks": [
+    "_ALIAS_TO_CANONICAL is underscore-private but imported across modules (location.py, path_helpers), so renaming it is a cross-module change",
+    "Schemes for Azure Files and NFS providers are absent: no URL routes to AZURE_FILES or NFS",
+    "README shows an 'r2://' scheme among S3-family examples; this table is the only source of the full list and is not rendered in user docs"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_schemes.py",
+      "detail": "SCHEMES dict and SchemeSpec dataclass"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/location.py",
+      "detail": "identify_scheme uses SCHEMES and _ALIAS_TO_CANONICAL"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/registry/backend_detection.py",
+      "detail": "provider detection consults the scheme table via location.identify_scheme"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/path_helpers/test_scheme.py",
+      "detail": "scheme identification tests"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_schemes.py",
+      "detail": "single commit f079800 -> stable"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}
