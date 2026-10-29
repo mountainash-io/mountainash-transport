@@ -187,3 +187,16 @@ def test_s3_context_preserves_body_error() -> None:
         assert caught.value is primary
         assert primary.__notes__
         assert conn.client is None
+
+
+def test_missing_boto3_names_s3_extra(monkeypatch):
+    import sys
+
+    from mountainash_transport.connections.errors import TransportConnectionError
+
+    monkeypatch.setitem(sys.modules, "boto3", None)
+    with pytest.raises(
+        TransportConnectionError,
+        match=r"boto3 is required for S3 connections.*mountainash-transport\[s3\]",
+    ):
+        S3Connection(FAKE_S3_KWARGS).connect()

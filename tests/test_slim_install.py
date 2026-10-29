@@ -84,3 +84,27 @@ def test_caller_registration_wins_on_base_install():
             def __init__(self, profile, connection=None): pass
         assert type(get_storage_backend(C.LOCAL, None)) is Custom
     ''')
+
+
+def test_remote_surfaces_name_the_http_extra_on_base_install():
+    _run_base('''
+        from mountainash_transport import MissingExtraError, StorageFacade
+
+        def expect(fn):
+            try:
+                fn()
+            except MissingExtraError as err:
+                assert err.extra == "http", err
+                assert "pip install 'mountainash-transport[http]'" in str(err), err
+                return
+            raise AssertionError("no MissingExtraError")
+
+        expect(lambda: StorageFacade.from_path("https://example.com/a.csv"))
+        expect(lambda: StorageFacade.from_path("s3://bucket/key").read("s3://bucket/key"))
+        expect(lambda: __import__("mountainash_transport.settings.storage.profiles", fromlist=["S3StorageProfile"]))
+        expect(lambda: __import__("mountainash_transport.connections", fromlist=["create_connection"]))
+        import mountainash_transport as root
+        for name in ("StoragePath", "HttpRequestEngine", "resolve_storage", "create_connection"):
+            expect(lambda name=name: getattr(root, name))
+        from mountainash_transport import HttpNotFoundError, RetryPolicy  # stdlib-only HTTP names stay importable
+    ''')
