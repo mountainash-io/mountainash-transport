@@ -5,7 +5,6 @@ import io
 import typing as t
 from dataclasses import dataclass
 
-
 from mountainash_transport._core.exceptions import StorageError
 
 CacheName = t.Literal["readahead", "blockcache", "bytes", "none"]

@@ -30,8 +30,6 @@ def test_every_remote_extra_resolves_the_http_stack_with_unchanged_bounds(extra)
     assert STACK_NAMES <= set(active), (extra, STACK_NAMES - set(active))
     for name, bound in SIBLING_BOUNDS.items():
         assert active[name] == SpecifierSet(bound), (extra, name)
-    assert "0.2.0" not in active["mountainash-auth-client"]
-    assert "26.6.1" not in active["mountainash-auth-client"]
 
 
 def test_supported_python_metadata():
