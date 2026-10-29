@@ -1,0 +1,110 @@
+{
+  "dependencies": [
+    "mountainash_transport",
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.extras",
+    "mountainash_transport._core.transforms",
+    "mountainash_transport._schemes",
+    "mountainash_transport.location"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.facade"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.storage.path_helpers",
+  "path": "src/mountainash_transport/storage/path_helpers/",
+  "summary": "Path parsing, normalisation and suffix-based transform inference. StoragePath is a classmethod-only helper (identify_scheme, normalize, join, to_str, matches) over universal_pathlib UPath and urllib, rejecting mixed-case schemes for strict SchemeSpecs and scheme: forms missing '//'. infer_pipeline parses a path's suffix chain right-to-left (.gz/.gzip -> Gzip, .gpg/.asc/.pgp -> GPG) into a Pipeline. The s3 submodule extracts bucket/key for any S3-family scheme. infer_pipeline and SUFFIX_TRANSFORMS work on a base install, while StoragePath and s3 need [http].",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StoragePath",
+    "infer_pipeline",
+    "SUFFIX_TRANSFORMS",
+    "s3"
+  ],
+  "key_classes": [
+    "StoragePath — stateless classmethod helper for scheme identification, strict normalisation, joining and wildcard matching; does not dispatch to backends",
+    "_GenericSchemePath — private str subclass returned by normalize() for SCHEMES entries UPath cannot construct; supports '/' joining"
+  ],
+  "key_functions": [
+    "StoragePath.identify_scheme(path) -> str | None — canonical scheme, '' for bare/local, None for unknown (aliases resolved, case-insensitive)",
+    "StoragePath.normalize(path) — canonical UPath/_GenericSchemePath; strips trailing slashes; ValueError on unknown scheme, mixed case, or missing '//'",
+    "StoragePath.join(path, name) — normalize(path) / stripped name; None if either is falsy",
+    "StoragePath.matches(pattern, name) -> bool — fnmatch wildcard",
+    "infer_pipeline(path, *, gpg=None, gzip=None) -> tuple[Pipeline | None, str] — suffix-chain inference; ValueError when a gpg suffix appears without gpg=",
+    "s3.s3_bucket(path, *, assume_s3=False) / s3.s3_key(path, *, assume_s3=False) — S3-family bucket/key extraction; None for non-addressable paths (including host:port netlocs)"
+  ],
+  "extension_points": [
+    "New schemes are added in _schemes.SCHEMES (not here); the S3-family scheme set in s3.py is derived from SCHEMES so it tracks new aliases automatically",
+    "Suffix inference is a fixed SUFFIX_TRANSFORMS table; supplying gzip=/gpg= instances customises the transforms used"
+  ],
+  "lifecycle_notes": [
+    "Package __init__ eagerly imports suffixes (base-install safe) and lazily imports StoragePath/s3 via __getattr__, raising MissingExtraError for [http]",
+    "Inference is read-side only; there is no write-side suffix inference",
+    "Parsing stops at the first unknown suffix, so 'a.gz.csv' yields no pipeline"
+  ],
+  "documentation_hooks": [
+    "Path normalisation rules: aliases, strict casing, trailing slashes, '//' requirement",
+    "Suffix inference reference: suffix table, ordering (outermost first), GPG key requirement",
+    "S3 bucket/key helpers and the assume_s3 bare-path mode"
+  ],
+  "examples": [
+    "examples/path_dispatch/example.py — StoragePath.normalize/join/identify_scheme/matches and mixed-case rejection",
+    "examples/suffix_inference/example.py — infer_pipeline and facade.read(..., infer=True)"
+  ],
+  "tests": [
+    "tests/storage/path_helpers/test_storage_path.py",
+    "tests/storage/path_helpers/test_suffixes.py",
+    "tests/storage/path_helpers/test_s3.py",
+    "tests/storage/path_helpers/test_scheme.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "normalize() returns UPath for fsspec-known schemes but a plain str subclass for others (e.g. azure, b2, smb); callers must treat the result via str() and cannot rely on Path methods",
+    "_normalize_bare calls expanduser(), so '~' in bare paths is expanded silently",
+    "StoragePath.identify_scheme and the module-level location.identify_scheme overlap; the canonical owner of scheme identification is location/_schemes"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "StoragePath and infer_pipeline are root exports"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/path_helpers/__init__.py",
+      "detail": "Lazy __getattr__ for StoragePath/s3 with raise_for_missing_extra('...','http')"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_slim_install.py",
+      "detail": "infer_pipeline exercised on a base install"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_path.py",
+      "detail": "S3 backend imports s3_bucket/s3_key"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/path_helpers",
+      "detail": "Feature churn ended mid-2026; recent commits are base-install/location refactors: stable"
+    }
+  ]
+}

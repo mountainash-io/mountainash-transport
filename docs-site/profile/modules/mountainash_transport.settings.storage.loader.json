@@ -1,0 +1,109 @@
+{
+  "dependencies": [
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport.connections",
+    "mountainash_transport.settings",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.settings.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.settings"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.settings.storage.loader",
+  "path": "src/mountainash_transport/settings/storage/loader.py",
+  "summary": "Named-profile resolver. resolve_storage(name, settings_parameters=None) loads the storage_profiles section through mountainash-settings (from MOUNTAINASH_PROFILES_CONFIG or caller-supplied SettingsParameters), materialises the provider's storage Profile from STORAGE_REGISTRY and the auth profile from auth-client's AUTH_REGISTRY, and validates the auth mode against the provider spec's supported_auth. Validation errors that touch secret: references are replaced with redacted ProfileResolutionError messages so credential values do not leak through exception text or __context__.",
+  "role": "orchestration",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "resolve_storage",
+    "StorageProfilesSettings",
+    "StorageProfileBlock",
+    "AuthBlock",
+    "CONST_PROFILES_CONFIG_ENV"
+  ],
+  "key_classes": [
+    "StorageProfilesSettings — MountainAshBaseSettings model exposing storage_profiles: dict[str, StorageProfileBlock] plus an excluded reference_inputs metadata field",
+    "StorageProfileBlock — one named block: provider (STORAGE_REGISTRY key), parameters, optional auth",
+    "AuthBlock — auth section: optional mode (CONST_AUTH_PROFILES value) and parameters",
+    "_ReferenceLocationsSource — private CacheableSettingsSource that records where secret: references occur (shape only, never values) for redaction decisions"
+  ],
+  "key_functions": [
+    "resolve_storage(name, *, settings_parameters=None) -> tuple[StorageProfileProtocol, AuthProfile] — materialise and validate a named storage/auth pair",
+    "_build_params(name, settings_parameters) — builds SettingsParameters, rejects a caller-set settings_class, re-derives reference_inputs from runtime kwargs",
+    "_sensitive_validation(error, shape) — decides whether a pydantic ValidationError implicates a secret reference and must be redacted"
+  ],
+  "extension_points": [
+    "New providers become resolvable automatically once registered in STORAGE_REGISTRY (block.provider is the registry key)",
+    "New auth modes come from mountainash-auth-client's AUTH_REGISTRY; the loader adds no mapping of its own",
+    "Secret readers are injected through SettingsParameters(secret_store=...); the loader deliberately performs no resolver pass of its own"
+  ],
+  "lifecycle_notes": [
+    "Without settings_parameters, ambient config is read from the file named by the MOUNTAINASH_PROFILES_CONFIG environment variable",
+    "A caller-supplied SettingsParameters must leave settings_class unset; resolve_storage owns it and raises ProfileResolutionError otherwise",
+    "Omitted auth mode falls back to spec.default_auth; the pairing is checked against spec.supported_auth before an auth profile is built",
+    "Importing the module imports settings.storage.profiles to populate STORAGE_REGISTRY; requires the [http] extra (pydantic, mountainash-settings, auth-client)"
+  ],
+  "documentation_hooks": [
+    "Named profiles guide: YAML shape of storage_profiles (provider/parameters/auth.mode/auth.parameters)",
+    "Secret references (secret:<record>.<field>) and selecting a reader at the application boundary",
+    "Error reference: ProfileNotFoundError, ProfileResolutionError, UnsupportedAuthProfileError and when each is raised",
+    "Security note: redaction of secret-bearing validation errors"
+  ],
+  "examples": [
+    "examples/named_profiles/example.py — resolves a named profile from profiles.yaml and handles ProfileNotFoundError",
+    "examples/named_profiles/profiles.yaml — config shape consumed by resolve_storage"
+  ],
+  "tests": [
+    "tests/settings/test_loader.py",
+    "tests/test_public_api.py",
+    "tests/test_slim_install.py",
+    "tests/typing/consumer.py"
+  ],
+  "risks": [
+    "UnsupportedAuthProfileError is imported lazily from connections.errors inside resolve_storage, so the settings layer has a runtime dependency on the connections layer",
+    "Redaction depends on _ReferenceLocationsSource capture and _reference_shape mirroring kwargs; a change in mountainash-settings source capture semantics could silently disable redaction (reference_inputs is a reserved key and raises ValueError if present in config)",
+    "Docstring calls this 'the load_storage successor'; load_storage no longer exists, so that reference is historical"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "resolve_storage, StorageProfilesSettings, StorageProfileBlock, AuthBlock are root exports"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/storage/loader.py",
+      "detail": "resolve_storage raises ProfileNotFoundError / ProfileResolutionError / UnsupportedAuthProfileError"
+    },
+    {
+      "kind": "example",
+      "path": "examples/named_profiles/example.py",
+      "detail": "User-facing recipe imports resolve_storage from package root"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "'Named profiles and secret references' section documents resolve_storage and secret: references"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/settings/storage/loader.py",
+      "detail": "Six substantive commits 2026-07 to 2026-10 (secret-reader binding, redaction, typing): evolving"
+    }
+  ]
+}

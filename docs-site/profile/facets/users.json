@@ -1,74 +1,181 @@
 {
   "audience": "users",
-  "summary": "mountainash-transport gives you a single, consistent way to read, write, copy, and manage files across local disk, S3-compatible stores, and HTTP endpoints. Configure your storage provider, then use read_bytes() for quick one-liners or StorageFacade for full-featured operations. Built-in transform pipelines handle compression and encryption transparently, and suffix-aware path helpers keep your code clean.",
-  "use_cases": [
-    "Read a file from S3 with a single function call",
-    "Copy files between local disk and cloud storage with optional compression",
-    "Automatically decompress .gz or decrypt .gpg files based on file extension",
-    "Switch between AWS S3, Cloudflare R2, MinIO, and Backblaze B2 with only a config change",
-    "Stream large files through gzip or GPG transform pipelines"
-  ],
+  "summary": "Application developers who read, write, stream, list, copy and delete files across local disk, S3-compatible stores, SFTP and HTTP(S) through one facade, configure stores with storage profiles, and opt into transforms, location policy and the HTTP engine.",
   "concepts": [
     {
-      "name": "One-liner file reading",
-      "module_ids": ["mountainash_utils_files.storage_facade.read_bytes"],
-      "description": "read_bytes() accepts any supported URL scheme and returns file contents in a single call. It dispatches to the correct backend automatically, so you can read from local paths, S3 URIs, or HTTP URLs with the same function."
+      "name": "One file API across storage systems",
+      "module_ids": [
+        "mountainash_transport",
+        "mountainash_transport.storage.facade",
+        "mountainash_transport.storage.registry",
+        "mountainash_transport.storage.path_helpers"
+      ],
+      "recommended_docs": [
+        "getting-started",
+        "facade-reference",
+        "path-dispatch-guide"
+      ],
+      "evidence": [
+        "src/mountainash_transport/__init__.py",
+        "src/mountainash_transport/storage/facade/facade.py",
+        "examples/path_dispatch",
+        "examples/local_files"
+      ]
     },
     {
-      "name": "Unified file operations via StorageFacade",
-      "module_ids": ["mountainash_utils_files.storage_facade"],
-      "description": "StorageFacade provides the full set of file operations: read, write, list, delete, copy, and metadata retrieval. Use from_path() to create a facade instance for any supported storage location."
+      "name": "Storage profiles and named-profile loading",
+      "module_ids": [
+        "mountainash_transport.settings",
+        "mountainash_transport.settings.storage.profiles",
+        "mountainash_transport.settings.storage.loader",
+        "mountainash_transport.settings.storage.registry"
+      ],
+      "recommended_docs": [
+        "storage-profiles-guide",
+        "provider-profile-reference"
+      ],
+      "evidence": [
+        "src/mountainash_transport/settings/storage/loader.py",
+        "examples/storage_profiles",
+        "examples/named_profiles"
+      ]
     },
     {
-      "name": "Provider configuration",
-      "module_ids": ["mountainash_utils_files.settings.providers"],
-      "description": "Each storage provider has a dedicated settings class with typed fields for authentication, endpoints, and provider-specific options. Configuration is explicit and discoverable, with clear required and optional parameters."
+      "name": "Read access modes: sequential, streaming and random",
+      "module_ids": [
+        "mountainash_transport.storage.facade",
+        "mountainash_transport._core.ranged_io"
+      ],
+      "recommended_docs": [
+        "read-access-modes-guide"
+      ],
+      "evidence": [
+        "docs/read-access-modes.md",
+        "examples/streaming"
+      ]
     },
     {
-      "name": "Cross-backend file copying",
-      "module_ids": ["mountainash_utils_files.storage_facade.cross_backend"],
-      "description": "copy_between() moves files across different storage backends in a single call. You can apply transform pipelines during the copy, enabling workflows like compressing a local file while uploading it to S3."
+      "name": "Stream transforms: gzip, GPG and suffix inference",
+      "module_ids": [
+        "mountainash_transport._core.transforms",
+        "mountainash_transport._core.transforms.pipeline",
+        "mountainash_transport.storage.path_helpers"
+      ],
+      "recommended_docs": [
+        "transforms-guide"
+      ],
+      "evidence": [
+        "examples/gzip_pipeline",
+        "examples/suffix_inference"
+      ]
     },
     {
-      "name": "Compression and encryption transforms",
-      "module_ids": ["mountainash_utils_files.storage_transforms"],
-      "description": "Pipeline, Gzip, and GPG transforms let you compose compression and encryption steps declaratively. Pipelines apply transforms in the correct order for both reads and writes, keeping your application logic focused on data rather than encoding details."
+      "name": "Cross-backend copy",
+      "module_ids": [
+        "mountainash_transport.storage.facade.cross_backend"
+      ],
+      "recommended_docs": [
+        "cross-backend-copy-recipe"
+      ],
+      "evidence": [
+        "examples/cross_backend_copy",
+        "src/mountainash_transport/storage/facade/cross_backend.py"
+      ]
     },
     {
-      "name": "Suffix-aware transform inference",
-      "module_ids": ["mountainash_utils_files.path_helpers"],
-      "description": "infer_pipeline examines file suffixes like .gz and .gpg and builds the appropriate transform pipeline automatically. Files are decompressed or decrypted on read and compressed or encrypted on write, with no manual pipeline construction needed."
+      "name": "Connections: SFTP, SSH and bastion tunnels",
+      "module_ids": [
+        "mountainash_transport.connections",
+        "mountainash_transport.connections.sftp",
+        "mountainash_transport.connections.ssh",
+        "mountainash_transport.connections.tunnel"
+      ],
+      "recommended_docs": [
+        "connections-guide",
+        "tunnel-recipe"
+      ],
+      "evidence": [
+        "src/mountainash_transport/connections/__init__.py",
+        "AGENTS.md"
+      ]
     },
     {
-      "name": "Storage path utilities",
-      "module_ids": ["mountainash_utils_files.path_helpers"],
-      "description": "StoragePath provides URL scheme identification, path normalisation, and join operations across all supported backends. It gives you a consistent way to construct and manipulate paths regardless of the underlying storage system."
+      "name": "HTTP request engine and auth",
+      "module_ids": [
+        "mountainash_transport._core.http"
+      ],
+      "recommended_docs": [
+        "http-engine-guide"
+      ],
+      "evidence": [
+        "examples/http_engine",
+        "examples/auth_compatibility"
+      ]
     },
     {
-      "name": "Error handling",
-      "module_ids": ["mountainash_utils_files.exceptions"],
-      "description": "A clear exception hierarchy lets you catch storage errors at the right level of specificity, from broad storage failures down to provider-specific issues. Each exception carries context about what went wrong and where."
+      "name": "Location policy (allowed schemes and hosts)",
+      "module_ids": [
+        "mountainash_transport.location"
+      ],
+      "recommended_docs": [
+        "location-policy-guide"
+      ],
+      "evidence": [
+        "src/mountainash_transport/location.py",
+        "README.md"
+      ]
+    },
+    {
+      "name": "Capability checks and errors",
+      "module_ids": [
+        "mountainash_transport.storage.protocols",
+        "mountainash_transport._core.exceptions",
+        "mountainash_transport._core.constants",
+        "mountainash_transport._core.dataclasses"
+      ],
+      "recommended_docs": [
+        "capability-checks-guide",
+        "error-reference"
+      ],
+      "evidence": [
+        "examples/capability_checks",
+        "src/mountainash_transport/_core/exceptions.py"
+      ]
     }
   ],
   "featured_modules": [
-    "mountainash_utils_files",
-    "mountainash_utils_files.storage_facade",
-    "mountainash_utils_files.storage_facade.read_bytes",
-    "mountainash_utils_files.settings.providers",
-    "mountainash_utils_files.storage_transforms",
-    "mountainash_utils_files.path_helpers"
+    "mountainash_transport",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.storage.facade.cross_backend",
+    "mountainash_transport.location",
+    "mountainash_transport._core.http"
   ],
   "hidden_or_internal_modules": [
-    "mountainash_utils_files.storage_transforms._stream_encoder",
-    "mountainash_utils_files.settings.adapters",
-    "mountainash_utils_files.settings.utils",
-    "mountainash_utils_files.settings.templates",
-    "mountainash_utils_files.settings.base",
-    "mountainash_utils_files.settings.descriptor",
-    "mountainash_utils_files.settings.profile",
-    "mountainash_utils_files.settings.registry",
-    "mountainash_utils_files.settings.exceptions",
-    "mountainash_utils_files.storage_registry"
+    "mountainash_transport._core.extras",
+    "mountainash_transport._core.sequential_io",
+    "mountainash_transport._core.stream_errors",
+    "mountainash_transport._core.transforms._stream_encoder",
+    "mountainash_transport._schemes",
+    "mountainash_transport.settings.utils.secrets",
+    "mountainash_transport.storage.backends",
+    "mountainash_transport.connections.http",
+    "mountainash_transport.connections.s3"
   ],
-  "open_questions": []
+  "documentation_plan": [
+    "Getting started: install extras ([http], [s3], [sftp], [encryption], [oauth1]) and the base-install surface, then a one-call read/write via the root storage() factory and StorageFacade.",
+    "Backend support matrix per protocol including RangedRead (local, S3 family, SFTP, HTTP; GCS/Azure/FTP/SMB/GitHub are settings-only).",
+    "Storage profiles: per-provider profile classes, named-profile loading, credentials supplied separately via mountainash-auth-client auth profiles.",
+    "Read access modes guide built from docs/read-access-modes.md, plus materialize().",
+    "Transforms guide: Pipeline ordering on read vs write, suffix inference, GPG buffering caveat.",
+    "Location policy guide, including the empty allow-list semantics.",
+    "Connections and tunnels recipe, including the HTTPS-through-tunnel limitation.",
+    "Error reference: TransportError hierarchy, MissingExtraError, BackendNotImplementedError."
+  ],
+  "open_questions": [
+    "Is mountainash_transport.location intended to be imported directly (not re-exported from the root) as documented public API?",
+    "Should the root storage() factory gain the policy= parameter that StorageFacade/from_path/for_local accept?"
+  ]
 }

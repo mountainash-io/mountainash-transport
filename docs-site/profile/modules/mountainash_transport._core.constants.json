@@ -1,0 +1,104 @@
+{
+  "id": "mountainash_transport._core.constants",
+  "path": "src/mountainash_transport/_core/constants.py",
+  "summary": "Defines StrEnum constants for storage. CONST_STORAGE_PROVIDER_TYPE enumerates provider identifiers (local, s3, s3express, azure_blob, azure_files, gcs, sftp, ftp, smb, nfs, minio, ssh, b2, github, r2, http) and is the key used by the backend registry, scheme table, profiles and facade. A _FindMemberMixin adds a case-insensitive find_member() lookup to the provider and access-type enums. Several further enums (access type, encryption type, connection status, transfer mode, compression type) are defined but not referenced elsewhere in src or tests.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "CONST_STORAGE_PROVIDER_TYPE"
+  ],
+  "key_classes": [
+    "CONST_STORAGE_PROVIDER_TYPE — StrEnum of storage provider identifiers; the dispatch key for registry, schemes, profiles and facade",
+    "CONST_STORAGE_ACCESS_TYPE — StrEnum of access levels (read_only, write_only, read_write, admin); currently unused",
+    "CONST_STORAGE_ENCRYPTION_TYPE — StrEnum of encryption kinds; currently unused",
+    "CONST_STORAGE_CONNECTION_STATUS — StrEnum of connection states; currently unused",
+    "CONST_STORAGE_TRANSFER_MODE — StrEnum of binary/text/auto; currently unused",
+    "CONST_STORAGE_COMPRESSION_TYPE — StrEnum of compression kinds; currently unused",
+    "_FindMemberMixin — StrEnum base adding find_member()"
+  ],
+  "key_functions": [
+    "_FindMemberMixin.find_member(v) -> Self | None — exact value lookup, then case-insensitive match on values; None for no match or None input"
+  ],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport._schemes",
+    "mountainash_transport.connections",
+    "mountainash_transport.settings.storage.profiles",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "Adding a provider means adding a CONST_STORAGE_PROVIDER_TYPE member, then wiring it through _schemes.SCHEMES, a storage profile spec, and (optionally) a registered backend"
+  ],
+  "lifecycle_notes": [
+    "Stdlib-only; imported eagerly by the package root and by _schemes/location, so it must stay dependency-free"
+  ],
+  "documentation_hooks": [
+    "Provider identifier reference table (enum value, schemes that map to it, profile class, backend status)",
+    "Maintainer checklist: adding a new provider"
+  ],
+  "examples": [
+    "examples/path_dispatch/example.py — prints detect_provider_from_path(...).value, i.e. CONST_STORAGE_PROVIDER_TYPE values"
+  ],
+  "tests": [
+    "tests/_core/test_constants_and_exceptions.py",
+    "tests/test_public_api.py"
+  ],
+  "risks": [
+    "NFS and SSH are provider members; NFS has no scheme in _schemes.SCHEMES and no profile, so it is a declared provider with no route to it",
+    "Five secondary enums are dead code (no references in src or tests outside this file), which can mislead readers into thinking encryption/compression/status are modelled here",
+    "find_member swallows all exceptions from str(v) and returns None, hiding bad inputs"
+  ],
+  "open_questions": [
+    "Should the unused enums (CONST_STORAGE_ACCESS_TYPE, CONST_STORAGE_ENCRYPTION_TYPE, CONST_STORAGE_CONNECTION_STATUS, CONST_STORAGE_TRANSFER_MODE, CONST_STORAGE_COMPRESSION_TYPE) be removed or wired up?",
+    "Is the NFS provider member intentional backlog, given it has no scheme or profile?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "CONST_STORAGE_PROVIDER_TYPE is eagerly imported and listed in root __all__"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_schemes.py",
+      "detail": "SCHEMES maps URL schemes to CONST_STORAGE_PROVIDER_TYPE members"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/test_constants_and_exceptions.py",
+      "detail": "tests StrEnum base, required members, lowercase values, and removal of legacy enums"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/registry/registry.py",
+      "detail": "registry keys backends by CONST_STORAGE_PROVIDER_TYPE"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/constants.py",
+      "detail": "only two commits (ca981bd reorganisation, 8ae8bb1 typing) -> stable"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "id": "mountainash_transport.storage.backends.http",
+  "path": "src/mountainash_transport/storage/backends/http/",
+  "summary": "HTTPStorageBackend, registered for CONST_STORAGE_PROVIDER_TYPE.HTTP, performs reads (GET/streamed GET), writes (PUT) and metadata (HEAD) through the package HttpRequestEngine, so retry, redirect, auth-strategy and per-request location checks apply. It implements StorageReadProtocol (HTTPReadMixin), StorageWriteProtocol (HTTPWriteMixin), StorageMetadataProtocol (HTTPMetadataMixin) and, structurally via HTTPReadMixin.open_ranged, RangedReadProtocol; it does not implement Enumerate, Delete, Copy or Directory. Engine and httpx errors are translated to StorageError subclasses with credential-redacted paths.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "HTTPStorageBackend",
+    "HTTPReadMixin",
+    "HTTPWriteMixin",
+    "HTTPMetadataMixin"
+  ],
+  "key_classes": [
+    "HTTPStorageBackend — registered HTTP/HTTPS backend; builds an HttpRequestEngine from connection.client, auth_strategy, policy and location_check, or uses an injected engine",
+    "HTTPReadMixin — StorageReadProtocol: read_to_bytes (GET), read_to_stream (forward-only streamed GET), plus open_ranged (RangedReadProtocol)",
+    "HTTPWriteMixin — StorageWriteProtocol: write_from_bytes / write_from_stream via PUT; create_parents ignored",
+    "HTTPMetadataMixin — StorageMetadataProtocol: path_exists, get_metadata, get_size via HEAD"
+  ],
+  "key_functions": [
+    "HTTPReadMixin.open_ranged(path) -> RangedSource — probes 'Range: bytes=0-0' with identity encoding; pins later ranges with If-Match on a strong ETag; 416 with 'bytes */0' yields an empty source",
+    "_helpers._map_error(exc, path) -> StorageError | None — maps 404/401/403/412 and transport errors to PathNotFound/Authentication/PermissionDenied/ObjectChanged/StorageConnection/StorageError; leaves request-construction errors native",
+    "_helpers._mapped(path) — context manager raising the mapped error from a credential-safe cause",
+    "http_metadata._size(headers, path) — parses Content-Length; invalid values raise StorageError"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.http",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.sequential_io",
+    "mountainash_transport._core.stream_errors",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.protocols",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.backends"
+  ],
+  "extension_points": [
+    "Inject a pre-built HttpRequestEngine (engine=) to control client, policy and auth; combining engine= with location_check= raises ValueError.",
+    "Pass a custom RequestPolicy (policy=) and AuthStrategy (auth_strategy=); this is the only built-in backend that accepts auth_strategy (registry guards others).",
+    "Mixins are exported and can be recomposed into a custom backend that provides _get_engine()."
+  ],
+  "lifecycle_notes": [
+    "Stateless over a borrowed connection: the backend never closes the connection; StorageFacade owns and closes it.",
+    "HttpRequestEngine and httpx are imported inside functions so the module imports on a base install; using it needs the [http] extra.",
+    "read_to_stream returns a forward-only BufferedReader that holds the streaming response open until the caller closes it; errors may surface during consumption.",
+    "Retry/OAuth refresh apply before a response is yielded; bodies are not replayed after consumption starts (docs/read-access-modes.md)."
+  ],
+  "documentation_hooks": [
+    "Support matrix row: HTTP = Read, Write, Metadata, RangedRead; not Enumerate, Delete, Copy, Directory.",
+    "Random access over HTTP: range probe, identity-encoding requirement, RangeNotSupportedError cases, ETag If-Match consistency.",
+    "Error translation table for HTTP status codes to StorageError subclasses, including credential redaction.",
+    "HTTP write semantics: PUT only, create_parents ignored, caller stream errors preserved."
+  ],
+  "examples": [
+    "examples/capability_checks/example.py — HTTP facade refuses list_dir with UnsupportedOperationError and reports read/write/metadata support",
+    "examples/http_engine/README.md — HttpRequestEngine retries and typed errors that underlie this backend"
+  ],
+  "tests": [
+    "tests/storage/backends/test_http.py",
+    "tests/storage/backends/test_http_ranges.py",
+    "tests/storage/backends/test_ranged_conformance.py",
+    "tests/storage/backends/test_sequential_reads.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/storage/facade/test_parquet_consumer.py",
+    "tests/storage/facade/test_http_defaults.py",
+    "tests/_core/http/test_url_userinfo_redaction.py",
+    "tests/_core/http/test_engine_stream_retry.py",
+    "tests/storage/protocols/test_backend_conformance.py"
+  ],
+  "risks": [
+    "HTTPStorageBackend docstring lists only Read/Write/Metadata; RangedReadProtocol support is structural (open_ranged on HTTPReadMixin, no explicit subclass), so docs derived from docstrings will understate capability.",
+    "Without a connection or engine, construction succeeds but every operation raises StorageConnectionError from _get_engine().",
+    "location_check is typed Callable[[str], None] in the backend and registry, while StorageFacade passes its _check method that returns str; the return value is ignored here.",
+    "get_metadata/get_size issue HEAD; servers that reject HEAD or omit Content-Length yield errors or size None."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/http/__init__.py",
+      "detail": "@register_storage_backend(HTTP) class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin)."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/http/http_read.py",
+      "detail": "HTTPReadMixin(StorageReadProtocol) defines read_to_bytes, read_to_stream and open_ranged (RangedReadProtocol shape)."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/http/http_write.py",
+      "detail": "HTTPWriteMixin(StorageWriteProtocol) uses PUT."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/http/http_metadata.py",
+      "detail": "HTTPMetadataMixin(StorageMetadataProtocol) uses HEAD."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "HTTP expected Read/Write/Metadata and excluded from Enumerate/Delete/Copy/Directory."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/backends/test_ranged_conformance.py",
+      "detail": "Ranged conformance cases cover http, s3 and sftp backends."
+    },
+    {
+      "kind": "doc",
+      "path": "docs/read-access-modes.md",
+      "detail": "Describes HTTP bytes=0-0 probe, identity encoding and If-Match behaviour."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/backends/http",
+      "detail": "10 commits since 2026-08 (slim install, credential redaction, location policy); evolving."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

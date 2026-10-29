@@ -1,0 +1,95 @@
+{
+  "id": "mountainash_transport.connections.ssh",
+  "path": "src/mountainash_transport/connections/ssh.py",
+  "summary": "SSHConnection is the leaf connection wrapping paramiko.SSHClient. connect() lazily imports paramiko, loads system known hosts plus an optional KNOWN_HOSTS_FILE, applies a strict host-key policy (reject by default, warn, or auto_add) taken from the _post_connect envelope, and calls client.connect(**kwargs), mapping socket and paramiko failures to TransportConnectionError or ConnectionTimeoutError. It serves both SFTP storage and the tunnel bastion.",
+  "role": "integration",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "SSHConnection"
+  ],
+  "key_classes": [
+    "SSHConnection — ConnectionProtocol leaf owning one paramiko.SSHClient"
+  ],
+  "key_functions": [
+    "SSHConnection(connect_kwargs: dict) — kwargs for paramiko connect plus a '_post_connect' dict (host_key_policy, known_hosts_file)",
+    "SSHConnection.connect() -> Self — host-key policy setup and authenticated connect; releases the client on any failure",
+    "SSHConnection.disconnect() -> None — idempotent client.close()"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections"
+  ],
+  "dependents": [
+    "mountainash_transport.connections"
+  ],
+  "extension_points": [
+    "_HOST_KEY_POLICIES maps policy names to paramiko policy classes; must stay in sync with SFTPStorageProfile validation (sftp_storage_profile.py comment)"
+  ],
+  "lifecycle_notes": [
+    "paramiko is imported in connect(); missing paramiko raises TransportConnectionError naming [sftp].",
+    "Invalid host_key_policy raises ValueError before any socket is opened.",
+    "Partial acquisition is released on failure, with cleanup errors attached as notes.",
+    "__enter__ returns self without connecting; __exit__ disconnects and attaches cleanup failures as notes when the body raised."
+  ],
+  "documentation_hooks": [
+    "SFTP/SSH host-key verification table (reject/warn/auto_add) and migration from 'ignore'",
+    "SSH bastion usage for tunnels",
+    "Connections reference: SSHConnection"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/connections/test_ssh_connection.py",
+    "tests/connections/test_tunnel_connection.py",
+    "tests/connections/test_factory.py"
+  ],
+  "risks": [
+    "'warn' and 'auto_add' policies permit man-in-the-middle attacks (README host-key table); auto_add only remembers keys for the client lifetime.",
+    "Missing paramiko raises TransportConnectionError instead of MissingExtraError.",
+    "Host-key policy names are duplicated between ssh.py and SFTPStorageProfile; drift would cause late ValueErrors."
+  ],
+  "open_questions": [
+    "Should missing paramiko raise MissingExtraError('sftp')?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "SSHConnection in root __all__"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/ssh.py",
+      "detail": "_HOST_KEY_POLICIES and ValueError on unknown policy"
+    },
+    {
+      "kind": "config",
+      "path": "src/mountainash_transport/settings/storage/profiles/sftp_storage_profile.py",
+      "detail": "Comment: host-key policy values must stay in sync with connections/ssh.py"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "SFTP host-key verification section documents policies and security trade-offs"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/connections/ssh.py",
+      "detail": "2214cbe strict host-key policy values; removed unwired 'ignore' (backlog 384)"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

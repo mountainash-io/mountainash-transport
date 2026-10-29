@@ -1,0 +1,163 @@
+{
+  "id": "mountainash_transport.connections",
+  "path": "src/mountainash_transport/connections/",
+  "summary": "Connection factory package. create_connection(profile, auth_profile) validates the auth mode against the profile spec's supported_auth, maps the provider to a leaf connection class and an auth-client TargetFamily, and builds connect kwargs by layering auth_profile.emit() over profile.emit() (with a boto Session/assume-role envelope for S3 ROLE_ARN/PROFILE_NAME). create_tunnelled_connection builds an SSH-bastion TunnelledConnection. The package also defines the TransportConnectionError hierarchy, NullConnection for local storage, the OAuth2 refreshable-auth adapter, and re-exports auth-client OAuth flow helpers for backward compatibility; importing it requires the [http] extra.",
+  "role": "orchestration",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "create_connection",
+    "create_tunnelled_connection",
+    "TransportConnectionError",
+    "SSHConnection",
+    "SFTPConnection",
+    "TunnelledConnection",
+    "HTTPConnection (module __all__)",
+    "NullConnection (module __all__)",
+    "S3Connection (module __all__)",
+    "ConnectionTimeoutError (module __all__)",
+    "ConnectionError (module __all__, alias of TransportConnectionError)",
+    "TokenExchangeError (module __all__)",
+    "TokenRefreshError (module __all__)",
+    "AuthorizationRequired (module __all__)",
+    "UnsupportedAuthProfileError (connections.errors)",
+    "OAuth2RefreshableAuthStrategy (module __all__)",
+    "create_auth_strategy (module __all__)",
+    "OAuthFlow, OAuth1Flow, LocalCallbackServer, extract_code_from_input, prompt_for_code (legacy re-exports from mountainash_auth_client)"
+  ],
+  "key_classes": [
+    "TransportConnectionError — base exception for connection operations (not a StorageError)",
+    "ConnectionTimeoutError — connection or tunnel-worker timeout",
+    "UnsupportedAuthProfileError — auth mode outside spec.supported_auth, or an OAuth authorization request transport does not handle",
+    "TokenExchangeError / TokenRefreshError / AuthorizationRequired — legacy OAuth error types kept for compatibility",
+    "NullConnection — always-connected no-op connection with client None, used for local storage",
+    "OAuth2RefreshableAuthStrategy — thread-safe RefreshableAuthStrategy over auth-client's OAuth2TokenManager (get_headers acquires, refresh forces refresh)"
+  ],
+  "key_functions": [
+    "create_connection(profile, auth_profile=None, *, auto_authorize=False) -> ConnectionProtocol — validate auth, emit kwargs, return an unconnected leaf/decorator connection",
+    "create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, target_auth, remote_host, remote_port) -> TunnelledConnection — SSH bastion chain whose inner connection targets 127.0.0.1:<ephemeral port>",
+    "create_auth_strategy(auth_profile, *, oauth_provider=None, token_store=None) -> OAuth2RefreshableAuthStrategy | None — managed OAuth2 strategy or None for static tokens; fails closed on misconfiguration",
+    "_emit_kwargs(profile, auth_profile, family) -> dict — kwargs assembly incl. boto Session envelope; rejects ROLE_ARN for r2/minio/b2"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.extras",
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections.http",
+    "mountainash_transport.connections.s3",
+    "mountainash_transport.connections.sftp",
+    "mountainash_transport.connections.ssh",
+    "mountainash_transport.connections.tunnel",
+    "mountainash_transport.settings"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.connections.http",
+    "mountainash_transport.connections.s3",
+    "mountainash_transport.connections.sftp",
+    "mountainash_transport.connections.ssh",
+    "mountainash_transport.connections.tunnel",
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport.storage.facade"
+  ],
+  "extension_points": [
+    "_PROVIDER_CONNECTION_MAP and _PROVIDER_FAMILY_MAP (private dicts) map provider strings to leaf classes and TargetFamily; adding a provider means editing these maps",
+    "Any object implementing ConnectionProtocol can be supplied as a tunnel inner connection via create_tunnelled_connection's inner factory",
+    "Profiles may implement emit(family) to control kwargs; otherwise to_handler_kwargs() is used",
+    "Profile __spec__.supported_auth drives auth-mode enforcement; specless profiles skip it"
+  ],
+  "lifecycle_notes": [
+    "create_connection returns an unconnected connection and performs no I/O; the caller (normally StorageFacade) calls connect().",
+    "Package import raises MissingExtraError naming [http] when mountainash_auth_client is absent; leaf SDKs (boto3, paramiko) are imported lazily in connect().",
+    "SFTP profiles produce SFTPConnection(SSHConnection(...)); decorators exclusively own their inner connection.",
+    "auth-client owns token acquisition/refresh; transport only adapts OAuth2TokenManager to the HTTP engine seam. Token stores are caller-owned.",
+    "auto_authorize is accepted but unused in the current implementation."
+  ],
+  "documentation_hooks": [
+    "Connections overview: leaf vs decorator connections and the create_connection pipeline",
+    "Profile + auth separation: how storage profile emit and auth profile emit combine per TargetFamily",
+    "S3 assume-role / named AWS profile envelope and flavor restrictions",
+    "Auth compatibility errors (UnsupportedAuthProfileError) and supported_auth",
+    "Managed OAuth2 via create_auth_strategy and token stores",
+    "Connection error hierarchy and its relation to StorageError"
+  ],
+  "examples": [
+    "examples/auth_compatibility/example.py — create_connection rejects an incompatible auth profile with UnsupportedAuthProfileError before any I/O",
+    "examples/auth_compatibility/README.md — recipe narrative"
+  ],
+  "tests": [
+    "tests/connections/test_factory.py",
+    "tests/connections/test_factory_profile_protocol.py",
+    "tests/connections/test_emission_golden.py",
+    "tests/connections/test_create_connection_oauth.py",
+    "tests/connections/test_auth_strategy.py",
+    "tests/connections/test_errors.py",
+    "tests/connections/test_null_connection.py",
+    "tests/test_slim_install.py",
+    "tests/test_public_api.py"
+  ],
+  "risks": [
+    "Unknown or None provider types silently fall back to HTTPConnection (_connection_for_provider), so a misdeclared profile builds an HTTP client instead of failing.",
+    "connections.errors defines ConnectionError as an alias of TransportConnectionError, shadowing the builtin ConnectionError for star-importers; TransportConnectionError is not part of the StorageError hierarchy.",
+    "auto_authorize parameter is accepted but ignored, which can mislead callers expecting an interactive flow.",
+    "Legacy OAuth re-exports (OAuthFlow, LocalCallbackServer, etc.) tie the package surface to auth-client internal module paths; the module docstring still describes 'OAuth flows, callback servers' as transport infrastructure.",
+    "create_connection returns ConnectionProtocol[Any]; the client type is runtime-dependent (docs/typing.md dynamic boundaries)."
+  ],
+  "open_questions": [
+    "Should the legacy OAuth re-exports and ConnectionError alias be deprecated on a schedule?",
+    "Should unknown provider types raise instead of defaulting to HTTPConnection?",
+    "Is auto_authorize intended to be removed or wired up?",
+    "Boundary: this module bundles factory, errors, NullConnection and the OAuth2 adapter; should auth_strategy.py be profiled separately as an HTTP-auth integration?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Root exports create_connection, create_tunnelled_connection, SSHConnection, SFTPConnection, TunnelledConnection, TransportConnectionError"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "create_connection enforces supported_auth then selects leaf via _PROVIDER_CONNECTION_MAP with HTTPConnection default; legacy OAuth re-exports"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/errors.py",
+      "detail": "TransportConnectionError(Exception) base; ConnectionError alias; UnsupportedAuthProfileError"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "Facade calls create_connection, create_auth_strategy, then connection.connect()"
+    },
+    {
+      "kind": "example",
+      "path": "examples/auth_compatibility/example.py",
+      "detail": "Public use of create_connection and UnsupportedAuthProfileError"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_slim_install.py",
+      "detail": "Importing mountainash_transport.connections on base install raises MissingExtraError('http')"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "Frequent changes June–Oct 2026 (auth enforcement, assume-role envelope, OAuth2 strategy, MissingExtraError) => evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

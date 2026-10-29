@@ -1,0 +1,98 @@
+{
+  "id": "mountainash_transport._core.dataclasses",
+  "path": "src/mountainash_transport/_core/dataclasses/",
+  "summary": "Defines the immutable result types returned by storage metadata, listing and enumeration operations. StorageEntry is a frozen, slotted dataclass describing one file, directory or object-store prefix (path, name, size, last_modified, etag, content_type, entry_type, storage_class, source, version_id, checksum, checksum_algorithm). EnumerateResult pairs a tuple of object entries with a tuple of common-prefix entries for list_objects(). EntryType is a StrEnum of file, directory and prefix.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageEntry",
+    "EntryType",
+    "EnumerateResult"
+  ],
+  "key_classes": [
+    "StorageEntry — frozen/slots dataclass: unified descriptor for a file, directory or prefix across all backends",
+    "EntryType — StrEnum FILE/DIRECTORY/PREFIX",
+    "EnumerateResult — frozen/slots dataclass of objects and common_prefixes tuples returned by list_objects()"
+  ],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.protocols"
+  ],
+  "extension_points": [
+    "Backend authors populate StorageEntry from native metadata; optional fields default to None/empty string, so a backend fills only what its service reports"
+  ],
+  "lifecycle_notes": [
+    "Stdlib-only and imported by every backend; immutable values that can outlive the facade that produced them"
+  ],
+  "documentation_hooks": [
+    "Reference page for StorageEntry fields with per-backend population matrix (which backends set etag, version_id, checksum, storage_class, content_type)",
+    "list_objects() result semantics: objects vs common_prefixes, shared max_results limit, delimiter behaviour (README exact-path and S3 prefix enumeration sections)",
+    "Timestamp semantics: last_modified is UTC-aware on Local and SFTP; None when the server omits it"
+  ],
+  "examples": [
+    "examples/local_files/example.py — reads StorageEntry from metadata() and checks entry_type is EntryType.FILE",
+    "examples/directories/example.py — list_dir() returning StorageEntry values and reading .name"
+  ],
+  "tests": [
+    "tests/_core/test_storage_entry.py",
+    "tests/storage/protocols/test_protocol_shapes.py",
+    "tests/storage/cross_backend/test_list.py",
+    "tests/storage/facade/test_s3_enumeration.py",
+    "tests/storage/backends/test_directory_semantics.py"
+  ],
+  "risks": [
+    "Empty-string defaults for etag/content_type/version_id/checksum make 'unknown' indistinguishable from an empty value, unlike size/last_modified which use None",
+    "SFTP metadata falls back to EntryType.FILE when the server omits mode bits, so FILE is not proof of a regular file (README filesystem directory semantics)",
+    "No per-backend contract states which optional fields are populated; consumers may rely on fields that only some backends fill"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "StorageEntry, EntryType, EnumerateResult re-exported lazily from the root"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "metadata() returns StorageEntry, list_dir() list[StorageEntry], list_objects() EnumerateResult"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "directory semantics and enumeration sections describe EntryType.DIRECTORY, FILE fallback and EnumerateResult fields"
+    },
+    {
+      "kind": "example",
+      "path": "examples/local_files/example.py",
+      "detail": "user-facing use of StorageEntry/EntryType"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/dataclasses",
+      "detail": "41f7f2a introduced StorageEntry replacing FileMetadata (bd78d75); c3c0aca finalised enumeration contracts"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}
