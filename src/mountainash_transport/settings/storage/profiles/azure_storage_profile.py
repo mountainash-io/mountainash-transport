@@ -27,6 +27,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = [
     "AZURE_STORAGE_SPEC",
     "AzureStorageProfile",
@@ -225,6 +228,7 @@ class AzureStorageProfile(Profile):
         API_VERSION: str | None
         SECONDARY_HOSTNAME: str | None
         MAX_BLOCK_SIZE: int | None
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = AZURE_STORAGE_SPEC
     # Settings emission adapters belong in __adapters__ keyed by SDK target.

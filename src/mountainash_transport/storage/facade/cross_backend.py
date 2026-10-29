@@ -34,6 +34,7 @@ def copy_between(
         and destination_pipeline is None
         and isinstance(source_facade._backend, type(destination_facade._backend))
         and source_facade._policy == destination_facade._policy
+        and source_facade._base == destination_facade._base
         and source_facade._storage_profile is destination_facade._storage_profile
         and source_facade.supports(StorageCopyProtocol)
     ):

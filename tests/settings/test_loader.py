@@ -153,6 +153,34 @@ def test_ordinary_returned_profiles_can_reconstruct_settings(
         assert actual == value
 
 
+def test_named_policy_controls_real_reads_and_explicit_off(tmp_path):
+    from mountainash_transport import StorageFacade
+    from mountainash_transport.location import LocationNotAllowed
+
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "inside").write_bytes(b"inside")
+    (tmp_path / "outside").write_bytes(b"outside")
+    config = tmp_path / "policy.yaml"
+    config.write_text(
+        "storage_profiles:\n"
+        "  confined:\n"
+        "    provider: local\n"
+        "    parameters:\n"
+        f"      ROOT_PATH: {root}\n"
+        "      LOCATION_POLICY: {}\n"
+    )
+    profile, auth = resolve_storage(
+        "confined", settings_parameters=SettingsParameters.create(config_files=[str(config)]),
+    )
+    with StorageFacade.from_path("inside", profile, auth_profile=auth) as facade:
+        assert facade.read("inside") == b"inside"
+        with pytest.raises(LocationNotAllowed):
+            facade.read("../outside")
+    with StorageFacade.from_path("inside", profile, auth_profile=auth, policy=None) as facade:
+        assert facade.read("../outside") == b"outside"
+
+
 class TestSecretResolution:
     def test_secret_reference_resolved_via_backend(self, tmp_path):
         from mountainash_settings.secrets import MemorySecretStore

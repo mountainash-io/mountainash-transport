@@ -25,6 +25,9 @@ from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["SFTP_SPEC", "SFTPStorageProfile"]
 
 
@@ -223,6 +226,7 @@ class SFTPStorageProfile(Profile):
         COMPRESS: bool
         KNOWN_HOSTS_FILE: str | None
         HOST_KEY_POLICY: str
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = SFTP_SPEC
     __adapters__ = {TargetFamily.PARAMIKO: _sftp_paramiko_kwargs}

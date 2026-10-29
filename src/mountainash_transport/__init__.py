@@ -11,6 +11,7 @@ import typing as t
 
 from .__version__ import __version__
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from .location import POLICY_UNSET, PolicyOverride
 
 # Docstring-only subpackage; imported eagerly *before* the ``storage`` factory is
 # defined so the factory (not the subpackage) is the final ``storage`` binding.
@@ -118,14 +119,16 @@ if t.TYPE_CHECKING:
 
 
 def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-            profile=None, *, auth_profile=None) -> "StorageFacade":
+            profile=None, *, auth_profile=None, policy: PolicyOverride = POLICY_UNSET) -> "StorageFacade":
     """Convenience factory for creating a StorageFacade."""
     from .storage.facade import StorageFacade
 
-    return StorageFacade(provider_type, profile, auth_profile=auth_profile)
+    return StorageFacade(provider_type, profile, auth_profile=auth_profile, policy=policy)
 
 
 _LAZY: dict[str, tuple[str, str]] = {
+    'NativeReadAccess': ('.native_read', 'NativeReadAccess'),
+    'resolve_native_read': ('.native_read', 'resolve_native_read'),
     'StorageFacade': ('.storage.facade', 'StorageFacade'),
     'copy_between': ('.storage.facade', 'copy_between'),
     'RangePolicy': ('._core.ranged_io', 'RangePolicy'),
@@ -218,6 +221,7 @@ __all__ = [
     "RangePolicy", "RangeNotSupportedError", "ObjectChangedError", "RangedReadProtocol",
     "__version__",
     "StorageFacade", "copy_between", "storage",
+    "POLICY_UNSET", "PolicyOverride", "NativeReadAccess", "resolve_native_read",
     "get_storage_backend", "detect_provider_from_path",
     "ConnectionProtocol", "TransportConnectionError",
     "SSHConnection", "SFTPConnection", "TunnelledConnection",

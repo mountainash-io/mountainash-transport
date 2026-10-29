@@ -32,6 +32,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["SMB_SPEC", "SMBStorageProfile"]
 
 
@@ -136,6 +139,7 @@ class SMBStorageProfile(Profile):
         DOMAIN: str | None
         ENCRYPT: bool
         CONNECTION_TIMEOUT: int
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = SMB_SPEC
 

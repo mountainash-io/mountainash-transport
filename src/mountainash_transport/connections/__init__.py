@@ -150,13 +150,8 @@ def _emit_kwargs(
     return auth_profile.emit(family, base=base)
 
 
-def create_connection(
-    profile: ProfileProtocol,
-    auth_profile: AuthProfile | None = None,
-    *,
-    auto_authorize: bool = False,
-) -> ConnectionProtocol:
-    """Create the right connection for a profile + auth combination."""
+def _require_supported_auth(profile: ProfileProtocol, auth_profile: "AuthProfile | None") -> None:
+    """Raise UnsupportedAuthProfileError if the profile's spec rejects this auth mode."""
     spec = getattr(profile, "__spec__", None)
     supported = getattr(spec, "supported_auth", None)
     if supported is not None:
@@ -169,6 +164,16 @@ def create_connection(
                 reason=f"mode {mode.value!r} not in supported_auth "
                        f"{sorted(m.value for m in supported)}",
             )
+
+
+def create_connection(
+    profile: ProfileProtocol,
+    auth_profile: AuthProfile | None = None,
+    *,
+    auto_authorize: bool = False,
+) -> ConnectionProtocol:
+    """Create the right connection for a profile + auth combination."""
+    _require_supported_auth(profile, auth_profile)
 
     provider_type = _provider_type_from_profile(profile)
     family = _family_for_provider(provider_type)

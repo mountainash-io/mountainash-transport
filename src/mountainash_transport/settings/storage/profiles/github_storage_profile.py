@@ -30,6 +30,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["GITHUB_REPO_SPEC", "GitHubRepoStorageProfile"]
 
 
@@ -134,6 +137,7 @@ class GitHubRepoStorageProfile(Profile):
         REF: str | None
         BASE_URL: str
         TIMEOUT: float
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = GITHUB_REPO_SPEC
 

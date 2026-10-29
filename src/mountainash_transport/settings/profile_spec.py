@@ -9,6 +9,20 @@ from mountainash_settings.profiles import (
     ParameterSpec,
     ProfileSpec
 )
+from mountainash_transport.location import LocationPolicy
+
+
+_LOCATION_POLICY = ParameterSpec(
+    name="LOCATION_POLICY",
+    type=LocationPolicy | None,
+    tier="advanced",
+    default=None,
+    description=(
+        "Optional location confinement. Omit or set null for unrestricted locations; "
+        "configure a root or remote allowance to enable confinement. Authentication "
+        "and TLS are independent of this setting."
+    ),
+)
 
 
 
@@ -58,3 +72,7 @@ class StorageProfileSpec(ProfileSpec):
         default_factory=lambda: frozenset({CONST_AUTH_PROFILES.NONE})
     )
     implemented: bool = True
+
+    def __post_init__(self) -> None:
+        if not any(parameter.name == "LOCATION_POLICY" for parameter in self.parameters):
+            object.__setattr__(self, "parameters", [*self.parameters, _LOCATION_POLICY])

@@ -41,18 +41,9 @@ from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedRead
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 from mountainash_transport.location import (
-    LocationNotAllowed, LocationPolicy, allow_remote, confine_local, identify_scheme,
-    require_known_scheme, url_host,
+    POLICY_UNSET, LocationNotAllowed, PolicyOverride, check_location,
+    confine_local, require_known_scheme, resolve_policy,
 )
-from mountainash_transport._schemes import SCHEMES
-
-_S3_FAMILY = frozenset({
-    CONST_STORAGE_PROVIDER_TYPE.S3, CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS,
-    CONST_STORAGE_PROVIDER_TYPE.MINIO, CONST_STORAGE_PROVIDER_TYPE.R2,
-    CONST_STORAGE_PROVIDER_TYPE.B2,
-})
-
-_PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider in _S3_FAMILY}
 
 
 def _has_static_token(auth_profile: t.Any) -> bool:
@@ -77,7 +68,7 @@ class StorageFacade:
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
         token_store: ClearableSecretStore | None = None,
-        policy: LocationPolicy | None = None,
+        policy: PolicyOverride = POLICY_UNSET,
     ) -> None:
         self._provider_type = provider_type
         self._storage_profile = storage_profile
@@ -85,7 +76,8 @@ class StorageFacade:
         declared = None
         if provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and storage_profile is not None:
             declared = getattr(storage_profile, "ROOT_PATH", None)
-        self._policy = (policy or LocationPolicy()).with_declared_root(declared) if declared else policy
+        self._base = os.path.join(os.getcwd(), os.fspath(declared)) if declared else None
+        self._policy = resolve_policy(policy, storage_profile, declared_root=self._base)
         if declared and getattr(storage_profile, "CREATE_PATH", False):
             target = declared if os.path.isabs(declared) else os.path.join(os.getcwd(), declared)
             if self._policy is None or not self._policy.active or self._policy.root == declared:
@@ -98,18 +90,6 @@ class StorageFacade:
                 else:
                     os.makedirs(target, exist_ok=True)
 
-        # Profile permission comes only from a caller-supplied profile.
-        self._profile_host: str | None = None
-        self._profile_any = False
-        if storage_profile is not None:
-            if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
-                self._profile_host = getattr(storage_profile, "HOST", None)
-            elif provider_type in _S3_FAMILY:
-                bucket = getattr(storage_profile, "BUCKET", None)
-                if bucket:
-                    self._profile_host = bucket
-                else:
-                    self._profile_any = True
 
         if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
             from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
@@ -158,27 +138,9 @@ class StorageFacade:
 
     def _check(self, path: str) -> str:
         """Return the path the backend must use, enforcing the location policy."""
-        if self._policy is None or not self._policy.active:
-            return path
-        scheme = require_known_scheme(path, self._policy)
-        provider = self._provider_type
-        if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
-            return confine_local(path, self._policy)
-        if provider in _S3_FAMILY:
-            if not self._profile_any:
-                from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
-                try:
-                    bucket, _ = parse_s3_path(path)
-                except ValueError:
-                    raise LocationNotAllowed(path, "invalid location") from None
-                allow_remote(_PROVIDER_SCHEME[provider], bucket.lower(), self._policy,
-                             profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
-            if identify_scheme(path) == "sftp":
-                allow_remote("sftp", url_host(path), self._policy, profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP and scheme is not None:
-            allow_remote(scheme, url_host(path), self._policy)
-        return path
+        return check_location(
+            path, self._provider_type, self._storage_profile, self._policy, base=self._base,
+        )
 
     def _ensure_open(self) -> None:
         if self._closed:
@@ -220,7 +182,7 @@ class StorageFacade:
     # ------------------------------------------------------------------
 
     @classmethod
-    def for_local(cls, *, policy: LocationPolicy | None = None) -> StorageFacade:
+    def for_local(cls, *, policy: PolicyOverride = POLICY_UNSET) -> StorageFacade:
         """Return a StorageFacade backed by the local filesystem."""
         return cls(CONST_STORAGE_PROVIDER_TYPE.LOCAL, storage_profile=None, policy=policy)
 
@@ -233,7 +195,7 @@ class StorageFacade:
         auth_profile: AuthProfile | None = None,
         oauth_provider: t.Any = None,
         token_store: ClearableSecretStore | None = None,
-        policy: LocationPolicy | None = None,
+        policy: PolicyOverride = POLICY_UNSET,
     ) -> StorageFacade:
         """Construct a facade whose provider is inferred from a path's URL scheme.
 
@@ -252,8 +214,9 @@ class StorageFacade:
         Raises:
             ValueError: If *path*'s scheme is unrecognised or has no backend.
         """
-        if policy is not None and policy.active:
-            require_known_scheme(path, policy)
+        selected = resolve_policy(policy, storage_profile)
+        if selected is not None and selected.active:
+            require_known_scheme(path, selected)
         provider = detect_provider_from_path(path)
         return cls(
             provider_type=provider, storage_profile=storage_profile, auth_profile=auth_profile,

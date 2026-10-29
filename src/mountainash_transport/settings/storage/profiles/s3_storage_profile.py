@@ -25,6 +25,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["S3_SPEC", "S3StorageProfile", "validate_flavor"]
 
 
@@ -277,6 +280,7 @@ class S3StorageProfile(Profile):
         VERIFY_SSL: bool
         CONNECT_TIMEOUT: float | None
         READ_TIMEOUT: float | None
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = S3_SPEC
     __adapters__ = {TargetFamily.BOTO: _s3_boto_kwargs}
