@@ -1,6 +1,10 @@
 """HTTP transport foundation — error hierarchy and shared client utilities."""
 
-from .engine import HttpRequestEngine
+import typing as _t
+
+if _t.TYPE_CHECKING:
+    from .engine import HttpRequestEngine
+
 from .errors import (
     HttpTransportError,
     HttpResponseError,
@@ -31,6 +35,18 @@ from .policy import (
     IDEMPOTENT_METHODS,
 )
 from .response import HttpResponse, HttpStreamResponse
+
+
+def __getattr__(name: str) -> _t.Any:
+    if name != "HttpRequestEngine":
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        from .engine import HttpRequestEngine
+    except ImportError as exc:
+        from mountainash_transport._core.extras import raise_for_missing_extra
+        raise_for_missing_extra("HttpRequestEngine", "http", exc)
+    return HttpRequestEngine
+
 
 __all__ = [
     "HttpRequestEngine",

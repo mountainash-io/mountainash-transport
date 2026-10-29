@@ -2,7 +2,7 @@
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._schemes import SCHEMES
-from mountainash_transport.storage.path_helpers.storage_path import StoragePath
+from mountainash_transport import location
 
 
 def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
@@ -18,7 +18,7 @@ def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
         ValueError: If the scheme is present but not registered in SCHEMES,
             or if the scheme is registered but has no backend provider.
     """
-    scheme = StoragePath.identify_scheme(path)
+    scheme = location.identify_scheme(str(path)) if path else ""
     if scheme is None:
         raise ValueError(f"Unrecognised scheme in path {path!r}")
     spec = SCHEMES[scheme]

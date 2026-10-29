@@ -5,7 +5,6 @@ import typing as t
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.exceptions import StorageConnectionError
-from mountainash_transport._core.http.engine import HttpRequestEngine
 from mountainash_transport._core.http.policy import RequestPolicy
 from mountainash_transport.storage.registry import register_storage_backend
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
@@ -16,6 +15,7 @@ from .http_write import HTTPWriteMixin
 
 if t.TYPE_CHECKING:
     from mountainash_transport._core.http.auth_protocol import AuthStrategy
+    from mountainash_transport._core.http.engine import HttpRequestEngine
 
 
 @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.HTTP)
@@ -53,6 +53,8 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
                 raise StorageConnectionError(
                     "HTTP backend requires a connected connection"
                 )
+            from mountainash_transport._core.http.engine import HttpRequestEngine
+
             self._engine = HttpRequestEngine(
                 client=client,
                 auth_strategy=auth_strategy,

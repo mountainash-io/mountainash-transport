@@ -4,8 +4,6 @@ from __future__ import annotations
 import contextlib
 import typing as t
 
-import httpx
-
 from mountainash_transport._core.exceptions import (
     AuthenticationError, ObjectChangedError, PathNotFoundError,
     PermissionDeniedError, StorageConnectionError, StorageError,
@@ -19,6 +17,8 @@ from mountainash_transport._core.http.errors import (
 
 
 def _map_error(exc: Exception, path: str) -> StorageError | None:
+    import httpx
+
     path = redact_userinfo(path)
     if isinstance(exc, (StorageError, HttpRequestError, httpx.InvalidURL,
                         httpx.UnsupportedProtocol, httpx.LocalProtocolError)):

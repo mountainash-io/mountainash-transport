@@ -100,16 +100,6 @@ def get_storage_backend(
     # Build the implemented-providers list for error messages
     implemented = sorted(str(k) for k in _backend_registry)
 
-    # Step 2 — provider has a profile but backend is not implemented
-    from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY  # avoid circular import
-
-    for spec in STORAGE_REGISTRY.specs.values():
-        if spec.provider_type == provider_type:
-            raise BackendNotImplementedError(
-                f"The '{provider_type}' storage provider is not yet implemented. "
-                f"Implemented providers: {implemented}"
-            )
-
     # Step 3 — valid enum member but no profile registered
     if isinstance(provider_type, CONST_STORAGE_PROVIDER_TYPE):
         raise BackendNotImplementedError(

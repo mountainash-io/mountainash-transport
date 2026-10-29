@@ -5,7 +5,6 @@ import io
 import typing as t
 from dataclasses import dataclass
 
-from fsspec.caching import caches  # type: ignore[import-untyped]
 
 from mountainash_transport._core.exceptions import StorageError
 
@@ -57,6 +56,7 @@ class RangedReader(io.RawIOBase):
         self._source = source
         self._pos = 0
         kwargs = {"maxblocks": policy.max_blocks} if policy.cache == "blockcache" else {}
+        from fsspec.caching import caches  # type: ignore[import-untyped]
         self._cache = caches[policy.cache](policy.block_size, self._fetch, source.size, **kwargs)
 
     def _fetch(self, start: int, end: int) -> bytes:
