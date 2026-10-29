@@ -1,6 +1,8 @@
 # Chapter plan: mountainash-transport
 
-Status: proposed — awaiting user approval. No chapter prose or site outlines exist yet.
+Status: approved — 2026-10-29 by the user: the 15-chapter, three-part plan as written, including the support-matrix-and-limits page, FAQ, glossary, references and Mermaid visuals. Chapter 14 stays a single chapter.
+
+Post-approval editorial change (2026-10-29): every graph node received a `chapter` field set to its primary chapter slug from this plan. This is a deliberate mapping on a new graph, not mechanical reconciliation.
 Implements: `docs-site/editorial-brief.md` (confirmed 2026-10-29).
 Source: `8f0a49e` (develop). Profile: `docs-site/profile` (src `8a979e2`, unchanged in `src/`). Graph: `docs-site/learning-graph/learning-graph.json` (124 concepts, IDs 101–224, validated). Book-wide `cis_max` = 357 (Byte Storage Endpoints).
 
