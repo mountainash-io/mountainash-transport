@@ -36,7 +36,7 @@ def _remote_path(profile: t.Any, path: str) -> str:
     host = url_host(path)
     try:
         parts = urlsplit(path)
-        port = parts.port or 22
+        port = parts.port if parts.port is not None else 22
     except ValueError:
         raise LocationNotAllowed(path, "invalid location") from None
     if parts.query or parts.fragment:
