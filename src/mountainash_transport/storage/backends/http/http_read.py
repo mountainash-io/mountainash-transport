@@ -44,8 +44,14 @@ class HTTPReadMixin(StorageReadProtocol):
         stack = contextlib.ExitStack()
         with _mapped(path):
             response = stack.enter_context(engine.stream("GET", path))
+        def chunks() -> t.Iterator[bytes]:
+            # Consumption happens outside engine.stream's active exception
+            # handler; translate here before the generic reader sees the error.
+            with _mapped(path):
+                yield from response.iter_bytes()
+
         try:
-            raw = IterBytesReader(iter(response.iter_bytes()), stack.close, lambda exc: _map_error(exc, path))
+            raw = IterBytesReader(chunks(), stack.close, lambda exc: _map_error(exc, path))
             return t.cast(t.BinaryIO, io.BufferedReader(raw))
         except BaseException:
             stack.close()

@@ -31,7 +31,7 @@ from mountainash_transport._core.http.errors import (
     HttpTransportError,
     map_status_to_error,
 )
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.http.redact import _safe_cause, redact_userinfo
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse
 
@@ -378,7 +378,7 @@ class HttpRequestEngine:
                     policy=pol,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(redact_userinfo(str(exc))) from exc
+                raise HttpRequestError(redact_userinfo(str(exc))) from _safe_cause(exc, url)
             except httpx.HTTPError as exc:
                 transport_exc = _map_httpx_exception(exc)
 
@@ -400,7 +400,7 @@ class HttpRequestEngine:
                     time.sleep(delay)
                     continue
 
-                raise transport_exc from exc
+                raise transport_exc from _safe_cause(exc, url)
 
             status = response.status_code
 
@@ -516,7 +516,7 @@ class HttpRequestEngine:
                     params=params, policy=pol, stream=True,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(redact_userinfo(str(exc))) from exc
+                raise HttpRequestError(redact_userinfo(str(exc))) from _safe_cause(exc, url)
             except httpx.HTTPError as exc:
                 mapped = _map_httpx_exception(exc)
                 if (safe and retry.retry_on_transport
@@ -524,40 +524,41 @@ class HttpRequestEngine:
                         and attempt < retry.max_attempts):
                     time.sleep(delay())
                     continue
-                raise mapped from exc
+                raise mapped from _safe_cause(exc, url)
             status = response.status_code
             if 200 <= status < 300:
                 break
             try:
-                if (status == 401 and pol.auth_refresh_on_401 and not refreshed
-                        and isinstance(self._auth_strategy, RefreshableAuthStrategy)):
-                    response.close()
-                    refreshed = True
-                    if self._auth_strategy.refresh():
-                        merged_headers = self._merge_headers(headers)
-                        attempt -= 1
+                with contextlib.closing(response):
+                    if (status == 401 and pol.auth_refresh_on_401 and not refreshed
+                            and isinstance(self._auth_strategy, RefreshableAuthStrategy)):
+                        response.close()
+                        refreshed = True
+                        if self._auth_strategy.refresh():
+                            merged_headers = self._merge_headers(headers)
+                            attempt -= 1
+                            continue
+                    if (status in retry.retry_on_status and attempt < retry.max_attempts
+                            and (status == 429 or safe)):
+                        pause = delay(response)
+                        response.close()
+                        time.sleep(pause)
                         continue
-                if (status in retry.retry_on_status and attempt < retry.max_attempts
-                        and (status == 429 or safe)):
-                    pause = delay(response)
-                    response.close()
-                    time.sleep(pause)
-                    continue
-                if 300 <= status < 400:
-                    raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {redact_userinfo(url)}")
-                # Error metadata is available without draining an arbitrary error body.
-                cls = map_status_to_error(status)
-                kwargs: dict[str, t.Any] = dict(
-                    status_code=status, headers=dict(response.headers),
-                    body_preview=None, url=redact_userinfo(str(response.url)), method=method_upper,
-                )
-                if status == 429:
-                    kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
-                raise cls(f"HTTP {status} {method_upper} {redact_userinfo(url)}", **kwargs)
-            finally:
-                response.close()
+                    if 300 <= status < 400:
+                        raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {redact_userinfo(url)}")
+                    # Error metadata is available without draining an arbitrary error body.
+                    cls = map_status_to_error(status)
+                    kwargs: dict[str, t.Any] = dict(
+                        status_code=status, headers=dict(response.headers),
+                        body_preview=None, url=redact_userinfo(str(response.url)), method=method_upper,
+                    )
+                    if status == 429:
+                        kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
+                    raise cls(f"HTTP {status} {method_upper} {redact_userinfo(url)}", **kwargs)
+            except httpx.HTTPError as exc:
+                raise _map_httpx_exception(exc) from _safe_cause(exc, url)
         try:
             with contextlib.closing(response):
                 yield HttpStreamResponse(response)
         except httpx.HTTPError as exc:
-            raise _map_httpx_exception(exc) from exc
+            raise _map_httpx_exception(exc) from _safe_cause(exc, url)

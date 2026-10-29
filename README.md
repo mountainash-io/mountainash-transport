@@ -218,9 +218,17 @@ values. **Migration:** `ignore` previously behaved as `reject`; remove it or set
 ## Storage errors and strict queries
 
 Implemented Local, S3-family, SFTP and HTTP backends translate their own I/O
-failures into public exceptions, retaining the native exception as `__cause__`.
-The same contract applies when reading, fetching ranges or closing an opened
-stream—not only when opening it.
+failures into public exceptions, retaining native causes except for the HTTP
+credential-redaction case below. The same contract applies when reading,
+fetching ranges or closing an opened stream—not only when opening it.
+
+HTTP translation suppresses native exception chains containing URL userinfo
+(`user:password@`) from standard formatted tracebacks. Clean chains remain
+available for debugging, and public error classification is unchanged.
+This is display redaction, not secret erasure: Python's hidden `__context__`,
+request objects and traceback locals may still retain credentials. Configure
+error reporters accordingly; query tokens and response bodies are not covered
+by URL-userinfo redaction.
 
 | Condition | Exception |
 |---|---|
