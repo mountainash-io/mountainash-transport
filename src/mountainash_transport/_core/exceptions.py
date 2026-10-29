@@ -43,6 +43,18 @@ class TransformError(StorageError):
     """Raised when a stream transform fails to encode or decode."""
 
 
+class MissingExtraError(StorageError, ImportError):
+    """A storage feature needs an optional extra that is not installed.
+
+    Attributes:
+        extra: Name of the ``mountainash-transport`` extra to install.
+        feature: The feature that needed it.
+    """
+
+    extra: str
+    feature: str
+
+
 class BackendNotImplementedError(StorageError):
     """Raised when a storage provider has no backend implementation yet."""
 

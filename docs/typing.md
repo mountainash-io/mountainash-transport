@@ -28,6 +28,9 @@ covers all of `src/mountainash_transport` and `tests`; no test exclusions apply.
 - `PermissionDeniedError` is an `AuthenticationError` and a `StorageError`,
   exported from the package root. Catch the permission subtype first when
   distinguishing access denial from credential rejection.
+- `MissingExtraError` is raised when a feature needs an extra that is not
+  installed. It is both a `StorageError` and an `ImportError`; `.extra` names
+  the extra and `.feature` what needed it.
 
 ## Dynamic boundaries
 
