@@ -1,75 +1,96 @@
 {
   "metadata": {
-    "title": "Mountainash Utils Files Concept Graph",
-    "description": "A concept dependency graph for the mountainash-transport cloud-native storage abstraction library. 90 concepts across 9 categories covering storage protocols, facade, path handling, transforms, local/S3/HTTP backends, and settings.",
+    "title": "mountainash-transport Concept Graph",
+    "description": "Internal concept dependency graph for the mountainash-transport package documentation rebuild: ecosystem boundary, package surface, paths and location policy, storage profiles, facade operations, read access modes, stream transforms, connections and HTTP engine, protocols and registry, backends, errors and maintenance.",
     "creator": "Nathaniel Ramm",
-    "date": "2026-06-03",
-    "version": "1.0",
+    "date": "2026-10-29",
+    "version": "2.0",
     "format": "Learning Graph JSON v1.0",
     "schema": "https://raw.githubusercontent.com/dmccreary/learning-graphs/refs/heads/main/src/schema/learning-graph-schema.json",
     "license": "CC BY-NC-SA 4.0 DEED",
-    "source_commit": "65bc90f901403a1454ba5d3d608660a95d64b163",
-    "profile_dir": "03.profile/mountainash-transport"
+    "source_repository": "mountainash-io/mountainash-transport",
+    "source_revision": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+    "profile_revision": "8a979e2eada96046bfcce92873a801cd7252a32a",
+    "editorial_brief": "docs-site/editorial-brief.md (confirmed 2026-10-29)",
+    "tool_revision": "mountainash-ibook-skills 36c2babce38a51ee6886eb2e783bce9899aefef6",
+    "id_policy": "Replacement graph. IDs start at 101 so no ID from the retired 1.0 graph (IDs 1-90, mountainash_utils_files, baseline 65bc90f) is reused with a different meaning.",
+    "source_commit": "8a979e2eada96046bfcce92873a801cd7252a32a",
+    "profile_dir": "docs-site/profile",
+    "enrichment": "Seeded 2026-10-29 from an explicit reviewed concept-to-module mapping (confidence 1.0); conceptual and ecosystem concepts have null source_module."
   },
   "groups": {
-    "FOUND": {
-      "classifierName": "Foundation Concepts",
+    "BACK": {
+      "classifierName": "Backends",
       "color": "SteelBlue",
       "font": {
         "color": "white"
       }
     },
-    "PROTO": {
-      "classifierName": "Storage Protocols",
+    "CONN": {
+      "classifierName": "Connections and HTTP Engine",
       "color": "DarkSlateBlue",
       "font": {
         "color": "white"
       }
     },
-    "FACADE": {
-      "classifierName": "StorageFacade",
+    "ECO": {
+      "classifierName": "Ecosystem and Foundations",
       "color": "DarkGreen",
       "font": {
         "color": "white"
       }
     },
-    "PATH": {
-      "classifierName": "Path Handling",
-      "color": "Teal",
-      "font": {
-        "color": "white"
-      }
-    },
-    "TRANS": {
-      "classifierName": "Transforms",
-      "color": "Gold",
-      "font": {
-        "color": "black"
-      }
-    },
-    "LOCAL": {
-      "classifierName": "Local Backend",
+    "FAC": {
+      "classifierName": "Facade Operations",
       "color": "LimeGreen",
       "font": {
         "color": "black"
       }
     },
-    "S3": {
-      "classifierName": "S3 Backend",
-      "color": "Orange",
+    "MAINT": {
+      "classifierName": "Errors, Testing and Maintenance",
+      "color": "Gold",
       "font": {
         "color": "black"
       }
     },
-    "HTTP": {
-      "classifierName": "HTTP Backend",
-      "color": "MediumPurple",
+    "PATH": {
+      "classifierName": "Paths, Schemes and Location Policy",
+      "color": "DarkGoldenrod",
       "font": {
         "color": "white"
       }
     },
-    "SETT": {
-      "classifierName": "Settings & Configuration",
+    "PROF": {
+      "classifierName": "Storage Profiles and Settings",
+      "color": "Khaki",
+      "font": {
+        "color": "black"
+      }
+    },
+    "PROTO": {
+      "classifierName": "Protocols and Registry",
+      "color": "Teal",
+      "font": {
+        "color": "white"
+      }
+    },
+    "READ": {
+      "classifierName": "Read Access and Streams",
+      "color": "DodgerBlue",
+      "font": {
+        "color": "white"
+      }
+    },
+    "SURF": {
+      "classifierName": "Package Surface and Install",
+      "color": "LightSkyBlue",
+      "font": {
+        "color": "black"
+      }
+    },
+    "XFRM": {
+      "classifierName": "Stream Transforms",
       "color": "Crimson",
       "font": {
         "color": "white"
@@ -78,1530 +99,2049 @@
   },
   "nodes": [
     {
-      "id": 1,
-      "label": "File Systems",
-      "group": "FOUND",
+      "id": 101,
+      "label": "Byte Storage Endpoints",
+      "group": "ECO",
       "shape": "box",
+      "cis": 357,
+      "chapter": "01-what-transport-does",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 2,
-      "label": "Cloud Object Storage",
-      "group": "FOUND",
-      "shape": "box",
+      "id": 102,
+      "label": "URL Schemes and Paths",
+      "group": "ECO",
+      "cis": 96,
+      "chapter": "01-what-transport-does",
+      "source_module": "mountainash_transport._schemes",
+      "source_path": "src/mountainash_transport/_schemes.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 103,
+      "label": "Object Storage Model",
+      "group": "ECO",
+      "cis": 8,
+      "chapter": "01-what-transport-does",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 3,
-      "label": "URL Schemes",
-      "group": "FOUND",
-      "shape": "box",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "01-foundation-concepts",
-      "match_confidence": 0.0
-    },
-    {
-      "id": 4,
+      "id": 104,
       "label": "Binary Streams",
-      "group": "FOUND",
+      "group": "ECO",
       "shape": "box",
+      "cis": 114,
+      "chapter": "01-what-transport-does",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 5,
-      "label": "Python Protocols",
-      "group": "FOUND",
+      "id": 105,
+      "label": "Transport Responsibility Boundary",
+      "group": "ECO",
+      "cis": 71,
+      "chapter": "01-what-transport-does",
+      "source_module": null,
+      "source_path": null,
+      "match_confidence": 0.0
+    },
+    {
+      "id": 106,
+      "label": "Mountainash Ecosystem",
+      "group": "ECO",
       "shape": "box",
+      "cis": 161,
+      "chapter": "02-mountainash-ecosystem",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 6,
-      "label": "Runtime Checkable Protocol",
-      "group": "FOUND",
+      "id": 107,
+      "label": "mountainash-auth-client",
+      "group": "ECO",
+      "cis": 9,
+      "chapter": "02-mountainash-ecosystem",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 7,
-      "label": "Mixin Pattern",
-      "group": "FOUND",
-      "shape": "box",
+      "id": 108,
+      "label": "mountainash-settings",
+      "group": "ECO",
+      "cis": 115,
+      "chapter": "02-mountainash-ecosystem",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 8,
-      "label": "Pydantic Models",
-      "group": "FOUND",
-      "shape": "box",
+      "id": 109,
+      "label": "mountainash-files",
+      "group": "ECO",
+      "cis": 18,
+      "chapter": "02-mountainash-ecosystem",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 9,
-      "label": "Decorators",
-      "group": "FOUND",
-      "shape": "box",
+      "id": 110,
+      "label": "mountainash Relations Readers",
+      "group": "ECO",
+      "cis": 18,
+      "chapter": "02-mountainash-ecosystem",
       "source_module": null,
       "source_path": null,
-      "chapter": "01-foundation-concepts",
       "match_confidence": 0.0
     },
     {
-      "id": 10,
-      "label": "Registry Pattern",
-      "group": "FOUND",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "01-foundation-concepts",
-      "match_confidence": 0.0
-    },
-    {
-      "id": 11,
-      "label": "StorageConnectionProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 111,
+      "label": "Credential Delegation",
+      "group": "ECO",
+      "cis": 8,
+      "chapter": "02-mountainash-ecosystem",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
       "match_confidence": 1.0
     },
     {
-      "id": 12,
-      "label": "StorageReadProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 112,
+      "label": "Format-Agnostic Storage",
+      "group": "ECO",
+      "cis": 17,
+      "chapter": "02-mountainash-ecosystem",
+      "source_module": "mountainash_transport._core.ranged_io",
+      "source_path": "src/mountainash_transport/_core/ranged_io.py",
       "match_confidence": 1.0
     },
     {
-      "id": 13,
-      "label": "StorageWriteProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 113,
+      "label": "Base Install",
+      "group": "SURF",
+      "cis": 8,
+      "chapter": "03-installation",
+      "source_module": "mountainash_transport",
+      "source_path": "src/mountainash_transport/__init__.py",
       "match_confidence": 1.0
     },
     {
-      "id": 14,
-      "label": "StorageListProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 114,
+      "label": "Optional Extras",
+      "group": "SURF",
+      "cis": 4,
+      "chapter": "03-installation",
+      "source_module": "mountainash_transport._core.extras",
+      "source_path": "src/mountainash_transport/_core/extras.py",
       "match_confidence": 1.0
     },
     {
-      "id": 15,
-      "label": "StorageDeleteProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 115,
+      "label": "MissingExtraError",
+      "group": "SURF",
+      "cis": 2,
+      "chapter": "03-installation",
+      "source_module": "mountainash_transport._core.exceptions",
+      "source_path": "src/mountainash_transport/_core/exceptions.py",
       "match_confidence": 1.0
     },
     {
-      "id": 16,
-      "label": "StorageMetadataProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 116,
+      "label": "Lazy Package Root",
+      "group": "SURF",
+      "cis": 2,
+      "chapter": "03-installation",
+      "source_module": "mountainash_transport",
+      "source_path": "src/mountainash_transport/__init__.py",
       "match_confidence": 1.0
     },
     {
-      "id": 17,
-      "label": "StorageCopyProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 117,
+      "label": "storage() Factory",
+      "group": "SURF",
+      "cis": 1,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport",
+      "source_path": "src/mountainash_transport/__init__.py",
       "match_confidence": 1.0
     },
     {
-      "id": 18,
-      "label": "StorageDirectoryProtocol",
-      "group": "PROTO",
-      "source_module": "storage-protocols",
-      "source_path": "src/mountainash_utils_files/storage_protocols/",
-      "chapter": "02-storage-protocols",
+      "id": 118,
+      "label": "SchemeSpec Registry",
+      "group": "PATH",
+      "cis": 76,
+      "chapter": "04-paths-and-schemes",
+      "source_module": "mountainash_transport._schemes",
+      "source_path": "src/mountainash_transport/_schemes.py",
       "match_confidence": 1.0
     },
     {
-      "id": 19,
-      "label": "StorageFacade Class",
-      "group": "FACADE",
-      "source_module": "storage-facade",
-      "source_path": "src/mountainash_utils_files/storage_facade/facade.py",
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.85
-    },
-    {
-      "id": 20,
-      "label": "Protocol Checked Dispatch",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 21,
-      "label": "UnsupportedOperationError",
-      "group": "FACADE",
-      "source_module": "exceptions",
-      "source_path": "src/mountainash_utils_files/exceptions.py",
-      "chapter": "05-storage-facade",
+      "id": 119,
+      "label": "Scheme Dispatch",
+      "group": "PATH",
+      "cis": 75,
+      "chapter": "04-paths-and-schemes",
+      "source_module": "mountainash_transport.storage.registry",
+      "source_path": "src/mountainash_transport/storage/registry/",
       "match_confidence": 1.0
     },
     {
-      "id": 22,
-      "label": "Read Bytes Method",
-      "group": "FACADE",
-      "source_module": "storage-facade-read-bytes",
-      "source_path": "src/mountainash_utils_files/storage_facade/read_bytes.py",
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.85
-    },
-    {
-      "id": 23,
-      "label": "Read Stream Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 24,
-      "label": "Write Bytes Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 25,
-      "label": "Write Stream Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 26,
-      "label": "List Files Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 27,
-      "label": "Delete Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 28,
-      "label": "Exists Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 29,
-      "label": "Get Metadata Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 30,
-      "label": "Copy Method",
-      "group": "FACADE",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "05-storage-facade",
-      "match_confidence": 0.3
-    },
-    {
-      "id": 31,
-      "label": "StoragePath Class",
+      "id": 120,
+      "label": "StoragePath",
       "group": "PATH",
-      "source_module": "path-helpers",
-      "source_path": "src/mountainash_utils_files/path_helpers/",
-      "chapter": "03-path-handling",
-      "match_confidence": 0.85
+      "cis": 6,
+      "chapter": "04-paths-and-schemes",
+      "source_module": "mountainash_transport.storage.path_helpers",
+      "source_path": "src/mountainash_transport/storage/path_helpers/",
+      "match_confidence": 1.0
     },
     {
-      "id": 32,
-      "label": "SchemeSpec Dataclass",
+      "id": 121,
+      "label": "S3 Bucket and Key Parsing",
       "group": "PATH",
-      "source_module": "path-helpers",
-      "source_path": "src/mountainash_utils_files/path_helpers/",
-      "chapter": "03-path-handling",
-      "match_confidence": 0.85
+      "cis": 3,
+      "chapter": "04-paths-and-schemes",
+      "source_module": "mountainash_transport.storage.path_helpers",
+      "source_path": "src/mountainash_transport/storage/path_helpers/",
+      "match_confidence": 1.0
     },
     {
-      "id": 33,
-      "label": "SCHEMES Registry",
+      "id": 122,
+      "label": "Suffix Chains",
       "group": "PATH",
-      "source_module": "path-helpers",
-      "source_path": "src/mountainash_utils_files/path_helpers/",
-      "chapter": "03-path-handling",
-      "match_confidence": 0.7
+      "cis": 2,
+      "chapter": "04-paths-and-schemes",
+      "source_module": "mountainash_transport.storage.path_helpers",
+      "source_path": "src/mountainash_transport/storage/path_helpers/",
+      "match_confidence": 1.0
     },
     {
-      "id": 34,
-      "label": "Alias Resolution",
+      "id": 123,
+      "label": "LocationPolicy",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 11,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 35,
-      "label": "Identify Scheme Method",
+      "id": 124,
+      "label": "Local Root Confinement",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 4,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 36,
-      "label": "Normalize Method",
+      "id": 125,
+      "label": "Remote Allow-List",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 3,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 37,
-      "label": "GenericSchemePath Fallback",
+      "id": 126,
+      "label": "Profile-Granted Hosts",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 2,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 38,
-      "label": "Path Joining",
+      "id": 127,
+      "label": "LocationNotAllowed",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 2,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 39,
-      "label": "UPath Integration",
+      "id": 128,
+      "label": "Credential Redaction",
       "group": "PATH",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "03-path-handling",
-      "match_confidence": 0.3
+      "cis": 2,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.location",
+      "source_path": "src/mountainash_transport/location.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 40,
-      "label": "Detect Provider From Path",
-      "group": "PATH",
-      "source_module": "storage-registry",
-      "source_path": "src/mountainash_utils_files/storage_registry/",
-      "chapter": "03-path-handling",
-      "match_confidence": 0.8
+      "id": 129,
+      "label": "Storage Profiles",
+      "group": "PROF",
+      "cis": 114,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
     },
     {
-      "id": 41,
-      "label": "StreamTransform Protocol",
-      "group": "TRANS",
-      "source_module": "storage-transforms",
-      "source_path": "src/mountainash_utils_files/storage_transforms/",
-      "chapter": "06-transforms",
-      "match_confidence": 0.85
+      "id": 130,
+      "label": "Auth Profiles",
+      "group": "PROF",
+      "cis": 3,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 42,
-      "label": "Wrap Method",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "id": 131,
+      "label": "Provider Types",
+      "group": "PROF",
+      "cis": 8,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport._core.constants",
+      "source_path": "src/mountainash_transport/_core/constants.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 43,
-      "label": "Unwrap Method",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "id": 132,
+      "label": "StorageProfileSpec",
+      "group": "PROF",
+      "cis": 14,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings",
+      "source_path": "src/mountainash_transport/settings/",
+      "match_confidence": 1.0
     },
     {
-      "id": 44,
-      "label": "Pipeline Class",
-      "group": "TRANS",
-      "source_module": "storage-transforms-pipeline",
-      "source_path": "src/mountainash_utils_files/storage_transforms/pipeline.py",
-      "chapter": "06-transforms",
-      "match_confidence": 0.85
+      "id": 133,
+      "label": "Implemented Flag",
+      "group": "PROF",
+      "cis": 11,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings",
+      "source_path": "src/mountainash_transport/settings/",
+      "match_confidence": 1.0
     },
     {
-      "id": 45,
-      "label": "Apply Read Direction",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "id": 134,
+      "label": "Settings-Only Providers",
+      "group": "PROF",
+      "cis": 6,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
     },
     {
-      "id": 46,
-      "label": "Apply Write Direction",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "id": 135,
+      "label": "STORAGE_REGISTRY",
+      "group": "PROF",
+      "cis": 2,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.registry",
+      "source_path": "src/mountainash_transport/settings/storage/registry.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 47,
+      "id": 136,
+      "label": "S3 Flavours",
+      "group": "PROF",
+      "cis": 4,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 137,
+      "label": "SFTP Profile",
+      "group": "PROF",
+      "cis": 2,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 138,
+      "label": "HTTP Profile",
+      "group": "PROF",
+      "cis": 2,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 139,
+      "label": "Local Profile",
+      "group": "PROF",
+      "cis": 3,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.settings.storage.profiles",
+      "source_path": "src/mountainash_transport/settings/storage/profiles/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 140,
+      "label": "Profile Emission",
+      "group": "PROF",
+      "cis": 3,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings",
+      "source_path": "src/mountainash_transport/settings/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 141,
+      "label": "Named Profiles",
+      "group": "PROF",
+      "cis": 2,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.loader",
+      "source_path": "src/mountainash_transport/settings/storage/loader.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 142,
+      "label": "resolve_storage",
+      "group": "PROF",
+      "cis": 1,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport.settings.storage.loader",
+      "source_path": "src/mountainash_transport/settings/storage/loader.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 143,
+      "label": "StorageFacade",
+      "group": "FAC",
+      "cis": 73,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 144,
+      "label": "from_path",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 145,
+      "label": "for_local",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 146,
+      "label": "Facade Lifecycle",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 147,
+      "label": "Capability Checks",
+      "group": "FAC",
+      "cis": 2,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 148,
+      "label": "Read and Write",
+      "group": "FAC",
+      "cis": 32,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 149,
+      "label": "Streaming Reads and Writes",
+      "group": "FAC",
+      "cis": 20,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 150,
+      "label": "Enumerate and List",
+      "group": "FAC",
+      "cis": 7,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 151,
+      "label": "StorageEntry",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport._core.dataclasses",
+      "source_path": "src/mountainash_transport/_core/dataclasses/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 152,
+      "label": "Metadata Queries",
+      "group": "FAC",
+      "cis": 6,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 153,
+      "label": "Delete",
+      "group": "FAC",
+      "cis": 6,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 154,
+      "label": "Directory Operations",
+      "group": "FAC",
+      "cis": 7,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 155,
+      "label": "Parent Creation",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 156,
+      "label": "Copy Within a Backend",
+      "group": "FAC",
+      "cis": 7,
+      "chapter": "07-file-operations",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 157,
+      "label": "copy_between",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport.storage.facade.cross_backend",
+      "source_path": "src/mountainash_transport/storage/facade/cross_backend.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 158,
+      "label": "Location Policy on the Facade",
+      "group": "FAC",
+      "cis": 1,
+      "chapter": "08-location-policy",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 159,
+      "label": "Read Access Modes",
+      "group": "READ",
+      "cis": 16,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 160,
+      "label": "Sequential Access",
+      "group": "READ",
+      "cis": 2,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport._core.sequential_io",
+      "source_path": "src/mountainash_transport/_core/sequential_io.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 161,
+      "label": "Random Access",
+      "group": "READ",
+      "cis": 11,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport._core.ranged_io",
+      "source_path": "src/mountainash_transport/_core/ranged_io.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 162,
+      "label": "Buffered Access",
+      "group": "READ",
+      "cis": 2,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 163,
+      "label": "RangePolicy",
+      "group": "READ",
+      "cis": 2,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport._core.ranged_io",
+      "source_path": "src/mountainash_transport/_core/ranged_io.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 164,
+      "label": "RangedReader",
+      "group": "READ",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport._core.ranged_io",
+      "source_path": "src/mountainash_transport/_core/ranged_io.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 165,
+      "label": "Sequential Stream Adapters",
+      "group": "READ",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport._core.sequential_io",
+      "source_path": "src/mountainash_transport/_core/sequential_io.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 166,
+      "label": "Deferred Read Errors",
+      "group": "READ",
+      "cis": 1,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport._core.stream_errors",
+      "source_path": "src/mountainash_transport/_core/stream_errors.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 167,
+      "label": "Stream Ownership",
+      "group": "READ",
+      "cis": 2,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 168,
+      "label": "materialize",
+      "group": "READ",
+      "cis": 1,
+      "chapter": "09-read-access-modes",
+      "source_module": "mountainash_transport._core.transforms",
+      "source_path": "src/mountainash_transport/_core/transforms/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 169,
+      "label": "Native Local Handles",
+      "group": "READ",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.local",
+      "source_path": "src/mountainash_transport/storage/backends/local/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 170,
+      "label": "Stream Transform",
+      "group": "XFRM",
+      "cis": 10,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms",
+      "source_path": "src/mountainash_transport/_core/transforms/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 171,
+      "label": "Transform Pipeline",
+      "group": "XFRM",
+      "cis": 6,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms.pipeline",
+      "source_path": "src/mountainash_transport/_core/transforms/pipeline.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 172,
+      "label": "Transform Direction",
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms.pipeline",
+      "source_path": "src/mountainash_transport/_core/transforms/pipeline.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 173,
       "label": "Gzip Transform",
-      "group": "TRANS",
-      "source_module": "storage-transforms",
-      "source_path": "src/mountainash_utils_files/storage_transforms/",
-      "chapter": "06-transforms",
-      "match_confidence": 0.7
+      "group": "XFRM",
+      "cis": 2,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms",
+      "source_path": "src/mountainash_transport/_core/transforms/",
+      "match_confidence": 1.0
     },
     {
-      "id": 48,
+      "id": 174,
       "label": "GPG Transform",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms",
+      "source_path": "src/mountainash_transport/_core/transforms/",
+      "match_confidence": 1.0
     },
     {
-      "id": 49,
-      "label": "Suffix Transforms Map",
-      "group": "TRANS",
-      "source_module": "path-helpers",
-      "source_path": "src/mountainash_utils_files/path_helpers/",
-      "chapter": "06-transforms",
-      "match_confidence": 0.85
+      "id": 175,
+      "label": "Suffix Inference",
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport.storage.path_helpers",
+      "source_path": "src/mountainash_transport/storage/path_helpers/",
+      "match_confidence": 1.0
     },
     {
-      "id": 50,
-      "label": "Infer Pipeline Function",
-      "group": "TRANS",
-      "source_module": "path-helpers",
-      "source_path": "src/mountainash_utils_files/path_helpers/",
-      "chapter": "06-transforms",
-      "match_confidence": 0.85
+      "id": 176,
+      "label": "Transforms and Random Access",
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
     },
     {
-      "id": 51,
-      "label": "Materialize Utility",
-      "group": "TRANS",
-      "source_module": "storage-transforms",
-      "source_path": "src/mountainash_utils_files/storage_transforms/",
-      "chapter": "06-transforms",
-      "match_confidence": 0.85
+      "id": 177,
+      "label": "Streaming Gzip Encoder",
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms._stream_encoder",
+      "source_path": "src/mountainash_transport/_core/transforms/_stream_encoder.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 52,
-      "label": "PairedStream Helper",
-      "group": "TRANS",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "06-transforms",
-      "match_confidence": 0.3
+      "id": 178,
+      "label": "Transform Layer Ownership",
+      "group": "XFRM",
+      "cis": 1,
+      "chapter": "10-stream-transforms",
+      "source_module": "mountainash_transport._core.transforms.pipeline",
+      "source_path": "src/mountainash_transport/_core/transforms/pipeline.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 53,
-      "label": "LocalStorageBackend Class",
-      "group": "LOCAL",
-      "source_module": "storage-backends-local",
-      "source_path": "src/mountainash_utils_files/storage_backends/local/",
-      "chapter": "07-local-backend",
-      "match_confidence": 0.85
+      "id": 179,
+      "label": "ConnectionProtocol",
+      "group": "CONN",
+      "cis": 27,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport._core.protocols",
+      "source_path": "src/mountainash_transport/_core/protocols.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 54,
-      "label": "LocalConnectionMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 180,
+      "label": "create_connection",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 55,
-      "label": "LocalReadMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 181,
+      "label": "Target Families",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 56,
-      "label": "LocalWriteMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 182,
+      "label": "Leaf Connections",
+      "group": "CONN",
+      "cis": 22,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 57,
-      "label": "LocalListMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 183,
+      "label": "Decorator Connections",
+      "group": "CONN",
+      "cis": 4,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 58,
-      "label": "LocalDeleteMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 184,
+      "label": "HTTPConnection",
+      "group": "CONN",
+      "cis": 7,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections.http",
+      "source_path": "src/mountainash_transport/connections/http.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 59,
-      "label": "LocalMetadataMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 185,
+      "label": "S3Connection",
+      "group": "CONN",
+      "cis": 3,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections.s3",
+      "source_path": "src/mountainash_transport/connections/s3.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 60,
-      "label": "LocalCopyMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 186,
+      "label": "SSHConnection",
+      "group": "CONN",
+      "cis": 4,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections.ssh",
+      "source_path": "src/mountainash_transport/connections/ssh.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 61,
-      "label": "LocalDirectoryMixin",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 187,
+      "label": "SFTPConnection",
+      "group": "CONN",
+      "cis": 2,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections.sftp",
+      "source_path": "src/mountainash_transport/connections/sftp.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 62,
-      "label": "Full Protocol Coverage Local",
-      "group": "LOCAL",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "07-local-backend",
-      "match_confidence": 0.3
+      "id": 188,
+      "label": "NullConnection",
+      "group": "CONN",
+      "cis": 3,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 63,
-      "label": "S3StorageBackend Class",
-      "group": "S3",
-      "source_module": "storage-backends-s3",
-      "source_path": "src/mountainash_utils_files/storage_backends/s3/",
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.85
+      "id": 189,
+      "label": "Bastion Tunnels",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections.tunnel",
+      "source_path": "src/mountainash_transport/connections/tunnel.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 64,
-      "label": "S3ConnectionMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 190,
+      "label": "Connection Errors",
+      "group": "CONN",
+      "cis": 2,
+      "chapter": "11-connections",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 65,
-      "label": "S3ReadMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 191,
+      "label": "HTTP Request Engine",
+      "group": "CONN",
+      "cis": 6,
+      "chapter": "12-http-engine",
+      "source_module": "mountainash_transport._core.http",
+      "source_path": "src/mountainash_transport/_core/http/",
+      "match_confidence": 1.0
     },
     {
-      "id": 66,
-      "label": "S3WriteMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 192,
+      "label": "HTTP Retry Policy",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "12-http-engine",
+      "source_module": "mountainash_transport._core.http",
+      "source_path": "src/mountainash_transport/_core/http/",
+      "match_confidence": 1.0
     },
     {
-      "id": 67,
-      "label": "S3ListMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 193,
+      "label": "HTTP Response Handling",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "12-http-engine",
+      "source_module": "mountainash_transport._core.http",
+      "source_path": "src/mountainash_transport/_core/http/",
+      "match_confidence": 1.0
     },
     {
-      "id": 68,
-      "label": "S3DeleteMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 194,
+      "label": "Refreshable Auth Strategy",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "12-http-engine",
+      "source_module": "mountainash_transport.connections",
+      "source_path": "src/mountainash_transport/connections/",
+      "match_confidence": 1.0
     },
     {
-      "id": 69,
-      "label": "S3MetadataMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 195,
+      "label": "HTTP Error Redaction",
+      "group": "CONN",
+      "cis": 1,
+      "chapter": "12-http-engine",
+      "source_module": "mountainash_transport._core.http",
+      "source_path": "src/mountainash_transport/_core/http/",
+      "match_confidence": 1.0
     },
     {
-      "id": 70,
-      "label": "S3CopyMixin",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 196,
+      "label": "Storage Protocols",
+      "group": "PROTO",
+      "cis": 67,
+      "chapter": "06-storage-facade",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 71,
-      "label": "Boto3 Client",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 197,
+      "label": "Runtime-Checkable Protocols",
+      "group": "PROTO",
+      "cis": 4,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 72,
-      "label": "S3 Flavor Dispatch",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 198,
+      "label": "Read Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 73,
-      "label": "AWS S3 Flavor",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 199,
+      "label": "Write Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 74,
-      "label": "S3 Express One Zone Flavor",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 200,
+      "label": "Enumerate Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 75,
-      "label": "Cloudflare R2 Flavor",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 201,
+      "label": "Delete Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 76,
-      "label": "MinIO Flavor",
-      "group": "S3",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "08-s3-backend",
-      "match_confidence": 0.3
+      "id": 202,
+      "label": "Metadata Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 77,
-      "label": "HTTPStorageBackend Class",
-      "group": "HTTP",
-      "source_module": "storage-backends-http",
-      "source_path": "src/mountainash_utils_files/storage_backends/http/__init__.py",
-      "chapter": "09-http-backend",
-      "match_confidence": 0.85
+      "id": 203,
+      "label": "Copy Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 78,
-      "label": "HTTP Read Support",
-      "group": "HTTP",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "09-http-backend",
-      "match_confidence": 0.3
+      "id": 204,
+      "label": "Directory Protocol",
+      "group": "PROTO",
+      "cis": 5,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 79,
-      "label": "HTTP Metadata Support",
-      "group": "HTTP",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "09-http-backend",
-      "match_confidence": 0.3
+      "id": 205,
+      "label": "Ranged Read Protocol",
+      "group": "PROTO",
+      "cis": 6,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
     },
     {
-      "id": 80,
-      "label": "HTTP Connection Support",
-      "group": "HTTP",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "09-http-backend",
-      "match_confidence": 0.3
+      "id": 206,
+      "label": "Backend Registry",
+      "group": "PROTO",
+      "cis": 7,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.registry",
+      "source_path": "src/mountainash_transport/storage/registry/",
+      "match_confidence": 1.0
     },
     {
-      "id": 81,
-      "label": "Httpx Client",
-      "group": "HTTP",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "09-http-backend",
-      "match_confidence": 0.3
+      "id": 207,
+      "label": "register_storage_backend",
+      "group": "PROTO",
+      "cis": 3,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.registry",
+      "source_path": "src/mountainash_transport/storage/registry/",
+      "match_confidence": 1.0
     },
     {
-      "id": 82,
-      "label": "HTTP Error Mapping",
-      "group": "HTTP",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "09-http-backend",
-      "match_confidence": 0.3
+      "id": 208,
+      "label": "Backend Lookup",
+      "group": "PROTO",
+      "cis": 2,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.registry",
+      "source_path": "src/mountainash_transport/storage/registry/",
+      "match_confidence": 1.0
     },
     {
-      "id": 83,
-      "label": "StorageAuthBase Class",
-      "group": "SETT",
-      "source_module": "settings-base",
-      "source_path": "src/mountainash_utils_files/settings/base.py",
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.85
+      "id": 209,
+      "label": "Facade Dispatch",
+      "group": "PROTO",
+      "cis": 1,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.facade",
+      "source_path": "src/mountainash_transport/storage/facade/",
+      "match_confidence": 1.0
     },
     {
-      "id": 84,
-      "label": "Provider Type Enum",
-      "group": "SETT",
-      "shape": "box",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.3
+      "id": 210,
+      "label": "Mixin Composition",
+      "group": "BACK",
+      "cis": 8,
+      "chapter": "13-architecture",
+      "source_module": "mountainash_transport.storage.backends",
+      "source_path": "src/mountainash_transport/storage/backends/__init__.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 85,
-      "label": "Auth Method Enum",
-      "group": "SETT",
-      "shape": "box",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.3
+      "id": 211,
+      "label": "Support Matrix",
+      "group": "BACK",
+      "cis": 4,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends",
+      "source_path": "src/mountainash_transport/storage/backends/__init__.py",
+      "match_confidence": 1.0
     },
     {
-      "id": 86,
-      "label": "Access Type Enum",
-      "group": "SETT",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.3
+      "id": 212,
+      "label": "Local Backend",
+      "group": "BACK",
+      "cis": 2,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.local",
+      "source_path": "src/mountainash_transport/storage/backends/local/",
+      "match_confidence": 1.0
     },
     {
-      "id": 87,
-      "label": "Per Provider Settings",
-      "group": "SETT",
-      "source_module": null,
-      "source_path": null,
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.3
+      "id": 213,
+      "label": "S3 Backend",
+      "group": "BACK",
+      "cis": 2,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.s3",
+      "source_path": "src/mountainash_transport/storage/backends/s3/",
+      "match_confidence": 1.0
     },
     {
-      "id": 88,
-      "label": "Settings Descriptor",
-      "group": "SETT",
-      "source_module": "settings-descriptor",
-      "source_path": "src/mountainash_utils_files/settings/descriptor.py",
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.6
+      "id": 214,
+      "label": "S3 Family Registration",
+      "group": "BACK",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.s3",
+      "source_path": "src/mountainash_transport/storage/backends/s3/",
+      "match_confidence": 1.0
     },
     {
-      "id": 89,
-      "label": "Settings Profile",
-      "group": "SETT",
-      "source_module": "settings-profile",
-      "source_path": "src/mountainash_utils_files/settings/profile.py",
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.6
+      "id": 215,
+      "label": "SFTP Backend",
+      "group": "BACK",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.sftp",
+      "source_path": "src/mountainash_transport/storage/backends/sftp/",
+      "match_confidence": 1.0
     },
     {
-      "id": 90,
-      "label": "Settings Adapters",
-      "group": "SETT",
-      "source_module": "settings-adapters",
-      "source_path": "src/mountainash_utils_files/settings/adapters/",
-      "chapter": "04-settings-and-configuration",
-      "match_confidence": 0.6
+      "id": 216,
+      "label": "HTTP Backend",
+      "group": "BACK",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends.http",
+      "source_path": "src/mountainash_transport/storage/backends/http/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 217,
+      "label": "Backend Divergences",
+      "group": "BACK",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends",
+      "source_path": "src/mountainash_transport/storage/backends/__init__.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 218,
+      "label": "TransportError Hierarchy",
+      "group": "MAINT",
+      "cis": 10,
+      "chapter": "03-installation",
+      "source_module": "mountainash_transport._core.exceptions",
+      "source_path": "src/mountainash_transport/_core/exceptions.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 219,
+      "label": "Backend Error Mapping",
+      "group": "MAINT",
+      "cis": 1,
+      "chapter": "14-backends",
+      "source_module": "mountainash_transport.storage.backends",
+      "source_path": "src/mountainash_transport/storage/backends/__init__.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 220,
+      "label": "BackendNotImplementedError",
+      "group": "MAINT",
+      "cis": 1,
+      "chapter": "05-storage-profiles",
+      "source_module": "mountainash_transport._core.exceptions",
+      "source_path": "src/mountainash_transport/_core/exceptions.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 221,
+      "label": "Conformance Tests",
+      "group": "MAINT",
+      "cis": 2,
+      "chapter": "15-maintaining",
+      "source_module": "mountainash_transport.storage.protocols",
+      "source_path": "src/mountainash_transport/storage/protocols/",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 222,
+      "label": "Registry Completeness Tests",
+      "group": "MAINT",
+      "cis": 1,
+      "chapter": "15-maintaining",
+      "source_module": "mountainash_transport.settings.storage.registry",
+      "source_path": "src/mountainash_transport/settings/storage/registry.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 223,
+      "label": "Slim Install Test",
+      "group": "MAINT",
+      "cis": 1,
+      "chapter": "15-maintaining",
+      "source_module": "mountainash_transport._core.extras",
+      "source_path": "src/mountainash_transport/_core/extras.py",
+      "match_confidence": 1.0
+    },
+    {
+      "id": 224,
+      "label": "Adding a Backend",
+      "group": "MAINT",
+      "cis": 1,
+      "chapter": "15-maintaining",
+      "source_module": "mountainash_transport.storage.registry",
+      "source_path": "src/mountainash_transport/storage/registry/",
+      "match_confidence": 1.0
     }
   ],
   "edges": [
     {
-      "from": 6,
-      "to": 5
+      "from": 102,
+      "to": 101
     },
     {
-      "from": 10,
-      "to": 9
+      "from": 103,
+      "to": 101
     },
     {
-      "from": 11,
-      "to": 5
+      "from": 105,
+      "to": 101
     },
     {
-      "from": 11,
-      "to": 6
+      "from": 105,
+      "to": 104
     },
     {
-      "from": 12,
-      "to": 5
+      "from": 107,
+      "to": 106
     },
     {
-      "from": 12,
-      "to": 6
+      "from": 108,
+      "to": 106
     },
     {
-      "from": 12,
-      "to": 4
+      "from": 109,
+      "to": 106
     },
     {
-      "from": 13,
-      "to": 5
+      "from": 110,
+      "to": 106
     },
     {
-      "from": 13,
-      "to": 6
+      "from": 111,
+      "to": 105
     },
     {
-      "from": 13,
-      "to": 4
+      "from": 111,
+      "to": 107
     },
     {
-      "from": 14,
-      "to": 5
+      "from": 112,
+      "to": 105
     },
     {
-      "from": 14,
-      "to": 6
+      "from": 112,
+      "to": 109
     },
     {
-      "from": 15,
-      "to": 5
+      "from": 112,
+      "to": 110
     },
     {
-      "from": 15,
-      "to": 6
+      "from": 113,
+      "to": 105
     },
     {
-      "from": 16,
-      "to": 5
+      "from": 114,
+      "to": 113
     },
     {
-      "from": 16,
-      "to": 6
+      "from": 115,
+      "to": 114
     },
     {
-      "from": 17,
-      "to": 5
+      "from": 115,
+      "to": 218
     },
     {
-      "from": 17,
-      "to": 6
+      "from": 116,
+      "to": 113
     },
     {
-      "from": 18,
-      "to": 5
+      "from": 117,
+      "to": 116
     },
     {
-      "from": 18,
-      "to": 6
+      "from": 117,
+      "to": 143
     },
     {
-      "from": 19,
-      "to": 11
+      "from": 118,
+      "to": 102
     },
     {
-      "from": 19,
-      "to": 12
+      "from": 119,
+      "to": 118
     },
     {
-      "from": 19,
-      "to": 13
+      "from": 120,
+      "to": 102
     },
     {
-      "from": 19,
-      "to": 14
+      "from": 121,
+      "to": 120
     },
     {
-      "from": 19,
-      "to": 15
+      "from": 121,
+      "to": 103
     },
     {
-      "from": 19,
-      "to": 16
+      "from": 122,
+      "to": 120
     },
     {
-      "from": 19,
-      "to": 17
+      "from": 123,
+      "to": 102
     },
     {
-      "from": 19,
-      "to": 40
+      "from": 124,
+      "to": 123
     },
     {
-      "from": 20,
-      "to": 19
+      "from": 125,
+      "to": 123
     },
     {
-      "from": 20,
-      "to": 6
+      "from": 126,
+      "to": 125
     },
     {
-      "from": 21,
-      "to": 20
+      "from": 126,
+      "to": 129
     },
     {
-      "from": 22,
-      "to": 19
+      "from": 127,
+      "to": 123
     },
     {
-      "from": 22,
-      "to": 12
+      "from": 127,
+      "to": 218
     },
     {
-      "from": 23,
-      "to": 19
+      "from": 128,
+      "to": 102
     },
     {
-      "from": 23,
-      "to": 12
+      "from": 129,
+      "to": 101
     },
     {
-      "from": 23,
-      "to": 4
+      "from": 129,
+      "to": 108
     },
     {
-      "from": 24,
-      "to": 19
+      "from": 130,
+      "to": 111
     },
     {
-      "from": 24,
-      "to": 13
+      "from": 131,
+      "to": 129
     },
     {
-      "from": 25,
-      "to": 19
+      "from": 132,
+      "to": 129
     },
     {
-      "from": 25,
-      "to": 13
+      "from": 133,
+      "to": 132
     },
     {
-      "from": 25,
-      "to": 4
+      "from": 134,
+      "to": 133
     },
     {
-      "from": 26,
-      "to": 19
+      "from": 135,
+      "to": 132
     },
     {
-      "from": 26,
-      "to": 14
+      "from": 136,
+      "to": 129
     },
     {
-      "from": 27,
-      "to": 19
+      "from": 136,
+      "to": 103
     },
     {
-      "from": 27,
-      "to": 15
+      "from": 137,
+      "to": 129
     },
     {
-      "from": 28,
-      "to": 19
+      "from": 138,
+      "to": 129
     },
     {
-      "from": 28,
-      "to": 16
+      "from": 139,
+      "to": 129
     },
     {
-      "from": 29,
-      "to": 19
+      "from": 139,
+      "to": 124
     },
     {
-      "from": 29,
-      "to": 16
+      "from": 140,
+      "to": 129
     },
     {
-      "from": 30,
-      "to": 19
+      "from": 140,
+      "to": 111
     },
     {
-      "from": 30,
-      "to": 17
+      "from": 141,
+      "to": 129
     },
     {
-      "from": 31,
-      "to": 3
+      "from": 142,
+      "to": 141
     },
     {
-      "from": 32,
-      "to": 3
+      "from": 142,
+      "to": 130
     },
     {
-      "from": 33,
-      "to": 32
+      "from": 142,
+      "to": 135
     },
     {
-      "from": 33,
-      "to": 10
+      "from": 143,
+      "to": 129
     },
     {
-      "from": 34,
-      "to": 33
+      "from": 143,
+      "to": 119
     },
     {
-      "from": 35,
-      "to": 31
+      "from": 144,
+      "to": 143
     },
     {
-      "from": 35,
-      "to": 33
+      "from": 144,
+      "to": 119
     },
     {
-      "from": 36,
-      "to": 31
+      "from": 145,
+      "to": 143
     },
     {
-      "from": 36,
-      "to": 35
+      "from": 146,
+      "to": 143
     },
     {
-      "from": 37,
-      "to": 36
+      "from": 146,
+      "to": 179
     },
     {
-      "from": 38,
-      "to": 31
+      "from": 147,
+      "to": 143
     },
     {
-      "from": 39,
-      "to": 31
+      "from": 147,
+      "to": 196
     },
     {
-      "from": 40,
-      "to": 35
+      "from": 148,
+      "to": 143
     },
     {
-      "from": 40,
-      "to": 33
+      "from": 148,
+      "to": 104
     },
     {
-      "from": 41,
-      "to": 5
+      "from": 149,
+      "to": 148
     },
     {
-      "from": 41,
-      "to": 6
+      "from": 150,
+      "to": 143
     },
     {
-      "from": 41,
-      "to": 4
+      "from": 151,
+      "to": 150
     },
     {
-      "from": 42,
-      "to": 41
+      "from": 152,
+      "to": 143
     },
     {
-      "from": 43,
-      "to": 41
+      "from": 153,
+      "to": 143
     },
     {
-      "from": 44,
-      "to": 41
+      "from": 154,
+      "to": 143
     },
     {
-      "from": 45,
-      "to": 44
+      "from": 155,
+      "to": 148
     },
     {
-      "from": 45,
-      "to": 43
+      "from": 155,
+      "to": 154
     },
     {
-      "from": 46,
-      "to": 44
+      "from": 156,
+      "to": 143
     },
     {
-      "from": 46,
-      "to": 42
+      "from": 157,
+      "to": 156
     },
     {
-      "from": 47,
-      "to": 41
+      "from": 157,
+      "to": 171
     },
     {
-      "from": 48,
-      "to": 41
+      "from": 158,
+      "to": 143
     },
     {
-      "from": 49,
-      "to": 3
+      "from": 158,
+      "to": 123
     },
     {
-      "from": 50,
-      "to": 49
+      "from": 158,
+      "to": 127
     },
     {
-      "from": 50,
-      "to": 44
+      "from": 158,
+      "to": 126
     },
     {
-      "from": 50,
-      "to": 47
+      "from": 159,
+      "to": 149
     },
     {
-      "from": 50,
-      "to": 48
+      "from": 159,
+      "to": 112
     },
     {
-      "from": 51,
-      "to": 4
+      "from": 160,
+      "to": 159
     },
     {
-      "from": 52,
-      "to": 4
+      "from": 161,
+      "to": 159
     },
     {
-      "from": 52,
-      "to": 23
+      "from": 162,
+      "to": 159
     },
     {
-      "from": 53,
-      "to": 7
+      "from": 163,
+      "to": 161
     },
     {
-      "from": 53,
-      "to": 10
+      "from": 164,
+      "to": 163
     },
     {
-      "from": 53,
-      "to": 11
+      "from": 164,
+      "to": 205
     },
     {
-      "from": 54,
-      "to": 7
+      "from": 165,
+      "to": 160
     },
     {
-      "from": 54,
-      "to": 11
+      "from": 166,
+      "to": 149
     },
     {
-      "from": 54,
-      "to": 1
+      "from": 166,
+      "to": 218
     },
     {
-      "from": 55,
-      "to": 7
+      "from": 167,
+      "to": 149
     },
     {
-      "from": 55,
-      "to": 12
+      "from": 168,
+      "to": 162
     },
     {
-      "from": 55,
-      "to": 1
+      "from": 169,
+      "to": 161
     },
     {
-      "from": 56,
-      "to": 7
+      "from": 169,
+      "to": 212
     },
     {
-      "from": 56,
-      "to": 13
+      "from": 170,
+      "to": 104
     },
     {
-      "from": 56,
-      "to": 1
+      "from": 171,
+      "to": 170
     },
     {
-      "from": 57,
-      "to": 7
+      "from": 172,
+      "to": 171
     },
     {
-      "from": 57,
-      "to": 14
+      "from": 173,
+      "to": 170
     },
     {
-      "from": 57,
-      "to": 1
+      "from": 174,
+      "to": 170
     },
     {
-      "from": 58,
-      "to": 7
+      "from": 174,
+      "to": 114
     },
     {
-      "from": 58,
-      "to": 15
+      "from": 175,
+      "to": 171
     },
     {
-      "from": 58,
-      "to": 1
+      "from": 175,
+      "to": 122
     },
     {
-      "from": 59,
-      "to": 7
+      "from": 176,
+      "to": 171
     },
     {
-      "from": 59,
-      "to": 16
+      "from": 176,
+      "to": 161
     },
     {
-      "from": 59,
-      "to": 1
+      "from": 177,
+      "to": 173
     },
     {
-      "from": 60,
-      "to": 7
+      "from": 178,
+      "to": 171
     },
     {
-      "from": 60,
-      "to": 17
+      "from": 178,
+      "to": 167
     },
     {
-      "from": 60,
-      "to": 1
+      "from": 179,
+      "to": 105
     },
     {
-      "from": 61,
-      "to": 7
+      "from": 180,
+      "to": 179
     },
     {
-      "from": 61,
-      "to": 18
+      "from": 180,
+      "to": 140
     },
     {
-      "from": 61,
-      "to": 1
+      "from": 180,
+      "to": 130
     },
     {
-      "from": 62,
-      "to": 53
+      "from": 181,
+      "to": 140
     },
     {
-      "from": 62,
-      "to": 54
+      "from": 182,
+      "to": 179
     },
     {
-      "from": 62,
-      "to": 55
+      "from": 183,
+      "to": 182
     },
     {
-      "from": 62,
-      "to": 56
+      "from": 184,
+      "to": 182
     },
     {
-      "from": 62,
-      "to": 57
+      "from": 185,
+      "to": 182
     },
     {
-      "from": 62,
-      "to": 58
+      "from": 185,
+      "to": 136
     },
     {
-      "from": 62,
-      "to": 59
+      "from": 186,
+      "to": 182
     },
     {
-      "from": 62,
-      "to": 60
+      "from": 187,
+      "to": 183
     },
     {
-      "from": 62,
-      "to": 61
+      "from": 187,
+      "to": 186
     },
     {
-      "from": 63,
-      "to": 7
+      "from": 188,
+      "to": 182
     },
     {
-      "from": 63,
-      "to": 10
+      "from": 189,
+      "to": 183
     },
     {
-      "from": 63,
-      "to": 11
+      "from": 189,
+      "to": 186
     },
     {
-      "from": 63,
-      "to": 2
+      "from": 190,
+      "to": 179
     },
     {
-      "from": 64,
-      "to": 7
+      "from": 190,
+      "to": 218
     },
     {
-      "from": 64,
-      "to": 11
+      "from": 191,
+      "to": 184
     },
     {
-      "from": 64,
-      "to": 71
+      "from": 192,
+      "to": 191
     },
     {
-      "from": 65,
-      "to": 7
+      "from": 193,
+      "to": 191
     },
     {
-      "from": 65,
-      "to": 12
+      "from": 194,
+      "to": 191
     },
     {
-      "from": 65,
-      "to": 71
+      "from": 194,
+      "to": 111
     },
     {
-      "from": 66,
-      "to": 7
+      "from": 195,
+      "to": 191
     },
     {
-      "from": 66,
-      "to": 13
+      "from": 195,
+      "to": 128
     },
     {
-      "from": 66,
-      "to": 71
+      "from": 196,
+      "to": 101
     },
     {
-      "from": 67,
-      "to": 7
+      "from": 197,
+      "to": 196
     },
     {
-      "from": 67,
-      "to": 14
+      "from": 198,
+      "to": 196
     },
     {
-      "from": 67,
-      "to": 71
+      "from": 198,
+      "to": 148
     },
     {
-      "from": 68,
-      "to": 7
+      "from": 199,
+      "to": 196
     },
     {
-      "from": 68,
-      "to": 15
+      "from": 199,
+      "to": 148
     },
     {
-      "from": 68,
-      "to": 71
+      "from": 200,
+      "to": 196
     },
     {
-      "from": 69,
-      "to": 7
+      "from": 200,
+      "to": 150
     },
     {
-      "from": 69,
-      "to": 16
+      "from": 201,
+      "to": 196
     },
     {
-      "from": 69,
-      "to": 71
+      "from": 201,
+      "to": 153
     },
     {
-      "from": 70,
-      "to": 7
+      "from": 202,
+      "to": 196
     },
     {
-      "from": 70,
-      "to": 17
+      "from": 202,
+      "to": 152
     },
     {
-      "from": 70,
-      "to": 71
+      "from": 203,
+      "to": 196
     },
     {
-      "from": 71,
-      "to": 2
+      "from": 203,
+      "to": 156
     },
     {
-      "from": 72,
-      "to": 63
+      "from": 204,
+      "to": 196
     },
     {
-      "from": 72,
-      "to": 84
+      "from": 204,
+      "to": 154
     },
     {
-      "from": 73,
-      "to": 72
+      "from": 205,
+      "to": 196
     },
     {
-      "from": 74,
-      "to": 72
+      "from": 205,
+      "to": 161
     },
     {
-      "from": 75,
-      "to": 72
+      "from": 206,
+      "to": 196
     },
     {
-      "from": 76,
-      "to": 72
+      "from": 206,
+      "to": 131
     },
     {
-      "from": 77,
-      "to": 10
+      "from": 207,
+      "to": 206
     },
     {
-      "from": 77,
-      "to": 11
+      "from": 208,
+      "to": 206
     },
     {
-      "from": 77,
-      "to": 3
+      "from": 208,
+      "to": 133
     },
     {
-      "from": 78,
-      "to": 77
+      "from": 209,
+      "to": 147
     },
     {
-      "from": 78,
-      "to": 12
+      "from": 209,
+      "to": 208
     },
     {
-      "from": 78,
-      "to": 81
+      "from": 209,
+      "to": 197
     },
     {
-      "from": 79,
-      "to": 77
+      "from": 210,
+      "to": 196
     },
     {
-      "from": 79,
-      "to": 16
+      "from": 211,
+      "to": 196
     },
     {
-      "from": 79,
-      "to": 81
+      "from": 211,
+      "to": 134
     },
     {
-      "from": 80,
-      "to": 77
+      "from": 211,
+      "to": 198
     },
     {
-      "from": 80,
-      "to": 11
+      "from": 211,
+      "to": 199
     },
     {
-      "from": 80,
-      "to": 81
+      "from": 211,
+      "to": 200
     },
     {
-      "from": 81,
-      "to": 3
+      "from": 211,
+      "to": 201
     },
     {
-      "from": 82,
-      "to": 77
+      "from": 211,
+      "to": 202
     },
     {
-      "from": 83,
-      "to": 8
+      "from": 211,
+      "to": 203
     },
     {
-      "from": 83,
-      "to": 84
+      "from": 211,
+      "to": 204
     },
     {
-      "from": 83,
-      "to": 85
+      "from": 211,
+      "to": 205
     },
     {
-      "from": 86,
-      "to": 84
+      "from": 212,
+      "to": 210
     },
     {
-      "from": 87,
-      "to": 83
+      "from": 212,
+      "to": 188
     },
     {
-      "from": 87,
-      "to": 10
+      "from": 212,
+      "to": 139
     },
     {
-      "from": 88,
-      "to": 83
+      "from": 213,
+      "to": 210
     },
     {
-      "from": 89,
-      "to": 83
+      "from": 213,
+      "to": 185
     },
     {
-      "from": 90,
-      "to": 83
+      "from": 213,
+      "to": 121
+    },
+    {
+      "from": 214,
+      "to": 213
+    },
+    {
+      "from": 214,
+      "to": 207
+    },
+    {
+      "from": 215,
+      "to": 210
+    },
+    {
+      "from": 215,
+      "to": 187
+    },
+    {
+      "from": 215,
+      "to": 137
+    },
+    {
+      "from": 216,
+      "to": 210
+    },
+    {
+      "from": 216,
+      "to": 191
+    },
+    {
+      "from": 216,
+      "to": 138
+    },
+    {
+      "from": 217,
+      "to": 211
+    },
+    {
+      "from": 218,
+      "to": 105
+    },
+    {
+      "from": 219,
+      "to": 218
+    },
+    {
+      "from": 219,
+      "to": 210
+    },
+    {
+      "from": 220,
+      "to": 218
+    },
+    {
+      "from": 220,
+      "to": 134
+    },
+    {
+      "from": 221,
+      "to": 211
+    },
+    {
+      "from": 221,
+      "to": 197
+    },
+    {
+      "from": 222,
+      "to": 133
+    },
+    {
+      "from": 222,
+      "to": 206
+    },
+    {
+      "from": 223,
+      "to": 113
+    },
+    {
+      "from": 223,
+      "to": 115
+    },
+    {
+      "from": 224,
+      "to": 207
+    },
+    {
+      "from": 224,
+      "to": 221
+    },
+    {
+      "from": 224,
+      "to": 133
+    },
+    {
+      "from": 224,
+      "to": 190
     }
   ]
 }
