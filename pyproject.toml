@@ -23,37 +23,44 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+    "typing-extensions>=4.0",
+]
+
+[project.optional-dependencies]
+http = [
     "mountainash-settings>=0.1.0,<0.2",
     "mountainash-auth-client>=0.1.0,<0.2",
     "pydantic>=2.10,<3",
-    "typing-extensions>=4.0",
     "universal_pathlib==0.2.2",
     "httpx>=0.27",
     "fsspec>=2026.6.0,<2027",
 ]
-
-[project.optional-dependencies]
 s3 = [
+    "mountainash-transport[http]",
     "boto3>=1.29.4",
     "s3fs>=2023.1.0",
     "aiobotocore[boto3]>=2.19.0",
     "minio>=7.2.7",
 ]
 gcs = [
+    "mountainash-transport[http]",
     "google-cloud-storage>=2.9.0",
     "gcsfs>=2023.1.0",
 ]
 azure = [
+    "mountainash-transport[http]",
     "azure-storage-blob>=12.13.0",
     "adlfs>=2023.1.0",
 ]
 sftp = [
+    "mountainash-transport[http]",
     "paramiko>=5.0.0",
     "smart-open[ssh]>=7.0.4",
 ]
 encryption = ["python-gnupg>=0.5.2"]
-oauth1 = ["authlib>=1.9.1"]
+oauth1 = ["mountainash-transport[http]", "authlib>=1.9.1"]
 all = [
+    "mountainash-transport[http]",
     "boto3>=1.29.4",
     "s3fs>=2023.1.0",
     "aiobotocore[boto3]>=2.19.0",

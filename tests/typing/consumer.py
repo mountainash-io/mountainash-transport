@@ -20,6 +20,7 @@ from mountainash_transport import (
     HttpRequestEngine,
     HttpResponse,
     HttpTransportError,
+    MissingExtraError,
     PathNotFoundError,
     Pipeline,
     RangePolicy,
@@ -120,3 +121,10 @@ def http_contracts(engine: HttpRequestEngine) -> None:
     assert_type(engine.request("GET", "https://files.example.com/sales.csv").content, bytes)
 
     engine.request("GET", "https://files.example.com", content="text")  # type: ignore[arg-type]
+
+
+def missing_extra_contracts(err: MissingExtraError) -> None:
+    assert_type(err.extra, str)
+    assert_type(err.feature, str)
+    storage: StorageError = err
+    imported: ImportError = err

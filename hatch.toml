@@ -35,6 +35,7 @@ export-requirements = "hatch dep show requirements > ./requirements.txt"
 python = "3.12"
 installer = "uv"
 path = ".venv"
+features = ["http"]
 dependencies = [
     "mountainash_settings @          {root:uri}/../mountainash-settings",
     "mountainash_auth_client @       {root:uri}/../mountainash-auth-client",

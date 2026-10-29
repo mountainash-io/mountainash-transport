@@ -22,7 +22,7 @@ DEPENDENCY_BASES = {
 }
 PACKAGE = "mountainash_transport"
 RECIPES = ("tools/qualify_typing.py", "tests/typing/consumer.py",
-           "tests/typing/runtime_smoke.py", "docs/typing.md")
+           "tests/typing/runtime_smoke.py", "tests/typing/base_smoke.py", "docs/typing.md")
 OPTIONAL_SDKS = ("boto3", "botocore", "paramiko", "gnupg")
 
 
@@ -132,7 +132,7 @@ def main() -> None:
             environment = output / f"env-{kind}"
             venv.EnvBuilder(with_pip=True).create(environment)
             python = str(environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python"))
-            run([python, "-m", "pip", "--isolated", "install", str(wheel),
+            run([python, "-m", "pip", "--isolated", "install", f"{wheel}[http]",
                  *(str(w) for _, w in dependency_wheels.values()),
                  "mypy==1.10.1", "types-PyYAML==6.0.12.20260906"], consumer, f"{kind}-install.log")
             run([python, "-m", "pip", "--isolated", "freeze"], consumer, f"{kind}-dependencies.log")
@@ -188,6 +188,17 @@ pathlib.Path("exports.py").write_text("from mountainash_transport import " + ", 
             if result.returncode != 1 or actual != expected or result.stdout.count(": error:") != len(expected):
                 raise RuntimeError(f"Unexpected negative diagnostics: expected {expected}, got {actual}")
             run([python, "runtime_smoke.py"], consumer, f"{kind}-runtime.log")
+        # Base install: the wheel alone, no extras or sibling wheels (backlog 33, AC1).
+        base = output / "consumer-base"
+        base.mkdir()
+        shutil.copy(source / "tests/typing/base_smoke.py", base / "base_smoke.py")
+        base_env = output / "env-base"
+        venv.EnvBuilder(with_pip=True).create(base_env)
+        base_python = str(base_env / ("Scripts/python.exe" if os.name == "nt" else "bin/python"))
+        run([base_python, "-m", "pip", "--isolated", "install", str(direct)], base, "base-install.log")
+        frozen = run([base_python, "-m", "pip", "--isolated", "freeze"], base, "base-dependencies.log")
+        run([base_python, "base_smoke.py"], base, "base-smoke.log")
+        receipt["cells"]["base"] = {"installed": frozen.stdout.splitlines(), "smoke": "passed"}
         receipt["status"] = "passed"
     except Exception as exc:
         receipt["error"] = str(exc)

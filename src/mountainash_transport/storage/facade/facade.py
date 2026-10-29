@@ -11,7 +11,9 @@ import typing as t
 from types import TracebackType
 from typing import BinaryIO
 
-from mountainash_settings.secrets import ClearableSecretStore
+if t.TYPE_CHECKING:
+    from mountainash_auth_client import AuthProfile
+    from mountainash_settings.secrets import ClearableSecretStore
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
@@ -26,7 +28,6 @@ from mountainash_transport.storage.protocols import (
     StorageReadProtocol,
     StorageWriteProtocol,
 )
-from mountainash_auth_client import AuthProfile
 from mountainash_transport.storage.registry import (
     detect_provider_from_path,
     get_storage_backend,
@@ -78,8 +79,6 @@ class StorageFacade:
         token_store: ClearableSecretStore | None = None,
         policy: LocationPolicy | None = None,
     ) -> None:
-        from mountainash_transport.connections import create_connection, create_auth_strategy
-        from mountainash_auth_client import OAuth2AuthProfile
         self._provider_type = provider_type
         self._storage_profile = storage_profile
 
@@ -122,6 +121,9 @@ class StorageFacade:
         strategy = None
         try:
             if storage_profile is not None:
+                from mountainash_transport.connections import create_auth_strategy, create_connection
+                from mountainash_auth_client import OAuth2AuthProfile
+
                 self._connection = create_connection(storage_profile, auth_profile)
                 strategy = create_auth_strategy(
                     auth_profile, oauth_provider=oauth_provider, token_store=token_store,

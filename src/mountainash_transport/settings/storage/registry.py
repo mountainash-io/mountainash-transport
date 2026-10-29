@@ -46,3 +46,8 @@ def get_descriptor(name: str) -> StorageProfileSpec:
 
 def get_settings_class(name: str) -> type["StorageProfileProtocol"]:
     return STORAGE_REGISTRY.get_settings_class(name)
+
+
+# Populate the registry on import. Profile modules use ``register`` above, so this
+# import must stay at the bottom.
+from . import profiles as _profiles  # noqa: E402,F401

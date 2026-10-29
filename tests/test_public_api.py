@@ -30,7 +30,7 @@ class TestPublicAPI:
     def test_exceptions_importable(self):
         from mountainash_transport import (
             StorageError, UnsupportedOperationError,
-            PathNotFoundError, AuthenticationError,
+            PathNotFoundError, AuthenticationError, MissingExtraError,
         )
 
     def test_storage_path_importable(self):

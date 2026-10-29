@@ -22,7 +22,10 @@ class S3Connection(ConnectionProtocol):
         try:
             import boto3
         except ImportError as exc:
-            raise TransportConnectionError("boto3 is required for S3 connections") from exc
+            raise TransportConnectionError(
+                "boto3 is required for S3 connections — install with: "
+                "pip install mountainash-transport[s3]"
+            ) from exc
 
         self.disconnect()
         try:

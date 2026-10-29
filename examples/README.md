@@ -16,8 +16,9 @@ repository root:
 python -m pip install -e ".[s3]"
 ```
 
-Only the profile recipes need the `[s3]` extra (they build botocore client
-configuration); nothing connects to S3. All commands run from the repository
+The `[s3]` extra includes `[http]`, which the profile, HTTP-engine and
+path-dispatch recipes need; the profile recipes also build botocore client
+configuration. Nothing connects to S3. All commands run from the repository
 root. Input paths are relative to each script, so an absolute script path also
 works from another working directory.
 

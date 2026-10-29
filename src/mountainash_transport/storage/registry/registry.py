@@ -53,15 +53,13 @@ def get_storage_backend(
 ) -> t.Any:
     """Instantiate and return a backend for the given provider type.
 
-    Uses a three-step lookup to give clear error messages:
+    Lookup order:
 
     1. If a backend is registered, instantiate and return it.
-    2. If the provider has a profile with ``implemented=False``, raise
-       :class:`BackendNotImplementedError` with a helpful message listing
-       implemented providers.
-    3. If the value is a valid :class:`CONST_STORAGE_PROVIDER_TYPE` enum
-       member (but has no profile), raise :class:`BackendNotImplementedError`.
-    4. Otherwise raise :class:`ValueError` for truly unknown providers.
+    2. If the value is a valid :class:`CONST_STORAGE_PROVIDER_TYPE` enum
+       member with no backend, raise :class:`BackendNotImplementedError`
+       listing the implemented providers.
+    3. Otherwise raise :class:`ValueError` for truly unknown providers.
 
     Args:
         provider_type: The storage provider to look up.
@@ -100,24 +98,14 @@ def get_storage_backend(
     # Build the implemented-providers list for error messages
     implemented = sorted(str(k) for k in _backend_registry)
 
-    # Step 2 — provider has a profile but backend is not implemented
-    from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY  # avoid circular import
-
-    for spec in STORAGE_REGISTRY.specs.values():
-        if spec.provider_type == provider_type:
-            raise BackendNotImplementedError(
-                f"The '{provider_type}' storage provider is not yet implemented. "
-                f"Implemented providers: {implemented}"
-            )
-
-    # Step 3 — valid enum member but no profile registered
+    # Step 2 — valid enum member but no backend registered
     if isinstance(provider_type, CONST_STORAGE_PROVIDER_TYPE):
         raise BackendNotImplementedError(
             f"The '{provider_type}' storage provider is not yet implemented. "
             f"Implemented providers: {implemented}"
         )
 
-    # Step 4 — truly unknown
+    # Step 3 — truly unknown
     raise ValueError(f"Unknown provider type: {provider_type!r}")
 
 

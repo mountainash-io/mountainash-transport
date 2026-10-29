@@ -156,3 +156,16 @@ class TestStorageRegistry:
         """The wrapper supports ``in`` membership checks by name."""
         assert "s3" in STORAGE_REGISTRY
         assert "definitely_not_here" not in STORAGE_REGISTRY
+
+
+def test_registry_import_alone_is_populated():
+    """Importing only the registry module yields every built-in profile spec."""
+    import subprocess
+    import sys
+
+    code = (
+        "from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY, get_spec\n"
+        "assert {'s3', 'local', 'http', 'sftp'} <= set(STORAGE_REGISTRY.specs), sorted(STORAGE_REGISTRY.specs)\n"
+        "assert get_spec('local') is STORAGE_REGISTRY.specs['local']\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)

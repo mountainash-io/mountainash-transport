@@ -34,6 +34,7 @@ if t.TYPE_CHECKING:
         PermissionDeniedError as PermissionDeniedError,
         TransformError as TransformError,
         BackendNotImplementedError as BackendNotImplementedError,
+        MissingExtraError as MissingExtraError,
         ProfileResolutionError as ProfileResolutionError,
         ProfileNotFoundError as ProfileNotFoundError,
     )
@@ -164,6 +165,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'PermissionDeniedError': ('._core.exceptions', 'PermissionDeniedError'),
     'TransformError': ('._core.exceptions', 'TransformError'),
     'BackendNotImplementedError': ('._core.exceptions', 'BackendNotImplementedError'),
+    'MissingExtraError': ('._core.exceptions', 'MissingExtraError'),
     'ProfileResolutionError': ('._core.exceptions', 'ProfileResolutionError'),
     'ProfileNotFoundError': ('._core.exceptions', 'ProfileNotFoundError'),
     'Pipeline': ('._core.transforms', 'Pipeline'),
@@ -228,6 +230,7 @@ __all__ = [
     "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
     "PathNotFoundError", "AuthenticationError", "TransformError", "BackendNotImplementedError",
+    "MissingExtraError",
     "PermissionDeniedError",
     "ProfileResolutionError", "ProfileNotFoundError",
     "StoragePath", "infer_pipeline",

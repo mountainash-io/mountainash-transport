@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_auth_client import CONST_AUTH_PROFILES
-from mountainash_auth_client.targets import TargetFamily
+try:
+    from mountainash_auth_client import CONST_AUTH_PROFILES
+    from mountainash_auth_client.targets import TargetFamily
+except ImportError as _exc:
+    from mountainash_transport._core.extras import raise_for_missing_extra
+    raise_for_missing_extra("connections", "http", _exc)
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import ProfileProtocol
