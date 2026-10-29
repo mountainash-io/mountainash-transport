@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import typing as t
 
-from ._helpers import _mapped, _wrap_sftp_error
+from ._helpers import _mapped, _remote_path, _wrap_sftp_error
 from mountainash_transport._core.ranged_io import RangedSource
 from mountainash_transport._core.sequential_io import ForwardOnlyReader
 
@@ -13,12 +13,14 @@ class SFTPReadMixin:
     """Read mixin for SFTP storage backend."""
 
     def read_to_bytes(self, path: str) -> bytes:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path), sftp.open(path, "rb") as f:
             return f.read()
 
     def read_to_stream(self, path: str) -> t.BinaryIO:
         """Return demand-driven forward-only reads; no unbounded prefetch."""
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             handle = sftp.open(path, "rb")
@@ -29,6 +31,7 @@ class SFTPReadMixin:
 
     def open_ranged(self, path: str) -> RangedSource:
         """Open a native remote file without prefetch or version pinning."""
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             handle = sftp.open(path, "rb")

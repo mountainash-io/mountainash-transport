@@ -315,3 +315,59 @@ def test_sftp_caller_input_failure_is_unchanged() -> None:
     with Input(b"x") as source, pytest.raises(EOFError) as caught:
         backend.write_from_stream("/destination", source)
     assert caught.value is original
+
+
+_URL_OPERATIONS: list[tuple[str, tuple[t.Any, ...]]] = [
+    ("read_to_bytes", ()), ("read_to_stream", ()), ("open_ranged", ()),
+    ("write_from_bytes", (b"x",)), ("write_from_stream", (io.BytesIO(b"x"),)),
+    ("delete_file", ()), ("path_exists", ()), ("get_metadata", ()), ("get_size", ()),
+    ("list_dir", ()), ("mkdir", ()), ("rmdir", ()), ("list_objects", ()),
+]
+
+
+def _profile_backend() -> tuple[t.Any, MagicMock]:
+    from types import SimpleNamespace
+    backend, client = _make_backend()
+    backend.storage_profile = SimpleNamespace(HOST="SFTP.example.com", PORT=2222)
+    client.stat.return_value.st_mode = stat.S_IFREG | 0o644
+    client.stat.return_value.st_size = 1
+    client.open.return_value.stat.return_value.st_size = 1
+    client.listdir_attr.return_value = []
+    return backend, client
+
+
+@pytest.mark.parametrize(("operation", "extra"), _URL_OPERATIONS)
+def test_sftp_url_behaves_as_remote_path(operation: str, extra: tuple[t.Any, ...]) -> None:
+    calls = []
+    for path in ("/data/a b.csv", "sftp://user@sftp.example.com:2222/data/a%20b.csv"):
+        backend, client = _profile_backend()
+        args = tuple(io.BytesIO(b"x") if isinstance(a, io.BytesIO) else a for a in extra)
+        try:
+            getattr(backend, operation)(path, *args)
+        except StorageError:
+            pass  # MagicMock stat modes; only the remote calls matter
+        calls.append(client.mock_calls)
+    assert calls[0] == calls[1]
+    assert "sftp://" not in repr(calls[1])
+
+
+@pytest.mark.parametrize("url", [
+    "sftp://other.example.com:2222/data/a.csv",
+    "sftp://sftp.example.com/data/a.csv",          # default port 22 != 2222
+    "sftp://sftp.example.com:2222/data/a.csv?x=1",
+])
+@pytest.mark.parametrize(("operation", "extra"), _URL_OPERATIONS)
+def test_sftp_url_for_another_server_is_rejected(operation: str, extra: tuple[t.Any, ...], url: str) -> None:
+    from mountainash_transport.location import LocationNotAllowed
+    backend, client = _profile_backend()
+    with pytest.raises(LocationNotAllowed):
+        getattr(backend, operation)(url, *extra)
+    assert client.mock_calls == []
+
+
+def test_sftp_url_without_profile_is_rejected() -> None:
+    from mountainash_transport.location import LocationNotAllowed
+    backend, client = _make_backend()
+    with pytest.raises(LocationNotAllowed):
+        backend.read_to_bytes("sftp://sftp.example.com/data/a.csv")
+    assert client.mock_calls == []

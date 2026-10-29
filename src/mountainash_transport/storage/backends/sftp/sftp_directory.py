@@ -8,13 +8,14 @@ from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
-from ._helpers import _check_not_directory, _is_not_found, _mapped
+from ._helpers import _check_not_directory, _is_not_found, _mapped, _remote_path
 
 
 class SFTPDirectoryMixin:
     """Directory mixin for SFTP storage backend."""
 
     def list_dir(self, path: str) -> list[StorageEntry]:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             try:
@@ -48,6 +49,7 @@ class SFTPDirectoryMixin:
         return results
 
     def mkdir(self, path: str, *, parents: bool = True) -> None:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             if not parents or not path:
@@ -93,6 +95,7 @@ class SFTPDirectoryMixin:
                         raise
 
     def rmdir(self, path: str) -> None:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             sftp.rmdir(path)

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, EntryType, StorageEntry
 
-from ._helpers import _check_not_directory, _is_not_found, _mapped, _require_file_type
+from ._helpers import _check_not_directory, _is_not_found, _mapped, _remote_path, _require_file_type
 
 if t.TYPE_CHECKING:
     from paramiko import SFTPAttributes
@@ -38,6 +38,7 @@ class SFTPEnumerateMixin:
             raise ValueError("SFTP enumeration supports only None or '/' as delimiter")
         if max_results is not None and max_results < 0:
             raise ValueError("max_results must be nonnegative")
+        prefix = _remote_path(self.storage_profile, prefix)  # type: ignore[attr-defined]
         objects: list[StorageEntry] = []
         prefixes: list[StorageEntry] = []
 

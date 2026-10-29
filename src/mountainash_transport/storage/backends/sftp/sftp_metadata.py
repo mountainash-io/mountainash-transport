@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 from mountainash_transport._core.exceptions import PathNotFoundError
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _remote_path
 
 
 class SFTPMetadataMixin:
     """Metadata mixin for SFTP storage backend."""
 
     def path_exists(self, path: str) -> bool:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         try:
             with _mapped(path):
@@ -23,6 +24,7 @@ class SFTPMetadataMixin:
             return False
 
     def get_metadata(self, path: str) -> StorageEntry:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             stat = sftp.stat(path)
@@ -48,6 +50,7 @@ class SFTPMetadataMixin:
         )
 
     def get_size(self, path: str) -> int | None:
+        path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
             stat = sftp.stat(path)

@@ -22,6 +22,31 @@ def _is_not_found(exc: BaseException) -> bool:
     return False
 
 
+def _remote_path(profile: t.Any, path: str) -> str:
+    """Return the remote path for *path*, converting ``sftp://HOST[:PORT]/p`` to ``/p``.
+
+    The URL's host and port must match the connected profile's ``HOST`` and
+    ``PORT``; otherwise the URL names another server and is rejected.
+    """
+    if not path[:7].lower().startswith("sftp://"):
+        return path
+    from urllib.parse import unquote, urlsplit
+
+    from mountainash_transport.location import LocationNotAllowed, _norm_host, url_host
+    host = url_host(path)
+    try:
+        parts = urlsplit(path)
+        port = parts.port or 22
+    except ValueError:
+        raise LocationNotAllowed(path, "invalid location") from None
+    if parts.query or parts.fragment:
+        raise LocationNotAllowed(path, "invalid location")
+    profile_host = getattr(profile, "HOST", None)
+    if not profile_host or host != _norm_host(profile_host) or port != getattr(profile, "PORT", 22):
+        raise LocationNotAllowed(path, "profile host mismatch")
+    return unquote(parts.path) or "/"
+
+
 def _wrap_sftp_error(exc: BaseException, path: str) -> StorageError | None:
     if isinstance(exc, (StorageError, io.UnsupportedOperation)):
         return None
