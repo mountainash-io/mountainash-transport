@@ -1,11 +1,13 @@
 {
-  "FOUND": "Foundation Concepts",
-  "PROTO": "Storage Protocols",
-  "FACADE": "StorageFacade",
-  "PATH": "Path Handling",
-  "TRANS": "Transforms",
-  "LOCAL": "Local Backend",
-  "S3": "S3 Backend",
-  "HTTP": "HTTP Backend",
-  "SETT": "Settings & Configuration"
+  "ECO": "Ecosystem and Foundations",
+  "SURF": "Package Surface and Install",
+  "PATH": "Paths, Schemes and Location Policy",
+  "PROF": "Storage Profiles and Settings",
+  "FAC": "Facade Operations",
+  "READ": "Read Access and Streams",
+  "XFRM": "Stream Transforms",
+  "CONN": "Connections and HTTP Engine",
+  "PROTO": "Protocols and Registry",
+  "BACK": "Backends",
+  "MAINT": "Errors, Testing and Maintenance"
 }
