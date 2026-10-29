@@ -364,6 +364,17 @@ def test_sftp_url_for_another_server_is_rejected(operation: str, extra: tuple[t.
         getattr(backend, operation)(url, *extra)
     assert client.mock_calls == []
 
+def test_sftp_url_with_port_zero_is_rejected_for_default_port_profile() -> None:
+    from types import SimpleNamespace
+
+    from mountainash_transport.location import LocationNotAllowed
+    backend, client = _profile_backend()
+    backend.storage_profile = SimpleNamespace(HOST="sftp.example.com", PORT=22)
+    with pytest.raises(LocationNotAllowed):
+        backend.read_to_bytes("sftp://sftp.example.com:0/data/a.csv")
+    assert client.mock_calls == []
+
+
 
 def test_sftp_url_without_profile_is_rejected() -> None:
     from mountainash_transport.location import LocationNotAllowed
