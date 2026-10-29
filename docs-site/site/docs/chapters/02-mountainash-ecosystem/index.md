@@ -88,7 +88,7 @@ from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
 
 from mountainash_transport import create_connection
 from mountainash_transport.connections.errors import UnsupportedAuthProfileError
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
 print("S3 profile carries:", sorted(profile.to_handler_kwargs()))
@@ -197,7 +197,7 @@ Named profiles and `resolve_storage` are covered in [Named profiles](../05-stora
 
 `mountainash-files` parses and writes file formats. Each format is a frozen, serialisable spec plus capability functions (a required parser, an optional serialiser and an optional inspector), registered in a format registry that also accepts plugins. Tabular results are Arrow tables. Files owns the format engines, the type rules, and the choice of how each format reads its source.
 
-Files reaches all storage through transport's public API, and its own configuration enforces this. The `pyproject.toml` of `mountainash-files` bans direct file and network access in its source (`pathlib.Path`, `os` file calls, `open()`, `shutil`, `httpx`, `boto3`, `paramiko`, `fsspec`, PyArrow's own file access) and bans every `mountainash_transport` submodule, so imports come only from the `mountainash_transport` package root. Profiles, credentials, transforms and location policy therefore apply to every file that files reads. A local-file shortcut would bypass all of them.
+Files reaches all storage through transport's public API, and its own configuration enforces this. The `pyproject.toml` of `mountainash-files` bans direct file and network access in its source (`pathlib.Path`, `os` file calls, `open()`, `shutil`, `httpx`, `boto3`, `paramiko`, `fsspec`, PyArrow's own file access) and bans the `mountainash_transport._core`, `connections`, `messaging`, `settings` and `storage` subpackages, so files imports transport's API from the `mountainash_transport` package root. Profiles, credentials, transforms and location policy therefore apply to every file that files reads. A local-file shortcut would bypass all of them.
 
 <!-- concept:110 -->
 
@@ -257,7 +257,7 @@ table.bin ('random', b'FOOT')
 table.bin.gz ('buffered', b'FOOT')
 ```
 
-`infer_pipeline` returns `None` when the path has no transform suffix, and a pipeline (here `Gzip`) when it has one. Nothing in the consumer depends on the backend: the same function works for an `https://` or `s3://` path.
+`infer_pipeline` returns a pair: the pipeline and the path without its transform suffixes. The pipeline is `None` when the path has no transform suffix, and a `Pipeline` containing `Gzip` when the suffix is `.gz`. Nothing in the consumer depends on the backend: the same function works for an `https://` or `s3://` path.
 
 !!! note "Random access with transforms raises `ValueError`"
     Requesting `access="random"` together with a non-empty transform pipeline raises a plain `ValueError` ("access='random' cannot be combined with transforms"), not one of the typed refusals. Check the pipeline with `infer_pipeline` before choosing random access, as the example does. See the [support matrix and known limits](../../reference/support-matrix.md).

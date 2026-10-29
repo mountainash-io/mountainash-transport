@@ -4,9 +4,9 @@ title: File operations
 
 # File operations
 
-A `StorageFacade` reads and writes files, streams them, lists and inspects them, deletes them, manages directories and copies within one store. Each operation has one signature for every backend that supports it, so code written against a local directory runs unchanged against an S3 bucket or an SFTP server. Where backends genuinely differ, the difference is noted beside the operation.
+A `StorageFacade` reads and writes files, streams them, lists and inspects them, deletes them, manages directories and copies within one store. Each operation has one signature for every backend that supports it, so code written against a local directory runs unchanged against an S3 bucket or an SFTP server, apart from operations whose behaviour differs by backend: SFTP has no `copy()`, and `rmdir()` removes a whole tree locally but only an empty directory on SFTP ([known limits](../../reference/support-matrix.md#known-limits)). Each difference is noted beside the operation.
 
-Creating, checking and closing facades is described in [Opening storage with StorageFacade](../06-storage-facade/index.md). The examples on this page share one setup: a local facade, an S3 facade on a bucket named `reports`, and a temporary directory `root`. `ENDPOINT` is the URL of a local S3-compatible server; the examples were run against moto's server.
+Creating, checking and closing facades is described in [Opening storage with StorageFacade](../06-storage-facade/index.md). The examples on this page share one setup: a local facade, an S3 facade on a bucket named `reports`, and a temporary directory `root`. `ENDPOINT` is the URL of a local S3-compatible server; the examples were run in page order against moto's server. Each example writes under its own paths, so its output does not depend on the examples before it.
 
 ```python
 import tempfile
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL=ENDPOINT, BUCKET="reports")
 auth = IAMAuthProfile(ACCESS_KEY_ID="example-access-key", SECRET_ACCESS_KEY="example-secret")
@@ -134,14 +134,14 @@ A stream returned by `read_stream()` must stay open for the whole read, and its 
 
 With the default `delimiter="/"` you get one level: immediate files in `objects` and immediate subdirectories or key groups in `common_prefixes`, as entries of type `EntryType.PREFIX`. With `delimiter=None` the listing recurses and returns every file below the prefix. `max_results` caps the combined count of both tuples. The facade default of `"/"` differs from the backend protocol default of `None`, so code that calls a backend directly gets a recursive listing.
 
-Given the same three files in a local directory and in the bucket, both stores list them the same way:
+Given the same three files in a local directory and under a key prefix in the bucket, both stores list them the same way:
 
 ```python
 for key in ("2026/q1.csv", "2026/q2.csv", "2026/archive/q4.csv"):
-    local.write(f"{root}/reports/{key}", b"region,total\n")
-    s3.write(f"s3://reports/{key}", b"region,total\n")
+    local.write(f"{root}/inventory/{key}", b"region,total\n")
+    s3.write(f"s3://reports/inventory/{key}", b"region,total\n")
 
-for storage, prefix in ((local, f"{root}/reports/2026"), (s3, "s3://reports/2026/")):
+for storage, prefix in ((local, f"{root}/inventory/2026"), (s3, "s3://reports/inventory/2026/")):
     grouped = storage.list_objects(prefix)                  # delimiter="/"
     flat = storage.list_objects(prefix, delimiter=None)     # recursive
     print(sorted(e.name for e in grouped.objects),
@@ -263,12 +263,12 @@ Local and SFTP stores have real directories and support three directory methods.
 ```python
 from mountainash_transport import PathNotFoundError
 
-reports = f"{root}/reports/2026"
-local.mkdir(reports)                          # parents=True by default
-local.write(f"{reports}/q1.csv", b"region,total\n")
-local.mkdir(f"{reports}/archive")
+folder = f"{root}/projects/2026"
+local.mkdir(folder)                           # parents=True by default
+local.write(f"{folder}/q1.csv", b"region,total\n")
+local.mkdir(f"{folder}/archive")
 
-for entry in sorted(local.list_dir(reports), key=lambda e: e.name):
+for entry in sorted(local.list_dir(folder), key=lambda e: e.name):
     print(entry.name, entry.entry_type.value, entry.size)
 
 try:
@@ -276,8 +276,8 @@ try:
 except PathNotFoundError as error:
     print("parents=False:", type(error).__name__)
 
-local.rmdir(f"{root}/reports")               # local removes the whole tree
-print(local.exists(f"{root}/reports"))
+local.rmdir(f"{root}/projects")              # local removes the whole tree
+print(local.exists(f"{root}/projects"))
 ```
 
 Output:

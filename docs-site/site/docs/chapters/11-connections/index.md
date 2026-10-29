@@ -24,9 +24,9 @@ The returned connection is not yet connected; call `connect()` or use it as a co
 from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
 from mountainash_transport import create_connection
 from mountainash_transport.settings.storage.profiles import (
-    FTPStorageProfile, HTTPStorageProfile, LocalStorageProfile, SFTPStorageProfile,
+    FTPStorageProfile, HTTPStorageProfile, LocalStorageProfile, S3StorageProfile,
+    SFTPStorageProfile,
 )
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
 pairs = [
     (LocalStorageProfile(), None),
@@ -137,7 +137,7 @@ The example below ran against an in-process S3 endpoint; its setup is not shown.
 ```python
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import create_connection
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
 keys = IAMAuthProfile(ACCESS_KEY_ID="example-access-key", SECRET_ACCESS_KEY="example-secret")
@@ -316,8 +316,7 @@ The rewrite is visible on a boto3 client's endpoint. Bastion setup is again not 
 ```python
 from mountainash_auth_client import PasswordAuthProfile
 from mountainash_transport import create_tunnelled_connection
-from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile, SFTPStorageProfile
 
 bastion_profile = SFTPStorageProfile(
     HOST="127.0.0.1", PORT=bastion.port, USERNAME="analyst",
@@ -344,7 +343,10 @@ minio: http://127.0.0.1:40731
 aws: https://s3.ap-southeast-2.amazonaws.com
 ```
 
-For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does. An `aws` flavour S3 client keeps its public AWS endpoint and does not use the tunnel at all.
+For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does.
+
+!!! warning "Some targets bypass the tunnel without an error"
+    Through `create_tunnelled_connection`, an `aws` flavour S3 profile (one without `ENDPOINT_URL`) keeps its public AWS endpoint and connects directly to AWS, silently bypassing the bastion. An `HTTPStorageProfile` target does the same unless you build its URLs from `local_port`. Nothing raises in either case. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
 
 !!! warning "HTTPS targets do not work through a tunnel"
     The bastion hop is SSH, so traffic between your machine and the bastion is encrypted. The problem is the last leg: a rewritten `endpoint_url` or `base_url` always becomes `http://127.0.0.1:<port>`, dropping the original scheme, host name and any path prefix. An HTTPS-only service then receives plain HTTP on its TLS port and the request fails; Host headers, SNI and certificate checks would no longer name the real service in any case. Tunnel only plain-HTTP or SSH targets. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
@@ -376,9 +378,8 @@ from mountainash_auth_client import PasswordAuthProfile
 from mountainash_transport import StorageError, TransportConnectionError, create_connection
 from mountainash_transport.connections.errors import UnsupportedAuthProfileError
 from mountainash_transport.settings.storage.profiles import (
-    FTPStorageProfile, HTTPStorageProfile, SFTPStorageProfile,
+    FTPStorageProfile, HTTPStorageProfile, S3StorageProfile, SFTPStorageProfile,
 )
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
 with socket.socket() as probe:                 # find a local port nobody listens on
     probe.bind(("127.0.0.1", 0))

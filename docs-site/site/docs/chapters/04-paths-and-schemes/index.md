@@ -144,7 +144,7 @@ For maintainers, the dispatch pieces are `src/mountainash_transport/_schemes.py`
 | `matches(pattern, name)` | `fnmatch` wildcard matching with `*` and `?`. |
 | `to_str(path)` | `str(path)`, passing `None` through. |
 
-`normalize` rewrites the scheme to its canonical form, removes a trailing slash, and expands `~` in bare local paths. For schemes that the fsspec-based `UPath` library supports it returns a `UPath`; for registry schemes that `UPath` cannot construct (such as `azure`, `b2` and `smb`) it returns a plain string subclass with the canonical URL. Treat the result as path-like and call `str()` on it when you need text. It rejects mixed-case schemes, a scheme without `//` after the colon, and unknown schemes.
+`normalize` rewrites the scheme to its canonical form, removes a trailing slash, and expands `~` in bare local paths. For schemes that the fsspec-based `UPath` library supports it returns a `UPath`; for registry schemes that `UPath` cannot construct (`azure`, `b2`, `r2`, `minio` and `s3express`) it returns a plain string subclass with the canonical URL. Without the SMB SDK, `normalize("smb://...")` raises `ImportError` ("SMB requires smbprotocol"). Treat the result as path-like and call `str()` on it when you need text. It rejects mixed-case schemes, a scheme without `//` after the colon, and unknown schemes.
 
 ```python
 from mountainash_transport import StoragePath
@@ -176,13 +176,16 @@ ValueError: Unknown scheme in path: 'nfs://server/share'
 
 The `azure://` path normalised to a string because no backend-independent `UPath` class exists for it. Normalising a path never implies that a backend is available; dispatch decides that.
 
+!!! warning "`normalize` drops the host of `sftp://` and `ftp://` URLs"
+    For these two schemes the normalised result loses its host. `StoragePath.normalize("sftp://files.example.com/reports/sales.csv")` returns `sftp://reports/sales.csv`, and `StoragePath.normalize("ftp://h.example.com/a/b")` returns `ftp:///a/b`. `join` normalises first, so it drops the host too. Do not use the result of either method as an SFTP or FTP URL; keep the original string. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+
 <!-- concept:121 -->
 
 ### S3 bucket and key parsing
 
 An S3-family path has two parts: the bucket in the URL's host position and the object key after it. `s3_bucket` and `s3_key` in `mountainash_transport.storage.path_helpers.s3` split them. Both accept any of the five S3-family schemes, validate the path with `StoragePath.normalize` first, and return `None` rather than raising when the path is not an addressable S3 path, so you can branch on the result.
 
-The helpers enforce one rule worth knowing: a path never carries an endpoint. If the host position contains a port, as in `minio://localhost:9000/reports/sales.csv`, the helpers return `None`, because the endpoint belongs on the [storage profile](../05-storage-profiles/index.md#provider-profiles) and the path only names the bucket. For bare strings that you know are S3 locations, `assume_s3=True` reads the first segment as the bucket.
+The helpers enforce one rule: a path never carries an endpoint. If the host position contains a port, as in `minio://localhost:9000/reports/sales.csv`, the helpers return `None`, because the endpoint belongs on the [storage profile](../05-storage-profiles/index.md#provider-profiles) and the path only names the bucket. For bare strings that you know are S3 locations, `assume_s3=True` reads the first segment as the bucket.
 
 ```python
 from mountainash_transport.storage.path_helpers.s3 import s3_bucket, s3_key

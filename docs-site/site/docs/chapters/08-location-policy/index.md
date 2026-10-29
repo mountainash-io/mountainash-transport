@@ -214,7 +214,7 @@ With `127.0.0.1` listed, the same server is refused under the name `localhost`, 
 !!! warning "An empty set allows every host"
     `allowed_remote={"http": frozenset()}` does not block `http`; it allows any host for that scheme, as the "empty set" rows above show. This is the current behaviour of `allow_remote` in `src/mountainash_transport/location.py`: a scheme that is absent from the mapping is refused, while a scheme mapped to an empty set is unrestricted. To block a scheme, leave it out of `allowed_remote`. Do not build an allow-list from configuration in a way that can produce an empty set when you mean "nothing allowed". See the [support matrix and known limits](../../reference/support-matrix.md).
 
-!!! note "What the host check does not cover"
+!!! note "DNS resolution and token endpoints after the host check"
     The check compares host names, so it does not defend against DNS rebinding, where an allowed name resolves to an unexpected address. Token endpoints used by managed OAuth2 are not checked by the policy.
 
 <!-- concept:126 -->

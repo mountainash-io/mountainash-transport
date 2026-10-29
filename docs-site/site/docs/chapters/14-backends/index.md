@@ -112,7 +112,7 @@ The example runs against a local S3-compatible endpoint. The server bootstrappin
 ```python
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import PathNotFoundError, RangedReadProtocol, StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL=endpoint, BUCKET="reports", REGION="us-east-1")
 auth = IAMAuthProfile(ACCESS_KEY_ID="x", SECRET_ACCESS_KEY="y")
@@ -211,7 +211,7 @@ The facade returns two kinds of remote read stream. Sequential reads use forward
 <!-- concept:165 -->
 ### Sequential stream adapters
 
-`ForwardOnlyReader` and `IterBytesReader` (`_core/sequential_io.py`) adapt a native source into an `io.RawIOBase` that the backends wrap in `io.BufferedReader`. `ForwardOnlyReader` takes a sized `read` callable and a `close` callable; S3 passes the `get_object` body's methods and SFTP the remote file handle's. `IterBytesReader` takes an iterator of chunks, which the HTTP backend uses for `httpx` streaming responses, and holds at most one incoming chunk. Both translate errors raised during `read` or `close` with the backend's error mapping, so a failure partway through a stream surfaces as a `StorageError` subclass with the native exception as its cause. Neither reads ahead of the caller.
+`ForwardOnlyReader` and `IterBytesReader` (`_core/sequential_io.py`) adapt a native source into an `io.RawIOBase` that the backends wrap in `io.BufferedReader`. `ForwardOnlyReader` takes a sized `read` callable and a `close` callable; S3 passes the `get_object` body's methods and SFTP the remote file handle's. `IterBytesReader` takes an iterator of chunks, which the HTTP backend uses for `httpx` streaming responses, and holds at most one incoming chunk. Both translate errors raised during `read` or `close` with the backend's error mapping, so a failure partway through a stream surfaces as a `StorageError` subclass with the native exception as its cause. The adapters themselves do not read ahead; the `io.BufferedReader` around them reads at most one buffer (8 KiB, `io.DEFAULT_BUFFER_SIZE`, by default) ahead of the caller.
 
 ## Where backends differ
 

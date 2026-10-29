@@ -60,7 +60,7 @@ Remote streams used to be downloaded into memory before `read_stream()` returned
 
 ### Sequential access
 
-Sequential is the default and suits anything that reads front to back: line-oriented text, CSV, JSON lines, gzip. Remote backends return a forward-only stream that requests more data only as you read, so memory stays flat however large the object is; SFTP also disables unbounded prefetch. On a local store you get the operating system's file handle, which keeps its native seekability. Transforms apply as you read: a `.gz` object is decompressed chunk by chunk. A forward-only remote stream wrapped in gzip remains forward-only. Because data arrives during consumption, so do errors ([Deferred read errors](#deferred-read-errors)).
+Sequential is the default and suits anything that reads front to back: line-oriented text, CSV, JSON lines, gzip. Remote backends return a forward-only stream that requests more data only as you read, so memory stays flat however large the object is; SFTP also disables unbounded prefetch. On a local store you get a reader over the operating system's file object, which keeps its native seekability. Transforms apply as you read: a `.gz` object is decompressed chunk by chunk. A forward-only remote stream wrapped in gzip remains forward-only. Because data arrives during consumption, so do errors ([Deferred read errors](#deferred-read-errors)).
 
 <!-- concept:161 -->
 
@@ -73,7 +73,7 @@ How each backend serves ranges:
 - S3 family: a `HEAD` request for the size, then ranged `GET` requests. When the object has a strong ETag, each range request carries `If-Match`, so a replaced object raises `ObjectChangedError` instead of mixing bytes from two versions.
 - HTTP: a `bytes=0-0` probe on open, then range requests, each validated before it is read. Strong ETags are pinned the same way.
 - SFTP: a native remote file handle without prefetch, and no ETag pinning.
-- Local: the native file handle. Local has no ranged-read capability and needs none, so `supports(RangedReadProtocol)` is `False` even though random mode works. `readinto`, `seek`, `tell` and `fileno` behave as on any file.
+- Local: a reader that wraps the native file object from `open(path, "rb")` and forwards its attributes, with no ranged reader or extra buffer. Local has no ranged-read capability and needs none, so `supports(RangedReadProtocol)` is `False` even though random mode works. `readinto`, `seek`, `tell` and `fileno` behave as on any file.
 
 Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `ValueError`; decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
 

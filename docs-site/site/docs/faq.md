@@ -99,7 +99,7 @@ No. Dispatch reads only the path's scheme. To choose the backend yourself, const
 
 ### Why does `local` report no ranged-read support when random reads work?
 
-Local storage does not implement `RangedReadProtocol`, so `supports(RangedReadProtocol)` is `False`. `read_stream(access="random")` still works on local paths because the facade returns the operating system's native seekable file handle. See [Native local handles](chapters/14-backends/index.md#native-local-handles).
+Local storage does not implement `RangedReadProtocol`, so `supports(RangedReadProtocol)` is `False`. `read_stream(access="random")` still works on local paths because the facade returns a reader that wraps the operating system's native seekable file object and forwards its attributes. See [Native local handles](chapters/14-backends/index.md#native-local-handles).
 
 ## Profiles and credentials
 
@@ -269,7 +269,7 @@ The target's host key is looked up under the rewritten address, `[127.0.0.1]:<lo
 
 ### How do I retry failed HTTP requests?
 
-Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`, and a body passed as a non-seekable stream is never retried. Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
+Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A 429 is retried for any method and any body; transport errors and other retryable statuses are not retried when the body was passed as a non-seekable stream. Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
 
 ### Do the engine's retries apply to HTTP storage reads and writes?
 

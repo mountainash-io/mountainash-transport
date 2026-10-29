@@ -12,11 +12,12 @@ This page assumes you have installed the package with the extras for the stores 
 
 <!-- concept:143 -->
 
-A facade is bound to one provider type, such as local, S3 or SFTP, for its whole life. When you construct it, the facade does three things:
+A facade is bound to one provider type, such as local, S3 or SFTP, for its whole life. When you construct it, the facade does these things in order:
 
-1. If you passed a storage profile, it builds a connection from the profile and the auth profile and connects it.
-2. It looks up the backend registered for the provider type and hands it the connection.
-3. It records a location policy, if you supplied one, so that every later path is checked against it.
+1. It records the location policy, if you supplied one, so that every later path is checked against it. For a local storage profile, the profile's `ROOT_PATH` becomes the policy's declared root, and with `CREATE_PATH` set the facade creates that directory, skipping it if an active policy would refuse the path.
+2. It records the host or bucket that a storage profile grants: `HOST` for SFTP, `BUCKET` for the S3 family (see [Hosts granted by a profile](../08-location-policy/index.md#hosts-granted-by-a-profile)).
+3. If you passed a storage profile, it builds a connection from the profile and the auth profile and connects it. An HTTP facade without a profile gets a default `HTTPStorageProfile`.
+4. It looks up the backend registered for the provider type and hands it the connection.
 
 After that, each method checks that the backend supports the operation, checks the path against the location policy and then delegates to the backend. The facade itself holds no file data.
 
@@ -40,7 +41,7 @@ from pathlib import Path
 
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 SALES = b"region,total\nnorth,120\nsouth,95\n"
 
@@ -142,7 +143,7 @@ Not every store can do everything. An object store has no directories, a plain w
 | `StorageDirectoryProtocol` | `list_dir`, `mkdir`, `rmdir` | yes | no | yes | no |
 | `RangedReadProtocol` | `read_stream(access="random")` | native handle | yes | yes | yes |
 
-All eight protocols are exported from the package root. They are `typing.Protocol` classes marked `runtime_checkable`, so a backend satisfies one simply by having the right methods; it does not need to inherit from it. The local backend has no ranged-read method, yet `read_stream(access="random")` still works on local paths because the facade returns the operating system's own seekable file handle instead (see [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode)).
+All eight protocols are exported from the package root. They are `typing.Protocol` classes marked `runtime_checkable`, so a backend satisfies one by having the right methods; it does not need to inherit from it. The local backend has no ranged-read method, yet `read_stream(access="random")` still works on local paths because the facade returns the operating system's own seekable file handle instead (see [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode)).
 
 Settings-only providers (GCS, Azure, FTP, SMB and GitHub) have no backend, so they support none of these protocols; constructing a facade for them fails before any capability question arises.
 

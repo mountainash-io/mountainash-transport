@@ -169,7 +169,7 @@ HttpServiceUnavailableError 503 busy
 
 Both GETs succeeded on their second attempt; the POST was sent once and failed without a retry.
 
-Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay. A `request()` body passed as a non-seekable stream is read into memory first but still counts as not replayable, so it is never retried; pass `content=` bytes when you want retries.
+Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay. A `request()` body passed as a non-seekable stream is read into memory first but still counts as not replayable. A 429 response is retried regardless, because that retry ignores the body; transport errors and the other retryable statuses are not retried for such a body. Pass `content=` bytes when you want every retry to apply.
 
 ## Authentication strategies
 

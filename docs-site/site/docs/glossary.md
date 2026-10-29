@@ -36,7 +36,7 @@ Explained in [The backend registry](chapters/13-architecture/index.md#the-backen
 
 ## `BackendNotImplementedError`
 
-The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types.
+The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile fails earlier with `TransportConnectionError`, because `create_connection` falls back to an HTTP connection; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
 
 Related: [Settings-only provider](#settings-only-provider), [Backend registry](#backend-registry).
 
@@ -252,7 +252,7 @@ Explained in [Format-agnostic storage](chapters/02-mountainash-ecosystem/index.m
 
 ## Forward-only stream
 
-The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It requests data only as the caller reads, never reads ahead, and translates errors raised partway through into `StorageError` subclasses with the native exception as cause.
+The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It is wrapped in `io.BufferedReader`, so it requests data only as the caller reads and reads at most one buffer (8 KiB by default) ahead of the caller, and it translates errors raised partway through into `StorageError` subclasses with the native exception as cause.
 
 Related: [Sequential access](#sequential-access), [Deferred read error](#deferred-read-error).
 
@@ -476,7 +476,7 @@ Explained in [Named profiles](chapters/05-storage-profiles/index.md#named-profil
 
 ## Native local handle
 
-The file object from `open(path, "rb")` that a read stream on local storage returns without a ranged reader or extra buffer, so it keeps native methods such as `seek`, `tell` and `fileno`. This is how local storage serves random access.
+The reader that a read stream on local storage returns, wrapping the native file object from `open(path, "rb")` without a ranged reader or extra buffer. It forwards the native object's attributes, so it keeps methods such as `seek`, `tell` and `fileno`, and translates OS errors those methods raise. This is how local storage serves random access.
 
 Related: [`LocalStorageBackend`](#localstoragebackend), [Random access](#random-access).
 
@@ -676,7 +676,7 @@ Explained in [What transport owns](chapters/01-what-transport-does/index.md#what
 
 ## `RetryPolicy`
 
-The policy that decides which HTTP failures the engine retries: `max_attempts` including the first, exponential backoff with optional jitter, retried status codes, connection and timeout errors, and a cap on honoured `Retry-After` waits. Only idempotent methods are retried unless `retry_unsafe_methods` is set.
+The policy that decides which HTTP failures the engine retries: `max_attempts` including the first, exponential backoff with optional jitter, retried status codes, connection and timeout errors, and a cap on honoured `Retry-After` waits. Only idempotent methods are retried unless `retry_unsafe_methods` is set, except that a 429 is retried for any method.
 
 Related: [`RequestPolicy`](#requestpolicy), [`HttpRequestEngine`](#httprequestengine).
 
@@ -764,7 +764,7 @@ Explained in [Sequential access](chapters/09-read-access-modes/index.md#sequenti
 
 ## Settings-only provider
 
-A provider (GCS, Azure Storage, FTP/FTPS, SMB or GitHub repositories) whose profile class is complete and registered but which has no backend. Its configuration can be written, validated and loaded by name; opening storage for it raises `BackendNotImplementedError`.
+A provider (GCS, Azure Storage, FTP/FTPS, SMB or GitHub repositories) whose profile class is complete and registered but which has no backend. Its configuration can be written, validated and loaded by name. Opening storage for it from a path alone, or looking up its backend, raises `BackendNotImplementedError`; a facade built with its storage profile fails earlier with `TransportConnectionError` ([Settings-only providers](reference/support-matrix.md#settings-only-providers)).
 
 Related: [`BackendNotImplementedError`](#backendnotimplementederror), [`implemented` flag](#implemented-flag).
 

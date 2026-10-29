@@ -12,29 +12,29 @@
   },
   "chapter_state": {
     "01-what-transport-does": {
-      "content_hash": "sha256:9a1055c8d8e17dfdb6bb0a664df166c38911904dc44bf78e6ee4ef98accad3f1",
-      "word_count": 2213,
+      "content_hash": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+      "word_count": 2255,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "02-mountainash-ecosystem": {
-      "content_hash": "sha256:cd7b4871b39310c0b22ec4416364180a8036e1e1ed4ed1102d8a313e0e012c22",
-      "word_count": 2139,
+      "content_hash": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+      "word_count": 2160,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "03-installation": {
-      "content_hash": "sha256:c9d7947461dbf9e76ba4aea360d82461a1edf73789f3cf1f653e4874dabde904",
-      "word_count": 1543,
+      "content_hash": "sha256:4d42cb1fda12c3ae5bd66f9c5f23a95f9c9dab0a339e21d47cac46e8bf11c643",
+      "word_count": 1548,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "04-paths-and-schemes": {
-      "content_hash": "sha256:751d5dcada7f45d3ce5c3f1432e2fbeecdeb8c88db905d5dac095c59bf701f47",
-      "word_count": 1615,
+      "content_hash": "sha256:2cb38cf6ed6f1c9f35dddb849f0e54cba91e61e0283c561d30167ec2d956eebf",
+      "word_count": 1685,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
@@ -47,50 +47,50 @@
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "06-storage-facade": {
-      "content_hash": "sha256:d2f26baea4ddcea7990d845b8d22cdce4c9b4b3aeb33479c75a8fa8417daf6e8",
-      "word_count": 2191,
+      "content_hash": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+      "word_count": 2260,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "07-file-operations": {
-      "content_hash": "sha256:99ca41e26c1457ca5d098484b71023bfdd21d7393be193315be739d8160d1023",
-      "word_count": 2437,
+      "content_hash": "sha256:75af0a5a895dc92993add89edb4f9ef6ddf7f1de69883db48b1e6f907645280f",
+      "word_count": 2486,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "08-location-policy": {
-      "content_hash": "sha256:1101423f2b1be04088a05c47e246d6d93a03c2bd791704f8bec251fcd16c8c6f",
-      "word_count": 2084,
+      "content_hash": "sha256:0096e82e09197d6123094517dfeea3543aecd64db525b17135185cc32fe25988",
+      "word_count": 2086,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "09-read-access-modes": {
-      "content_hash": "sha256:64119222de03261efe8337c1295e057b5d54dcb158e2ae7c511a6a0d11ebf544",
-      "word_count": 2103,
+      "content_hash": "sha256:eff52817806a718d16ebee934989a7d9b630258b4e6f74f5c8f7546654f3367c",
+      "word_count": 2124,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "10-stream-transforms": {
-      "content_hash": "sha256:49fe16d95fa7b0c867872cfc79ce18206e7fd7500dae6d50e626ba92933bd924",
+      "content_hash": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
       "word_count": 2329,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "11-connections": {
-      "content_hash": "sha256:b0950b1ed53fba052ee367fd682c2074048c824c8613aab751ac19b7347840db",
-      "word_count": 2825,
+      "content_hash": "sha256:73eddb1dfb9544677c2d8e6aa136cf12cece5f341e43924d3e16b4a10a7ff5ff",
+      "word_count": 2857,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "12-http-engine": {
-      "content_hash": "sha256:36ab2333fc300d552a1f34ad8737b02db195b5b4d47ef279b712fc1379061f27",
-      "word_count": 1806,
+      "content_hash": "sha256:d14e1f4824b365f5be82772333ff26413961ef5ec7d1d37305129239f19f6061",
+      "word_count": 1830,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
@@ -103,15 +103,15 @@
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "14-backends": {
-      "content_hash": "sha256:78f1b1b13d80fa7d5e8a736d1daa212b1cc8784f0cc9d2f6a9a6a199b8b64274",
-      "word_count": 2484,
+      "content_hash": "sha256:de74c96256ace7f4f8c7d64a63f7adb6166e8b53d6906dc7253bd1189cb0ed35",
+      "word_count": 2503,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
     "15-maintaining": {
-      "content_hash": "sha256:0d24c854a6ae6efa05324ee8ebab56a965321c58ecd021cae2cddc9d0b81eb32",
-      "word_count": 1385,
+      "content_hash": "sha256:42c15752c1dd5736d2725a4708368bec6817c1a6e43b58d10233f1e6eb9f2473",
+      "word_count": 1386,
       "has_concept_markers": true,
       "last_generated": "2026-10-29",
       "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
@@ -125,7 +125,7 @@
   },
   "faq_state": {
     "question_count": 82,
-    "content_hash": "sha256:e56a1d8468cb5dbef4de8c8380524255d958e83826897d6647b8ffbb19a4304e"
+    "content_hash": "sha256:c164c65ea6d128534afdd116a13fc4c82d8dfab77a924815dddf140fd7331987"
   },
   "landing_state": {
     "index.md": {
@@ -136,17 +136,17 @@
         "docs-site/profile/facets/users.json": "sha256:35fc1af612d3103e6f147819ea1f14d6d18539bfd3da6b7262ddbc78356810ea",
         "docs-site/profile/facets/broader-hype.json": "sha256:0b52ece66bfe2e48cea1518854251a6558de70ea402d952572825ea2ed8a9f50",
         "docs-site/profile/facets/backend-architecture.json": "sha256:8a05235b019a80d20058f08a19a8b5df413d74916c032578ddac12677e6d0553",
-        "docs-site/site/mkdocs.yml": "sha256:0e23d2d2aafb29860ff32d9b4ac56e3084accc85574cb6c621ab3edf2e73f6a1",
-        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:9a1055c8d8e17dfdb6bb0a664df166c38911904dc44bf78e6ee4ef98accad3f1",
-        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:cd7b4871b39310c0b22ec4416364180a8036e1e1ed4ed1102d8a313e0e012c22",
-        "docs-site/site/docs/chapters/03-installation/index.md": "sha256:c9d7947461dbf9e76ba4aea360d82461a1edf73789f3cf1f653e4874dabde904",
+        "docs-site/site/mkdocs.yml": "sha256:bae596facd7de873c1b35d79192d198a3ab288764ed8c717c72a3145d2ba427f",
+        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+        "docs-site/site/docs/chapters/03-installation/index.md": "sha256:4d42cb1fda12c3ae5bd66f9c5f23a95f9c9dab0a339e21d47cac46e8bf11c643",
         "docs-site/site/docs/chapters/05-storage-profiles/index.md": "sha256:19d73dcb1f43d81c95bb3b4161a66f038e3ba7f35e13dadec37e05639da64990",
-        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:d2f26baea4ddcea7990d845b8d22cdce4c9b4b3aeb33479c75a8fa8417daf6e8",
-        "docs-site/site/docs/chapters/08-location-policy/index.md": "sha256:1101423f2b1be04088a05c47e246d6d93a03c2bd791704f8bec251fcd16c8c6f",
-        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:49fe16d95fa7b0c867872cfc79ce18206e7fd7500dae6d50e626ba92933bd924",
-        "docs-site/site/docs/chapters/11-connections/index.md": "sha256:b0950b1ed53fba052ee367fd682c2074048c824c8613aab751ac19b7347840db",
+        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+        "docs-site/site/docs/chapters/08-location-policy/index.md": "sha256:0096e82e09197d6123094517dfeea3543aecd64db525b17135185cc32fe25988",
+        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
+        "docs-site/site/docs/chapters/11-connections/index.md": "sha256:73eddb1dfb9544677c2d8e6aa136cf12cece5f341e43924d3e16b4a10a7ff5ff",
         "docs-site/site/docs/chapters/13-architecture/index.md": "sha256:57636478eccf6f2794479098e1b7695154b6f9b5494b9914b90024557a93e772",
-        "docs-site/site/docs/reference/support-matrix.md": "sha256:c7af588051df8ad7028c0b31a7d4d78e18be9b5041ce4129de21b9539f7b63bc",
+        "docs-site/site/docs/reference/support-matrix.md": "sha256:b53b36b576ea50fb50c22694656eb121b72a859ad9a4e7c9fdb3daa46e9b02e4",
         "src/mountainash_transport/__init__.py": "sha256:38b8087def545301a7f84716f8449278df6f3c46ce6e6859e64534864f6498d6",
         "src/mountainash_transport/storage/facade/facade.py": "sha256:0a2ea796be99ae496f2e3241612702040959f9ca7ca372e6ca7e80fdc9da66f8",
         "src/mountainash_transport/connections/tunnel.py": "sha256:365e9b130b9083921a7eafb1170d9e4bf28cbd7a25a899d425e3c1bf5e7b6b14",
@@ -176,13 +176,13 @@
         "docs-site/editorial-brief.md": "sha256:b11472ce41ac42c75bc1f8633cfe639f2c8745947edd88b040e3f0d7931e359e",
         "docs-site/profile/facets/broader-hype.json": "sha256:0b52ece66bfe2e48cea1518854251a6558de70ea402d952572825ea2ed8a9f50",
         "docs-site/profile/facets/users.json": "sha256:35fc1af612d3103e6f147819ea1f14d6d18539bfd3da6b7262ddbc78356810ea",
-        "docs-site/site/mkdocs.yml": "sha256:0e23d2d2aafb29860ff32d9b4ac56e3084accc85574cb6c621ab3edf2e73f6a1",
+        "docs-site/site/mkdocs.yml": "sha256:bae596facd7de873c1b35d79192d198a3ab288764ed8c717c72a3145d2ba427f",
         "docs-site/site/docs/license.md": "sha256:1050552e0ddeef823e8c5cd5525bb08f29fb26d6123dd6c250788df98722d1c0",
         "docs-site/site/docs/contact.md": "sha256:0209a4e87cfdf8241a67df6841a815657b56919e3139e2078a7df269b63c3506",
-        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:9a1055c8d8e17dfdb6bb0a664df166c38911904dc44bf78e6ee4ef98accad3f1",
-        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:cd7b4871b39310c0b22ec4416364180a8036e1e1ed4ed1102d8a313e0e012c22",
-        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:d2f26baea4ddcea7990d845b8d22cdce4c9b4b3aeb33479c75a8fa8417daf6e8",
-        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:49fe16d95fa7b0c867872cfc79ce18206e7fd7500dae6d50e626ba92933bd924",
+        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
         "src/mountainash_transport/__init__.py": "sha256:38b8087def545301a7f84716f8449278df6f3c46ce6e6859e64534864f6498d6",
         "src/mountainash_transport/storage/facade/facade.py": "sha256:0a2ea796be99ae496f2e3241612702040959f9ca7ca372e6ca7e80fdc9da66f8",
         "src/mountainash_transport/storage/facade/cross_backend.py": "sha256:14d13af4ccd7bcd7eb27ad5da603cba325df1319fca55b2a07d98c651b7107b9"

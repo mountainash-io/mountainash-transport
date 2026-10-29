@@ -6,7 +6,7 @@ title: Maintaining and extending transport
 
 mountainash-transport keeps its backend contracts honest with tests rather than documentation: conformance tests check each backend's protocol set, registry tests check that profiles, schemes and backends agree, and a slim-install test checks that the base install never imports an optional SDK. A new backend has to pass all three.
 
-It assumes the protocol and registry model in [Architecture: protocols and dispatch](../13-architecture/index.md), the [support matrix](../14-backends/index.md#support-matrix), the extras in [Base install and extras](../03-installation/index.md#base-install-and-extras) and the connection layer in [Leaf connections](../11-connections/index.md#leaf-connections).
+This page assumes the protocol and registry model in [Architecture: protocols and dispatch](../13-architecture/index.md), the [support matrix](../14-backends/index.md#support-matrix), the extras in [Base install and extras](../03-installation/index.md#base-install-and-extras) and the connection layer in [Leaf connections](../11-connections/index.md#leaf-connections).
 
 ## Tests that guard the contracts
 

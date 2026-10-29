@@ -6,7 +6,7 @@ title: What transport does
 
 `mountainash-transport` gives Python code one file API across storage systems. The same calls read, write, stream, list, copy and delete on local disk, the S3 family (AWS S3, S3 Express, Cloudflare R2, MinIO and Backblaze B2), SFTP servers and HTTP(S) endpoints. The path you pass decides which system is used. Transport moves bytes and leaves their meaning to you.
 
-This page assumes Python 3.12 or later, context managers and the standard binary I/O types (`bytes`, `io.BytesIO`, file objects opened in `"rb"` mode). It introduces the vocabulary that the rest of the documentation uses.
+This page assumes Python 3.12 or later, context managers and the standard binary I/O types (`bytes`, `io.BytesIO`, file objects opened in `"rb"` mode).
 
 ## Storage endpoints and paths
 
@@ -25,7 +25,7 @@ Transport puts one object in front of all of them. A `StorageFacade` is opened f
 | SFTP | SSH file transfer servers | `paramiko` |
 | HTTP | HTTP and HTTPS URLs | `httpx` |
 
-Five further providers (Google Cloud Storage, Azure Blob and Files, FTP, SMB and GitHub repositories) have storage profiles and recognised URL schemes but no backend. Opening a facade for one of them raises `BackendNotImplementedError`; see [Specs, the registry and settings-only providers](../05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers).
+Five further providers (Google Cloud Storage, Azure Blob and Files, FTP, SMB and GitHub repositories) have storage profiles and recognised URL schemes but no backend. Opening a facade for one of them from a path alone, with `StorageFacade.from_path`, raises `BackendNotImplementedError`. A facade built with one of their storage profiles fails earlier, while the connection is set up, with `TransportConnectionError` ([Settings-only providers](../../reference/support-matrix.md#settings-only-providers)). See [Specs, the registry and settings-only providers](../05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers).
 
 Not every endpoint can do everything. An HTTP server cannot be listed or asked to delete a file, and an object store has no directories. Each backend declares what it supports, and the facade refuses unsupported calls with `UnsupportedOperationError` instead of failing halfway. [Capabilities and supports()](../06-storage-facade/index.md#capabilities-and-supports) explains how to check before calling.
 
@@ -36,7 +36,7 @@ The example below reads one CSV file from local disk and from an HTTP server, th
 ```python
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 data = b"region,total\nnorth,120\nsouth,95\n"
 
@@ -145,7 +145,7 @@ Filesystems (local disk and SFTP) have real directories that exist independently
 ```python
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import StorageDirectoryProtocol, StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="minio", REGION="us-east-1", ENDPOINT_URL=moto_endpoint)
 auth = IAMAuthProfile(ACCESS_KEY_ID="test", SECRET_ACCESS_KEY="test")
@@ -224,7 +224,7 @@ decoded bytes: 108890
 `get_size` reports the stored size, which is the compressed size, because metadata describes the object at the endpoint. The decoded length is only known after reading.
 
 !!! warning "Gzip on write closes your source stream"
-    When `write_stream` is given a `Gzip` pipeline, the caller's source stream is closed once the write finishes. Without a pipeline the source stays open. Do not rely on reusing the source object after a compressed write. See the [support matrix and known limits](../../reference/support-matrix.md).
+    When `write_stream` is given a `Gzip` pipeline, the caller's source stream is closed once the write finishes. Without a pipeline, a write to local disk leaves the source open. An S3-family `write_stream` closes the source after a small single-request upload and leaves it open after a multipart upload ([Reading and writing](../07-file-operations/index.md#reading-and-writing)). Do not rely on reusing the source object after a write. See the [support matrix and known limits](../../reference/support-matrix.md).
 
 By default a stream from a remote endpoint is sequential: it reads forward and cannot seek. Formats that need to jump around a file, such as reading a footer first, need a different access mode. [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode) explains the sequential, random and buffered modes, and [Transforms and pipelines](../10-stream-transforms/index.md#transforms-and-pipelines) covers transforms in detail.
 

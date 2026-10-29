@@ -293,7 +293,7 @@ from pathlib import Path
 
 from mountainash_auth_client import IAMAuthProfile
 from mountainash_transport import Gzip, StorageFacade, copy_between
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 SALES = b"region,total\nnorth,120\nsouth,95\n"
 

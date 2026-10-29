@@ -215,7 +215,7 @@ also an ImportError: True
 ```
 
 !!! warning "`MissingExtraError` covers the `[http]` stack only"
-    A missing backend SDK is not reported as `MissingExtraError`. A missing `boto3` or `paramiko` raises `TransportConnectionError` when the S3 or SSH connection is created, and using `GPG` without `[encryption]` raises a plain `ImportError`. Each message names the extra to install. Catch `TransportConnectionError` and `ImportError` as well as `MissingExtraError` when probing for optional backends. See the [support matrix and known limits](../../reference/support-matrix.md).
+    A missing backend SDK is not reported as `MissingExtraError`. A missing `boto3` or `paramiko` raises `TransportConnectionError` when the S3 or SSH connection is opened with `connect()`; `create_connection` itself succeeds, and using `GPG` without `[encryption]` raises a plain `ImportError`. Each message names the extra to install. Catch `TransportConnectionError` and `ImportError` as well as `MissingExtraError` when probing for optional backends. See the [support matrix and known limits](../../reference/support-matrix.md).
 
 This code ran in an environment with `[http]` but without `[s3]`:
 
@@ -223,7 +223,7 @@ This code ran in an environment with `[http]` but without `[s3]`:
 from mountainash_auth_client import IAMAuthProfile
 
 from mountainash_transport import MissingExtraError, StorageFacade
-from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
 
 profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
 auth = IAMAuthProfile(ACCESS_KEY_ID="example-access-key", SECRET_ACCESS_KEY="example-secret")
