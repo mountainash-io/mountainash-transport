@@ -2,36 +2,40 @@
 
 ## Overview
 
-- **Total Concepts**: 90
-- **Number of Taxonomies**: 9
-- **Average Concepts per Taxonomy**: 10.0
+- **Total Concepts**: 124
+- **Number of Taxonomies**: 11
+- **Average Concepts per Taxonomy**: 11.3
 
 ## Distribution Summary
 
 | Category | TaxonomyID | Count | Percentage | Status |
 |----------|-----------|-------|------------|--------|
-| S3 Backend | S3 | 14 | 15.6% | ✅ |
-| StorageFacade | FACADE | 12 | 13.3% | ✅ |
-| Transforms | TRANS | 12 | 13.3% | ✅ |
-| Foundation Concepts | FOUND | 10 | 11.1% | ✅ |
-| Path Handling | PATH | 10 | 11.1% | ✅ |
-| Local Backend | LOCAL | 10 | 11.1% | ✅ |
-| Storage Protocols | PROTO | 8 | 8.9% | ✅ |
-| Settings & Configuration | SETT | 8 | 8.9% | ✅ |
-| HTTP Backend | HTTP | 6 | 6.7% | ✅ |
+| Connections and HTTP Engine | CONN | 17 | 13.7% | ✅ |
+| Facade Operations | FAC | 16 | 12.9% | ✅ |
+| Storage Profiles and Settings | PROF | 14 | 11.3% | ✅ |
+| Protocols and Registry | PROTO | 14 | 11.3% | ✅ |
+| Ecosystem and Foundations | ECO | 12 | 9.7% | ✅ |
+| Paths, Schemes and Location Policy | PATH | 11 | 8.9% | ✅ |
+| Read Access and Streams | READ | 11 | 8.9% | ✅ |
+| Stream Transforms | XFRM | 9 | 7.3% | ✅ |
+| Backends | BACK | 8 | 6.5% | ✅ |
+| Errors, Testing and Maintenance | MAINT | 7 | 5.6% | ✅ |
+| Package Surface and Install | SURF | 5 | 4.0% | ✅ |
 
 ## Visual Distribution
 
 ```
-S3 Backend               ███████  14 ( 15.6%)
-StorageFacade            ██████  12 ( 13.3%)
-Transforms               ██████  12 ( 13.3%)
-Foundation Concepts      █████  10 ( 11.1%)
-Path Handling            █████  10 ( 11.1%)
-Local Backend            █████  10 ( 11.1%)
-Storage Protocols        ████   8 (  8.9%)
-Settings & Configuration ████   8 (  8.9%)
-HTTP Backend             ███   6 (  6.7%)
+Connections and HTTP Engi ██████  17 ( 13.7%)
+Facade Operations         ██████  16 ( 12.9%)
+Storage Profiles and Sett █████  14 ( 11.3%)
+Protocols and Registry    █████  14 ( 11.3%)
+Ecosystem and Foundations ████  12 (  9.7%)
+Paths, Schemes and Locati ████  11 (  8.9%)
+Read Access and Streams   ████  11 (  8.9%)
+Stream Transforms         ███   9 (  7.3%)
+Backends                  ███   8 (  6.5%)
+Errors, Testing and Maint ██   7 (  5.6%)
+Package Surface and Insta ██   5 (  4.0%)
 ```
 
 ## Balance Analysis
@@ -42,162 +46,209 @@ All categories are under the 30% threshold. Good balance!
 
 ## Category Details
 
-### S3 Backend (S3)
+### Connections and HTTP Engine (CONN)
 
-**Count**: 14 concepts (15.6%)
-
-**Concepts**:
-
-- 63. S3StorageBackend Class
-- 64. S3ConnectionMixin
-- 65. S3ReadMixin
-- 66. S3WriteMixin
-- 67. S3ListMixin
-- 68. S3DeleteMixin
-- 69. S3MetadataMixin
-- 70. S3CopyMixin
-- 71. Boto3 Client
-- 72. S3 Flavor Dispatch
-- 73. AWS S3 Flavor
-- 74. S3 Express One Zone Flavor
-- 75. Cloudflare R2 Flavor
-- 76. MinIO Flavor
-
-### StorageFacade (FACADE)
-
-**Count**: 12 concepts (13.3%)
+**Count**: 17 concepts (13.7%)
 
 **Concepts**:
 
-- 19. StorageFacade Class
-- 20. Protocol Checked Dispatch
-- 21. UnsupportedOperationError
-- 22. Read Bytes Method
-- 23. Read Stream Method
-- 24. Write Bytes Method
-- 25. Write Stream Method
-- 26. List Files Method
-- 27. Delete Method
-- 28. Exists Method
-- 29. Get Metadata Method
-- 30. Copy Method
+- 179. ConnectionProtocol
+- 180. create_connection
+- 181. Target Families
+- 182. Leaf Connections
+- 183. Decorator Connections
+- 184. HTTPConnection
+- 185. S3Connection
+- 186. SSHConnection
+- 187. SFTPConnection
+- 188. NullConnection
+- 189. Bastion Tunnels
+- 190. Connection Errors
+- 191. HTTP Request Engine
+- 192. HTTP Retry Policy
+- 193. HTTP Response Handling
+- *...and 2 more*
 
-### Transforms (TRANS)
+### Facade Operations (FAC)
 
-**Count**: 12 concepts (13.3%)
-
-**Concepts**:
-
-- 41. StreamTransform Protocol
-- 42. Wrap Method
-- 43. Unwrap Method
-- 44. Pipeline Class
-- 45. Apply Read Direction
-- 46. Apply Write Direction
-- 47. Gzip Transform
-- 48. GPG Transform
-- 49. Suffix Transforms Map
-- 50. Infer Pipeline Function
-- 51. Materialize Utility
-- 52. PairedStream Helper
-
-### Foundation Concepts (FOUND)
-
-**Count**: 10 concepts (11.1%)
+**Count**: 16 concepts (12.9%)
 
 **Concepts**:
 
-- 1. File Systems
-- 2. Cloud Object Storage
-- 3. URL Schemes
-- 4. Binary Streams
-- 5. Python Protocols
-- 6. Runtime Checkable Protocol
-- 7. Mixin Pattern
-- 8. Pydantic Models
-- 9. Decorators
-- 10. Registry Pattern
+- 143. StorageFacade
+- 144. from_path
+- 145. for_local
+- 146. Facade Lifecycle
+- 147. Capability Checks
+- 148. Read and Write
+- 149. Streaming Reads and Writes
+- 150. Enumerate and List
+- 151. StorageEntry
+- 152. Metadata Queries
+- 153. Delete
+- 154. Directory Operations
+- 155. Parent Creation
+- 156. Copy Within a Backend
+- 157. copy_between
+- *...and 1 more*
 
-### Path Handling (PATH)
+### Storage Profiles and Settings (PROF)
 
-**Count**: 10 concepts (11.1%)
-
-**Concepts**:
-
-- 31. StoragePath Class
-- 32. SchemeSpec Dataclass
-- 33. SCHEMES Registry
-- 34. Alias Resolution
-- 35. Identify Scheme Method
-- 36. Normalize Method
-- 37. GenericSchemePath Fallback
-- 38. Path Joining
-- 39. UPath Integration
-- 40. Detect Provider From Path
-
-### Local Backend (LOCAL)
-
-**Count**: 10 concepts (11.1%)
+**Count**: 14 concepts (11.3%)
 
 **Concepts**:
 
-- 53. LocalStorageBackend Class
-- 54. LocalConnectionMixin
-- 55. LocalReadMixin
-- 56. LocalWriteMixin
-- 57. LocalListMixin
-- 58. LocalDeleteMixin
-- 59. LocalMetadataMixin
-- 60. LocalCopyMixin
-- 61. LocalDirectoryMixin
-- 62. Full Protocol Coverage Local
+- 129. Storage Profiles
+- 130. Auth Profiles
+- 131. Provider Types
+- 132. StorageProfileSpec
+- 133. Implemented Flag
+- 134. Settings-Only Providers
+- 135. STORAGE_REGISTRY
+- 136. S3 Flavours
+- 137. SFTP Profile
+- 138. HTTP Profile
+- 139. Local Profile
+- 140. Profile Emission
+- 141. Named Profiles
+- 142. resolve_storage
 
-### Storage Protocols (PROTO)
+### Protocols and Registry (PROTO)
 
-**Count**: 8 concepts (8.9%)
-
-**Concepts**:
-
-- 11. StorageConnectionProtocol
-- 12. StorageReadProtocol
-- 13. StorageWriteProtocol
-- 14. StorageListProtocol
-- 15. StorageDeleteProtocol
-- 16. StorageMetadataProtocol
-- 17. StorageCopyProtocol
-- 18. StorageDirectoryProtocol
-
-### Settings & Configuration (SETT)
-
-**Count**: 8 concepts (8.9%)
+**Count**: 14 concepts (11.3%)
 
 **Concepts**:
 
-- 83. StorageAuthBase Class
-- 84. Provider Type Enum
-- 85. Auth Method Enum
-- 86. Access Type Enum
-- 87. Per Provider Settings
-- 88. Settings Descriptor
-- 89. Settings Profile
-- 90. Settings Adapters
+- 196. Storage Protocols
+- 197. Runtime-Checkable Protocols
+- 198. Read Protocol
+- 199. Write Protocol
+- 200. Enumerate Protocol
+- 201. Delete Protocol
+- 202. Metadata Protocol
+- 203. Copy Protocol
+- 204. Directory Protocol
+- 205. Ranged Read Protocol
+- 206. Backend Registry
+- 207. register_storage_backend
+- 208. Backend Lookup
+- 209. Facade Dispatch
 
-### HTTP Backend (HTTP)
+### Ecosystem and Foundations (ECO)
 
-**Count**: 6 concepts (6.7%)
+**Count**: 12 concepts (9.7%)
 
 **Concepts**:
 
-- 77. HTTPStorageBackend Class
-- 78. HTTP Read Support
-- 79. HTTP Metadata Support
-- 80. HTTP Connection Support
-- 81. Httpx Client
-- 82. HTTP Error Mapping
+- 101. Byte Storage Endpoints
+- 102. URL Schemes and Paths
+- 103. Object Storage Model
+- 104. Binary Streams
+- 105. Transport Responsibility Boundary
+- 106. Mountainash Ecosystem
+- 107. mountainash-auth-client
+- 108. mountainash-settings
+- 109. mountainash-files
+- 110. mountainash Relations Readers
+- 111. Credential Delegation
+- 112. Format-Agnostic Storage
+
+### Paths, Schemes and Location Policy (PATH)
+
+**Count**: 11 concepts (8.9%)
+
+**Concepts**:
+
+- 118. SchemeSpec Registry
+- 119. Scheme Dispatch
+- 120. StoragePath
+- 121. S3 Bucket and Key Parsing
+- 122. Suffix Chains
+- 123. LocationPolicy
+- 124. Local Root Confinement
+- 125. Remote Allow-List
+- 126. Profile-Granted Hosts
+- 127. LocationNotAllowed
+- 128. Credential Redaction
+
+### Read Access and Streams (READ)
+
+**Count**: 11 concepts (8.9%)
+
+**Concepts**:
+
+- 159. Read Access Modes
+- 160. Sequential Access
+- 161. Random Access
+- 162. Buffered Access
+- 163. RangePolicy
+- 164. RangedReader
+- 165. Sequential Stream Adapters
+- 166. Deferred Read Errors
+- 167. Stream Ownership
+- 168. materialize
+- 169. Native Local Handles
+
+### Stream Transforms (XFRM)
+
+**Count**: 9 concepts (7.3%)
+
+**Concepts**:
+
+- 170. Stream Transform
+- 171. Transform Pipeline
+- 172. Transform Direction
+- 173. Gzip Transform
+- 174. GPG Transform
+- 175. Suffix Inference
+- 176. Transforms and Random Access
+- 177. Streaming Gzip Encoder
+- 178. Transform Layer Ownership
+
+### Backends (BACK)
+
+**Count**: 8 concepts (6.5%)
+
+**Concepts**:
+
+- 210. Mixin Composition
+- 211. Support Matrix
+- 212. Local Backend
+- 213. S3 Backend
+- 214. S3 Family Registration
+- 215. SFTP Backend
+- 216. HTTP Backend
+- 217. Backend Divergences
+
+### Errors, Testing and Maintenance (MAINT)
+
+**Count**: 7 concepts (5.6%)
+
+**Concepts**:
+
+- 218. TransportError Hierarchy
+- 219. Backend Error Mapping
+- 220. BackendNotImplementedError
+- 221. Conformance Tests
+- 222. Registry Completeness Tests
+- 223. Slim Install Test
+- 224. Adding a Backend
+
+### Package Surface and Install (SURF)
+
+**Count**: 5 concepts (4.0%)
+
+**Concepts**:
+
+- 113. Base Install
+- 114. Optional Extras
+- 115. MissingExtraError
+- 116. Lazy Package Root
+- 117. storage() Factory
 
 ## Recommendations
 
-- ✅ **Excellent balance**: Categories are evenly distributed (spread: 8.9%)
+- ✅ **Excellent balance**: Categories are evenly distributed (spread: 9.7%)
 - ✅ **MISC category minimal**: Good categorization specificity
 
 ### Educational Use Recommendations
@@ -210,4 +261,4 @@ All categories are under the 30% threshold. Good balance!
 
 ---
 
-*Report generated by learning-graph-reports/taxonomy_distribution.py*
+*Report generated by ibook graph taxonomy-report*

@@ -1,10 +1,15 @@
 {
-  "title": "Mountainash Utils Files Concept Graph",
-  "description": "A concept dependency graph for the mountainash-transport cloud-native storage abstraction library. 90 concepts across 9 categories covering storage protocols, facade, path handling, transforms, local/S3/HTTP backends, and settings.",
+  "title": "mountainash-transport Concept Graph",
+  "description": "Internal concept dependency graph for the mountainash-transport package documentation rebuild: ecosystem boundary, package surface, paths and location policy, storage profiles, facade operations, read access modes, stream transforms, connections and HTTP engine, protocols and registry, backends, errors and maintenance.",
   "creator": "Nathaniel Ramm",
-  "date": "2026-06-03",
-  "version": "1.0",
+  "date": "2026-10-29",
+  "version": "2.0",
   "format": "Learning Graph JSON v1.0",
-  "schema": "https://raw.githubusercontent.com/dmccreary/learning-graphs/refs/heads/main/src/schema/learning-graph-schema.json",
+  "source_repository": "mountainash-io/mountainash-transport",
+  "source_revision": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+  "profile_revision": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "editorial_brief": "docs-site/editorial-brief.md (confirmed 2026-10-29)",
+  "tool_revision": "mountainash-ibook-skills 36c2babce38a51ee6886eb2e783bce9899aefef6",
+  "id_policy": "Replacement graph. IDs start at 101 so no ID from the retired 1.0 graph (IDs 1-90, mountainash_utils_files, baseline 65bc90f) is reused with a different meaning.",
   "license": "CC BY-NC-SA 4.0 DEED"
 }

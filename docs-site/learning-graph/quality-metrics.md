@@ -2,12 +2,12 @@
 
 ## Overview
 
-- **Total Concepts**: 90
-- **Foundational Concepts** (no prerequisites, other concepts depend on them): 10
-- **Terminal Nodes** (nothing depends on them, but have prerequisites): 39
+- **Total Concepts**: 124
+- **Foundational Concepts** (no prerequisites, other concepts depend on them): 3
+- **Terminal Nodes** (nothing depends on them, but have prerequisites): 37
 - **Orphaned Nodes** (completely disconnected, no edges): 0
-- **Concepts with Dependencies**: 80
-- **Average Dependencies per Concept**: 2.20
+- **Concepts with Dependencies**: 121
+- **Average Dependencies per Concept**: 1.65
 
 ## Graph Structure Validation
 
@@ -19,63 +19,61 @@
 
 These concepts have no prerequisites:
 
-- **1**: File Systems
-- **2**: Cloud Object Storage
-- **3**: URL Schemes
-- **4**: Binary Streams
-- **5**: Python Protocols
-- **7**: Mixin Pattern
-- **8**: Pydantic Models
-- **9**: Decorators
-- **84**: Provider Type Enum
-- **85**: Auth Method Enum
+- **101**: Byte Storage Endpoints
+- **104**: Binary Streams
+- **106**: Mountainash Ecosystem
 
 ## Dependency Chain Analysis
 
-- **Maximum Dependency Chain Length**: 8
+- **Maximum Dependency Chain Length**: 13
 
 ### Longest Learning Path:
 
-1. **URL Schemes** (ID: 3)
-2. **SchemeSpec Dataclass** (ID: 32)
-3. **SCHEMES Registry** (ID: 33)
-4. **Identify Scheme Method** (ID: 35)
-5. **Detect Provider From Path** (ID: 40)
-6. **StorageFacade Class** (ID: 19)
-7. **Protocol Checked Dispatch** (ID: 20)
-8. **UnsupportedOperationError** (ID: 21)
+1. **Byte Storage Endpoints** (ID: 101)
+2. **URL Schemes and Paths** (ID: 102)
+3. **SchemeSpec Registry** (ID: 118)
+4. **Scheme Dispatch** (ID: 119)
+5. **StorageFacade** (ID: 143)
+6. **Read and Write** (ID: 148)
+7. **Streaming Reads and Writes** (ID: 149)
+8. **Read Access Modes** (ID: 159)
+9. **Random Access** (ID: 161)
+10. **Ranged Read Protocol** (ID: 205)
+11. **Support Matrix** (ID: 211)
+12. **Conformance Tests** (ID: 221)
+13. **Adding a Backend** (ID: 224)
 
 ## Terminal Nodes Analysis
 
 Terminal nodes are concepts that nothing else depends on but have prerequisites. They represent natural endpoints of learning paths — culminating or specialized concepts.
 
-- **Total Terminal Nodes**: 39 (43.3% of all concepts)
+- **Total Terminal Nodes**: 37 (29.8% of all concepts)
 - **Healthy Range**: 5-40% of total concepts
 
 Concepts at the end of learning paths:
 
-- **21**: UnsupportedOperationError
-- **22**: Read Bytes Method
-- **24**: Write Bytes Method
-- **25**: Write Stream Method
-- **26**: List Files Method
-- **27**: Delete Method
-- **28**: Exists Method
-- **29**: Get Metadata Method
-- **30**: Copy Method
-- **34**: Alias Resolution
-- **37**: GenericSchemePath Fallback
-- **38**: Path Joining
-- **39**: UPath Integration
-- **45**: Apply Read Direction
-- **46**: Apply Write Direction
-- **50**: Infer Pipeline Function
-- **51**: Materialize Utility
-- **52**: PairedStream Helper
-- **62**: Full Protocol Coverage Local
-- **64**: S3ConnectionMixin
+- **117**: storage() Factory
+- **142**: resolve_storage
+- **144**: from_path
+- **145**: for_local
+- **146**: Facade Lifecycle
+- **151**: StorageEntry
+- **155**: Parent Creation
+- **157**: copy_between
+- **158**: Location Policy on the Facade
+- **164**: RangedReader
+- **165**: Sequential Stream Adapters
+- **166**: Deferred Read Errors
+- **168**: materialize
+- **169**: Native Local Handles
+- **172**: Transform Direction
+- **174**: GPG Transform
+- **175**: Suffix Inference
+- **176**: Transforms and Random Access
+- **177**: Streaming Gzip Encoder
+- **178**: Transform Layer Ownership
 
-*...and 19 more*
+*...and 17 more*
 
 ## Orphaned Nodes Analysis
 
@@ -97,34 +95,33 @@ Top 10 concepts that are prerequisites for the most other concepts:
 
 | Rank | Concept ID | Concept Label | Indegree |
 |------|-----------|---------------|----------|
-| 1 | 7 | Mixin Pattern | 17 |
-| 2 | 5 | Python Protocols | 10 |
-| 3 | 6 | Runtime Checkable Protocol | 10 |
-| 4 | 19 | StorageFacade Class | 10 |
-| 5 | 1 | File Systems | 8 |
-| 6 | 4 | Binary Streams | 7 |
-| 7 | 11 | StorageConnectionProtocol | 7 |
-| 8 | 71 | Boto3 Client | 7 |
-| 9 | 12 | StorageReadProtocol | 6 |
-| 10 | 16 | StorageMetadataProtocol | 6 |
+| 1 | 196 | Storage Protocols | 13 |
+| 2 | 143 | StorageFacade | 12 |
+| 3 | 129 | Storage Profiles | 10 |
+| 4 | 218 | TransportError Hierarchy | 6 |
+| 5 | 101 | Byte Storage Endpoints | 5 |
+| 6 | 105 | Transport Responsibility Boundary | 5 |
+| 7 | 171 | Transform Pipeline | 5 |
+| 8 | 182 | Leaf Connections | 5 |
+| 9 | 191 | HTTP Request Engine | 5 |
+| 10 | 210 | Mixin Composition | 5 |
 
 ## Outdegree Distribution
 
 | Dependencies | Number of Concepts |
 |--------------|--------------------|
-| 0 | 10 |
-| 1 | 27 |
-| 2 | 23 |
-| 3 | 26 |
+| 0 | 3 |
+| 1 | 62 |
+| 2 | 48 |
+| 3 | 8 |
 | 4 | 2 |
-| 8 | 1 |
-| 9 | 1 |
+| 10 | 1 |
 
 ## Recommendations
 
-- ℹ️ **High terminal node percentage** (43.3%): Consider if some terminal concepts should be prerequisites for advanced concepts
+- ✅ **Terminal node percentage** (29.8%): Within healthy range (5-40%)
 - ✅ **DAG structure verified**: Graph supports valid learning progressions
 
 ---
 
-*Report generated by learning-graph-reports/analyze_graph.py*
+*Report generated by ibook graph analyze*
