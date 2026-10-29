@@ -1,98 +1,104 @@
 ---
-title: 'Mountainash Utils Files'
-description: 'A practical manual for mountainash-transport — one interface for local files, S3, HTTP, and more, with transparent compression and encryption.'
+title: mountainash-transport
+description: One file API for Python across local disk, S3-compatible stores, SFTP servers and HTTP(S) endpoints. The path picks the backend.
 ---
 
+# mountainash-transport
 
-[← Back to Ecosystem](https://docs.mountainash.io/)
-# Mountainash Utils Files
+**One file API for Python, from a folder on your laptop to S3-compatible buckets, SFTP servers and HTTP(S) endpoints.**
 
-A single, consistent way to read, write, copy, and manage files across local disk, S3-compatible stores, and HTTP endpoints — configure your storage provider, then use the same code everywhere.
+A data job usually starts with a file on local disk. Then the input moves to an S3 bucket, a partner starts dropping files on an SFTP server, and a reference table turns up behind an HTTPS URL. Each store brings its own client library, credentials, error types and idea of what a directory is. Before long the code branches on `if path.startswith("s3://")`, and every package that reads files carries its own copy of those branches.
 
-## Why a Guided Manual?
+mountainash-transport gives that code one set of calls. You open storage from a path, and the path's scheme picks the backend: local disk, the S3 family (AWS S3, S3 Express, Cloudflare R2, MinIO and Backblaze B2), SFTP or HTTP(S). The same methods read, write, stream, list, copy and delete on each of them. A storage profile describes the store, credentials arrive separately, and gzip or GPG can be applied to the bytes on their way in or out.
 
-The API reference tells you *what* each function does. This manual explains *why* the library is designed the way it is: why backends declare capabilities through protocols, why transforms compose as pipelines, and why path-driven dispatch matters. Understanding the design makes the API intuitive rather than something you memorise.
+## Who it's for
 
-## What's Inside
+<div class="grid cards" markdown>
 
-- **[Chapters](chapters/index.md)** — 9 chapters covering everything from foundation concepts through storage protocols, configuration, the facade pattern, transforms, and each backend (local, S3, HTTP)
+-   **Application developers**
 
-## Who This Is For
+    ---
 
-This manual is for Python developers who work with files across multiple storage backends and want a unified interface instead of provider-specific code. If that sounds like you, the [About](about.md) page has more detail on prerequisites and what you'll get out of reading this.
+    Read, write, stream, list and delete files through one `StorageFacade`, whatever the path points at. Ask a store what it supports before calling, and catch one family of storage errors instead of one per client library.
 
-# Package Overview
+    [Install and open a store](chapters/03-installation/index.md)
 
-mountainash-transport is a cloud-native storage abstraction library for Python. It provides a single interface for reading, writing, copying, and managing files across local disk, S3-compatible object stores, and HTTP endpoints, with transparent compression and encryption through composable transform pipelines.
+-   **Teams working across several stores**
 
-## Target Audience
+    ---
 
-Python developers building data pipelines, ETL processes, or applications that need to work with files across multiple storage backends. Typical readers are data engineers, backend developers, and platform engineers who want a unified file interface instead of provider-specific code.
+    Moving between AWS S3, R2, MinIO and B2 is a change of storage profile, not of code. `copy_between` copies a file from one store to another and can compress or encrypt it on the way. Named profiles keep stores and secret references in configuration.
 
-## Who This Is For
+    [Describe your stores](chapters/05-storage-profiles/index.md)
 
-This manual is for Python developers who need to read, write, and move files across local disk, S3-compatible object stores (AWS S3, Cloudflare R2, MinIO, Backblaze B2), and HTTP endpoints. You might be building data pipelines, managing an encrypted data lake, or migrating between cloud providers. If you're writing storage code and tired of provider-specific boilerplate, this is for you.
+-   **Platform and security engineers**
 
-## What You Should Already Know
+    ---
 
-You should be comfortable with:
+    Confine what a piece of code may touch with a location policy: a local root it cannot leave, and an allow list of remote hosts and buckets. Reach a plain-HTTP service on a private network through an SSH bastion; HTTPS targets do not work through a tunnel.
 
-- Python 3.12+ (type hints, dataclasses, protocols)
-- Basic file I/O in Python (open, read, write)
-- What S3 is and how buckets and keys work (you don't need deep AWS experience)
-- Environment variables and configuration patterns
+    [Set a location policy](chapters/08-location-policy/index.md)
 
-No prior experience with mountainash or its other packages is required.
+-   **Packages built on Mountainash**
 
-## What You'll Get Out of This
+    ---
 
-After working through this manual, you'll know how to:
+    Get bytes, streams and typed errors from one public API and keep format handling in your own package. Credentials come from `mountainash-auth-client` and configuration from `mountainash-settings`.
 
-- **Read a file from anywhere with a single call** — local paths, S3 URIs, and HTTP URLs all go through the same `read_bytes()` function
-- **Switch cloud providers without changing application code** — swap AWS S3 for Cloudflare R2 or MinIO by changing configuration, not code
-- **Apply compression and encryption transparently** — compose gzip and GPG transforms into pipelines that work on reads, writes, and cross-backend transfers
-- **Copy files between any two backends** — move data from S3 to local, local to R2, or HTTP to S3 with transforms applied in flight
-- **Use suffix-aware path helpers** — let the library infer the right transforms from file extensions like `.csv.gz` or `.csv.gz.gpg`
-- **Handle errors at the right level** — catch broad storage failures or narrow provider-specific issues using the exception hierarchy
+    [See where transport fits](chapters/02-mountainash-ecosystem/index.md)
 
-## Prerequisites
+-   **Backend contributors**
 
-- Python 3.12+ with familiarity in type hints, dataclasses, and protocols
-- Basic file I/O in Python
-- Conceptual understanding of S3 (buckets, keys, URI schemes)
-- Familiarity with environment variables and configuration patterns
+    ---
 
-## What This Manual Covers
+    Each capability is a small protocol, each backend implements the ones its store supports, and conformance tests hold every backend to its contract.
 
-1. Foundation concepts: URL schemes, path dispatch, and the facade pattern
-2. Storage protocols: the eight capability protocols (Read, Write, List, Delete, Metadata, Copy, Directory, Connection) and how backends declare what they support
-3. Path handling: StoragePath, URL scheme identification, normalisation, and join operations
-4. Settings and configuration: typed provider settings for AWS S3, Cloudflare R2, MinIO, Backblaze B2, and S3 Express
-5. StorageFacade: the central API for all file operations — read, write, list, delete, copy, and metadata
-6. Transforms: Gzip, GPG, and composable pipeline construction for transparent compression and encryption
-7. Local backend: local file system operations through the storage protocols
-8. S3 backend: connecting to any S3-compatible service with flavour-based configuration
-9. HTTP backend: reading from HTTP/HTTPS endpoints through the same interface
+    [Read the architecture](chapters/13-architecture/index.md)
 
-## What This Manual Does Not Cover
+</div>
 
-- Internal implementation details of the settings registry, adapters, or stream encoders
-- Other mountainash packages (mountainash-data, mountainash-rules, mountainash-settings)
-- General Python programming or cloud infrastructure setup
-- Performance benchmarking or production deployment patterns
+## See it work
 
-## Key Capabilities
+The script stores a gzip-compressed CSV on local disk, reads it back with the compression removed and lists its folder. It then opens a facade for an HTTPS URL and asks whether that store can delete files.
 
-**Read from anywhere with one call** — `read_bytes()` accepts any supported URL scheme and returns file contents. It dispatches to the correct backend automatically, so code that reads from a local path today can read from S3 or HTTP tomorrow with no changes.
+```python
+import tempfile
+from pathlib import Path
 
-**S3-family unification** — AWS S3, Cloudflare R2, MinIO, Backblaze B2, and S3 Express are all S3-compatible but all slightly different. One settings class with a flavour field handles the variations. Connecting to any S3-compatible service uses the same code path.
+from mountainash_transport import Gzip, StorageDeleteProtocol, StorageFacade
 
-**Transparent compression and encryption** — Gzip and GPG transforms compose as pipelines. Attach them to reads, writes, or cross-backend transfers. The `infer_pipeline` helper reads file extensions and applies the right transforms automatically — `.csv.gz` gets decompressed, `.csv.gz.gpg` gets decrypted then decompressed.
+with tempfile.TemporaryDirectory() as root:
+    path = str(Path(root) / "reports" / "sales.csv.gz")
 
-**Cross-backend transfers** — Copy from S3 to local, local to another S3 bucket, or HTTP to S3, with transforms applied in flight. The source and destination can be any supported backend.
+    with StorageFacade.from_path(path) as storage:  # a bare path selects local disk
+        storage.write(path, b"region,total\nnorth,120\nsouth,95\n", pipeline=Gzip())
+        print("stored:", storage.get_size(path), "bytes")
+        print("read back:", storage.read(path, infer=True).decode().splitlines())
+        listing = storage.list_objects(str(Path(root) / "reports"))
+        print("listed:", [Path(entry.path).name for entry in listing.objects])
 
-**Capability-driven backends** — Eight storage protocols, each independently implementable. A backend picks which capabilities it supports, and the facade dispatches based on what's available. Adding a new storage backend means implementing only the protocols that matter for your use case.
+url = "https://files.example.com/reports/sales.csv.gz"
+with StorageFacade.from_path(url) as web:  # an https:// URL selects the HTTP backend
+    print("https can delete:", web.supports(StorageDeleteProtocol))
+```
 
-## Context
+Output:
 
-mountainash-transport is part of the [mountainash](https://github.com/mountainash-io/mountainash) project, a modular Python framework for data engineering. It sits at the storage abstraction layer, used by higher-level packages like mountainash-data for file access.
+```text
+stored: 50 bytes
+read back: ['region,total', 'north,120', 'south,95']
+listed: ['sales.csv.gz']
+https can delete: False
+```
+
+The path chose the backend both times, the `.gz` suffix told the read to decompress, and the HTTP facade answered the capability question without sending a request. The local part runs on the base install; the HTTPS facade needs the `[http]` extra.
+
+## Where to go next
+
+- New to the package? Start with [What transport does](chapters/01-what-transport-does/index.md). It assumes Python 3.12 or later, context managers and binary I/O with `bytes` and file objects.
+- The [chapter list](chapters/index.md) shows everything the documentation covers.
+- The [support matrix and known limits](reference/support-matrix.md) shows what each backend can do.
+- [About](about.md) has the design ideas, authorship, the licenses and the link to the code repository.
+
+!!! note "Development baseline"
+    This documentation describes version 0.1.0, the development baseline. Until the sibling Mountainash packages are published, install development checkouts side by side, as described in [Optional extras](chapters/03-installation/index.md#optional-extras).

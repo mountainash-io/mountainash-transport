@@ -1,67 +1,228 @@
 {
   "schema_version": "1.0",
+  "project": "mountainash-transport",
   "baseline": {
-    "source_commit": "65bc90f901403a1454ba5d3d608660a95d64b163",
-    "refresh_date": "2026-06-04T12:43:03Z",
+    "source_commit": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+    "profile_commit": "8a979e2eada96046bfcce92873a801cd7252a32a",
+    "refresh_date": "2026-10-29",
     "tool_versions": {
-      "python": "3.12",
-      "enrich_script": "1.0.0"
+      "mountainash-ibook-skills": "36c2babce38a51ee6886eb2e783bce9899aefef6",
+      "python": "3.12"
     }
   },
   "chapter_state": {
-    "01-foundation-concepts": {
-      "content_hash": "4932fdd7ed5b0fafd715adecee13b75c611fbe86004a7f2aa634f59238077e11",
-      "word_count": 2996,
-      "has_concept_markers": true
+    "01-what-transport-does": {
+      "content_hash": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+      "word_count": 2255,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "02-storage-protocols": {
-      "content_hash": "ed028ba2c98a1709c8c1b1d4f2cd4697c754590f4f4b9626b3298a4701ad074a",
-      "word_count": 2739,
-      "has_concept_markers": true
+    "02-mountainash-ecosystem": {
+      "content_hash": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+      "word_count": 2160,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "03-path-handling": {
-      "content_hash": "5f30b537a9477dd72c3c7ebc6c0c579e796cef03092c4057e825695f3679da21",
-      "word_count": 2744,
-      "has_concept_markers": true
+    "03-installation": {
+      "content_hash": "sha256:4d42cb1fda12c3ae5bd66f9c5f23a95f9c9dab0a339e21d47cac46e8bf11c643",
+      "word_count": 1548,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "04-settings-and-configuration": {
-      "content_hash": "bb7bd50ac77ed655f4935d15dc750f3aaa345c12c4e03ff45ee070666cc4cea7",
-      "word_count": 2527,
-      "has_concept_markers": true
+    "04-paths-and-schemes": {
+      "content_hash": "sha256:2cb38cf6ed6f1c9f35dddb849f0e54cba91e61e0283c561d30167ec2d956eebf",
+      "word_count": 1685,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "05-storage-facade": {
-      "content_hash": "93b6f4a0c5937fcdb8b5c0bb3dda0748c43c337d505f5b557ad7b9699c4fc600",
-      "word_count": 2458,
-      "has_concept_markers": true
+    "05-storage-profiles": {
+      "content_hash": "sha256:19d73dcb1f43d81c95bb3b4161a66f038e3ba7f35e13dadec37e05639da64990",
+      "word_count": 3094,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "06-transforms": {
-      "content_hash": "456048746fda8351c497acf5fa988dac8b09337a870c504a9e69aac8be9a4f10",
-      "word_count": 2792,
-      "has_concept_markers": true
+    "06-storage-facade": {
+      "content_hash": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+      "word_count": 2260,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "07-local-backend": {
-      "content_hash": "d38dcab02da960080c33aad262377ad8bfeec45ab1f0c6e5fdb305e96872c66e",
-      "word_count": 2290,
-      "has_concept_markers": true
+    "07-file-operations": {
+      "content_hash": "sha256:75af0a5a895dc92993add89edb4f9ef6ddf7f1de69883db48b1e6f907645280f",
+      "word_count": 2486,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "08-s3-backend": {
-      "content_hash": "57c3937fb1708f07bb256031465c2ac39f025643f81692669153fd6d28c2340d",
-      "word_count": 2367,
-      "has_concept_markers": true
+    "08-location-policy": {
+      "content_hash": "sha256:0096e82e09197d6123094517dfeea3543aecd64db525b17135185cc32fe25988",
+      "word_count": 2086,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     },
-    "09-http-backend": {
-      "content_hash": "f6ae9c9445f951c33f54fb992b28797d7e47e1d00ce01f8a5e587b6707e346d9",
-      "word_count": 3219,
-      "has_concept_markers": true
+    "09-read-access-modes": {
+      "content_hash": "sha256:eff52817806a718d16ebee934989a7d9b630258b4e6f74f5c8f7546654f3367c",
+      "word_count": 2124,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "10-stream-transforms": {
+      "content_hash": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
+      "word_count": 2329,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "11-connections": {
+      "content_hash": "sha256:73eddb1dfb9544677c2d8e6aa136cf12cece5f341e43924d3e16b4a10a7ff5ff",
+      "word_count": 2857,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "12-http-engine": {
+      "content_hash": "sha256:d14e1f4824b365f5be82772333ff26413961ef5ec7d1d37305129239f19f6061",
+      "word_count": 1830,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "13-architecture": {
+      "content_hash": "sha256:57636478eccf6f2794479098e1b7695154b6f9b5494b9914b90024557a93e772",
+      "word_count": 2174,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "14-backends": {
+      "content_hash": "sha256:de74c96256ace7f4f8c7d64a63f7adb6166e8b53d6906dc7253bd1189cb0ed35",
+      "word_count": 2503,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
+    },
+    "15-maintaining": {
+      "content_hash": "sha256:42c15752c1dd5736d2725a4708368bec6817c1a6e43b58d10233f1e6eb9f2473",
+      "word_count": 1386,
+      "has_concept_markers": true,
+      "last_generated": "2026-10-29",
+      "generator_version": "chapter-content-generator@ibook-skills 36c2bab"
     }
   },
   "learning_graph_state": {
-    "content_hash": "b13ddc138b829a30d4d1fce5921dc399d5875f769d779b87fbc678fe7cf8288e",
-    "node_count": 90,
-    "edge_count": 176,
-    "enriched_nodes": 90,
-    "low_confidence_count": 52
+    "concept_count": 124,
+    "edge_count": 200,
+    "enriched_count": 115,
+    "content_hash": "sha256:c81eb0d76ed2075afd25546e757b6d1aef6cd99d85b8721ee20b24391dcb0c6d"
   },
-  "faq_state": null,
-  "refresh_history": []
+  "faq_state": {
+    "question_count": 82,
+    "content_hash": "sha256:c164c65ea6d128534afdd116a13fc4c82d8dfab77a924815dddf140fd7331987"
+  },
+  "landing_state": {
+    "index.md": {
+      "content_hash": "sha256:224a8d9ab5bbff18ef9e33d1590e04f8af854ce4f1c091959660bab3b68fa48f",
+      "inputs": {
+        "README.md": "sha256:7aa96ea09ef83b1031e4eaf3897318c3e892283b92c1706d81247fdd8f343a0b",
+        "docs-site/editorial-brief.md": "sha256:b11472ce41ac42c75bc1f8633cfe639f2c8745947edd88b040e3f0d7931e359e",
+        "docs-site/profile/facets/users.json": "sha256:35fc1af612d3103e6f147819ea1f14d6d18539bfd3da6b7262ddbc78356810ea",
+        "docs-site/profile/facets/broader-hype.json": "sha256:0b52ece66bfe2e48cea1518854251a6558de70ea402d952572825ea2ed8a9f50",
+        "docs-site/profile/facets/backend-architecture.json": "sha256:8a05235b019a80d20058f08a19a8b5df413d74916c032578ddac12677e6d0553",
+        "docs-site/site/mkdocs.yml": "sha256:bae596facd7de873c1b35d79192d198a3ab288764ed8c717c72a3145d2ba427f",
+        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+        "docs-site/site/docs/chapters/03-installation/index.md": "sha256:4d42cb1fda12c3ae5bd66f9c5f23a95f9c9dab0a339e21d47cac46e8bf11c643",
+        "docs-site/site/docs/chapters/05-storage-profiles/index.md": "sha256:19d73dcb1f43d81c95bb3b4161a66f038e3ba7f35e13dadec37e05639da64990",
+        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+        "docs-site/site/docs/chapters/08-location-policy/index.md": "sha256:0096e82e09197d6123094517dfeea3543aecd64db525b17135185cc32fe25988",
+        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
+        "docs-site/site/docs/chapters/11-connections/index.md": "sha256:73eddb1dfb9544677c2d8e6aa136cf12cece5f341e43924d3e16b4a10a7ff5ff",
+        "docs-site/site/docs/chapters/13-architecture/index.md": "sha256:57636478eccf6f2794479098e1b7695154b6f9b5494b9914b90024557a93e772",
+        "docs-site/site/docs/reference/support-matrix.md": "sha256:b53b36b576ea50fb50c22694656eb121b72a859ad9a4e7c9fdb3daa46e9b02e4",
+        "src/mountainash_transport/__init__.py": "sha256:38b8087def545301a7f84716f8449278df6f3c46ce6e6859e64534864f6498d6",
+        "src/mountainash_transport/storage/facade/facade.py": "sha256:0a2ea796be99ae496f2e3241612702040959f9ca7ca372e6ca7e80fdc9da66f8",
+        "src/mountainash_transport/connections/tunnel.py": "sha256:365e9b130b9083921a7eafb1170d9e4bf28cbd7a25a899d425e3c1bf5e7b6b14",
+        "tests/connections/test_tunnel_connection.py": "sha256:35c9dc404f978eac47604b129e6a6b1568cc5601b2843e6249bfbd0d8c84126f"
+      },
+      "public_symbols": [
+        "StorageFacade",
+        "Gzip",
+        "StorageDeleteProtocol",
+        "StorageFacade.from_path",
+        "StorageFacade.write",
+        "StorageFacade.read",
+        "StorageFacade.get_size",
+        "StorageFacade.list_objects",
+        "StorageFacade.supports"
+      ],
+      "last_generated": "2026-10-29"
+    },
+    "about.md": {
+      "content_hash": "sha256:384c3a2f58672b58b7b3497f1791e049ef9939422edbfb58eac0db78bed502ba",
+      "inputs": {
+        "README.md": "sha256:7aa96ea09ef83b1031e4eaf3897318c3e892283b92c1706d81247fdd8f343a0b",
+        "LICENSE": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "NOTICE": "sha256:e2591dd5be4027d417436e7aa95765512a2df627401c8dbd1a68c3439388665c",
+        "CONTRIBUTING.md": "sha256:d54a4c10aebc66727b81c9961f1f2e17fcab693a5ed60be067ad3cb1a871a39d",
+        "pyproject.toml": "sha256:e0a7c66e2aee1405f3daa2e9f55f15fded4878c52d134de61c53ab7315b34d4a",
+        "docs-site/editorial-brief.md": "sha256:b11472ce41ac42c75bc1f8633cfe639f2c8745947edd88b040e3f0d7931e359e",
+        "docs-site/profile/facets/broader-hype.json": "sha256:0b52ece66bfe2e48cea1518854251a6558de70ea402d952572825ea2ed8a9f50",
+        "docs-site/profile/facets/users.json": "sha256:35fc1af612d3103e6f147819ea1f14d6d18539bfd3da6b7262ddbc78356810ea",
+        "docs-site/site/mkdocs.yml": "sha256:bae596facd7de873c1b35d79192d198a3ab288764ed8c717c72a3145d2ba427f",
+        "docs-site/site/docs/license.md": "sha256:1050552e0ddeef823e8c5cd5525bb08f29fb26d6123dd6c250788df98722d1c0",
+        "docs-site/site/docs/contact.md": "sha256:0209a4e87cfdf8241a67df6841a815657b56919e3139e2078a7df269b63c3506",
+        "docs-site/site/docs/chapters/01-what-transport-does/index.md": "sha256:4e915a2b4d8176427f84c0e679586407d1a8ef31aeb0c2d30c4864ca4bea890f",
+        "docs-site/site/docs/chapters/02-mountainash-ecosystem/index.md": "sha256:f2504ce7432e288eb67e3f4d640d055e5fbbf4cf1170501848f7a4c8ded8913a",
+        "docs-site/site/docs/chapters/06-storage-facade/index.md": "sha256:c14d20bf3aeacef951490c10733c892ff602792cf7604c6e7b67a6972e8595ee",
+        "docs-site/site/docs/chapters/10-stream-transforms/index.md": "sha256:000fcdd49ea5a7778ff96aa9c663219f6d2a0f4b29926345494189ffa1f026a8",
+        "src/mountainash_transport/__init__.py": "sha256:38b8087def545301a7f84716f8449278df6f3c46ce6e6859e64534864f6498d6",
+        "src/mountainash_transport/storage/facade/facade.py": "sha256:0a2ea796be99ae496f2e3241612702040959f9ca7ca372e6ca7e80fdc9da66f8",
+        "src/mountainash_transport/storage/facade/cross_backend.py": "sha256:14d13af4ccd7bcd7eb27ad5da603cba325df1319fca55b2a07d98c651b7107b9"
+      },
+      "public_symbols": [],
+      "last_generated": "2026-10-29"
+    }
+  },
+  "refresh_history": [
+    {
+      "date": "2026-10-29",
+      "from_commit": "65bc90f901403a1454ba5d3d608660a95d64b163",
+      "to_commit": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+      "operation": "replacement",
+      "note": "Book replaced from scratch under a confirmed editorial brief and approved 15-chapter plan. Retired 9-chapter book (mountainash_utils_files, graph IDs 1-90); its chapter_state is not carried forward.",
+      "chapters_updated": [
+        "01-what-transport-does",
+        "02-mountainash-ecosystem",
+        "03-installation",
+        "04-paths-and-schemes",
+        "05-storage-profiles",
+        "06-storage-facade",
+        "07-file-operations",
+        "08-location-policy",
+        "09-read-access-modes",
+        "10-stream-transforms",
+        "11-connections",
+        "12-http-engine",
+        "13-architecture",
+        "14-backends",
+        "15-maintaining"
+      ],
+      "sections_regenerated": null,
+      "faq_questions_updated": 82,
+      "landing_pages_updated": [
+        "index.md",
+        "about.md"
+      ],
+      "learning_graph_nodes_updated": 124,
+      "tokens_used": null
+    }
+  ]
 }
