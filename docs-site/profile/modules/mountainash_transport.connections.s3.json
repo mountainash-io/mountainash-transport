@@ -1,0 +1,90 @@
+{
+  "id": "mountainash_transport.connections.s3",
+  "path": "src/mountainash_transport/connections/s3.py",
+  "summary": "S3Connection is the leaf connection for S3-family stores (AWS, S3 Express, R2, MinIO, B2). connect() lazily imports boto3 and either creates boto3.client('s3', **kwargs) from flat kwargs or, for a Session envelope, builds a boto3 Session from a named profile, explicit keys or ambient credentials and optionally wraps it with botocore assume-role refreshable credentials.",
+  "role": "integration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "S3Connection (via mountainash_transport.connections)"
+  ],
+  "key_classes": [
+    "S3Connection — ConnectionProtocol leaf owning a boto3 S3 client"
+  ],
+  "key_functions": [
+    "S3Connection.connect() -> Self — lazy boto3 import, flat or session-envelope client construction",
+    "S3Connection._build_via_session(boto3) — named profile / explicit keys / ambient source session, then STS AssumeRole via AssumeRoleCredentialFetcher + DeferredRefreshableCredentials when role_arn is set",
+    "S3Connection.disconnect() -> None — idempotent client.close()"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections"
+  ],
+  "dependents": [
+    "mountainash_transport.connections"
+  ],
+  "extension_points": [
+    "Envelope contract with connections._emit_kwargs: keys client_config, session, role_arn, session_name"
+  ],
+  "lifecycle_notes": [
+    "boto3 is imported in connect(), so the module imports on a base install; missing boto3 raises TransportConnectionError naming [s3].",
+    "Assume-role credentials are deferred and refreshed by botocore; the RoleSessionName defaults to 'mountainash-transport'.",
+    "Creating a boto3 client performs no network I/O; credential and endpoint failures surface on the first backend operation.",
+    "__enter__ returns self without connecting; __exit__ disconnects and attaches cleanup failures as notes when the body raised."
+  ],
+  "documentation_hooks": [
+    "S3 credentials guide: explicit keys vs named AWS profile vs ambient vs assume-role",
+    "Flavor restrictions: ROLE_ARN only for aws/express",
+    "Connections reference: S3Connection"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/connections/test_s3_connection.py",
+    "tests/connections/test_emission_golden.py",
+    "tests/connections/test_factory.py"
+  ],
+  "risks": [
+    "Missing boto3 raises TransportConnectionError rather than MissingExtraError, inconsistent with the package's missing-extra convention (AGENTS.md Dependencies).",
+    "Assume-role path sets the private botocore attribute target._credentials (type: ignore), which can break on botocore upgrades.",
+    "Specifying both PROFILE_NAME and explicit keys raises ValueError at connect time rather than at profile validation.",
+    "ValueError and TransportConnectionError propagate unwrapped while all other exceptions are wrapped, so callers see mixed exception types from connect()."
+  ],
+  "open_questions": [
+    "Should a missing boto3 raise MissingExtraError('s3') for consistency?"
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/s3.py",
+      "detail": "_build_via_session uses AssumeRoleCredentialFetcher and sets target._credentials"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "_emit_kwargs builds the session envelope and rejects ROLE_ARN for r2/minio/b2"
+    },
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "S3Connection in connections __all__, not root __all__"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/connections/s3.py",
+      "detail": "a17b092 real STS assume-role; d884e83 lazy boto3; 4f12987 failure-path release"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

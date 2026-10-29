@@ -1,0 +1,99 @@
+{
+  "id": "mountainash_transport._core.transforms.pipeline",
+  "path": "src/mountainash_transport/_core/transforms/pipeline.py",
+  "summary": "Pipeline is an ordered stack of StreamTransforms listed outermost-first, matching file-suffix order. apply_read unwraps outer to inner and returns a handle that, on close, closes every distinct layer it built in reverse construction order while leaving the caller's source open; apply_write wraps inner to outer. The same instance serves both directions and is reused by the facade for read, write and cross-backend copy.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "Pipeline"
+  ],
+  "key_classes": [
+    "Pipeline — ordered outermost-first transform stack with is_empty/apply_read/apply_write",
+    "_ReadStream — private RawIOBase wrapper that delegates reads/seek/tell and owns an ExitStack of layer closes"
+  ],
+  "key_functions": [
+    "Pipeline(*transforms: StreamTransform) — construct; order is outermost-first",
+    "Pipeline.is_empty() -> bool — whether the pipeline leaves bytes unchanged",
+    "Pipeline.apply_read(stream) -> BinaryIO — strip layers outer→inner; returns source unchanged for empty/identity pipelines",
+    "Pipeline.apply_write(stream) -> BinaryIO — add layers inner→outer (reverse list order)"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.transforms"
+  ],
+  "dependents": [
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.storage.facade"
+  ],
+  "extension_points": [
+    "Accepts any object satisfying the StreamTransform protocol; identity transforms (returning the same stream) are tracked and not double-owned"
+  ],
+  "lifecycle_notes": [
+    "apply_read ownership: the returned stream owns layers it constructed, not the supplied source; callers close the source separately (docs/read-access-modes.md).",
+    "Layer close order is LIFO; layers already closed by a cascading transform are skipped via _close_if_open.",
+    "Construction failures unwind built layers and re-raise the original exception; cleanup exceptions during that unwind are swallowed.",
+    "apply_write performs no ownership tracking; closing the outermost writer-side reader cascades only as far as each transform's own close() does.",
+    "_ReadStream.seek/tell raise io.UnsupportedOperation when the innermost decoded layer is not seekable."
+  ],
+  "documentation_hooks": [
+    "Pipeline ordering (outermost-first, suffix order) with a worked gzip-of-gpg example",
+    "Stream ownership and close semantics for direct apply_read callers",
+    "How the facade chooses direction for read/write/copy_between"
+  ],
+  "examples": [
+    "examples/gzip_pipeline/example.py — Pipeline/Gzip used via facade write and read",
+    "examples/cross_backend_copy/example.py — source_pipeline/destination_pipeline re-encoding"
+  ],
+  "tests": [
+    "tests/_core/transforms/test_pipeline.py",
+    "tests/_core/transforms/test_facade_integration.py",
+    "tests/storage/facade/test_read_access_modes.py",
+    "tests/storage/cross_backend/test_read_write.py"
+  ],
+  "risks": [
+    "Asymmetric ownership: apply_read never closes the source, but the Gzip write path (GzipCompressingReader) closes its source, so write-side callers get different ownership than read-side.",
+    "Cleanup exceptions during a failed apply_read construction are silently discarded (bare except Exception: pass), which can hide resource leaks.",
+    "_ReadStream is not thread-safe; read-access-modes docs state handles are not safe for concurrent seek/read."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Pipeline exported from root via _LAZY ('._core.transforms','Pipeline')"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/transforms/pipeline.py",
+      "detail": "apply_read builds ExitStack of _close_if_open callbacks; returns source if len(seen)==1"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "Facade calls effective.apply_read(source_stream) and apply_write(source)"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/read-access-modes.md",
+      "detail": "Documents layer close order and that apply_read does not own the supplied source"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/transforms/pipeline.py",
+      "detail": "6e99fc5 'close every read transform layer deterministically' (2026-10-16)"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

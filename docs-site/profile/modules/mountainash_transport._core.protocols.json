@@ -1,0 +1,96 @@
+{
+  "id": "mountainash_transport._core.protocols",
+  "path": "src/mountainash_transport/_core/protocols.py",
+  "summary": "Defines ConnectionProtocol[C], the runtime-checkable generic protocol every connection implements, parameterised by the native client type. It requires connect() returning Self, idempotent disconnect(), client and is_connected properties, and context-manager methods. The docstring fixes lifecycle rules: disconnect cleans up partial acquisition and is idempotent after failure, connect may reopen, context-body errors stay primary over cleanup errors, and decorator connections exclusively own their children.",
+  "role": "protocol",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "ConnectionProtocol"
+  ],
+  "key_classes": [
+    "ConnectionProtocol[C] — runtime-checkable lifecycle protocol (connect/disconnect/client/is_connected/__enter__/__exit__) over a covariant native client type C"
+  ],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.connections",
+    "mountainash_transport.connections.http",
+    "mountainash_transport.connections.s3",
+    "mountainash_transport.connections.sftp",
+    "mountainash_transport.connections.ssh",
+    "mountainash_transport.connections.tunnel",
+    "mountainash_transport.storage.facade"
+  ],
+  "extension_points": [
+    "Implement ConnectionProtocol to add a new connection type (leaf over a native client, or decorator wrapping another connection like SFTPConnection/TunnelledConnection); the facade and backends accept any conforming object"
+  ],
+  "lifecycle_notes": [
+    "disconnect() must release all owned resources, including partially acquired ones, and be safe to call repeatedly even after a failed close",
+    "connect() may reopen a connection; this differs from StorageFacade.close(), which is terminal",
+    "Decorator connections exclusively own their inner connection and must close it",
+    "create_connection() is typed as returning ConnectionProtocol[Any] because the client type depends on the runtime provider (docs/typing.md)"
+  ],
+  "documentation_hooks": [
+    "Architecture page: leaf vs decorator connections and ownership",
+    "Connection lifetime section (README) and how it differs from facade lifetime",
+    "Guide: writing a custom connection"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/_core/test_connection_protocol.py",
+    "tests/connections/test_factory.py",
+    "tests/connections/test_null_connection.py",
+    "tests/connections/test_ssh_connection.py",
+    "tests/connections/test_sftp_connection.py",
+    "tests/connections/test_tunnel_connection.py",
+    "tests/connections/test_http_connection.py",
+    "tests/connections/test_s3_connection.py"
+  ],
+  "risks": [
+    "runtime_checkable isinstance checks only verify attribute presence, not the documented idempotence and ownership semantics; conformance depends on per-connection tests"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "ConnectionProtocol lazily re-exported in root __all__"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/connections/s3.py",
+      "detail": "connections implement ConnectionProtocol"
+    },
+    {
+      "kind": "doc",
+      "path": "AGENTS.md",
+      "detail": "Connections table lists leaf and decorator connections"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "create_connection() returns ConnectionProtocol[Any]"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/test_connection_protocol.py",
+      "detail": "protocol shape tests"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

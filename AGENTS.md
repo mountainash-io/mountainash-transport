@@ -4,7 +4,7 @@ Guidance for coding agents working in this repository.
 
 ## Project Overview
 
-**mountainash-transport** provides unified file operations across storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), Azure Blob/Files, GCS, SFTP/SSH, FTP, SMB, HTTP/HTTPS and GitHub (read-only) — behind one facade, with path manipulation, cross-backend copy and stream transforms (gzip/GPG).
+**mountainash-transport** provides unified file operations across storage systems — local filesystem, S3 (AWS + R2 + MinIO + B2 + S3 Express via flavor discriminator), SFTP and HTTP/HTTPS — behind one facade, with path manipulation, cross-backend copy and stream transforms (gzip/GPG). Azure Blob/Files, GCS, FTP, SMB and GitHub (read-only) have settings profiles only; they have no backend yet and raise `BackendNotImplementedError`.
 
 Settings follow the **profile + auth separation pattern**: storage profiles return SDK config only; credentials come from `mountainash-auth-client` auth profiles and are emitted at connection time.
 
@@ -63,7 +63,7 @@ Package-local map. The *why* behind each layer lives in the central principles.
 |`FTPStorageProfile`|FTP + FTPS|`USE_TLS: bool`|
 |`SMBStorageProfile`|SMB|—|
 |`LocalStorageProfile`|Local filesystem (`ROOT_PATH` confines)|`ROOT_PATH: Optional[str]`|
-|`GitHubStorageProfile`|GitHub (read-only, fsspec-backed)|—|
+|`GitHubRepoStorageProfile`|GitHub repository (read-only; registry key `github_repo`)|—|
 |`HTTPStorageProfile`|HTTP/HTTPS (httpx)|—|
 
 ### Connections
@@ -83,8 +83,8 @@ Package-local map. The *why* behind each layer lives in the central principles.
 
 ### Storage
 
-- **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Directory, plus `ConnectionProtocol` in `_core`) implemented à la carte.
-- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all but enumerate), `s3` (flavor-dispatched; all but directory), `sftp` (read/write/delete/metadata/directory). Other profiled providers have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`. Every backend package must import on a base install: SDKs and `[http]`-stack modules are imported inside functions (`tests/test_slim_install.py` blocks every non-base import).
+- **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Directory/RangedRead, plus `ConnectionProtocol` in `_core`) implemented à la carte. `RangedReadProtocol` is satisfied structurally by an `open_ranged` method; no mixin subclasses it.
+- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata/ranged read), `local` (all but ranged read; random mode uses the native file handle), `s3` (flavor-dispatched; all but directory), `sftp` (all but copy). `tests/storage/protocols/test_backend_conformance.py` asserts the seven core protocols (it has no RangedRead column or B2 row yet). GCS, Azure, FTP, SMB and GitHub profiles have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`. Every backend package must import on a base install: SDKs and `[http]`-stack modules are imported inside functions (`tests/test_slim_install.py` blocks every non-base import).
 - **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `cross_backend` copy.
 - **Registry** (`storage/registry/`): `get_storage_backend`, `get_registered_backends`, `detect_provider_from_path`.
 - **Path helpers** (`storage/path_helpers/`): `StoragePath`, suffixes, S3 paths. The scheme registry (`SchemeSpec`, `SCHEMES`) lives in `_schemes.py`; `location.py` owns confinement.

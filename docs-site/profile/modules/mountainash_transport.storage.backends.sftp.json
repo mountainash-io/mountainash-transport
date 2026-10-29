@@ -1,0 +1,130 @@
+{
+  "id": "mountainash_transport.storage.backends.sftp",
+  "path": "src/mountainash_transport/storage/backends/sftp/",
+  "summary": "SFTPStorageBackend, registered for CONST_STORAGE_PROVIDER_TYPE.SFTP, operates on a paramiko SFTPClient borrowed from an SFTPConnection. It implements StorageReadProtocol (SFTPReadMixin), StorageWriteProtocol (SFTPWriteMixin), StorageEnumerateProtocol (SFTPEnumerateMixin), StorageDeleteProtocol (SFTPDeleteMixin), StorageMetadataProtocol (SFTPMetadataMixin), StorageDirectoryProtocol (SFTPDirectoryMixin) and, via SFTPReadMixin.open_ranged, RangedReadProtocol; it does not implement StorageCopyProtocol. sftp:// URLs are converted to remote paths only when host and port match the connected profile, otherwise LocationNotAllowed is raised.",
+  "role": "backend",
+  "visibility": "semi-public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "SFTPStorageBackend",
+    "SFTPReadMixin",
+    "SFTPWriteMixin",
+    "SFTPDeleteMixin",
+    "SFTPMetadataMixin",
+    "SFTPDirectoryMixin",
+    "_is_not_found",
+    "_wrap_sftp_error"
+  ],
+  "key_classes": [
+    "SFTPStorageBackend — registered SFTP backend; _get_client() returns the connection's SFTPClient or raises StorageConnectionError",
+    "SFTPReadMixin — StorageReadProtocol: read_to_bytes, forward-only read_to_stream without prefetch, plus open_ranged (seek/read on a native handle, no version pinning)",
+    "SFTPWriteMixin — StorageWriteProtocol: writes via sftp.open('wb'), creating parents through SFTPDirectoryMixin.mkdir when create_parents=True",
+    "SFTPEnumerateMixin — StorageEnumerateProtocol: exact-path enumeration that does not follow discovered directory links (not in sftp __all__)",
+    "SFTPDirectoryMixin — StorageDirectoryProtocol: list_dir, race-tolerant mkdir with parents, empty-only rmdir",
+    "SFTPDeleteMixin — StorageDeleteProtocol: sftp.remove",
+    "SFTPMetadataMixin — StorageMetadataProtocol: stat-based metadata, path_exists, get_size"
+  ],
+  "key_functions": [
+    "_helpers._remote_path(profile, path) -> str — converts sftp://HOST[:PORT]/p to /p; rejects host/port mismatch, explicit port 0, query or fragment with LocationNotAllowed",
+    "_helpers._wrap_sftp_error(exc, path) -> StorageError | None — ENOENT/EACCES/paramiko auth and SSH errors to typed errors",
+    "_helpers._check_not_directory(client, path) — recovers ENOTDIR when SFTP v3 reports NO_SUCH_FILE",
+    "_helpers._require_file_type(mode, path) -> int — raises StorageError when the server omits file type"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.sequential_io",
+    "mountainash_transport.location",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.backends"
+  ],
+  "extension_points": [
+    "Mixins rely on self._get_client() and self.storage_profile; SFTPWriteMixin additionally requires self.mkdir, so it cannot be composed without SFTPDirectoryMixin.",
+    "Re-registering CONST_STORAGE_PROVIDER_TYPE.SFTP overrides this backend."
+  ],
+  "lifecycle_notes": [
+    "Borrowed client: the backend never opens or closes the SSH/SFTP session; StorageFacade owns the SFTPConnection (SSHConnection decorator).",
+    "paramiko is imported lazily inside _wrap_sftp_error; using the backend needs the [sftp] extra.",
+    "open_ranged keeps one remote file handle open until the RangedSource is closed; callers must close random streams before the facade.",
+    "Sequential reads disable unbounded prefetch (docs/read-access-modes.md)."
+  ],
+  "documentation_hooks": [
+    "Support matrix row: SFTP = Read, Write, Enumerate, Delete, Metadata, Directory, RangedRead; no Copy (copy_between streams through).",
+    "sftp:// URL handling and host/port confinement against the profile (security note).",
+    "Directory semantics: mkdir parent creation across SFTP v3 ambiguities; rmdir empty-only.",
+    "Enumeration and symlink handling on SFTP; UTC-aware timestamps.",
+    "Tunnelled SFTP via create_tunnelled_connection."
+  ],
+  "examples": [],
+  "tests": [
+    "tests/storage/backends/test_sftp.py",
+    "tests/storage/backends/test_directory_semantics.py",
+    "tests/storage/backends/test_ranged_conformance.py",
+    "tests/storage/backends/test_read_initialization.py",
+    "tests/storage/backends/test_sequential_reads.py",
+    "tests/storage/protocols/test_backend_conformance.py",
+    "tests/storage/facade/test_facade_remote_policy.py"
+  ],
+  "risks": [
+    "SFTPWriteMixin.write_from_stream calls stream.read() and buffers the whole payload in memory, unlike S3/local streaming writes; this also applies to copy_between and pipeline writes targeting SFTP.",
+    "No StorageCopyProtocol: same-server copies download and re-upload via copy_between.",
+    "SFTPStorageBackend docstring says 'Read, Write, List, Delete, Metadata' and omits Enumerate, Directory and RangedRead; AGENTS.md also omits enumerate.",
+    "sftp __all__ exports private helpers _is_not_found and _wrap_sftp_error but omits SFTPEnumerateMixin.",
+    "open_ranged has no ETag/version pinning; concurrent remote modification is not detected."
+  ],
+  "open_questions": [
+    "Should _is_not_found and _wrap_sftp_error remain in sftp __all__ (underscore names) or be dropped, and should SFTPEnumerateMixin be added?",
+    "No examples/ recipe exercises SFTP; is one planned?"
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/sftp/__init__.py",
+      "detail": "@register_storage_backend(SFTP) class SFTPStorageBackend(SFTPReadMixin, SFTPWriteMixin, SFTPDeleteMixin, SFTPMetadataMixin, SFTPDirectoryMixin, SFTPEnumerateMixin); __all__ includes _is_not_found/_wrap_sftp_error."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/sftp/sftp_write.py",
+      "detail": "write_from_stream -> self.write_from_bytes(path, stream.read(), ...)."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/sftp/sftp_read.py",
+      "detail": "open_ranged returns RangedSource(size, fetch, close) over a native handle."
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/sftp/_helpers.py",
+      "detail": "_remote_path enforces host/port match with profile HOST/PORT."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "SFTP excludes only StorageCopyProtocol."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/backends/sftp",
+      "detail": "Port-0 rejection 2026-10-29, sftp:// URL handling 2026-10-28, enumeration 2026-10-17; evolving."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

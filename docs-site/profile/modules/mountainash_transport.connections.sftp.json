@@ -1,0 +1,85 @@
+{
+  "id": "mountainash_transport.connections.sftp",
+  "path": "src/mountainash_transport/connections/sftp.py",
+  "summary": "SFTPConnection is a decorator connection that opens a paramiko SFTPClient channel over an SSHConnection it exclusively owns. connect() reuses a healthy SSH connection, replaces any existing channel, and on failure releases both the channel and SSH; disconnect() closes the channel then the SSH connection, attaching secondary failures as notes.",
+  "role": "integration",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "SFTPConnection"
+  ],
+  "key_classes": [
+    "SFTPConnection — decorator over SSHConnection exposing paramiko.SFTPClient as .client"
+  ],
+  "key_functions": [
+    "SFTPConnection(ssh_connection) — wrap an SSHConnection (ownership transferred)",
+    "SFTPConnection.connect() -> Self — connect SSH if needed, then open_sftp()",
+    "SFTPConnection.disconnect() -> None — close channel, then SSH, preserving the primary error"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections"
+  ],
+  "dependents": [
+    "mountainash_transport.connections"
+  ],
+  "extension_points": [
+    "Accepts any object with is_connected/connect/disconnect/client.open_sftp(), typed as t.Any"
+  ],
+  "lifecycle_notes": [
+    "Owns its SSHConnection: disconnect() always tears down SSH; reconnect reuses healthy SSH and only replaces the channel.",
+    "Failed startup releases both channel and SSH; cleanup failures become notes on the primary exception.",
+    "__enter__ returns self without connecting; __exit__ disconnects and attaches cleanup failures as notes when the body raised.",
+    "is_connected reflects only the SFTP channel, not SSH health."
+  ],
+  "documentation_hooks": [
+    "SFTP connections: ownership of the SSH layer and reconnect semantics",
+    "Connection lifetime section of README (SFTP exclusive ownership)"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/connections/test_sftp_connection.py",
+    "tests/connections/test_factory.py"
+  ],
+  "risks": [
+    "ssh_connection is typed t.Any, so the type checker cannot catch passing a non-SSH connection.",
+    "Closing the SFTP channel does not close channels opened by other callers on the same SSHClient, but disconnect() closes the whole SSH client, which would break any shared use."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "SFTPConnection in root __all__"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/sftp.py",
+      "detail": "Docstring: owns the inner SSHConnection exclusively; disconnect tears down both"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "create_connection returns SFTPConnection(SSHConnection(...)) for SFTP provider"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Connection lifetime: SFTP exclusively owns its SSH connection; successful channel replacement reuses healthy SSH"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

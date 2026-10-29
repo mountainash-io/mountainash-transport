@@ -1,0 +1,85 @@
+{
+  "id": "mountainash_transport.connections.http",
+  "path": "src/mountainash_transport/connections/http.py",
+  "summary": "HTTPConnection is the leaf connection for HTTP/HTTPS: connect() creates an httpx.Client from the emitted connect kwargs (base_url, headers, auth, timeouts) and disconnect() closes it. Client construction failures are mapped to ConnectionTimeoutError or TransportConnectionError. It is also the fallback leaf for unknown provider types.",
+  "role": "integration",
+  "visibility": "semi-public",
+  "stability": "stable",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "reference-only",
+  "confidence": "high",
+  "public_api": [
+    "HTTPConnection (via mountainash_transport.connections)"
+  ],
+  "key_classes": [
+    "HTTPConnection — ConnectionProtocol leaf owning one httpx.Client"
+  ],
+  "key_functions": [
+    "HTTPConnection(connect_kwargs: dict) — store kwargs; no I/O",
+    "HTTPConnection.connect() -> Self — release any previous client, then build httpx.Client(**kwargs)",
+    "HTTPConnection.disconnect() -> None — idempotent close; raises TransportConnectionError if close fails"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.protocols",
+    "mountainash_transport.connections"
+  ],
+  "dependents": [
+    "mountainash_transport.connections"
+  ],
+  "extension_points": [
+    "Behaviour is driven entirely by connect_kwargs emitted by the profile and auth profile (TargetFamily.HTTP)"
+  ],
+  "lifecycle_notes": [
+    "connect() is re-entrant: it disconnects the previous client before replacing it.",
+    "__enter__ returns self without connecting; __exit__ disconnects and attaches cleanup failures as notes when the body raised.",
+    "Imports httpx at module import; available only with the [http] extra.",
+    "The HTTP storage backend wraps the client in HttpRequestEngine; the engine borrows it and this connection owns it."
+  ],
+  "documentation_hooks": [
+    "Connections reference: HTTPConnection lifecycle and kwargs",
+    "HTTP stack layering: HTTPConnection → HttpRequestEngine → HTTPStorageBackend"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/connections/test_http_connection.py",
+    "tests/connections/test_factory.py",
+    "tests/storage/facade/test_http_defaults.py"
+  ],
+  "risks": [
+    "Because create_connection defaults unknown providers to HTTPConnection, this class can be instantiated with non-HTTP kwargs and fail late at httpx.Client(**kwargs) with a generic TransportConnectionError.",
+    "Constructing httpx.Client performs no network I/O, so the timeout/connect-error branches in connect() are largely defensive."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/connections/http.py",
+      "detail": "connect() builds httpx.Client(**kwargs) and maps exceptions"
+    },
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/connections/__init__.py",
+      "detail": "HTTPConnection in connections __all__ but not in root __all__ => semi-public"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/http/__init__.py",
+      "detail": "Backend reads connection.client to build HttpRequestEngine"
+    },
+    {
+      "kind": "doc",
+      "path": "AGENTS.md",
+      "detail": "Connections table lists HTTPConnection as leaf with httpx.Client"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

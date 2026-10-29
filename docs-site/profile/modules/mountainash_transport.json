@@ -1,0 +1,207 @@
+{
+  "id": "mountainash_transport",
+  "path": "src/mountainash_transport/__init__.py",
+  "summary": "Package root that defines the public import surface of mountainash-transport. It eagerly imports only __version__ and CONST_STORAGE_PROVIDER_TYPE and resolves every other public name lazily through a PEP 562 __getattr__ backed by a _LAZY name-to-(module, attribute) table, caching each resolved value in module globals. A TYPE_CHECKING block mirrors the lazy table so type checkers see static re-exports. It also defines the storage() convenience factory that builds a StorageFacade.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "RangePolicy",
+    "RangeNotSupportedError",
+    "ObjectChangedError",
+    "RangedReadProtocol",
+    "__version__",
+    "StorageFacade",
+    "copy_between",
+    "storage",
+    "get_storage_backend",
+    "detect_provider_from_path",
+    "ConnectionProtocol",
+    "TransportConnectionError",
+    "SSHConnection",
+    "SFTPConnection",
+    "TunnelledConnection",
+    "create_connection",
+    "create_tunnelled_connection",
+    "StorageReadProtocol",
+    "StorageWriteProtocol",
+    "StorageEnumerateProtocol",
+    "StorageDeleteProtocol",
+    "StorageMetadataProtocol",
+    "StorageCopyProtocol",
+    "StorageDirectoryProtocol",
+    "ProfileProtocol",
+    "StorageProfileProtocol",
+    "resolve_storage",
+    "StorageProfilesSettings",
+    "StorageProfileBlock",
+    "AuthBlock",
+    "CONST_STORAGE_PROVIDER_TYPE",
+    "StorageEntry",
+    "EntryType",
+    "EnumerateResult",
+    "StorageError",
+    "UnsupportedOperationError",
+    "StorageConnectionError",
+    "PathNotFoundError",
+    "AuthenticationError",
+    "TransformError",
+    "BackendNotImplementedError",
+    "MissingExtraError",
+    "PermissionDeniedError",
+    "ProfileResolutionError",
+    "ProfileNotFoundError",
+    "StoragePath",
+    "infer_pipeline",
+    "Pipeline",
+    "StreamTransform",
+    "Gzip",
+    "GPG",
+    "HttpRequestEngine",
+    "RequestPolicy",
+    "RetryPolicy",
+    "TimeoutPolicy",
+    "RedirectPolicy",
+    "HttpResponse",
+    "HttpStreamResponse",
+    "SAFE_METHODS",
+    "IDEMPOTENT_METHODS",
+    "HttpTransportError",
+    "HttpResponseError",
+    "HttpClientError",
+    "HttpServerError",
+    "HttpNotFoundError",
+    "HttpAuthenticationError",
+    "HttpForbiddenError",
+    "HttpRateLimitError",
+    "HttpConflictError",
+    "HttpBadGatewayError",
+    "HttpServiceUnavailableError",
+    "HttpGatewayTimeoutError",
+    "HttpConnectionError",
+    "HttpTimeoutError",
+    "HttpRedirectError",
+    "HttpProtocolError",
+    "HttpRequestError",
+    "HttpDecodeError"
+  ],
+  "key_classes": [],
+  "key_functions": [
+    "storage(provider_type=CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile=None, *, auth_profile=None) -> StorageFacade — convenience factory that constructs a StorageFacade for a provider enum",
+    "__getattr__(name) -> Any — PEP 562 lazy resolver: imports the owning submodule from _LAZY on first access, caches the value in globals(), raises AttributeError for unknown names"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.http",
+    "mountainash_transport._core.protocols",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.connections",
+    "mountainash_transport.settings",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.protocols",
+    "mountainash_transport.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "Adding a public name requires three coordinated edits: the _LAZY table entry, the TYPE_CHECKING re-export, and __all__ (tests/test_public_api.py and tests/typing/consumer.py guard the result)",
+    "Because backends register on first registry lookup rather than at package import, callers can register a custom backend (register_storage_backend) before first lookup and it wins (tests/test_lazy_imports.py::test_caller_registration_before_first_lookup_wins)"
+  ],
+  "lifecycle_notes": [
+    "import mountainash_transport is light: only __version__, _core.constants and the docstring-only storage subpackage load eagerly; heavy SDKs (boto3, botocore, paramiko, gnupg, s3fs, minio) must not be imported (tests/test_lazy_imports.py)",
+    "Names backed by the [http] stack (settings, connections, HTTP engine, StoragePath/infer_pipeline, profile types) import on first attribute access; on a base install that access raises MissingExtraError naming the [http] extra rather than an ImportError at package import",
+    "The storage subpackage is imported eagerly as _storage_pkg before the storage() function is defined so the factory, not the subpackage, is the final 'storage' binding even after 'import mountainash_transport.storage.facade' (tests/test_lazy_imports.py::test_storage_factory_survives_submodule_import_order)",
+    "__version__ is re-exported from __version__.py (single constant)",
+    "LocationPolicy and LocationNotAllowed are not root exports; they are imported from mountainash_transport.location so stdlib-only consumers avoid the lazy surface"
+  ],
+  "documentation_hooks": [
+    "Public API reference index grouped by area: facade and factory, read modes (RangePolicy, RangedReadProtocol), storage protocols, connections, settings/profiles, data classes, exceptions, transforms, path helpers, HTTP engine and HTTP error hierarchy",
+    "Installation and extras page: which root names work on a base install versus needing [http] or a backend extra",
+    "Maintainer note: how lazy exports work and the checklist for adding a public name",
+    "Quick start (README) using StorageFacade + Gzip from the root"
+  ],
+  "examples": [
+    "examples/local_files/example.py — imports StorageFacade and EntryType from the root for write/read/metadata/delete",
+    "examples/gzip_pipeline/example.py — root-level transform imports (Pipeline/Gzip) with the facade",
+    "examples/path_dispatch/example.py — StoragePath and detect_provider_from_path from the root",
+    "examples/named_profiles/example.py — resolve_storage and ProfileNotFoundError from the root",
+    "examples/http_engine/example.py — HttpRequestEngine and typed HTTP errors from the root",
+    "examples/capability_checks/example.py — UnsupportedOperationError and protocol capability checks from the root"
+  ],
+  "tests": [
+    "tests/test_public_api.py",
+    "tests/test_lazy_imports.py",
+    "tests/test_slim_install.py",
+    "tests/test_installed_contract.py",
+    "tests/typing/consumer.py",
+    "tests/typing/base_smoke.py",
+    "tests/typing/runtime_smoke.py"
+  ],
+  "risks": [
+    "The _LAZY table, TYPE_CHECKING block and __all__ are maintained by hand in three places; a name added to one but not the others either fails at runtime (AttributeError) or is invisible to type checkers",
+    "storage() accepts no policy= argument, unlike StorageFacade(...)/from_path/for_local, so callers using the factory cannot apply a LocationPolicy",
+    "storage() parameters profile/auth_profile are unannotated while the rest of the package claims full typing (docs/typing.md)",
+    "Errors from a lazily imported submodule surface on first attribute access, not at 'import mountainash_transport', which can move failures far from the import site"
+  ],
+  "open_questions": [
+    "Is storage() intended to remain a first-class public entry point (it is in __all__ and tested) given README and examples use StorageFacade.from_path/for_local exclusively? Should it gain policy= and annotations?",
+    "Should LocationPolicy/LocationNotAllowed be exported from the root (lazily) for discoverability, or is the separate stdlib-only import path a deliberate contract?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "__all__ lists the public surface; _LAZY maps each lazy name to its owning submodule; __getattr__ implements PEP 562 resolution"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_lazy_imports.py",
+      "detail": "asserts top-level import pulls in no heavy SDKs, lazy exports are identical objects, and storage() survives submodule import order"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_public_api.py",
+      "detail": "asserts root importability of facade, protocols, dataclasses, registry, exceptions, transforms and HTTP names"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_slim_install.py",
+      "detail": "base-install behaviour: local facade round-trip and remote surfaces naming the [http] extra"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Quick start and installation sections document root imports and the base vs [http] split"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "public typing contracts for root exports"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "recent commits e5923e6 (lazy exports), 3685652 (static re-exports), 8bf57eb (MissingExtraError) show active churn -> evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}
