@@ -29,24 +29,21 @@ nav:
   - Home: index.md
   - Chapters:
       - List of Chapters: chapters/index.md
-      - Concepts:
-          - "1. What transport does": chapters/01-what-transport-does/index.md
-          - "2. Transport in the Mountainash ecosystem": chapters/02-mountainash-ecosystem/index.md
-      - Using the package:
-          - "3. Installation and the package surface": chapters/03-installation/index.md
-          - "4. Paths and scheme dispatch": chapters/04-paths-and-schemes/index.md
-          - "5. Storage profiles and credentials": chapters/05-storage-profiles/index.md
-          - "6. Opening storage with StorageFacade": chapters/06-storage-facade/index.md
-          - "7. File operations": chapters/07-file-operations/index.md
-          - "8. Location policy": chapters/08-location-policy/index.md
-          - "9. Read access modes": chapters/09-read-access-modes/index.md
-          - "10. Stream transforms and cross-backend copy": chapters/10-stream-transforms/index.md
-          - "11. Connections, SSH and tunnels": chapters/11-connections/index.md
-          - "12. The HTTP request engine": chapters/12-http-engine/index.md
-      - Internals:
-          - "13. Architecture: protocols and dispatch": chapters/13-architecture/index.md
-          - "14. Backends": chapters/14-backends/index.md
-          - "15. Maintaining and extending transport": chapters/15-maintaining/index.md
+      - "1. What transport does": chapters/01-what-transport-does/index.md
+      - "2. Transport in the Mountainash ecosystem": chapters/02-mountainash-ecosystem/index.md
+      - "3. Installation and the package surface": chapters/03-installation/index.md
+      - "4. Paths and scheme dispatch": chapters/04-paths-and-schemes/index.md
+      - "5. Storage profiles and credentials": chapters/05-storage-profiles/index.md
+      - "6. Opening storage with StorageFacade": chapters/06-storage-facade/index.md
+      - "7. File operations": chapters/07-file-operations/index.md
+      - "8. Location policy": chapters/08-location-policy/index.md
+      - "9. Read access modes": chapters/09-read-access-modes/index.md
+      - "10. Stream transforms and cross-backend copy": chapters/10-stream-transforms/index.md
+      - "11. Connections, SSH and tunnels": chapters/11-connections/index.md
+      - "12. The HTTP request engine": chapters/12-http-engine/index.md
+      - "13. Architecture: protocols and dispatch": chapters/13-architecture/index.md
+      - "14. Backends": chapters/14-backends/index.md
+      - "15. Maintaining and extending transport": chapters/15-maintaining/index.md
   - Reference:
       - Support matrix and known limits: reference/support-matrix.md
       - References: reference/references.md
