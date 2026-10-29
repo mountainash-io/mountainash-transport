@@ -47,6 +47,8 @@ nav:
           - "13. Architecture: protocols and dispatch": chapters/13-architecture/index.md
           - "14. Backends": chapters/14-backends/index.md
           - "15. Maintaining and extending transport": chapters/15-maintaining/index.md
+  - Reference:
+      - Support matrix and known limits: reference/support-matrix.md
   - License: license.md
   - Contact: contact.md
   - About: about.md
@@ -105,7 +107,11 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
