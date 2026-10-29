@@ -70,7 +70,10 @@ targeted checks with that flag enabled; they also accept extra mypy flags.
 `qualify` builds the wheel and sdist, rebuilds a wheel from the sdist, and checks
 each wheel from its own fresh environment outside the checkout: marker presence,
 public exports, positive `assert_type` contracts, every expected-invalid call
-(each must fail with its exact error code), and an installed runtime smoke.
+(each must fail with its exact error code), and an installed runtime smoke. The
+typed cells install `wheel[http]` with the sibling wheels; a separate base cell
+installs the wheel alone and runs `tests/typing/base_smoke.py`. On a base
+install, consumers see `AuthProfile`/`ClearableSecretStore` annotations as `Any`.
 Pass `--settings-source` / `--auth-client-source` to use other checkouts.
 `--output` must be a new directory outside all source checkouts; the command
 writes logs, artifacts and a SHA-256 `receipt.json` there. CI runs both commands

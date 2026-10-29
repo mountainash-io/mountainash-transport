@@ -84,7 +84,7 @@ Package-local map. The *why* behind each layer lives in the central principles.
 ### Storage
 
 - **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Directory, plus `ConnectionProtocol` in `_core`) implemented à la carte.
-- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all but enumerate), `s3` (flavor-dispatched; all but directory), `sftp` (read/write/delete/metadata/directory). Other profiled providers have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`.
+- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata), `local` (all but enumerate), `s3` (flavor-dispatched; all but directory), `sftp` (read/write/delete/metadata/directory). Other profiled providers have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`. Every backend package must import on a base install: SDKs and `[http]`-stack modules are imported inside functions (`tests/test_slim_install.py` blocks every non-base import).
 - **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `cross_backend` copy.
 - **Registry** (`storage/registry/`): `get_storage_backend`, `get_registered_backends`, `detect_provider_from_path`.
 - **Path helpers** (`storage/path_helpers/`): `StoragePath`, suffixes, S3 paths. The scheme registry (`SchemeSpec`, `SCHEMES`) lives in `_schemes.py`; `location.py` owns confinement.
@@ -148,8 +148,8 @@ from `__spec__`. Public typing changes need a matching `tests/typing/consumer.py
 
 Declared in `pyproject.toml` — treat it as the source of truth for versions.
 
-- Core: `mountainash-settings`, `mountainash-auth-client`, `pydantic`, `universal_pathlib`, `httpx`.
-- Extras: `[s3]`, `[gcs]`, `[azure]`, `[sftp]`, `[encryption]`, `[oauth1]`, `[all]`.
+- Core: `typing-extensions` only — local files and `LocationPolicy`.
+- Extras: `[http]` (settings, auth-client, pydantic, universal_pathlib, httpx, fsspec — remote storage, profiles, connections); `[s3]`, `[gcs]`, `[azure]`, `[sftp]`, `[oauth1]` (each includes `[http]`); `[encryption]`; `[all]`. Missing extras raise `MissingExtraError` (`_core/extras.py`).
 
 ## Code Style
 

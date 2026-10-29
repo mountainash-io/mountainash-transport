@@ -41,8 +41,10 @@ recognised schemes but no backend yet: constructing a facade for them raises
 
 ## Installation
 
-Requires **Python 3.12+**, **Pydantic 2.10+**, `mountainash-settings` 0.1 and
-`mountainash-auth-client` 0.1.
+Requires **Python 3.12+**. The base install has no runtime dependency beyond
+`typing-extensions` and covers local files and `LocationPolicy`. Remote storage
+and storage profiles need `[http]` (included by every backend extra); without it
+they raise `MissingExtraError` naming the extra.
 
 This README describes the **0.1.0 development baseline**. Until the sibling
 packages are published, install development checkouts side by side:
@@ -55,11 +57,12 @@ python -m pip install -e ".[s3]"
 
 | Extra | Adds |
 |---|---|
-| `[s3]` | boto3, s3fs, minio |
-| `[sftp]` | paramiko, smart-open[ssh] |
+| `[http]` | mountainash-settings, mountainash-auth-client, pydantic, universal_pathlib, httpx, fsspec — HTTP/HTTPS, storage profiles, connections |
+| `[s3]` | `[http]` + boto3, s3fs, minio |
+| `[sftp]` | `[http]` + paramiko, smart-open[ssh] |
 | `[encryption]` | python-gnupg (for `GPG`) |
-| `[oauth1]` | authlib |
-| `[gcs]`, `[azure]` | SDKs for the pending GCS and Azure backends |
+| `[oauth1]` | `[http]` + authlib |
+| `[gcs]`, `[azure]` | `[http]` + SDKs for the pending GCS and Azure backends |
 | `[all]` | all of the above |
 
 ## Quick start
@@ -349,7 +352,8 @@ facade may touch.
 - **`root`** confines local paths: symlinks and `..` are resolved and anything
   outside the root raises `LocationNotAllowed`. A local profile's `ROOT_PATH`
   now confines too (it becomes the root when the policy sets none).
-  `MOUNT_SPEC` has been removed.
+  `MOUNT_SPEC` has been removed. `LocalStorageProfile` is a settings profile
+  and needs `[http]`; on a base install use `LocationPolicy(root=...)`.
 - **`allowed_remote`** maps a scheme to the hosts (or S3 buckets) it may reach,
   e.g. `{"http": frozenset({"api.example.com"})}`. HTTP is refused unless listed;
   every request is checked, including redirects and auth-flow follow-ups,
