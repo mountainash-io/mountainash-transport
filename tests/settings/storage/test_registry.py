@@ -1,0 +1,171 @@
+"""Tests for STORAGE_REGISTRY wrapper and helpers.
+
+This is the **settings** registry (spec-driven, wraps
+``mountainash_settings.profiles.Registry``). It is distinct from
+``tests/test_registry.py`` which covers the older per-path
+``storage_backends`` dispatch table.
+"""
+
+from __future__ import annotations
+
+import pytest
+from mountainash_settings.profiles import Profile
+
+# Trigger provider registration so STORAGE_REGISTRY is populated.
+import mountainash_transport.settings.storage.profiles  # noqa: F401
+
+from mountainash_transport.settings.storage.profiles import (
+    AZURE_STORAGE_SPEC,
+    AzureStorageProfile,
+    FTP_SPEC,
+    FTPStorageProfile,
+    GCS_SPEC,
+    GCSStorageProfile,
+    GITHUB_REPO_SPEC,
+    GitHubRepoStorageProfile,
+    HTTP_SPEC,
+    HTTPStorageProfile,
+    LOCAL_SPEC,
+    LocalStorageProfile,
+    S3_SPEC,
+    S3StorageProfile,
+    SFTP_SPEC,
+    SFTPStorageProfile,
+    SMB_SPEC,
+    SMBStorageProfile,
+)
+from mountainash_transport.settings.storage.registry import (
+    STORAGE_REGISTRY,
+    get_spec,
+    get_settings_class,
+    register,
+)
+
+from mountainash_transport.settings.profile_spec import (
+    ParameterSpec,
+    StorageProfileSpec,
+)
+from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_auth_client import CONST_AUTH_PROFILES
+
+
+
+EXPECTED_PROVIDERS = {
+    "s3",
+    "gcs",
+    "azure_storage",
+    "sftp",
+    "ftp",
+    "smb",
+    "local",
+    "github_repo",
+    "http",
+}
+
+
+@pytest.mark.unit
+class TestStorageRegistry:
+    def test_registry_name(self):
+        """The registry exposes the expected domain name."""
+        assert STORAGE_REGISTRY.name == "storage"
+
+    def test_all_providers_registered(self):
+        """All expected specs register themselves at import time."""
+        registered = set(STORAGE_REGISTRY.specs.keys())
+        missing = EXPECTED_PROVIDERS - registered
+        assert not missing, f"missing from STORAGE_REGISTRY: {missing}"
+
+    def test_no_unexpected_providers(self):
+        """Only the expected providers are registered (no stragglers)."""
+        registered = set(STORAGE_REGISTRY.specs.keys())
+        extras = registered - EXPECTED_PROVIDERS
+        assert not extras, f"unexpected extras in STORAGE_REGISTRY: {extras}"
+
+    @pytest.mark.parametrize(
+        "name,expected_spec",
+        [
+            ("s3", S3_SPEC),
+            ("gcs", GCS_SPEC),
+            ("azure_storage", AZURE_STORAGE_SPEC),
+            ("sftp", SFTP_SPEC),
+            ("ftp", FTP_SPEC),
+            ("smb", SMB_SPEC),
+            ("local", LOCAL_SPEC),
+            ("github_repo", GITHUB_REPO_SPEC),
+        ],
+    )
+    def test_get_spec_returns_canonical_spec(self, name, expected_spec):
+        """get_spec() returns the exact module-level spec object."""
+        assert get_spec(name) is expected_spec
+
+    @pytest.mark.parametrize(
+        "name,expected_class",
+        [
+            ("s3", S3StorageProfile),
+            ("gcs", GCSStorageProfile),
+            ("azure_storage", AzureStorageProfile),
+            ("sftp", SFTPStorageProfile),
+            ("ftp", FTPStorageProfile),
+            ("smb", SMBStorageProfile),
+            ("local", LocalStorageProfile),
+            ("github_repo", GitHubRepoStorageProfile),
+        ],
+    )
+    def test_get_settings_class_returns_registered_class(
+        self, name, expected_class
+    ):
+        """get_settings_class() returns the class registered via @register."""
+        assert get_settings_class(name) is expected_class
+
+    def test_nonexistent_provider_raises_key_error(self):
+        """Looking up an unknown provider name raises ``KeyError``."""
+        with pytest.raises(KeyError):
+            get_spec("does_not_exist")
+
+    def test_register_is_bound_to_storage_registry(self):
+        """The exported ``register`` decorator targets STORAGE_REGISTRY."""
+
+        dummy_spec = StorageProfileSpec(
+            name="_test_registry_binding",
+            provider_type="_test",
+            parameters=[
+                ParameterSpec(name="FOO", type=str, tier="core", default=None)
+            ],
+            default_auth=CONST_AUTH_PROFILES.NONE,
+            supported_auth=frozenset({CONST_AUTH_PROFILES.NONE}),
+        )
+        snapshot = STORAGE_REGISTRY._snapshot_for_tests()
+        try:
+            @register
+            class _DummyStorageProfile(Profile):
+                __spec__ = dummy_spec
+
+                def to_handler_kwargs(self) -> dict:
+                    return {"foo": getattr(self, "FOO")}
+
+                def get_connection_url(self) -> str:
+                    return "test://"
+
+            assert isinstance(_DummyStorageProfile(), StorageProfileProtocol)
+            assert "_test_registry_binding" in STORAGE_REGISTRY.specs
+            assert get_settings_class("_test_registry_binding") is _DummyStorageProfile
+        finally:
+            STORAGE_REGISTRY._reset_for_tests(*snapshot)
+
+    def test_registry_supports_contains(self):
+        """The wrapper supports ``in`` membership checks by name."""
+        assert "s3" in STORAGE_REGISTRY
+        assert "definitely_not_here" not in STORAGE_REGISTRY
+
+
+def test_registry_import_alone_is_populated():
+    """Importing only the registry module yields every built-in profile spec."""
+    import subprocess
+    import sys
+
+    code = (
+        "from mountainash_transport.settings.storage.registry import STORAGE_REGISTRY, get_spec\n"
+        "assert {'s3', 'local', 'http', 'sftp'} <= set(STORAGE_REGISTRY.specs), sorted(STORAGE_REGISTRY.specs)\n"
+        "assert get_spec('local') is STORAGE_REGISTRY.specs['local']\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)

@@ -1,0 +1,96 @@
+{
+  "id": "mountainash_transport.storage.facade.cross_backend",
+  "path": "src/mountainash_transport/storage/facade/cross_backend.py",
+  "summary": "copy_between copies one file between two open StorageFacade instances, optionally applying a source-side and destination-side transform pipeline. It uses the backend's native StorageCopyProtocol copy only when no pipelines are given, both backends are the same type, location policies are equal, both facades share the identical storage profile object, and the source supports copy; otherwise it streams source read_stream into destination write_stream and closes the source stream.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [
+    "copy_between"
+  ],
+  "key_classes": [],
+  "key_functions": [
+    "copy_between(source_path, destination_path, source_facade, destination_facade, *, source_pipeline=None, destination_pipeline=None) -> None — native same-backend copy or sequential stream-through copy with optional transforms"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.protocols"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.facade"
+  ],
+  "extension_points": [
+    "Native fast path is driven by StorageCopyProtocol: a backend that implements copy() gets server-side/same-filesystem copies automatically when the fast-path conditions hold."
+  ],
+  "lifecycle_notes": [
+    "Borrows both facades: requires both open (_ensure_open) and never closes them.",
+    "Stream path always uses sequential access; the source stream is closed in a finally block.",
+    "Policy checks run through the facades: source.copy checks both paths against the source policy on the native path; read_stream/write_stream check each side on the stream path."
+  ],
+  "documentation_hooks": [
+    "Cross-backend copy guide: when a native copy is used versus stream-through, and how pipelines force streaming.",
+    "Backend matrix tie-in: Copy column (local, s3) determines native fast-path eligibility; SFTP and HTTP always stream.",
+    "Re-encoding during transfer (e.g. gzip on destination)."
+  ],
+  "examples": [
+    "examples/cross_backend_copy/example.py — local-to-local copy that gzips on the destination side via destination_pipeline"
+  ],
+  "tests": [
+    "tests/storage/facade/test_facade.py",
+    "tests/storage/facade/test_facade_location_policy.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/storage/facade/test_http_defaults.py",
+    "tests/storage/cross_backend/test_read_write.py",
+    "tests/_core/transforms/test_facade_integration.py",
+    "tests/test_public_api.py",
+    "tests/typing/consumer.py"
+  ],
+  "risks": [
+    "Fast-path eligibility compares storage profiles by identity (`is`), so two facades built from equal but distinct profile objects (e.g. same bucket) fall back to a full download/upload.",
+    "The function reads private StorageFacade attributes (_backend, _policy, _storage_profile, _ensure_open); refactors of facade.py can break it silently outside type checking.",
+    "Stream path to an SFTP destination buffers the whole payload in memory because SFTPWriteMixin.write_from_stream reads the stream fully.",
+    "Failures mid-transfer can leave a partial destination object; no cleanup or atomic rename is attempted."
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/facade/cross_backend.py",
+      "detail": "Fast-path condition: both pipelines None, isinstance(source._backend, type(dest._backend)), equal _policy, `source._storage_profile is dest._storage_profile`, source.supports(StorageCopyProtocol)."
+    },
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "copy_between in root __all__."
+    },
+    {
+      "kind": "example",
+      "path": "examples/cross_backend_copy/example.py",
+      "detail": "copy_between(..., destination_pipeline=Gzip())."
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "copy_between() borrows both facades and requires both to be open; it never closes them."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/facade/cross_backend.py",
+      "detail": "Two changes since 2026-08 (location policy, facade ownership); stable."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

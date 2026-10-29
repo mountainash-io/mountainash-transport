@@ -1,0 +1,113 @@
+"""Tests for StorageProfileProtocol — profile protocol contract.
+
+Profile mechanism tests live in mountainash-settings. Here we
+exercise that concrete profile classes satisfy the
+``StorageProfileProtocol`` contract (``to_handler_kwargs`` +
+``get_connection_url``) and that the spec metadata is accessible.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from mountainash_auth_client import NoAuthProfile
+
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+from mountainash_transport.settings.storage.profiles import (
+    LocalStorageProfile,
+    LOCAL_SPEC,
+    S3StorageProfile,
+    S3_SPEC,
+)
+
+
+@pytest.mark.unit
+class TestStorageProfile:
+    def test_local_satisfies_protocol(self):
+        """LocalStorageProfile is a runtime instance of StorageProfileProtocol."""
+        p = LocalStorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            ROOT_PATH="/tmp/files",
+            auth=NoAuthProfile(),
+        )
+        assert isinstance(p, StorageProfileProtocol)
+
+    def test_to_handler_kwargs_returns_dict(self):
+        """to_handler_kwargs returns a dict."""
+        p = LocalStorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            ROOT_PATH="/tmp/files",
+            auth=NoAuthProfile(),
+        )
+        kwargs = p.to_handler_kwargs()
+        assert isinstance(kwargs, dict)
+
+    def test_get_connection_url_returns_str(self):
+        """get_connection_url returns a string."""
+        p = LocalStorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            ROOT_PATH="/tmp/files",
+            auth=NoAuthProfile(),
+        )
+        url = p.get_connection_url()
+        assert isinstance(url, str)
+
+    def test_spec_name_accessible(self):
+        """The spec's typed metadata is reachable off the class."""
+        assert LOCAL_SPEC.name == "local"
+        assert LOCAL_SPEC.read_only is False
+        assert LOCAL_SPEC.supports_streaming is True
+
+    def test_s3_satisfies_protocol(self):
+        """S3StorageProfile is a runtime instance of StorageProfileProtocol."""
+        p = S3StorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.S3,
+            FLAVOR="aws",
+            REGION="us-east-1",
+            auth=NoAuthProfile(),
+        )
+        assert isinstance(p, StorageProfileProtocol)
+
+
+@pytest.mark.unit
+class TestProfileProtocolHierarchy:
+    def test_minimal_profile_satisfies_profile_protocol(self):
+        """A class with only to_handler_kwargs() satisfies ProfileProtocol."""
+        from mountainash_transport.settings.profile_protocol import ProfileProtocol
+
+        class MinimalProfile:
+            def to_handler_kwargs(self) -> dict:
+                return {"host": "example.com"}
+
+        assert isinstance(MinimalProfile(), ProfileProtocol)
+
+    def test_minimal_profile_does_not_satisfy_storage_protocol(self):
+        """A ProfileProtocol-only class does NOT satisfy StorageProfileProtocol."""
+        from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
+
+        class MinimalProfile:
+            def to_handler_kwargs(self) -> dict:
+                return {"host": "example.com"}
+
+        assert not isinstance(MinimalProfile(), StorageProfileProtocol)
+
+    def test_storage_profile_satisfies_both_protocols(self):
+        """StorageProfileProtocol implementations satisfy ProfileProtocol too."""
+        from mountainash_auth_client import NoAuthProfile
+        from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+        from mountainash_transport.settings.storage.profiles import (
+            LocalStorageProfile,
+        )
+        from mountainash_transport.settings.profile_protocol import (
+            ProfileProtocol,
+            StorageProfileProtocol,
+        )
+
+        p = LocalStorageProfile(
+            PROVIDER_TYPE=CONST_STORAGE_PROVIDER_TYPE.LOCAL,
+            ROOT_PATH="/tmp/files",
+            auth=NoAuthProfile(),
+        )
+        assert isinstance(p, ProfileProtocol)
+        assert isinstance(p, StorageProfileProtocol)

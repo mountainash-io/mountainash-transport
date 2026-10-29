@@ -15,7 +15,7 @@ This course is aimed at Python developers who work with files across more than o
 
 Readers should be comfortable with:
 
-- Python 3.10+, including type hints, dataclasses, and protocols
+- Python 3.12+, including type hints, dataclasses, and protocols
 - Basic file I/O in Python (`open`, `read`, `write`)
 - The conceptual shape of S3 (buckets, keys, URI schemes) — deep AWS experience is not required
 - Environment variables and typical configuration patterns

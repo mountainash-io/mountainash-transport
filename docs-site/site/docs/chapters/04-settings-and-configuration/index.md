@@ -220,7 +220,7 @@ The `@register` decorator registers the class in the `STORAGE_REGISTRY`, enablin
 
 Each storage provider has a dedicated settings class that specializes the descriptor and adapter for its SDK's requirements. The library currently provides settings for all registered providers.
 
-The **`LocalSettings`** class is the simplest, declaring only three parameters (`ROOT_PATH`, `CREATE_PATH`, `MOUNT_SPEC`) with `NoAuth` as its only auth mode. Its adapter emits `{"root_path": ..., "create_path": ...}` and optionally includes `mount_spec` for NFS/CIFS pre-mounted filesystems.
+The **`LocalSettings`** class is the simplest, declaring only two parameters (`ROOT_PATH`, `CREATE_PATH`) with `NoAuth` as its only auth mode. Its adapter emits `{"root_path": ..., "create_path": ...}`. `ROOT_PATH` confines the facade to that directory.
 
 The **`S3Settings`** class is the most complex, handling five S3-compatible flavors through a single `FLAVOR` discriminator field. The adapter resolves flavor-specific endpoint URLs (e.g., `https://{ACCOUNT_ID}.r2.cloudflarestorage.com` for R2), sets addressing style constraints (S3 Express requires virtual addressing), and builds botocore `Config` objects with the appropriate S3 settings.
 
@@ -228,7 +228,7 @@ The **`HTTPSettings`** class configures httpx client parameters including connec
 
 | Provider | Auth Modes | Key Parameters | SDK |
 |---|---|---|---|
-| `LocalSettings` | NoAuth | ROOT_PATH, CREATE_PATH, MOUNT_SPEC | stdlib |
+| `LocalSettings` | NoAuth | ROOT_PATH, CREATE_PATH | stdlib |
 | `S3Settings` | IAM, Token, NoAuth | FLAVOR, REGION, BUCKET, ENDPOINT_URL | boto3 |
 | `HTTPSettings` | NoAuth, Token, Password | TIMEOUT_*, FOLLOW_REDIRECTS, HEADERS | httpx |
 

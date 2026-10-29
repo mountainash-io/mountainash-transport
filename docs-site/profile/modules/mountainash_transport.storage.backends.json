@@ -1,0 +1,94 @@
+{
+  "id": "mountainash_transport.storage.backends",
+  "path": "src/mountainash_transport/storage/backends/__init__.py",
+  "summary": "Package initialiser whose only job is to import the local, s3, http and sftp backend subpackages so their @register_storage_backend decorators populate the backend registry. The registry's ensure_backends_loaded() imports this package lazily before any lookup or registration. Verified support matrix at 8a979e2 (isinstance against runtime_checkable protocols): local = Read, Write, Enumerate, Delete, Metadata, Copy, Directory (no RangedRead; facade uses native seekable handle); s3 family = Read, Write, Enumerate, Delete, Metadata, Copy, RangedRead (no Directory); sftp = Read, Write, Enumerate, Delete, Metadata, Directory, RangedRead (no Copy); http = Read, Write, Metadata, RangedRead (no Enumerate, Delete, Copy, Directory).",
+  "role": "orchestration",
+  "visibility": "internal",
+  "stability": "stable",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "useful",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [],
+  "key_functions": [],
+  "dependencies": [
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "New built-in backend: add a subpackage under storage/backends/, decorate the composed class with @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.X), and add an import line here.",
+    "Third-party backends do not need to edit this file: register_storage_backend calls ensure_backends_loaded() first, so a caller registration made after import overrides the built-in one."
+  ],
+  "lifecycle_notes": [
+    "Imported lazily by storage/registry/registry.py ensure_backends_loaded() (cached by sys.modules), not by the package root.",
+    "Every backend subpackage must import on a base install (typing-extensions only); SDK and [http]-stack imports are deferred into functions and enforced by tests/test_slim_install.py."
+  ],
+  "documentation_hooks": [
+    "Backend support matrix page (Read/Write/Enumerate/Delete/Metadata/Copy/Directory/RangedRead per provider) generated from or checked against get_registered_backends().",
+    "Contributor guide: adding a storage backend (registration, import-on-base-install rule, conformance tests to extend).",
+    "Architecture: registry population order and override semantics."
+  ],
+  "examples": [
+    "examples/capability_checks/example.py — compares capabilities of the registered local and HTTP backends through StorageFacade.supports()"
+  ],
+  "tests": [
+    "tests/storage/protocols/test_backend_conformance.py",
+    "tests/storage/protocols/test_registry_completeness.py",
+    "tests/storage/registry/test_registry.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "AGENTS.md storage section is stale: it says local supports 'all but enumerate' and sftp 'read/write/delete/metadata/directory', but code, README.md matrix and tests/storage/protocols/test_backend_conformance.py show local and sftp both implement StorageEnumerateProtocol.",
+    "`import mountainash_transport.storage.backends as b` raises ImportError ('cannot import name backends from storage') because the package root rebinds the name `storage` to the storage() factory function; `from mountainash_transport.storage.backends import X` and plain `import ...` work (verified at 8a979e2)."
+  ],
+  "open_questions": [
+    "Should the support matrix gain a RangedRead column? README.md 'Supported storage' omits RangedReadProtocol although http, s3 and sftp implement it and docs/read-access-modes.md depends on it."
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/__init__.py",
+      "detail": "Only content is four `from . import <backend>` lines with noqa F401 for registration side effects."
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/registry/registry.py",
+      "detail": "ensure_backends_loaded() imports mountainash_transport.storage.backends; register_storage_backend calls it before inserting into _backend_registry."
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "EXPECTED_PROTOCOLS lists StorageEnumerateProtocol for LOCAL and excludes only StorageCopyProtocol for SFTP, contradicting AGENTS.md."
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Supported storage table: Local all columns; S3 family no Directories; SFTP no Copy; HTTP Read/Write/Metadata only; no RangedRead column."
+    },
+    {
+      "kind": "doc",
+      "path": "AGENTS.md",
+      "detail": "Storage > Backends bullet lists local as 'all but enumerate' and sftp without enumerate (stale)."
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/backends/__init__.py",
+      "detail": "Last changed 2026-06-10 (ssh -> sftp rename); stable."
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

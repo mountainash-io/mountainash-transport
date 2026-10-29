@@ -121,15 +121,15 @@ The **StorageWriteProtocol** mirrors the read protocol for output operations. It
 ```python
 @runtime_checkable
 class StorageWriteProtocol(Protocol):
-    def write_from_bytes(self, path: str, data: bytes) -> None: ...
-    def write_from_stream(self, path: str, stream: BinaryIO) -> None: ...
+    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None: ...
+    def write_from_stream(self, path: str, stream: BinaryIO, *, create_parents: bool = True) -> None: ...
 ```
 
 The `write_from_bytes` method writes a complete `bytes` payload to the specified path. For local files, this opens the file in binary-write mode and writes the data. For S3, it calls `put_object` with the bytes as the request body.
 
 The `write_from_stream` method accepts a `BinaryIO` and writes its contents to storage. The local backend reads the stream in 64 KiB chunks to avoid loading the entire payload into memory. The S3 backend uses boto3's `upload_fileobj`, which automatically handles multipart uploads for large streams.
 
-Both write methods in the local backend create parent directories automatically using `os.makedirs(exist_ok=True)`. This convention means callers never need to manually ensure directory structures exist before writing -- a significant ergonomic improvement over raw filesystem operations.
+Local and SFTP create missing parent directories by default. With `create_parents=False`, both open the destination without creating or pre-checking parents; a missing parent raises `PathNotFoundError`. S3-family and HTTP backends accept either value as a no-op. Custom backends must accept this keyword on both methods.
 
 <!-- concept:14 -->
 ## StorageListProtocol

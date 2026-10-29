@@ -16,9 +16,15 @@ This document outlines the process for contributing to the project and provides 
 ## Getting Started
 
 1. Fork the repository on GitHub.
-2. Clone your fork locally: `git clone https://github.com/your-username/mountainash-utils-files.git`
-3. Add the original repository as a remote: `git remote add upstream https://github.com/mountainash-io/mountainash-utils-files.git`
+2. Clone your fork locally: `git clone https://github.com/your-username/mountainash-transport.git`
+3. Add the original repository as a remote: `git remote add upstream https://github.com/mountainash-io/mountainash-transport.git`
 4. Create a new branch for your contribution (see [Branching Strategy](#branching-strategy)).
+
+Use Hatch for development environments; dependencies are declared in
+`pyproject.toml` and `hatch.toml`. `requirements-hatch.txt` selects sibling
+source checkouts during installation. The obsolete Rye-generated
+`requirements.lock` and `requirements-dev.lock` files have been removed;
+do not regenerate them.
 
 ## Branching Strategy
 

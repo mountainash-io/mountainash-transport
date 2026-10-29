@@ -1,0 +1,118 @@
+{
+  "id": "mountainash_transport.location",
+  "path": "src/mountainash_transport/location.py",
+  "summary": "Implements storage-location confinement using only the standard library. LocationPolicy (frozen) holds a local root, a per-scheme allow-list of remote hosts or buckets, and an allow_unconfined opt-out; LocationNotAllowed is a StorageError whose message redacts URL userinfo. Module functions classify a location's scheme, decode file:// URIs, confine local paths to the root after resolving symlinks and '..', optionally verify a directory tree stays inside the root, and check remote hosts against the allow-list or a profile's own host.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture",
+    "broader-hype"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "LocationPolicy",
+    "LocationNotAllowed"
+  ],
+  "key_classes": [
+    "LocationPolicy(root=None, allowed_remote={}, allow_unconfined=False) — frozen confinement policy passed to StorageFacade/from_path/for_local",
+    "LocationNotAllowed(location, reason) — StorageError with redacted .location and .reason"
+  ],
+  "key_functions": [
+    "LocationPolicy.with_declared_root(declared) -> LocationPolicy — use a profile-declared root (e.g. LocalStorageProfile.ROOT_PATH) only when the policy sets none",
+    "identify_scheme(location) -> str | None — canonical scheme ('' for local, Windows drive/UNC paths local), None if unknown",
+    "local_path(location) -> str — decode a file:// URI to an absolute path; reject non-local hosts, query or fragment",
+    "url_host(location) -> str — IDNA-normalised lowercase host; LocationNotAllowed if unparsable",
+    "require_known_scheme(location, policy) -> str | None — identify scheme; with an active policy, unknown schemes and parse errors raise a sanitised LocationNotAllowed",
+    "confine_local(location, policy, *, tree=False) -> str — resolve the path under policy.root; raise if outside; tree=True also checks every directory entry",
+    "allow_remote(scheme, host, policy, *, profile_host=None) -> None — permit if host equals profile_host or is in allowed_remote[scheme]; otherwise raise"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._schemes"
+  ],
+  "dependents": [
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.path_helpers",
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "Backends call allow_remote/url_host for their own host checks (SFTP helpers do) so per-request enforcement, including redirects, is consistent"
+  ],
+  "lifecycle_notes": [
+    "Stdlib-only import is a tested invariant (tests/test_lazy_imports.py::test_location_module_import_is_stdlib_only); not re-exported from the package root",
+    "With policy=None or allow_unconfined=True every check is a no-op apart from scheme identification and file:// decoding",
+    "Facade construction composes the caller policy with a local profile's declared ROOT_PATH via with_declared_root",
+    "Paths that do not yet exist are resolved component-wise so writes under the root are permitted while '..' in a missing remainder is rejected"
+  ],
+  "documentation_hooks": [
+    "README 'Location policy' section and a dedicated security/confinement guide: root confinement, allow-lists, profile permission, unconfined opt-out",
+    "Threat-model limits: host-name checks only (no DNS-rebinding defence); managed-OAuth token endpoints not covered",
+    "Error redaction guarantees for LocationNotAllowed",
+    "Proof point for broader positioning: deny-by-default remote access with per-request (including redirect) checks on a stdlib-only module"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/test_location.py",
+    "tests/storage/facade/test_facade_location_policy.py",
+    "tests/storage/facade/test_facade_remote_policy.py",
+    "tests/_core/http/test_redirects.py",
+    "tests/storage/backends/test_sftp.py",
+    "tests/test_lazy_imports.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "An empty frozenset in allowed_remote permits every host for that scheme (allow_remote returns when 'not entries'); tests rely on this, but README describes allowed_remote only as a host list, so a caller writing frozenset() to mean 'none' gets 'any'",
+    "Confinement is a check-then-use on resolved paths; symlinks changed between check and I/O are not defended (TOCTOU), and DNS rebinding is out of scope (README limits)",
+    "_check_tree walks the whole directory tree with followlinks=True, which can be expensive on large trees",
+    "No runnable example in examples/ demonstrates LocationPolicy",
+    "Windows drive/UNC handling is flagged in code as not CI-verified"
+  ],
+  "open_questions": [
+    "Is 'empty frozenset means any host for this scheme' the intended public semantics? If so it should be documented in README; if not, allow_remote and tests need changing.",
+    "Should LocationPolicy have a runnable recipe in examples/ given its doc_priority?"
+  ],
+  "evidence": [
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "'Location policy' section documents LocationPolicy import path, root, allowed_remote, profile permission, allow_unconfined and limits"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "facade imports LocationPolicy, confine_local, allow_remote, require_known_scheme, url_host and applies them per operation"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_location.py",
+      "detail": "unit tests for confinement, redaction, host normalisation and allow_remote rules including empty-set permit-all"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/facade/test_facade_remote_policy.py",
+      "detail": "end-to-end remote policy, including redirect rejection before second send"
+    },
+    {
+      "kind": "test",
+      "path": "tests/test_lazy_imports.py",
+      "detail": "stdlib-only import invariant"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/location.py",
+      "detail": "five commits under issue 381 (f079800..6a49155) including redaction fixes -> evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

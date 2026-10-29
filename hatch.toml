@@ -2,116 +2,106 @@
 allow-direct-references = true
 
 [version]
-path = "src/mountainash_utils_files/__version__.py"
+path = "src/mountainash_transport/__version__.py"
 
 [build.targets.wheel]
-packages = ["src/mountainash_utils_files"]
+packages = ["src/mountainash_transport"]
+
+[build.targets.sdist]
+include = ["/src", "/pyproject.toml", "/hatch.toml", "/requirements-hatch.txt", "/README.md", "/LICENSE", "/NOTICE", "/tools", "/tests/typing", "/docs/typing.md"]
 
 #================
 # Env: build_github
 #================
 [envs.build_github]
+python = "3.12"
 installer = "uv"
+# Hatch installs the project before syncing environment dependencies.
 dependencies = [
     "cyclonedx-bom==4.5.0",
 
-    "mountainash_data @        {root:uri}/temp/mountainash-data",
-    "mountainash @             {root:uri}/temp/mountainash",
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
-    "mountainash_utils_gpg @   {root:uri}/temp/mountainash-utils-gpg",
-    "mountainash_utils_ssh @   {root:uri}/temp/mountainash-utils-ssh",
+    "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
 ]
 [envs.build_github.scripts]
 sbom-all = "cyclonedx-py environment > ./sbom-full.json"
 sbom-direct = "cyclonedx-py requirements > ./sbom-direct.json"
-export-requirements = "hatch dep show requirements > ./requirements.txt"   
+export-requirements = "hatch dep show requirements > ./requirements.txt"
 
 #================
 # Env: default
 #================
 [envs.default]
+python = "3.12"
 installer = "uv"
 path = ".venv"
+features = ["http"]
 dependencies = [
-    # "mountainash_constants @          {root:uri}/../mountainash-constants",
-    # "mountainash_data @               {root:uri}/../mountainash-data",
-    # "mountainash_settings @           {root:uri}/../mountainash-settings",
-
-    # "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
-    # "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
-    # "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
-    # "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
+    "mountainash_settings @          {root:uri}/../mountainash-settings",
+    "mountainash_auth_client @       {root:uri}/../mountainash-auth-client",
 ]
-
-#================
-# Env: tower
-#================
-[envs.tower]
-installer = "uv"
-
-dependencies = []
-
 
 #================
 # Env: test_github
 #================
 [[envs.test_github.matrix]]
-python = ["3.12"] #,  "3.11",, "3.10" ] # "3.8", "3.9","3.9",
+python = ["3.12"]
 
 [envs.test_github]
 installer = "uv"
-
+path = ".hatch/test-github"
 dependencies = [
-    # "coverage[toml]>=6.5",
+    "pyarrow>=23.0.1",
     "pytest==8.3.5",
     "pytest-check==2.5.3",
     "pytest-cov==6.1.1",
 
-    "mountainash_data @        {root:uri}/temp/mountainash-data",
-    "mountainash @             {root:uri}/temp/mountainash",
+    "python-gnupg>=0.5.2",
+    "paramiko>=5.0.0",
+    "boto3>=1.29.4",
+    "authlib>=1.9.1",
+
     "mountainash_settings @    {root:uri}/temp/mountainash-settings",
-    "mountainash_utils_gpg @   {root:uri}/temp/mountainash-utils-gpg",
-    "mountainash_utils_ssh @   {root:uri}/temp/mountainash-utils-ssh",
+    "mountainash_auth_client @ {root:uri}/temp/mountainash-auth-client",
+
+
 
 ]
 [envs.test_github.scripts]
 test = "pytest"
-test-cov = "pytest --cov --junitxml=junit.xml -o junit_family=legacy  --cov-report=xml"
-
+test-cov = "pytest --cov --cov-config={root}/pyproject.toml --junitxml=junit.xml -o junit_family=legacy --cov-report=xml"
 
 #================
 # Env: test
 #================
 [[envs.test.matrix]]
-python = ["3.12"] #,  "3.11",, "3.10" ] # "3.8", "3.9","3.9",
+python = ["3.12"]
 
 [envs.test]
 installer = "uv"
+path = ".hatch/test"
 dependencies = [
+    "pyarrow>=23.0.1",
     "coverage[toml]>=6.5",
     "pytest==8.3.5",
-    "pytest-asyncio>=0.23.0",    # Async test support
+    "pytest-asyncio>=0.23.0",
     "pytest-check==2.5.3",
     "pytest-mock==3.12.0",
-    "pytest-json-report>=1.5.0", # Structured JSON output
-    "pytest-metadata>=2.0.0",    # Additional test metadata
-    "pytest-benchmark>=4.0.0",   # Performance benchmarking
-    "pytest-cov>=4.1.0",         # Better coverage integration
-    "pytest-clarity>=1.0.1",     # Better test output diff
-    "pytest-timeout>=2.1.0",     # Test timing control
-    "pytest-picked>=0.5.0",      # Changed files testing
-
+    "pytest-json-report>=1.5.0",
+    "pytest-metadata>=2.0.0",
+    "pytest-benchmark>=4.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-clarity>=1.0.1",
+    "pytest-timeout>=2.1.0",
+    "pytest-picked>=0.5.0",
 
     "python-gnupg>=0.5.2",
+    "paramiko>=5.0.0",
+    "boto3>=1.29.4",
+    "authlib>=1.9.1",
 
-    "mountainash_data @        {root:uri}/../mountainash-data",
-    "mountainash @             {root:uri}/../mountainash",
     "mountainash_settings @    {root:uri}/../mountainash-settings",
-    "mountainash_utils_gpg @   {root:uri}/../mountainash-utils-gpg",
-    "mountainash_utils_ssh @   {root:uri}/../mountainash-utils-ssh",
-
-
-
+    "mountainash_auth_client @ {root:uri}/../mountainash-auth-client",
 ]
 [envs.test.scripts]
 # ===========================================
@@ -119,7 +109,7 @@ dependencies = [
 # ===========================================
 
 test = [
-    "pytest --cov --junitxml=junit.xml",
+    "pytest --cov --cov-config={root}/pyproject.toml --junitxml=junit.xml",
     "coverage json --pretty-print",
     "coverage xml",
     "coverage html",
@@ -179,78 +169,17 @@ test-ci = [
     "coverage report --show-missing",
 ]
 
-
-# #================
-# # Env: test
-# #================
-# [[envs.test.matrix]]
-# python = ["3.12"]#, "3.11",  "3.10" ] # "3.8", "3.9","3.9",
-
-# [envs.test]
-# installer = "uv"
-# dependencies = [
-#   "coverage[toml]>=6.5",
-#   "pytest==8.3.5",
-#   "pytest-check==2.5.3",
-#   "pytest-mock==3.12.0",
-#   "pytest-json-report>=1.5.0",    # Structured JSON output
-#   "pytest-metadata>=2.0.0",       # Additional test metadata
-#   "pytest-benchmark>=4.0.0",      # Performance benchmarking
-#   "pytest-cov>=4.1.0",           # Better coverage integration
-#   "pytest-clarity>=1.0.1",       # Better test output diff
-#   "pytest-timeout>=2.1.0",       # Test timing control
-#   "pytest-picked>=0.5.0",         # Changed files testing
-
-#   "mountainash_constants @          {root:uri}/../mountainash-constants",
-#   "mountainash_data @               {root:uri}/../mountainash-data",
-#   "mountainash_settings @           {root:uri}/../mountainash-settings",
-
-#   "mountainash_utils_dataclasses @  {root:uri}/../mountainash-utils-dataclasses",
-#   "mountainash_utils_os @           {root:uri}/../mountainash-utils-os",
-#   "mountainash_utils_ssh @          {root:uri}/../mountainash-utils-ssh",
-#   "mountainash_utils_gpg @          {root:uri}/../mountainash-utils-gpg",
-# ]
-# [envs.test.scripts]
-# # Basic test commands
-# test = "pytest"
-# test-file = "pytest {args}"  # For specific file targeting
-# test-changed = "pytest --picked"  # Only changed files
-
-# # Coverage commands
-# test-cov = [
-#     "coverage run -m pytest",
-#     "coverage json --pretty-print",  # JSON output for agent consumption
-#     "coverage xml",                  # XML for CI tools
-#     "coverage html"                  # HTML for human review
-# ]
-
-# # Targeted testing with coverage
-# test-cov-file = [
-#     "coverage run -m pytest {args}",
-#     "coverage json --pretty-print"
-# ]
-
-# # Performance testing
-# test-perf = "pytest --benchmark-only"
-# test-perf-file = "pytest --benchmark-only {args}"
-
-# # Combined report generation
-# test-full-report = [
-#     "pytest --json-report --json-report-file=pytest_report.json",
-#     "coverage run -m pytest",
-#     "coverage json --pretty-print",
-#     "coverage xml"
-# ]
-# test-cov-junit = [
-#  "pytest --cov --junitxml=junit.xml"
-# ]
-
-
 #================
 # Env: ruff
 #================
 [envs.ruff]
 installer = "uv"
+# Own path: the tool envs must NOT share the project `.venv` (inherited from
+# [envs.default]). Sharing it makes `hatch run ruff:...` and `hatch run test:...`
+# thrash — each re-syncs `.venv` to its own disjoint dependency set, so whichever
+# ran last leaves the other's binary missing.
+path = ".hatch/ruff"
+detached = true
 dependencies = ["ruff==0.3.7"]
 [envs.ruff.scripts]
 check = "ruff check ./src"
@@ -259,9 +188,10 @@ fix = "ruff check ./src --fix"
 #================
 # Env: radon
 #================
-# Radon Complexity Checks
 [envs.radon]
 installer = "uv"
+path = ".hatch/radon"          # own path — see [envs.ruff] note
+detached = true
 dependencies = ["radon==6.0.1"]
 [envs.radon.scripts]
 radon-cc = "radon cc ./src -nd"
@@ -274,9 +204,43 @@ radon-cc-detail = "radon cc ./src"
 #================
 # Env: mypy
 #================
-# Mypy Type checks
 [envs.mypy]
+python = "3.12"
 installer = "uv"
-dependencies = ["mypy==1.10.1"]
+path = ".hatch/mypy"           # own path — see [envs.ruff] note
+# Optional SDK extras are installed so their imports are checked, with stubs
+# pinned to the extras' versions. Provision here, not via --install-types.
+features = ["s3", "sftp", "encryption"]
+dependencies = [
+    "mypy==1.10.1",
+    "pytest==8.3.5",
+    "build==1.2.2.post1",
+    "hatchling==1.27.0",
+    "boto3-stubs[s3]==1.43.117",
+    "types-PyYAML==6.0.12.20260906",
+    "types-paramiko==5.0.0.20261021",
+    "google-api-core>=2.11",
+]
 [envs.mypy.scripts]
-check = "mypy --install-types --non-interactive {args:src/mountainash_utils_files tests}"
+check = "mypy --warn-unused-ignores {args:src/mountainash_transport tests}"
+check-src = "mypy --warn-unused-ignores src/mountainash_transport {args}"
+check-tests = "mypy --warn-unused-ignores tests {args}"
+check-src-untyped = "mypy --warn-unused-ignores --check-untyped-defs src/mountainash_transport {args}"
+check-tests-untyped = "mypy --warn-unused-ignores --check-untyped-defs tests {args}"
+qualify = "python tools/qualify_typing.py {args}"
+
+[envs.mypy.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/.."
+
+[envs.default.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/.."
+
+[envs.test_github.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/temp"
+
+[envs.build_github.env-vars]
+UV_CONSTRAINT = "{root}/requirements-hatch.txt"
+HATCH_SIBLINGS = "{root:uri}/temp"

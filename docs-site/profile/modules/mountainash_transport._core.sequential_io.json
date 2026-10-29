@@ -1,0 +1,83 @@
+{
+  "id": "mountainash_transport._core.sequential_io",
+  "path": "src/mountainash_transport/_core/sequential_io.py",
+  "summary": "Provides forward-only raw-I/O adapters used for default sequential remote reads and for gzip decoding. ForwardOnlyReader wraps a sized read callable and a close callable, owns closure, and optionally maps native exceptions to package errors on read and close. IterBytesReader adapts a byte-chunk iterator, holding at most one pending chunk as a memoryview without draining the iterator.",
+  "role": "io",
+  "visibility": "internal",
+  "stability": "evolving",
+  "audiences": [
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "internal-note",
+  "confidence": "high",
+  "public_api": [],
+  "key_classes": [
+    "ForwardOnlyReader(read, close, map_error=None) — non-seekable RawIOBase over a sized read callable; translates errors via map_error at read and close time",
+    "IterBytesReader(chunks, close, map_error=None) — ForwardOnlyReader over an iterator of byte chunks retaining at most one chunk"
+  ],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp"
+  ],
+  "extension_points": [
+    "Backends produce sequential streams by wrapping their native body in io.BufferedReader(ForwardOnlyReader(...)) or IterBytesReader(...) and passing a map_error callable that returns a package exception (or None to leave the native error)"
+  ],
+  "lifecycle_notes": [
+    "The reader owns the close callable: close() invokes it once and marks the handle closed even if it raises",
+    "Error translation is deferred to consumption and close, matching the documented sequential error timing"
+  ],
+  "documentation_hooks": [
+    "Backend author guide: producing sequential streams and error mapping",
+    "docs/read-access-modes.md sequential row: remote handles are forward-only"
+  ],
+  "examples": [],
+  "tests": [
+    "tests/_core/test_sequential_io.py",
+    "tests/storage/facade/test_read_access_modes.py",
+    "tests/storage/backends/test_sequential_reads.py"
+  ],
+  "risks": [
+    "readable() does not check closed state while readinto does, unlike RangedReader, which checks on every method",
+    "A map_error callable that itself raises replaces the original exception"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/s3/s3_read.py",
+      "detail": "S3 sequential reads wrap ForwardOnlyReader in BufferedReader"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/backends/http/http_read.py",
+      "detail": "HTTP sequential reads use IterBytesReader with _map_error"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/_core/transforms/compression.py",
+      "detail": "gzip decoding returns BufferedReader(ForwardOnlyReader(...))"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/test_sequential_io.py",
+      "detail": "unit tests for adapters"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/sequential_io.py",
+      "detail": "be6ea2f then 6fa3c54 -> evolving"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

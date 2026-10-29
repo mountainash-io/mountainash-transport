@@ -1,0 +1,111 @@
+{
+  "dependencies": [
+    "mountainash_transport._core.dataclasses",
+    "mountainash_transport._core.ranged_io"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.facade.cross_backend"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.storage.protocols",
+  "path": "src/mountainash_transport/storage/protocols/",
+  "summary": "Granular runtime-checkable capability protocols that storage backends implement a la carte: StorageReadProtocol, StorageWriteProtocol, StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol, StorageCopyProtocol, StorageDirectoryProtocol and the optional RangedReadProtocol. The docstrings fix cross-backend semantics: typed StorageError subclasses instead of raw SDK errors, create_parents behaviour, path_exists returning False only for established absence, and the delimiter/recursion rules for list_objects. StorageFacade uses isinstance checks against these protocols for supports() and to raise UnsupportedOperationError.",
+  "role": "protocol",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageReadProtocol",
+    "StorageWriteProtocol",
+    "StorageEnumerateProtocol",
+    "StorageDeleteProtocol",
+    "StorageMetadataProtocol",
+    "StorageCopyProtocol",
+    "StorageDirectoryProtocol",
+    "RangedReadProtocol"
+  ],
+  "key_classes": [
+    "StorageReadProtocol — read_to_bytes(path), read_to_stream(path) -> BinaryIO",
+    "StorageWriteProtocol — write_from_bytes / write_from_stream with keyword-only create_parents=True (no-op on object/HTTP backends)",
+    "StorageEnumerateProtocol — list_objects(prefix, *, delimiter=None, max_results=None) -> EnumerateResult",
+    "StorageDeleteProtocol — delete_file(path) with backend-native idempotence",
+    "StorageMetadataProtocol — get_metadata -> StorageEntry, path_exists, get_size -> int | None",
+    "StorageCopyProtocol — copy(source, destination) within one backend",
+    "StorageDirectoryProtocol — list_dir -> list[StorageEntry], mkdir(path, *, parents=True), rmdir",
+    "RangedReadProtocol — open_ranged(path) -> RangedSource for random-access reads (HTTP, S3, SFTP)"
+  ],
+  "key_functions": [],
+  "extension_points": [
+    "Custom backends implement any subset structurally; capability is detected with isinstance (runtime_checkable)",
+    "tests/storage/protocols/test_backend_conformance.py pins the expected protocol set per registered provider; a new backend or capability needs a row there"
+  ],
+  "lifecycle_notes": [
+    "Stdlib-only imports (plus _core dataclasses/ranged_io); importable on a base install",
+    "Current coverage: local implements all seven core protocols; S3 family all but Directory; SFTP Read/Write/Delete/Metadata/Directory/Enumerate; HTTP Read/Write/Metadata; RangedRead on HTTP, S3, SFTP"
+  ],
+  "documentation_hooks": [
+    "Capability matrix per backend (generated from conformance expectations)",
+    "Error contract: which typed StorageError each operation may raise and when (read vs close)",
+    "Writing a backend: protocol method signatures and semantic obligations",
+    "create_parents semantics across directory and object backends"
+  ],
+  "examples": [
+    "examples/capability_checks/example.py — storage.supports(Protocol) on local vs https and UnsupportedOperationError for list_dir on HTTP"
+  ],
+  "tests": [
+    "tests/storage/protocols/test_protocol_shapes.py",
+    "tests/storage/protocols/test_backend_conformance.py",
+    "tests/test_lazy_imports.py",
+    "tests/typing/consumer.py"
+  ],
+  "risks": [
+    "runtime_checkable isinstance only checks method presence, not signatures; a backend missing the keyword-only create_parents argument still satisfies StorageWriteProtocol at runtime (README warns custom backends must accept it)",
+    "AGENTS.md backend list is stale against the conformance test: it says local implements 'all but enumerate' and SFTP 'read/write/delete/metadata/directory', but both also implement StorageEnumerateProtocol (README agrees with the test)",
+    "RangedReadProtocol has no class docstring and lives outside the 'Storage*' naming scheme",
+    "test_backend_conformance.py EXPECTED_PROTOCOLS has rows for S3, R2, S3EXPRESS and MINIO but none for B2, though B2 is registered to the same backend class"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "All eight protocols are root exports"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_backend_conformance.py",
+      "detail": "EXPECTED_PROTOCOLS per provider, including Enumerate for LOCAL"
+    },
+    {
+      "kind": "example",
+      "path": "examples/capability_checks/example.py",
+      "detail": "User recipe drives supports() with these protocols"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Supported storage table and write parent directories section mirror protocol semantics"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/storage/protocols",
+      "detail": "Contract refinements 2026-10-15..17 (ranged read, create_parents, enumeration); signatures settled and fully tested"
+    }
+  ]
+}

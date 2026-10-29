@@ -1,0 +1,139 @@
+{
+  "id": "mountainash_transport._core.transforms",
+  "path": "src/mountainash_transport/_core/transforms/",
+  "summary": "Stream-transform package: defines the StreamTransform protocol (wrap encodes, unwrap decodes, both lazily over binary streams) and two implementations, Gzip (stdlib, reproducible mtime=0, decompression bounded to 1 GiB by default) and GPG (python-gnupg via the [encryption] extra, fully buffered). It also hosts materialize(), an opt-in helper that drains a stream into a seekable memory or spooled-tempfile buffer and returns its length. Pipeline is re-exported here but profiled as its own module.",
+  "role": "public-api",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StreamTransform",
+    "Gzip",
+    "GPG",
+    "Pipeline (re-export; see _core.transforms.pipeline)"
+  ],
+  "key_classes": [
+    "StreamTransform — runtime-checkable protocol with wrap(stream)->BinaryIO (encode) and unwrap(stream)->BinaryIO (decode)",
+    "Gzip — gzip transform; wrap streams compression via GzipCompressingReader, unwrap returns a bounded GzipFile (forward-only reader over non-seekable input)",
+    "_BoundedGzipFile — GzipFile subclass capping every read/readline/seek at max_decompressed_bytes and raising TransformError past it",
+    "GPG — encrypts on wrap (requires recipients) and decrypts on unwrap via python-gnupg; result buffered in BytesIO"
+  ],
+  "key_functions": [
+    "Gzip(level=6, mtime=0, max_decompressed_bytes=1024**3) — construct; None disables the decode bound",
+    "GPG(recipients=None, gnupghome=None, key_file=None, passphrase=None, armor=False, always_trust=False) — construct; client and key import are lazy on first use",
+    "materialize(stream, *, to='memory'|'tempfile', memory_cutoff=64 MiB) -> tuple[BinaryIO, int] — drain a stream into a seekable buffer and return (buffer, length)"
+  ],
+  "dependencies": [
+    "mountainash_transport._core.exceptions",
+    "mountainash_transport._core.sequential_io",
+    "mountainash_transport._core.transforms._stream_encoder",
+    "mountainash_transport._core.transforms.pipeline"
+  ],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport._core.transforms.pipeline",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.facade.cross_backend",
+    "mountainash_transport.storage.path_helpers"
+  ],
+  "extension_points": [
+    "Implement the StreamTransform protocol (wrap/unwrap returning readable BinaryIO, lazy, leaving borrowed inputs open on read) to add a new codec; Pipeline accepts any conforming object",
+    "Register new suffixes for read-side inference in storage/path_helpers/suffixes.py (outside this module) when adding a codec"
+  ],
+  "lifecycle_notes": [
+    "Gzip is stdlib-only and imports on a base install; GPG imports gnupg lazily in _get_client() and raises ImportError naming [encryption] when missing (not MissingExtraError).",
+    "GPG caches its gnupg client and imports key_file once per instance.",
+    "Gzip.unwrap over a non-seekable source returns a forward-only BufferedReader; over a seekable source it returns the seekable (bounded) GzipFile.",
+    "The write-side GzipCompressingReader closes its source on close(), unlike the read-side contract where transforms leave borrowed inputs open.",
+    "materialize() exhausts the input stream and returns a buffer positioned at 0; the caller owns both."
+  ],
+  "documentation_hooks": [
+    "Stream transforms guide: Gzip and GPG options, reproducible output, decompression-bomb bound",
+    "Writing a custom StreamTransform (protocol contract, laziness, ownership)",
+    "GPG setup: [encryption] extra, keyring, recipients, buffering caveat",
+    "materialize() for callers needing length or seekability"
+  ],
+  "examples": [
+    "examples/gzip_pipeline/example.py — compress on write and decompress on read with Gzip",
+    "examples/suffix_inference/example.py — .gz suffix chooses Gzip decoding on read",
+    "examples/streaming/example.py — stream processing with transforms without holding the file in memory",
+    "examples/cross_backend_copy/example.py — re-encode with transforms during copy_between"
+  ],
+  "tests": [
+    "tests/_core/transforms/test_base.py",
+    "tests/_core/transforms/test_gzip.py",
+    "tests/_core/transforms/test_gpg.py",
+    "tests/_core/transforms/test_materialize.py",
+    "tests/_core/transforms/test_facade_integration.py",
+    "tests/storage/facade/test_facade_infer.py",
+    "tests/test_public_api.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "GPG buffers the full payload in memory on both wrap and unwrap (encryption.py docstring) and has no decrypted-size bound analogous to Gzip's max_decompressed_bytes.",
+    "GPG stores passphrase as a plain instance attribute; encryption.py carries a '#TERCHDEBT: Need to use GPGHelper here!' marker and has had no commits since the June 2026 reorganisation.",
+    "GPG missing-extra path raises plain ImportError, inconsistent with the package-wide MissingExtraError convention (AGENTS.md Dependencies).",
+    "materialize() is documented in AGENTS.md and docs/read-access-modes.md but lives at the private path _core.transforms.util and is not exported from the package root or transforms __all__.",
+    "Gzip default 1 GiB bound can surprise users reading large trusted archives; they must pass max_decompressed_bytes=None or a larger value."
+  ],
+  "open_questions": [
+    "Should materialize() be promoted to a public export (root or transforms __all__), given it is referenced in user docs?",
+    "Should GPG raise MissingExtraError and gain a decode size bound to match Gzip?",
+    "Should GzipCompressingReader.close() leave its source open to match the read-side borrowed-input contract?"
+  ],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "Root __all__ exports Pipeline, StreamTransform, Gzip, GPG from ._core.transforms"
+    },
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/_core/transforms/__init__.py",
+      "detail": "__all__ = StreamTransform, Pipeline, Gzip, GPG; materialize not exported"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/transforms/compression.py",
+      "detail": "_BoundedGzipFile and DEFAULT_MAX_DECOMPRESSED_BYTES = 1 GiB"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/_core/transforms/encryption.py",
+      "detail": "GPG buffers via io.BytesIO; _import_gnupg raises ImportError; TERCHDEBT comment"
+    },
+    {
+      "kind": "import",
+      "path": "src/mountainash_transport/storage/facade/facade.py",
+      "detail": "Facade imports materialize from _core.transforms.util for buffered access mode"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "Quick start uses Gzip; documents max_decompressed_bytes bound"
+    },
+    {
+      "kind": "example",
+      "path": "examples/gzip_pipeline/example.py",
+      "detail": "User-facing Gzip pipeline recipe"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/transforms/compression.py",
+      "detail": "02340d9 bounded gzip decompression (backlog 385); encryption.py untouched since ca981bd"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "id": "mountainash_transport._core.exceptions",
+  "path": "src/mountainash_transport/_core/exceptions.py",
+  "summary": "Defines the StorageError exception hierarchy used across the package. Subclasses cover unsupported operations, connection failure, missing paths, authentication and permission denial, transform failures, missing optional extras, unimplemented backends, range-read failures, object changes during ranged reads, and named-profile resolution. PermissionDeniedError subclasses AuthenticationError; MissingExtraError is both a StorageError and an ImportError carrying .extra and .feature.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "stable",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "StorageError",
+    "RangeNotSupportedError",
+    "ObjectChangedError",
+    "UnsupportedOperationError",
+    "StorageConnectionError",
+    "PathNotFoundError",
+    "AuthenticationError",
+    "PermissionDeniedError",
+    "TransformError",
+    "MissingExtraError",
+    "BackendNotImplementedError",
+    "ProfileResolutionError",
+    "ProfileNotFoundError"
+  ],
+  "key_classes": [
+    "StorageError — base for all storage errors",
+    "UnsupportedOperationError — backend lacks the capability protocol for an operation",
+    "StorageConnectionError — connection or timeout failure; also raised for I/O after facade close; deliberately not a builtin ConnectionError",
+    "PathNotFoundError — established absence of a resource",
+    "AuthenticationError — missing, invalid or expired credentials; base of PermissionDeniedError",
+    "PermissionDeniedError — access denied; does not prove credentials are valid",
+    "TransformError — encode/decode failure in a stream transform (e.g. gzip decompression bound exceeded)",
+    "MissingExtraError — StorageError + ImportError with .extra and .feature attributes",
+    "BackendNotImplementedError — provider has a profile/scheme but no backend",
+    "RangeNotSupportedError — resource cannot serve byte ranges (no implicit whole-object fallback)",
+    "ObjectChangedError — pinned strong ETag no longer matches during ranged reading",
+    "ProfileResolutionError(name, reason) — named storage profile could not be materialised; base of ProfileNotFoundError",
+    "ProfileNotFoundError(name, available) — named profile absent; message lists available names"
+  ],
+  "key_functions": [],
+  "dependencies": [],
+  "dependents": [
+    "mountainash_transport",
+    "mountainash_transport._core.extras",
+    "mountainash_transport._core.ranged_io",
+    "mountainash_transport._core.transforms",
+    "mountainash_transport.location",
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport.storage.backends.http",
+    "mountainash_transport.storage.backends.local",
+    "mountainash_transport.storage.backends.s3",
+    "mountainash_transport.storage.backends.sftp",
+    "mountainash_transport.storage.facade",
+    "mountainash_transport.storage.registry"
+  ],
+  "extension_points": [
+    "Backend authors translate native SDK failures into these classes (retaining native causes) so callers get a uniform taxonomy; see README 'Storage errors and strict queries'"
+  ],
+  "lifecycle_notes": [
+    "Stdlib-only; safe on a base install and imported by location.py and extras.py"
+  ],
+  "documentation_hooks": [
+    "Error taxonomy reference: class tree, when each is raised, condition-to-exception table from README",
+    "Catch-ordering guidance: catch PermissionDeniedError before AuthenticationError",
+    "Read-mode error timing (docs/read-access-modes.md): RangeNotSupportedError, ObjectChangedError, StorageError for bad ranges",
+    "Migration note: exists() raises on denial/operational failure instead of returning False"
+  ],
+  "examples": [
+    "examples/capability_checks/example.py — catches UnsupportedOperationError",
+    "examples/named_profiles/example.py — catches ProfileNotFoundError"
+  ],
+  "tests": [
+    "tests/_core/test_constants_and_exceptions.py",
+    "tests/_core/test_extras.py",
+    "tests/test_public_api.py",
+    "tests/storage/facade/test_read_access_modes.py",
+    "tests/storage/backends/test_ranged_conformance.py"
+  ],
+  "risks": [
+    "MissingExtraError declares extra/feature as class annotations only; they are set by raise_for_missing_extra, so a MissingExtraError constructed elsewhere lacks the attributes",
+    "PermissionDeniedError is-a AuthenticationError: handlers that catch AuthenticationError first will swallow denials (documented in README and docs/typing.md)",
+    "StorageConnectionError is reused for 'facade already closed', conflating lifecycle misuse with network failure"
+  ],
+  "open_questions": [],
+  "evidence": [
+    {
+      "kind": "export",
+      "path": "src/mountainash_transport/__init__.py",
+      "detail": "all thirteen exception classes are lazily re-exported in root __all__"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "'Storage errors and strict queries' table maps conditions to these exceptions"
+    },
+    {
+      "kind": "doc",
+      "path": "docs/typing.md",
+      "detail": "PermissionDeniedError and MissingExtraError typing contracts"
+    },
+    {
+      "kind": "test",
+      "path": "tests/_core/test_constants_and_exceptions.py",
+      "detail": "exception inheritance tests"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/_core/exceptions.py",
+      "detail": "additive commits only (5d2c7e7, b3545be, be6ea2f, e01c265, 8bf57eb); covered by tests and docs -> stable"
+    }
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  }
+}

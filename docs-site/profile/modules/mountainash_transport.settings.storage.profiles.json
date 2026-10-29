@@ -1,0 +1,164 @@
+{
+  "dependencies": [
+    "mountainash_transport._core.constants",
+    "mountainash_transport._core.extras",
+    "mountainash_transport.settings",
+    "mountainash_transport.settings.storage.registry"
+  ],
+  "dependents": [
+    "mountainash_transport.settings.storage.loader",
+    "mountainash_transport.settings.storage.registry",
+    "mountainash_transport.storage.facade"
+  ],
+  "source_hash": "8a979e2eada96046bfcce92873a801cd7252a32a",
+  "manual": {
+    "notes": "",
+    "editorial_status": "",
+    "owner": "",
+    "manual_summary": ""
+  },
+  "id": "mountainash_transport.settings.storage.profiles",
+  "path": "src/mountainash_transport/settings/storage/profiles/",
+  "summary": "Nine registered storage provider profile classes, each a mountainash_settings Profile whose fields are generated from a module-level StorageProfileSpec and registered in STORAGE_REGISTRY via @register. Four providers have a storage backend today: local (LocalStorageProfile), s3 (S3StorageProfile, covering the aws/express/r2/minio/b2 flavors), sftp (SFTPStorageProfile) and http (HTTPStorageProfile). Five are settings-only with implemented=False and no registered backend, so constructing a facade for them raises BackendNotImplementedError: gcs (GCSStorageProfile), azure_storage (AzureStorageProfile, blob/files), ftp (FTPStorageProfile, FTP/FTPS), smb (SMBStorageProfile) and github_repo (GitHubRepoStorageProfile, read-only). Profiles emit SDK config only. Credentials come from auth-client auth profiles at connection time.",
+  "role": "model",
+  "visibility": "public",
+  "stability": "evolving",
+  "audiences": [
+    "users",
+    "maintainers",
+    "backend-architecture"
+  ],
+  "doc_priority": "essential",
+  "confidence": "high",
+  "public_api": [
+    "S3StorageProfile",
+    "S3_SPEC",
+    "validate_flavor",
+    "LocalStorageProfile",
+    "LOCAL_SPEC",
+    "SFTPStorageProfile",
+    "SFTP_SPEC",
+    "HTTPStorageProfile",
+    "HTTP_SPEC",
+    "GCSStorageProfile",
+    "GCS_SPEC",
+    "AzureStorageProfile",
+    "AZURE_STORAGE_SPEC",
+    "validate_service_type",
+    "FTPStorageProfile",
+    "FTP_SPEC",
+    "SMBStorageProfile",
+    "SMB_SPEC",
+    "GitHubRepoStorageProfile",
+    "GITHUB_REPO_SPEC"
+  ],
+  "key_classes": [
+    "S3StorageProfile (registry key 's3') — BACKEND: S3StorageBackend registered for S3, S3EXPRESS, R2, MINIO, B2. FLAVOR in {aws, express, r2, minio, b2} selects endpoint/addressing; emits boto3 client kwargs + botocore Config via the TargetFamily.BOTO adapter; default_auth IAM, supported {IAM, NONE}; RANGE_* fields for random reads",
+    "LocalStorageProfile (key 'local') — BACKEND: LocalStorageBackend. ROOT_PATH confines every facade path, CREATE_PATH creates it; stdlib only; auth NONE only",
+    "SFTPStorageProfile (key 'sftp') — BACKEND: SFTPStorageBackend. HOST/USERNAME required, PORT 22, paramiko connect kwargs via TargetFamily.PARAMIKO adapter plus a _post_connect envelope (KNOWN_HOSTS_FILE, HOST_KEY_POLICY reject|warn|auto_add, default reject); auth PASSWORD default, also CERTIFICATE, KERBEROS, NONE; RANGE_* fields",
+    "HTTPStorageProfile (key 'http') — BACKEND: HTTPStorageBackend for http:// and https://. Timeouts, redirects, VERIFY_SSL, HEADERS emitted as httpx.Client kwargs via TargetFamily.HTTP; auth NONE default, also TOKEN, PASSWORD, OAUTH2; RANGE_* fields",
+    "GCSStorageProfile (key 'gcs') — SETTINGS-ONLY (implemented=False). PROJECT, BUCKET_NAME, API_ENDPOINT, LOCATION, USER_PROJECT; sdk google-cloud-storage; auth SERVICE_ACCOUNT default, also IAM, OAUTH2, TOKEN, NONE",
+    "AzureStorageProfile (key 'azure_storage') — SETTINGS-ONLY (implemented=False). SERVICE_TYPE in {blob, files}; ACCOUNT_NAME, CONTAINER_OR_SHARE, ACCOUNT_URL/ENDPOINT_SUFFIX, TOKEN_INTENT, API_VERSION, MAX_BLOCK_SIZE; provider_type AZURE_BLOB; auth AZURE_AD default, also TOKEN, PASSWORD, NONE",
+    "FTPStorageProfile (key 'ftp') — SETTINGS-ONLY (implemented=False). USE_TLS selects ftplib.FTP vs FTP_TLS; to_handler_kwargs returns an envelope {ftp_class_path, init_kwargs, _connect_kwargs, _post_connect}; auth PASSWORD default, also NONE",
+    "SMBStorageProfile (key 'smb') — SETTINGS-ONLY (implemented=False). SERVER, PORT, USERNAME, DOMAIN, ENCRYPT, CONNECTION_TIMEOUT; sdk smbprotocol; auth PASSWORD or KERBEROS (no NONE)",
+    "GitHubRepoStorageProfile (key 'github_repo') — SETTINGS-ONLY (implemented=False), read_only=True. ORG, REPO, REF (emitted as sha), BASE_URL, TIMEOUT for fsspec GithubFileSystem; auth TOKEN default, also JWT, NONE"
+  ],
+  "key_functions": [
+    "validate_flavor(v) — validates the S3 FLAVOR discriminator",
+    "validate_service_type(v) — validates the Azure SERVICE_TYPE discriminator",
+    "<Profile>.to_handler_kwargs() — SDK-ready kwargs without credentials (a deprecated shim delegating to emit(TargetFamily) on S3/SFTP/HTTP; hand-written on the others)",
+    "<Profile>.get_connection_url() — best-effort diagnostic URL"
+  ],
+  "extension_points": [
+    "Add a provider: define a StorageProfileSpec (parameters, provider_type, supported_auth, implemented), a Profile subclass with __spec__ and TYPE_CHECKING field declarations, decorate with @register, and import it in profiles/__init__.py",
+    "Per-target emission: set __adapters__ = {TargetFamily.X: fn(profile, merged_kwargs)} and _sdk_family() so create_connection can emit(family)",
+    "ParameterSpec(driver_key=...) maps a field straight into SDK kwargs; validator= attaches field validation",
+    "Flipping implemented=True must be paired with a register_storage_backend registration for spec.provider_type (drift test)"
+  ],
+  "lifecycle_notes": [
+    "Package import requires [http]; an ImportError is converted to MissingExtraError naming [http]",
+    "Importing settings.storage.registry imports this package at the bottom to populate STORAGE_REGISTRY; the profile modules in turn import register from the registry (intentional import cycle)",
+    "Profiles never hold credentials; create_connection layers auth_profile.emit(family, base=...) over profile.emit(family)",
+    "S3 flavor endpoint errors (minio without ENDPOINT_URL, r2 without ACCOUNT_ID/ENDPOINT_URL) are raised at emit time, not at profile construction",
+    "RANGE_CACHE/RANGE_BLOCK_SIZE/RANGE_MAX_BLOCKS on S3/HTTP/SFTP are transport settings read by RangePolicy, not SDK kwargs"
+  ],
+  "documentation_hooks": [
+    "Provider profile reference: one page per profile with field table (generated from __spec__.parameters), auth modes, emitted kwargs",
+    "Support matrix: providers with a backend (local, s3 family, sftp, http) vs settings-only (gcs, azure_storage, ftp, smb, github_repo)",
+    "S3 flavors guide: aws/express/r2/minio/b2 endpoint and addressing rules",
+    "SFTP host-key policy security guidance (reject vs warn vs auto_add)",
+    "Writing a new provider profile (contributor guide)"
+  ],
+  "examples": [
+    "examples/storage_profiles/example.py — builds aws and r2 S3StorageProfile instances and inspects emitted boto3 kwargs and supported auth modes",
+    "examples/auth_compatibility/example.py — pairs S3StorageProfile with auth profiles and shows UnsupportedAuthProfileError for rejected modes"
+  ],
+  "tests": [
+    "tests/settings/storage/profiles/test_s3_settings.py",
+    "tests/settings/storage/profiles/test_local_settings.py",
+    "tests/settings/storage/profiles/test_sftp_settings.py",
+    "tests/settings/storage/profiles/test_http_settings.py",
+    "tests/settings/storage/profiles/test_gcs_settings.py",
+    "tests/settings/storage/profiles/test_azure_settings.py",
+    "tests/settings/storage/profiles/test_ftp_settings.py",
+    "tests/settings/storage/profiles/test_smb_settings.py",
+    "tests/settings/storage/profiles/test_github_settings.py",
+    "tests/settings/storage/profiles/test_static_field_declarations.py",
+    "tests/storage/protocols/test_registry_completeness.py",
+    "tests/test_slim_install.py"
+  ],
+  "risks": [
+    "profiles/__init__.py docstring is stale: it names S3Settings, AzureStorageSettings, GCSSettings, FTPSettings, SMBSettings, LocalSettings, GitHubRepoSettings, HTTPSettings instead of the actual *StorageProfile classes",
+    "Several module/class docstrings cite mountainash_transport.settings.adapters.<provider>.build_handler_kwargs, but no settings/adapters package exists; settings-only profiles also keep commented-out _adapter stubs",
+    "AGENTS.md profile table names 'GitHubStorageProfile'; the real class is GitHubRepoStorageProfile with registry key 'github_repo' (Azure's key is 'azure_storage'), which matters for resolve_storage provider: values",
+    "SFTPStorageProfile.get_connection_url and FTPStorageProfile.get_connection_url read a ROOT_PATH attribute that neither spec defines, so that branch is dead",
+    "to_handler_kwargs is labelled a 'Deprecated shim' on S3/SFTP/HTTP yet is the ProfileProtocol contract method and is called in the storage_profiles example",
+    "Settings-only profiles validate and resolve successfully through resolve_storage; failure only surfaces later as BackendNotImplementedError when a facade/backend is requested"
+  ],
+  "open_questions": [
+    "Is to_handler_kwargs actually deprecated (per the S3/SFTP/HTTP docstrings) given ProfileProtocol requires it and the user-facing example calls it? If so, what replaces it in the protocol?",
+    "Should settings-only profiles (implemented=False) be documented as public user surface now, or flagged as preview until backends land?"
+  ],
+  "evidence": [
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/storage/profiles/__init__.py",
+      "detail": "Imports and __all__ list the nine profile classes and their *_SPEC objects"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/__init__.py",
+      "detail": "Only local, s3, http and sftp backend packages are imported/registered"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/storage/backends/s3/__init__.py",
+      "detail": "S3StorageBackend registered for S3, S3EXPRESS, R2, MINIO, B2"
+    },
+    {
+      "kind": "symbol",
+      "path": "src/mountainash_transport/settings/storage/profiles/gcs_storage_profile.py",
+      "detail": "GCS_SPEC implemented=False (likewise azure, ftp, smb, github specs)"
+    },
+    {
+      "kind": "test",
+      "path": "tests/storage/protocols/test_registry_completeness.py",
+      "detail": "Pins spec.implemented to backend registration for every STORAGE_REGISTRY entry"
+    },
+    {
+      "kind": "doc",
+      "path": "README.md",
+      "detail": "'Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and recognised schemes but no backend yet'"
+    },
+    {
+      "kind": "example",
+      "path": "examples/storage_profiles/example.py",
+      "detail": "Public recipe imports S3StorageProfile by its full module path"
+    },
+    {
+      "kind": "git",
+      "path": "src/mountainash_transport/settings/storage/profiles",
+      "detail": "Frequent changes through 2026-10-29 (MissingExtraError, LocationPolicy/ROOT_PATH, host-key policy, range fields): evolving"
+    }
+  ]
+}

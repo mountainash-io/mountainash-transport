@@ -1,14 +1,15 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mountainash_utils_files"
+name = "mountainash_transport"
 dynamic = ["version"]
-description = 'Mountain Ash - Utils - Files'
+description = 'Mountain Ash - Transport — unified storage and messaging operations'
 readme = "README.md"
-requires-python = ">=3.10"
-# license = "Proprietary"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 keywords = []
 authors = [
     { name = "Nathaniel Ramm", email = "nathaniel.ramm@discretedatascience.com" },
@@ -16,89 +17,95 @@ authors = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "pandas>=2.2.0",
-    "polars>=1.35.1",
-    "pydantic==2.9.2",
-    "pydantic-settings==2.6.1",
-    "universal_pathlib==0.2.2",
-    "pyarrow==17.0.0",
-    "boltons==24.0.0",
-    "lazy_loader>=0.4",
-    # "paramiko==3.4.0",
-    # "gnupg==2.3.1",
-
-    # Move these to specific entrypoints once pattern developed.
-    "minio==7.2.7",
-    # "boto3==1.34.136",
-    "boto3>=1.29.4,<=1.34.113", #for Taipy
-    "smart-open[all]==7.0.4",
-
-    # "python-gnupg==0.5.2",
-    "lxml>=4.5.0",
-    "xsdata[lxml]>=24.4",
+    "typing-extensions>=4.0",
 ]
-
 
 [project.optional-dependencies]
+http = [
+    "mountainash-settings>=0.1.0,<0.2",
+    "mountainash-auth-client>=0.1.0,<0.2",
+    "pydantic>=2.10,<3",
+    "universal_pathlib==0.2.2",
+    "httpx>=0.27",
+    "fsspec>=2026.6.0,<2027",
+]
 s3 = [
-    "boto3>=1.29.4,<=1.34.113", #for Taipy
-    # "smart-open[s3,ssh]==7.0.4",
+    "mountainash-transport[http]",
+    "boto3>=1.29.4",
     "s3fs>=2023.1.0",
-    "minio==7.2.7",
+    "aiobotocore[boto3]>=2.19.0",
+    "minio>=7.2.7",
 ]
 gcs = [
+    "mountainash-transport[http]",
     "google-cloud-storage>=2.9.0",
     "gcsfs>=2023.1.0",
-    # "smart-open[gcs,ssh]==7.0.4",
 ]
 azure = [
+    "mountainash-transport[http]",
     "azure-storage-blob>=12.13.0",
     "adlfs>=2023.1.0",
-    # "smart-open[azure,ssh]==7.0.4",
 ]
-sftp = ["paramiko==3.4.0", "smart-open[ssh]==7.0.4"]
+sftp = [
+    "mountainash-transport[http]",
+    "paramiko>=5.0.0",
+    "smart-open[ssh]>=7.0.4",
+]
 encryption = ["python-gnupg>=0.5.2"]
+oauth1 = ["mountainash-transport[http]", "authlib>=1.9.1"]
 all = [
-    "boto3>=1.29.4,<=1.34.113", #for Taipy
-    "smart-open[all]==7.0.4",
+    "mountainash-transport[http]",
+    "boto3>=1.29.4",
     "s3fs>=2023.1.0",
-    "minio==7.2.7",
+    "aiobotocore[boto3]>=2.19.0",
+    "minio>=7.2.7",
+    "smart-open[all]>=7.0.4",
     "google-cloud-storage>=2.9.0",
     "gcsfs>=2023.1.0",
     "azure-storage-blob>=12.13.0",
     "adlfs>=2023.1.0",
-    "paramiko==3.4.0",
+    "paramiko>=5.0.0",
     "python-gnupg>=0.5.2",
+    "authlib>=1.9.1",
 ]
 
 
 [project.urls]
-Documentation = "https://github.com/mountainash-io/mountainash-utils-files#readme"
-Issues = "https://github.com/mountainash-io/mountainash-utils-files/issues"
-Source = "https://github.com/mountainash-io/mountainash-utils-files"
+Documentation = "https://github.com/mountainash-io/mountainash-transport#readme"
+Issues = "https://github.com/mountainash-io/mountainash-transport/issues"
+Source = "https://github.com/mountainash-io/mountainash-transport"
 
 #================
 # Tool: Coverage
 #================
 [tool.coverage.run]
-source_pkgs = ["mountainash_utils_files", "tests"]
+source_pkgs = ["mountainash_transport", "tests"]
 branch = true
 parallel = true
-omit = ["src/mountainash_utils_files/__version__.py"]
+# tests/typing holds installed-consumer fixtures run by tools/qualify_typing.py, not pytest.
+omit = ["src/mountainash_transport/__version__.py", "tests/typing/*"]
 
 [tool.coverage.paths]
-mountainash_utils_files = [
-    "src/mountainash_utils_files",
-    "*/mountainash-utils-files/src/mountainash_utils_files",
+mountainash_transport = [
+    "src/mountainash_transport",
+    "*/mountainash-transport/src/mountainash_transport",
 ]
-tests = ["tests", "*/mountainash-utils-files/tests"]
+tests = ["tests", "*/mountainash-transport/tests"]
 
 [tool.coverage.report]
-exclude_lines = ["no cov", "if __name__ == .__main__:", "if TYPE_CHECKING:"]
+exclude_lines = ["no cov", "if __name__ == .__main__:", "if (t\\.|typing\\.)?TYPE_CHECKING:"]
+
+#================
+# Tool: mypy
+#================
+# python-gnupg ships no annotations and has no published stub package; the
+# [encryption] extra imports it lazily (see _core/transforms/encryption.py).
+[[tool.mypy.overrides]]
+module = ["gnupg"]
+ignore_missing_imports = true

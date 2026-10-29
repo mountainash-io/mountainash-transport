@@ -126,19 +126,21 @@ Both methods use binary mode (`"rb"`) because the storage protocols operate excl
 <!-- concept:56 -->
 ## LocalWriteMixin
 
-The **`LocalWriteMixin`** provides file writing with automatic directory creation:
+The **`LocalWriteMixin`** provides file writing with optional parent-directory creation:
 
 ```python
 _CHUNK_SIZE = 65_536  # 64 KiB
 
 class LocalWriteMixin:
-    def write_from_bytes(self, path: str, data: bytes) -> None:
-        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
+        if create_parents:
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "wb") as fh:
             fh.write(data)
 
-    def write_from_stream(self, path: str, stream: BinaryIO) -> None:
-        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    def write_from_stream(self, path: str, stream: BinaryIO, *, create_parents: bool = True) -> None:
+        if create_parents:
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "wb") as fh:
             while True:
                 chunk = stream.read(_CHUNK_SIZE)
@@ -147,7 +149,7 @@ class LocalWriteMixin:
                 fh.write(chunk)
 ```
 
-Both methods call `os.makedirs(exist_ok=True)` on the parent directory before writing. This convention eliminates the need for callers to manually create directory trees -- a common source of `FileNotFoundError` in raw Python file operations. The `exist_ok=True` flag prevents errors when the directory already exists.
+By default, both methods call `os.makedirs(exist_ok=True)` on the parent directory before writing. With `create_parents=False`, they skip creation and open the destination directly, without an existence pre-check. The backend maps a native missing-parent failure to `PathNotFoundError`.
 
 The `write_from_stream` method reads the input stream in 64 KiB chunks rather than calling `stream.read()` (which would load the entire payload into memory). This chunked approach keeps memory usage bounded regardless of file size. The chunk size of 65,536 bytes balances system call overhead against memory consumption.
 
@@ -161,12 +163,12 @@ Type: workflow
 **Library:** vis-network<br/>
 **Status:** Specified
 
-**Purpose:** Show the step-by-step flow of both write methods, emphasizing the auto-directory creation step that happens before any file I/O.
+**Purpose:** Show the default (`create_parents=True`) flow of both write methods. With `False`, skip directory creation and proceed directly to opening the destination.
 
 **Components:**
 
 - Two parallel swim lanes: write_from_bytes and write_from_stream
-- Shared first step: os.makedirs (highlighted as the key safety feature)
+- Shared conditional first step: os.makedirs when create_parents is True
 - write_from_bytes: single fh.write(data) call
 - write_from_stream: loop showing chunk reads (64 KiB) with iteration counter
 - Error paths: permission denied, disk full
@@ -394,7 +396,7 @@ These patterns establish conventions that the S3 and HTTP backends also follow (
 - **`LocalStorageBackend`** is composed from eight mixins and is the only backend implementing all eight storage protocols.
 - **`LocalConnectionMixin`** implements no-op connection management -- the local filesystem is always "connected."
 - **`LocalReadMixin`** provides both `read_to_bytes` (self-closing) and `read_to_stream` (caller-closing) using Python's built-in `open()`.
-- **`LocalWriteMixin`** automatically creates parent directories before writing and uses 64 KiB chunked streaming for `write_from_stream`.
+- **`LocalWriteMixin`** creates parent directories by default, skips creation with `create_parents=False`, and uses 64 KiB chunked streaming for `write_from_stream`.
 - **`LocalListMixin`** uses `os.scandir()` for efficient, non-recursive directory enumeration and returns `FileMetadata` objects.
 - **`LocalDeleteMixin`** raises `PathNotFoundError` for missing files, unlike S3's silent success behavior.
 - **`LocalMetadataMixin`** converts `os.stat()` results into `FileMetadata` with UTC-aware timestamps.
