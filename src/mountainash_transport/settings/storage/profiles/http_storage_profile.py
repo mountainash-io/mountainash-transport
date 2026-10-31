@@ -18,6 +18,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["HTTP_SPEC", "HTTPStorageProfile"]
 
 
@@ -131,6 +134,7 @@ class HTTPStorageProfile(Profile):
         MAX_REDIRECTS: int
         VERIFY_SSL: bool
         HEADERS: dict[str, t.Any] | None
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = HTTP_SPEC
     __adapters__ = {TargetFamily.HTTP: _http_httpx_kwargs}

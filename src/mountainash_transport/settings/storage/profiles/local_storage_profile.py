@@ -1,9 +1,9 @@
 """Local filesystem settings.
 
 Descriptor-driven settings for direct local-filesystem access. ``ROOT_PATH``
-confines every path the facade handles to that directory; ``CREATE_PATH``
-creates ``ROOT_PATH`` if missing. Network filesystems must be mounted by the
-operating system; the library never issues mount commands.
+anchors relative paths without confining them; ``CREATE_PATH`` creates it
+if missing. Configure ``LOCATION_POLICY`` to enable confinement. Network
+filesystems must be mounted by the operating system.
 
 Adapter
 (:func:`mountainash_transport.settings.adapters.local.build_handler_kwargs`)
@@ -21,6 +21,9 @@ from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
 
 __all__ = ["LOCAL_SPEC", "LocalStorageProfile"]
 
@@ -41,8 +44,8 @@ LOCAL_SPEC = StorageProfileSpec(
             tier="core",
             default=None,
             description=(
-                "Filesystem root. When set, the facade confines every path to "
-                "this directory; relative paths resolve beneath it."
+                "Base directory for relative paths; absolute paths keep their meaning. "
+                "Set LOCATION_POLICY to enable confinement."
             ),
         ),
         ParameterSpec(
@@ -73,13 +76,14 @@ class LocalStorageProfile(Profile):
     Fields are installed from :data:`LOCAL_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is always :class:`NoAuth` (local files have no connection-level
-    auth). ``ROOT_PATH`` confines the facade to that directory.
+    auth). ``ROOT_PATH`` anchors relative paths; confinement is explicitly opt-in.
     """
 
     if t.TYPE_CHECKING:
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         ROOT_PATH: str | None
         CREATE_PATH: bool
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = LOCAL_SPEC
 

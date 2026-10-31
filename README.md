@@ -353,15 +353,39 @@ buckets raise typed errors.
 
 ## Location policy
 
-Pass a `LocationPolicy` (`from mountainash_transport.location import LocationPolicy`)
-to `StorageFacade` / `StorageFacade.from_path` / `for_local` to confine what a
-facade may touch.
+Location confinement is **off by default**. A profile's `ROOT_PATH` anchors
+relative paths but does not prohibit `..` or absolute paths outside that base.
+Authentication, TLS verification and OS permissions remain unchanged.
+
+Enable confinement with a profile's `LOCATION_POLICY` or a call-level
+`policy=LocationPolicy(...)`:
+
+```python
+from mountainash_transport import StorageFacade
+from mountainash_transport.location import LocationPolicy
+from mountainash_transport.settings.storage.profiles import LocalStorageProfile
+
+profile = LocalStorageProfile(ROOT_PATH="/srv/uploads", LOCATION_POLICY={})
+with StorageFacade.from_path("report.csv", profile) as storage:
+    data = storage.read("report.csv")  # inherits confinement to /srv/uploads
+
+# Deliberate override for a trusted caller; ROOT_PATH still resolves relative paths.
+with StorageFacade.from_path("../archive.csv", profile, policy=None) as storage:
+    data = storage.read("../archive.csv")
+```
+
+Omitting `policy` inherits the profile's setting. Explicit `None` disables it;
+another `LocationPolicy` replaces it without merging allow-lists. Wrappers can
+forward `POLICY_UNSET` to preserve omission. Named profiles accept
+`LOCATION_POLICY` under their existing `parameters` mapping; null means off,
+and `{}` enables confinement using a declared root where available.
 
 - **`root`** confines local paths: symlinks and `..` are resolved and anything
-  outside the root raises `LocationNotAllowed`. A local profile's `ROOT_PATH`
-  now confines too (it becomes the root when the policy sets none).
-  `MOUNT_SPEC` has been removed. `LocalStorageProfile` is a settings profile
-  and needs `[http]`; on a base install use `LocationPolicy(root=...)`.
+  outside the root raises `LocationNotAllowed`. When an enabled policy has no
+  root, the local profile's `ROOT_PATH` supplies it. A different policy root
+  constrains the resolved path; it never replaces the profile's base.
+  `LocalStorageProfile` needs `[http]`; a base install can use
+  `LocationPolicy(root=...)` directly without profile dependencies.
 - **`allowed_remote`** maps a scheme to the hosts (or S3 buckets) it may reach,
   e.g. `{"http": frozenset({"api.example.com"})}`. HTTP is refused unless listed;
   every request is checked, including redirects and auth-flow follow-ups,
@@ -370,14 +394,36 @@ facade may touch.
   an S3-family profile with a `BUCKET` permits only that bucket, and one with no
   `BUCKET` permits any bucket at its endpoint. A profile never widens
   `allowed_remote` for other hosts.
-- **`allow_unconfined=True`** opts out explicitly. With no policy, behaviour is
-  unchanged.
-- Unknown URL schemes are refused with a redacted error (credentials are never
-  echoed).
+- **`allow_unconfined=True`** remains an explicit disabled policy.
+- With an active policy, unknown URL schemes are refused with a redacted error.
+
+Migration: code that previously relied on `ROOT_PATH` implicitly confining access
+must now configure `LOCATION_POLICY={}` or pass an explicit active policy.
 
 Limits: the check is on the host name, so DNS rebinding is not defended
 against, and managed-OAuth token endpoints are not covered by the policy.
 See the path-confinement design spec for the full threat model.
+
+### Native access handoff
+
+`resolve_native_read(path, *, storage_profile=None, auth_profile=None,
+policy=POLICY_UNSET)` returns an immutable `NativeReadAccess` or `None` when
+transport must retain ownership of reading. It resolves access without opening
+the resource or acquiring cloud credentials. Direct and named profiles share
+the normal settings/authentication semantics.
+
+The result carries `location`, `scheme`, `provider`, effective `policy` and an
+immutable `connection_options` mapping. Locations and options are excluded from
+its repr; the mapping intentionally exposes credentials to the trusted consumer
+and must not be logged or serialized. Consumers must preserve the effective
+policy and every meaningful option, otherwise use transport. The helper is not
+a bypass for confinement or an engine-specific eligibility decision.
+
+Static S3 credentials can be represented; session/role/ambient authentication
+stays with transport. `None` and `NoAuthProfile()` do not force anonymous S3.
+Authenticated HTTP, including URL userinfo, also stays with transport. Missing
+dependencies and invalid settings remain errors, not a fallback signal.
+
 
 ## Connection lifetime
 

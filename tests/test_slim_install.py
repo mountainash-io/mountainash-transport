@@ -35,7 +35,8 @@ def test_local_facade_round_trip_on_base_install(tmp_path):
     _run_base(f'''
         import os
         import mountainash_transport.location
-        from mountainash_transport import Gzip, StorageFacade, infer_pipeline
+        from mountainash_transport import Gzip, StorageFacade, infer_pipeline, resolve_native_read
+        from mountainash_transport.location import LocationPolicy, LocationNotAllowed
         root = {str(tmp_path)!r}
         pipe, stripped = infer_pipeline("a.csv.gz")
         assert stripped == "a.csv" and pipe is not None and not pipe.is_empty()
@@ -43,6 +44,16 @@ def test_local_facade_round_trip_on_base_install(tmp_path):
         p = os.path.join(root, "a.txt")
         f.write(p, b"hello")
         assert f.read(p) == b"hello"
+        access = resolve_native_read(p)
+        assert f.read(access.location) == b"hello"
+        access = resolve_native_read(p, policy=LocationPolicy(root=root))
+        assert f.read(access.location) == b"hello"
+        try:
+            resolve_native_read(os.path.join(root, "..", "outside"), policy=LocationPolicy(root=root))
+        except LocationNotAllowed:
+            pass
+        else:
+            raise AssertionError("handoff bypassed explicit confinement")
         s = f.read_stream(p, access="random"); s.seek(1); assert s.read() == b"ello"; s.close()
         g = os.path.join(root, "b.txt.gz")
         f.write(g, b"zip", pipeline=Gzip())

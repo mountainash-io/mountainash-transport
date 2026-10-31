@@ -3,9 +3,11 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from enum import Enum
 from pathlib import Path
 from urllib.parse import SplitResult, unquote, urlsplit
 from mountainash_transport._core.exceptions import StorageError
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
 @dataclass(frozen=True)
@@ -18,6 +20,61 @@ class LocationPolicy:
         return not self.allow_unconfined
     def with_declared_root(self, declared: str | os.PathLike[str] | None) -> "LocationPolicy":
         return self if self.root is not None or declared is None else replace(self, root=declared)
+
+
+class _PolicyUnset(Enum):
+    UNSET = 0
+
+
+POLICY_UNSET = _PolicyUnset.UNSET
+PolicyOverride = LocationPolicy | None | _PolicyUnset
+
+
+def resolve_policy(
+    policy: PolicyOverride = POLICY_UNSET, storage_profile=None, *, declared_root=None,
+) -> LocationPolicy | None:
+    """Select an override without confusing omission with explicit off."""
+    selected = getattr(storage_profile, "LOCATION_POLICY", None) if policy is POLICY_UNSET else policy
+    return selected.with_declared_root(declared_root) if selected is not None else None
+
+
+_S3_FAMILY = frozenset({
+    CONST_STORAGE_PROVIDER_TYPE.S3, CONST_STORAGE_PROVIDER_TYPE.S3EXPRESS,
+    CONST_STORAGE_PROVIDER_TYPE.MINIO, CONST_STORAGE_PROVIDER_TYPE.R2,
+    CONST_STORAGE_PROVIDER_TYPE.B2,
+})
+_PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider in _S3_FAMILY}
+
+
+def check_location(path: str, provider, storage_profile, policy: LocationPolicy | None, *, base=None) -> str:
+    """Resolve a declared local base, then apply the shared confinement boundary."""
+    if policy is not None and policy.active:
+        require_known_scheme(path, policy)
+    if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL and base is not None:
+        path = os.path.join(base, local_path(path))
+    if policy is None or not policy.active:
+        return path
+    scheme = require_known_scheme(path, policy)
+    if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+        return confine_local(path, policy)
+    if provider in _S3_FAMILY:
+        profile_bucket = getattr(storage_profile, "BUCKET", None)
+        if storage_profile is None or profile_bucket:
+            from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+
+            try:
+                bucket, _ = parse_s3_path(path)
+            except ValueError:
+                raise LocationNotAllowed(path, "invalid location") from None
+            allow_remote(_PROVIDER_SCHEME[provider], bucket.lower(), policy,
+                         profile_host=profile_bucket)
+    elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
+        if scheme == "sftp":
+            allow_remote("sftp", url_host(path), policy,
+                         profile_host=getattr(storage_profile, "HOST", None))
+    elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP and scheme is not None:
+        allow_remote(scheme, url_host(path), policy)
+    return path
 
 class LocationNotAllowed(StorageError):
     def __init__(self, location: str, reason: str) -> None:

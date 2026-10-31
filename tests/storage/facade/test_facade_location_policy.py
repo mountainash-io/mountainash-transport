@@ -26,15 +26,40 @@ def local(root):
     return StorageFacade.for_local(policy=LocationPolicy(root=str(root)))
 
 
-def test_root_path_profile_confines(dirs):
+def test_explicit_profile_policy_confines(dirs):
     a, _, out = dirs
-    fac = StorageFacade(LOCAL, local_profile(ROOT_PATH=str(a)))
+    fac = StorageFacade(LOCAL, local_profile(ROOT_PATH=str(a), LOCATION_POLICY={}))
     assert fac.read("f.csv") == b"1"
     for call in (lambda: fac.read(str(out / "victim")), lambda: fac.write("../out/x", b"z"),
                  lambda: fac.mkdir("../out/d"), lambda: fac.delete(str(out / "victim")),
                  lambda: fac.exists(str(out / "victim")), lambda: fac.list_dir(str(out))):
         with pytest.raises(LocationNotAllowed):
             call()
+
+
+def test_root_path_resolves_without_enabling_confinement(dirs):
+    a, _, out = dirs
+    with StorageFacade(LOCAL, local_profile(ROOT_PATH=str(a))) as facade:
+        assert facade.read("f.csv") == b"1"
+        assert facade.read("../out/victim") == b"keep"
+        facade.write("../out/written", b"outside")
+    assert (out / "written").read_bytes() == b"outside"
+
+
+def test_explicit_none_disables_profile_policy(dirs):
+    a, _, out = dirs
+    profile = local_profile(ROOT_PATH=str(a), LOCATION_POLICY={})
+    with StorageFacade.from_path("../out/victim", profile, policy=None) as facade:
+        assert facade.read("../out/victim") == b"keep"
+
+
+def test_replacement_policy_does_not_retarget_profile_base(dirs):
+    a, _, out = dirs
+    profile = local_profile(ROOT_PATH=str(a), LOCATION_POLICY={})
+    with StorageFacade.from_path("f.csv", profile,
+                                 policy=LocationPolicy(root=str(a.parent))) as facade:
+        assert facade.read("f.csv") == b"1"
+        assert facade.read("../out/victim") == b"keep"
 
 
 def test_root_path_kept_when_caller_adds_only_allow_list(dirs):
@@ -157,11 +182,6 @@ def test_create_path_relative_root_created_nowhere_outside_caller_root(tmp_path,
     assert not (safe / "outside").exists()
 
 
-@pytest.mark.parametrize("pol", _INACTIVE)
-def test_inactive_policy_check_is_identity_for_local(pol):
-    fac = StorageFacade.for_local(policy=pol)
-    for p in ("file:///x", "file://otherhost/x", "rel/x"):
-        assert fac._check(p) == p
 
 
 @pytest.mark.parametrize("pol", _INACTIVE)
@@ -187,3 +207,32 @@ def test_active_policy_malformed_url_sanitized_no_secret():
     with pytest.raises(LocationNotAllowed) as ei:
         require_known_scheme("https://user:s3cret@[bad", LocationPolicy())
     assert "s3cret" not in str(ei.value)
+
+
+def test_active_local_profile_redacts_malformed_authority(dirs):
+    import traceback
+
+    root, _, _ = dirs
+    secret = "userinfo-redaction-sentinel"
+    malformed = f"file://user:{secret}@exam\uff0fple.com/x"
+    with StorageFacade(LOCAL, local_profile(ROOT_PATH=str(root), LOCATION_POLICY={})) as facade:
+        with pytest.raises(LocationNotAllowed) as caught:
+            facade.read(malformed)
+    assert secret not in "".join(traceback.format_exception(caught.value))
+
+
+def test_copy_between_same_profile_preserves_independently_anchored_bases(tmp_path, monkeypatch):
+    first, second = tmp_path / "first", tmp_path / "second"
+    for directory in (first, second):
+        (directory / "data").mkdir(parents=True)
+    (first / "data" / "in").write_bytes(b"source")
+    (first / "data" / "out").write_bytes(b"keep-source-output")
+    (second / "data" / "out").write_bytes(b"old-destination")
+    profile = local_profile(ROOT_PATH="data")
+    monkeypatch.chdir(first)
+    with StorageFacade(LOCAL, profile) as source:
+        monkeypatch.chdir(second)
+        with StorageFacade(LOCAL, profile) as destination:
+            copy_between("in", "out", source, destination)
+    assert (second / "data" / "out").read_bytes() == b"source"
+    assert (first / "data" / "out").read_bytes() == b"keep-source-output"

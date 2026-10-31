@@ -21,6 +21,9 @@ from mountainash_settings.profiles import Profile
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
+if t.TYPE_CHECKING:
+    from mountainash_transport.location import LocationPolicy
+
 __all__ = ["GCS_SPEC", "GCSStorageProfile"]
 
 
@@ -156,6 +159,7 @@ class GCSStorageProfile(Profile):
         API_ENDPOINT: str | None
         LOCATION: str | None
         USER_PROJECT: str | None
+        LOCATION_POLICY: LocationPolicy | None
 
     __spec__ = GCS_SPEC
 
