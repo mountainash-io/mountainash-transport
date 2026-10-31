@@ -129,7 +129,7 @@
   },
   "landing_state": {
     "index.md": {
-      "content_hash": "sha256:bc319489c1587e9e59e7f98b657896a3566b87dffa247f5dad67df1f2b26dda5",
+      "content_hash": "sha256:66a1d4b8d8e9dbf2a3032065479a50bd9965da4a3d780ef4be9632b52c6dedb1",
       "inputs": {
         "README.md": "sha256:7aa96ea09ef83b1031e4eaf3897318c3e892283b92c1706d81247fdd8f343a0b",
         "docs-site/editorial-brief.md": "sha256:b11472ce41ac42c75bc1f8633cfe639f2c8745947edd88b040e3f0d7931e359e",
@@ -236,6 +236,21 @@
       "landing_pages_updated": [
         "index.md",
         "about.md"
+      ],
+      "learning_graph_nodes_updated": [],
+      "tokens_used": null
+    },
+    {
+      "date": "2026-10-31",
+      "from_commit": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+      "to_commit": "8f0a49e98e2b899827ff0c2f8c7114beb71a5d8c",
+      "operation": "replacement",
+      "note": "Experimental (not production-ready) notice on Home under the lead. Source unchanged.",
+      "chapters_updated": [],
+      "sections_regenerated": [],
+      "faq_questions_updated": 0,
+      "landing_pages_updated": [
+        "index.md"
       ],
       "learning_graph_nodes_updated": [],
       "tokens_used": null
