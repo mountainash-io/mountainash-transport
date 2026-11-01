@@ -3,9 +3,14 @@ title: mountainash-transport
 description: One file API for Python across local disk, S3-compatible stores, SFTP servers and HTTP(S) endpoints. The path picks the backend.
 ---
 
+[← Back to Ecosystem](https://docs.mountainash.io/)
+
 # mountainash-transport
 
 **One file API for Python, from a folder on your laptop to S3-compatible buckets, SFTP servers and HTTP(S) endpoints.**
+
+!!! warning "Experimental"
+    mountainash-transport 0.1.0 is experimental and not yet ready for production use. Its APIs can change between versions, and it is not yet published on PyPI.
 
 A data job usually starts with a file on local disk. Then the input moves to an S3 bucket, a partner starts dropping files on an SFTP server, and a reference table turns up behind an HTTPS URL. Each store brings its own client library, credentials, error types and idea of what a directory is. Before long the code branches on `if path.startswith("s3://")`, and every package that reads files carries its own copy of those branches.
 

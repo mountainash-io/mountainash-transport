@@ -9,6 +9,9 @@ description: 'Why mountainash-transport exists, the design ideas behind it, wher
 
 **boto3, paramiko and httpx each talk to one kind of store. mountainash-transport decides which one a path needs and puts the same file API in front of all of them.**
 
+!!! warning "Experimental"
+    mountainash-transport 0.1.0 is experimental and not yet ready for production use. Its APIs can change between versions, and it is not yet published on PyPI.
+
 ## Why it exists
 
 Python already has a good client for every common store: `open()` and `pathlib` for local disk, `boto3` for S3-compatible object stores, `paramiko` for SFTP and `httpx` for HTTP. While a program talks to one store, that is all it needs.
