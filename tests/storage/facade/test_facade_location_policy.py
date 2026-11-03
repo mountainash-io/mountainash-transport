@@ -187,3 +187,28 @@ def test_active_policy_malformed_url_sanitized_no_secret():
     with pytest.raises(LocationNotAllowed) as ei:
         require_known_scheme("https://user:s3cret@[bad", LocationPolicy())
     assert "s3cret" not in str(ei.value)
+
+
+def _infer(path):
+    from mountainash_transport import infer_pipeline
+    infer_pipeline(path)
+
+
+def _parse_s3(path):
+    from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+    parse_s3_path(path)
+
+
+@pytest.mark.parametrize("pol", _INACTIVE)
+@pytest.mark.parametrize(("fn", "path", "kept"), [
+    ("from_path", "ftp2://alice:s3cr3t@host/x", "ftp2://host/x"),
+    ("parse_s3", "s3://alice:s3cr3t@", "s3://"),
+    ("infer", "https://alice:s3cr3t@h/x.gpg", "https://h/x.gpg"),
+])
+def test_dispatch_errors_redact_userinfo_without_policy(pol, fn, path, kept):
+    call = {"from_path": lambda p: StorageFacade.from_path(p, policy=pol),
+            "parse_s3": _parse_s3, "infer": _infer}[fn]
+    with pytest.raises(ValueError) as ei:
+        call(path)
+    assert "s3cr3t" not in str(ei.value) and "alice" not in str(ei.value)
+    assert kept in str(ei.value)
