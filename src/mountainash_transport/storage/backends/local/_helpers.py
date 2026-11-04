@@ -9,6 +9,17 @@ import typing as t
 from mountainash_transport._core.exceptions import (
     PathNotFoundError, PermissionDeniedError, StorageConnectionError, StorageError,
 )
+from mountainash_transport.location import local_path
+
+
+def _native(path: str) -> str:
+    """Return the filesystem path for *path*: ``file://`` URLs decoded, bare paths unchanged.
+
+    Runs on every operation regardless of location policy (a policy only judges);
+    a ``file://`` URL with a non-local host, userinfo, query or fragment raises a
+    redacted ``LocationNotAllowed``.
+    """
+    return local_path(path)
 
 
 def _map_local_error(exc: Exception, path: str) -> StorageError | None:

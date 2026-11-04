@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _native
 
 
 class LocalDeleteMixin:
@@ -16,5 +16,6 @@ class LocalDeleteMixin:
         Raises:
             PathNotFoundError: if the path does not exist.
         """
+        path = _native(path)
         with _mapped(path):
             os.remove(path)
