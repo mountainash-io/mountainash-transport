@@ -197,14 +197,6 @@ class _PatchedEndpointProfile:
         self._port = port
 
     def _patch_endpoint(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
-        # boto kwargs without endpoint_url make botocore resolve the public AWS
-        # endpoint itself; refuse rather than connect around the tunnel.
-        if "service_name" in kwargs and "endpoint_url" not in kwargs:
-            raise TunnelEndpointError(
-                f"Tunnel cannot redirect {kwargs['service_name']!r} target: it emits no "
-                "endpoint_url, so its SDK would connect directly and bypass the bastion. "
-                "Set ENDPOINT_URL on the target profile."
-            )
         if "hostname" in kwargs:
             kwargs["hostname"] = self._host
             kwargs["port"] = self._port
@@ -216,11 +208,22 @@ class _PatchedEndpointProfile:
     def to_handler_kwargs(self) -> dict[str, t.Any]:
         return self._patch_endpoint(self._inner.to_handler_kwargs())
 
-    def emit(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+    def emit(self, family: t.Any, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         # MUST override (not delegate via __getattr__) so the tunnel's local
         # endpoint is injected — otherwise the inner profile's emit returns the
         # real remote host/port and the tunnel is silently bypassed.
-        return self._patch_endpoint(self._inner.emit(*args, **kwargs))
+        from mountainash_auth_client.targets import TargetFamily
+
+        out = self._inner.emit(family, *args, **kwargs)
+        # Without endpoint_url botocore resolves the public AWS endpoint itself;
+        # refuse rather than connect around the tunnel.
+        if family is TargetFamily.BOTO and "endpoint_url" not in out:
+            raise TunnelEndpointError(
+                "Tunnel cannot redirect this S3 target: it emits no endpoint_url, so "
+                "boto3 would connect directly and bypass the bastion. "
+                "Set ENDPOINT_URL on the target profile."
+            )
+        return self._patch_endpoint(out)
 
     def get_connection_url(self) -> str:
         if hasattr(self._inner, "get_connection_url"):

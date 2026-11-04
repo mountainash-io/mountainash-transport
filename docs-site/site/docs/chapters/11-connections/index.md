@@ -309,7 +309,7 @@ The rewrite touches only specific keys in the target's emitted arguments, so wha
 |---|---|---|
 | `hostname` and `port` (SFTP) | `127.0.0.1` and `local_port` | the inner SSH session goes through the tunnel |
 | `endpoint_url` or `base_url` (for example an S3 profile with `ENDPOINT_URL`) | `http://127.0.0.1:<local_port>` | through the tunnel, always as plain HTTP |
-| `service_name` but no `endpoint_url` (an `aws` or `express` flavour S3 profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError`; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
+| no `endpoint_url` for an S3 (boto3) target (an `aws` or `express` flavour profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
 | none of these (an `HTTPStorageProfile`) | unchanged | the profile names no destination; build request URLs from `local_port` |
 
 The rewrite is visible on a boto3 client's endpoint. Bastion setup is again not shown:
@@ -339,7 +339,7 @@ Output (the port differs on each run):
 minio: http://127.0.0.1:40731
 ```
 
-For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does. An `aws` or `express` flavour S3 target without `ENDPOINT_URL` raises `TunnelEndpointError` from `connect()`, and the tunnel is torn down.
+For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does.
 
 !!! warning "HTTPS targets do not work through a tunnel"
     The bastion hop is SSH, so traffic between your machine and the bastion is encrypted. The problem is the last leg: a rewritten `endpoint_url` or `base_url` always becomes `http://127.0.0.1:<port>`, dropping the original scheme, host name and any path prefix. An HTTPS-only service then receives plain HTTP on its TLS port and the request fails; Host headers, SNI and certificate checks would no longer name the real service in any case. Tunnel only plain-HTTP or SSH targets. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).

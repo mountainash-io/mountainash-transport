@@ -568,17 +568,11 @@ class TestPatchedEndpointProfile:
         kwargs = profile.to_handler_kwargs()
         assert kwargs["endpoint_url"] == "http://127.0.0.1:8080"
 
-    def test_kwargs_without_endpoint_or_sdk_default_pass_through(self):
+    def test_unrecognised_kwargs_pass_through(self):
         inner = self._make_inner({"driver": "postgres", "database": "mydb"})
         profile = _PatchedEndpointProfile(inner, "127.0.0.1", 5432)
         kwargs = profile.to_handler_kwargs()
         assert kwargs == {"driver": "postgres", "database": "mydb"}
-
-    def test_boto_kwargs_without_endpoint_url_are_refused(self):
-        inner = self._make_inner({"service_name": "s3", "region_name": "ap-southeast-2"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 5432)
-        with pytest.raises(TunnelEndpointError, match="endpoint_url"):
-            profile.to_handler_kwargs()
 
     def test_delegates_other_attributes(self):
         inner = self._make_inner({})
@@ -627,6 +621,17 @@ class TestPatchedEndpointEmit:
         with pytest.raises(TunnelEndpointError):
             patched.emit(TargetFamily.BOTO)
 
+    def test_emit_refuses_any_boto_target_without_endpoint_url(self):
+        # A custom profile routed to boto3 need not emit service_name; the
+        # refusal keys on the target family, not on S3-adapter field names.
+        from mountainash_auth_client.targets import TargetFamily
+
+        inner = MagicMock()
+        inner.emit.return_value = {"region_name": "ap-southeast-2"}
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        with pytest.raises(TunnelEndpointError):
+            patched.emit(TargetFamily.BOTO)
+
     @pytest.mark.parametrize("flavor,extra", [("r2", {"ACCOUNT_ID": "abc"}), ("b2", {})])
     def test_emit_patches_s3_flavor_with_derived_endpoint(self, flavor, extra):
         from mountainash_auth_client.targets import TargetFamily
@@ -659,9 +664,13 @@ def test_connect_refuses_aws_s3_target_and_releases_tunnel(rig) -> None:
     connection = TunnelledConnection(rig.ssh, factory, "127.0.0.1", rig.peer.server_port)
     with pytest.raises(TunnelEndpointError):
         connection.connect()
+    assert rig.servers, "refusal should come after the listener started"
     assert not rig.ssh.is_connected
     assert connection.local_port is None
     assert all(server.socket.fileno() == -1 for server in rig.servers)
+    for worker in rig.threads:
+        worker.join(2)
+        assert not worker.is_alive()
 
 
 @pytest.mark.parametrize("boundary", ["listener", "socket"])
