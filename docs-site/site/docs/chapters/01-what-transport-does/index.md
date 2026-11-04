@@ -223,8 +223,7 @@ decoded bytes: 108890
 
 `get_size` reports the stored size, which is the compressed size, because metadata describes the object at the endpoint. The decoded length is only known after reading.
 
-!!! warning "S3 uploads may close your source stream"
-    Transforms never close the stream you pass to `write_stream`, and a write to local disk leaves it open. An S3-family `write_stream` closes the source after a small single-request upload and leaves it open after a multipart upload ([Reading and writing](../07-file-operations/index.md#reading-and-writing)). Do not rely on reusing the source object after an S3 write. See the [support matrix and known limits](../../reference/support-matrix.md).
+`write_stream` never closes the stream you pass it, on any backend and with or without a pipeline, so you can reuse or close the source yourself afterwards ([Reading and writing](../07-file-operations/index.md#reading-and-writing)).
 
 By default a stream from a remote endpoint is sequential: it reads forward and cannot seek. Formats that need to jump around a file, such as reading a footer first, need a different access mode. [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode) explains the sequential, random and buffered modes, and [Transforms and pipelines](../10-stream-transforms/index.md#transforms-and-pipelines) covers transforms in detail.
 
