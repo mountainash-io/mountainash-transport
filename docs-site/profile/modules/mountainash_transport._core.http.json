@@ -58,7 +58,7 @@
     "HttpRequestEngine.request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None) -> HttpResponse — buffered request with retries and error mapping",
     "HttpRequestEngine.stream(method, url, *, headers=None, content=None, params=None, policy=None) -> ContextManager[HttpStreamResponse] — retries/refreshes only before yielding; no replay once body consumption starts",
     "map_status_to_error(status_code) -> type[HttpResponseError] — most specific error class for a 4xx/5xx code; ValueError otherwise",
-    "redact_userinfo(text) -> str — replace scheme://userinfo@ with scheme://***@; redact_url(text) -> str — also masks every query value (error surfaces) (redact.py, not exported)"
+    "redact_userinfo(text) / redact_url(text) / redact_location(location) / raise_redacted(error, native, url) — stdlib-only, linear-time redaction helpers in _core/redact.py (not exported); userinfo runs to the last '@' of the authority"
   ],
   "dependencies": [
     "mountainash_transport._core.extras"
@@ -110,7 +110,7 @@
     "HttpTransportError does not subclass StorageError (errors.py docstring); callers using the engine directly must catch the HTTP hierarchy, while facade users see StorageError translations — two error vocabularies for HTTP.",
     "request(stream=...) reads a stream body into bytes up front but still gates retries on stream.seekable(), so a non-seekable stream body is never retried even though the bytes are already buffered (engine.py _is_body_replayable/_resolve_body).",
     "stream() accepts only content=bytes, not a stream body, and does not drain error bodies.",
-    "Redaction is display-only: hidden __context__, request objects and traceback locals can still hold credentials (README 'Storage errors'). HttpResponseError.headers masks Set-Cookie/Cookie/Authorization-style values entirely and URL credentials in the rest.",
+    "Credential-bearing native exceptions are dropped entirely (raise_redacted clears __context__ as well as __cause__); traceback frame locals remain outside the guarantee (README 'Storage errors'). HttpResponseError.headers masks Set-Cookie/Cookie/Authorization-style values entirely and URL credentials in the rest.",
     "map_status_to_error raises ValueError for non-4xx/5xx codes; a 1xx final status reaching _raise_for_status would surface as ValueError rather than an HTTP error.",
     "Backoff uses time.sleep in the calling thread; large backoff_max/max_retry_after values block callers."
   ],

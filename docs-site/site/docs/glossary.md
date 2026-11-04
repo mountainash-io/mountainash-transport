@@ -148,7 +148,7 @@ Explained in [How transport delegates credentials](chapters/02-mountainash-ecosy
 
 ## Credential redaction (HTTP engine)
 
-The HTTP request engine's replacement of URL userinfo and query values with `***` in every `HttpTransportError` message and in the `url` and `headers` attributes of response errors; credential headers such as `Set-Cookie` and `Authorization` are replaced whole. Successful responses' `url` redacts userinfo only. Response errors do not carry the body. When the URL or native exception holds credentials, the engine also drops the displayed cause, so a traceback does not print the native httpx exception.
+The HTTP request engine's replacement of URL userinfo (up to the last `@` of the authority) and query values with `***` in every `HttpTransportError` message and in the `url` and `headers` attributes of response errors; credential headers such as `Set-Cookie` and `Authorization` are replaced whole. Successful responses' `url` redacts userinfo only. Response errors do not carry the body. When the URL or native exception holds credentials, the engine attaches no native exception at all, as neither `__cause__` nor `__context__`.
 
 Related: [`HttpTransportError`](#httptransporterror), [Credential redaction (location policy)](#credential-redaction-location-policy).
 
@@ -156,7 +156,7 @@ Explained in [Error redaction](chapters/12-http-engine/index.md#error-redaction)
 
 ## Credential redaction (location policy)
 
-The removal of user name and password from a URL before `LocationNotAllowed` stores it in `location` or its message. A URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception. Scheme detection, `StoragePath`, S3 path parsing and suffix inference apply the same removal with or without an active policy.
+The removal of user name and password from a URL, and the masking of its query values, before `LocationNotAllowed` stores it in `location` or its message; a location without `//` whose first segment holds an `@` has that prefix replaced with `***@`. A URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception. Scheme detection, `StoragePath`, S3 path parsing and suffix inference apply the same redaction with or without an active policy.
 
 Related: [`LocationNotAllowed`](#locationnotallowed), [Credential redaction (HTTP engine)](#credential-redaction-http-engine).
 

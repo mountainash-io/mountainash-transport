@@ -219,3 +219,47 @@ def test_dispatch_errors_redact_userinfo_without_policy(pol, fn, path, kept):
         call(path)
     assert "s3cr3t" not in str(ei.value) and "alice" not in str(ei.value)
     assert kept in str(ei.value)
+
+
+def _chain(exc):
+    pending, seen = [exc], set()
+    while pending:
+        current = pending.pop()
+        if id(current) not in seen:
+            seen.add(id(current))
+            yield current
+            pending.extend(e for e in (current.__cause__, current.__context__) if e is not None)
+
+
+@pytest.mark.parametrize("pol", [None, LocationPolicy(allow_unconfined=True), LocationPolicy()])
+@pytest.mark.parametrize(("fn", "path"), [
+    ("from_path", "ftp2://host/x?sig=s3cr3t"),                # unknown scheme, query token (#62)
+    ("from_path", "alice:s3cr3t@host/x.csv"),                 # scheme-less userinfo (#64)
+    ("from_path", "alice:pa@s3cr3t@host/x.csv"),               # scheme-less, "@" in password (#64)
+    ("normalize", "ftp2://host/x?X-Amz-Signature=s3cr3t"),     # (#62)
+    ("normalize", "alice:s3cr3t@host/x.csv"),                 # (#64)
+    ("parse_s3", "s3://?X-Amz-Signature=s3cr3t"),              # invalid S3 path with query (#62)
+])
+def test_dispatch_errors_hide_query_values_and_schemeless_userinfo(pol, fn, path):
+    call = {"from_path": lambda p: StorageFacade.from_path(p, policy=pol),
+            "parse_s3": _parse_s3, "normalize": _normalize}[fn]
+    with pytest.raises((ValueError, LocationNotAllowed)) as ei:
+        call(path)
+    for link in _chain(ei.value):
+        for text in (str(link), repr(link), repr(link.args), repr(vars(link))):
+            assert "s3cr3t" not in text, f"{type(link).__name__}: {text}"
+
+
+@pytest.mark.parametrize(("location", "expected"), [
+    ("s3://bucket/x.zip?X-Amz-Signature=s3cr3t&X-Amz-Expires=60",
+     "s3://bucket/x.zip?X-Amz-Signature=***&X-Amz-Expires=***"),
+    ("https://alice:pa@s3cr3t@h/x?t=s3cr3t#frag", "https://h/x?t=***#frag"),
+    ("alice:s3cr3t@host/x.csv", "***@host/x.csv"),
+    ("s3:alice:s3cr3t@bucket/k", "***@bucket/k"),
+    ("/data/report@2026.csv", "/data/report@2026.csv"),     # "@" after the first "/" is a path
+    ("relative/file.csv", "relative/file.csv"),
+])
+def test_location_not_allowed_redacts(location, expected):
+    err = LocationNotAllowed(location, "remote not allowed")
+    assert err.location == expected
+    assert "s3cr3t" not in str(err) and "s3cr3t" not in repr(err)

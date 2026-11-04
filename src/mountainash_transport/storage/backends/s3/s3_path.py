@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mountainash_transport.location import _redact
+from mountainash_transport._core.redact import redact_location
 
 
 def parse_s3_path(path: str) -> tuple[str, str]:
@@ -26,5 +26,5 @@ def parse_s3_path(path: str) -> tuple[str, str]:
     key = s3_key(path, assume_s3=True)
 
     if bucket is None or key is None:
-        raise ValueError(f"Invalid S3 path: {_redact(path)}")
+        raise ValueError(f"Invalid S3 path: {redact_location(path)}")
     return bucket, key

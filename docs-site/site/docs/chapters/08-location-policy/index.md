@@ -282,7 +282,7 @@ The facade applies the policy in one place: every operation that takes a path ch
 
 ### Credential redaction
 
-URLs sometimes carry credentials in their user-info part, as in `https://user:password@host/path`. `LocationNotAllowed` strips that part before storing `location` or building its message, and a URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception, which could quote the input. Scheme detection, `StoragePath`, S3 path parsing and suffix inference strip it too, with or without a policy:
+URLs sometimes carry credentials in their user-info part, as in `https://user:password@host/path`, or in query values such as a presigned `?X-Amz-Signature=…`. `LocationNotAllowed` strips the user-info part and masks every query value (keys are kept) before storing `location` or building its message. A location without `//` whose first segment holds an `@`, such as `user:pass@host/x`, has that prefix replaced with `***@`. A URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception, which could quote the input. Scheme detection, `StoragePath`, S3 path parsing and suffix inference redact the same way, with or without a policy:
 
 ```python
 from mountainash_transport import StorageFacade
@@ -317,4 +317,4 @@ location not allowed: https://files.example.com (remote not allowed)
 ValueError: Unrecognised scheme in path 'nfs://files.example.com/share'
 ```
 
-The last call had no policy, and its `ValueError` still omits the password. Keep credentials in auth profiles rather than URLs anyway (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)): exception context and traceback locals can still hold them. HTTP errors have their own redaction, described in [error redaction](../12-http-engine/index.md#error-redaction).
+The last call had no policy, and its `ValueError` still omits the password. Keep credentials in auth profiles rather than URLs anyway (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)): traceback frame locals, such as the string you passed in, can still hold them. HTTP errors have their own redaction, described in [error redaction](../12-http-engine/index.md#error-redaction).

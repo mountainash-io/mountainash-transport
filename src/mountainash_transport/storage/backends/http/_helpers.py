@@ -8,7 +8,7 @@ from mountainash_transport._core.exceptions import (
     AuthenticationError, ObjectChangedError, PathNotFoundError,
     PermissionDeniedError, StorageConnectionError, StorageError,
 )
-from mountainash_transport._core.http.redact import _safe_cause, redact_url
+from mountainash_transport._core.redact import raise_redacted, redact_url
 from mountainash_transport._core.http.errors import (
     HttpAuthenticationError, HttpClientError, HttpConnectionError,
     HttpForbiddenError, HttpNotFoundError, HttpRequestError,
@@ -33,7 +33,9 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
         return ObjectChangedError(path)
     if not isinstance(exc, (HttpTransportError, httpx.HTTPError, OSError)):
         return None
-    # Suppressed engine causes still carry classification in hidden context.
+    # Classification follows the displayed cause chain; suppressed chains carry
+    # none (raise_redacted drops them), and the engine already maps socket
+    # failures to HttpConnectionError.
     current: BaseException | None = exc
     seen: set[int] = set()
     while current is not None and id(current) not in seen:
@@ -42,11 +44,7 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
                                 httpx.NetworkError, httpx.TimeoutException,
                                 httpx.ProxyError, ConnectionError, TimeoutError)):
             return StorageConnectionError(f"{path}: {redact_url(str(exc))}")
-        current = current.__cause__ or (
-            current.__context__
-            if isinstance(current, HttpTransportError) and current.__suppress_context__
-            else None
-        )
+        current = current.__cause__
     return StorageError(f"{path}: {redact_url(str(exc))}")
 
 
@@ -58,4 +56,4 @@ def _mapped(path: str) -> t.Iterator[None]:
         mapped = _map_error(exc, path)
         if mapped is None or mapped is exc:
             raise
-        raise mapped from _safe_cause(exc)
+        raise_redacted(mapped, exc)

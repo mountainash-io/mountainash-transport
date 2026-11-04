@@ -234,7 +234,7 @@ For OAuth 2.0 you do not write a strategy. `mountainash-auth-client` owns token 
 
 <!-- concept:195 -->
 
-URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). The engine keeps both out of what errors display. Every `HttpTransportError` replaces the userinfo and each query value in its message with `***`, keeping query keys for diagnosis; so do `HttpResponseError.url` and the values of `HttpResponseError.headers`, such as a `Location` pointing at a presigned URL. `HttpResponse.url` and `HttpStreamResponse.url` on successful responses redact userinfo only. When the request URL or the underlying httpx exception contains either, the engine raises its error without a displayed cause, so a standard traceback does not print the native exception either. Otherwise the httpx exception remains attached as `__cause__` for debugging.
+URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). The engine keeps both out of its errors. Every `HttpTransportError` replaces the userinfo (up to the last `@` of the authority, so a raw `@` inside a password is covered) and each query value in its message with `***`, keeping query keys for diagnosis; so do `HttpResponseError.url` and the values of `HttpResponseError.headers`, such as a `Location` pointing at a presigned URL. `HttpResponse.url` and `HttpStreamResponse.url` on successful responses redact userinfo only. When the request URL or the underlying httpx exception contains either, the engine raises its error with no native exception attached at all, neither as the displayed `__cause__` nor as the hidden `__context__`. Otherwise the httpx exception remains attached as `__cause__` for debugging.
 
 ```python
 import socket
@@ -275,7 +275,7 @@ with userinfo: cause shown = False
 no userinfo: cause shown = True
 ```
 
-!!! warning "Redaction covers display, not memory"
-    URL userinfo and query values are redacted, credential headers (`Set-Cookie`, `Cookie`, `Authorization`, `Proxy-Authorization`) on `HttpResponseError.headers` are replaced with `***`, and error objects do not carry response bodies. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+!!! warning "Traceback locals are not redacted"
+    URL userinfo and query values are redacted, credential headers (`Set-Cookie`, `Cookie`, `Authorization`, `Proxy-Authorization`) on `HttpResponseError.headers` are replaced with `***`, error objects do not carry response bodies, and credential-bearing native exceptions are dropped from the chain. The local variables of the frames in a traceback, such as the URL you passed in, are outside that guarantee, so configure error reporters that capture frame locals accordingly.
 
-Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helper is `src/mountainash_transport/_core/http/redact.py`; its tests are in `tests/_core/http/test_url_userinfo_redaction.py`.
+Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helpers are in `src/mountainash_transport/_core/redact.py`; their tests are in `tests/_core/http/test_url_userinfo_redaction.py`.

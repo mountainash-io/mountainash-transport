@@ -11,12 +11,13 @@ from mountainash_transport._core.exceptions import StorageConnectionError, Stora
 from mountainash_transport._core.http.engine import HttpRequestEngine
 from mountainash_transport._core.http.errors import HttpTransportError
 from mountainash_transport._core.http.policy import RedirectPolicy, RequestPolicy, RetryPolicy
-from mountainash_transport._core.http.redact import redact_url, redact_userinfo
+from mountainash_transport._core.redact import redact_url, redact_userinfo
 
 SECRET = "s3cr3t-sentinel-pw"
 URL = f"https://alice:{SECRET}@example.com/data/file.bin"
 QUERY_URL = f"https://example.com/data/file.bin?sig={SECRET}&X-Amz-Expires=60"
-ERROR_URLS = [URL, QUERY_URL]
+AT_URL = f"https://alice:pa@{SECRET}@example.com/data/file.bin"  # raw "@" inside the password
+ERROR_URLS = [URL, QUERY_URL, AT_URL]
 _NO_RETRY = RequestPolicy(retry=RetryPolicy(max_attempts=1, retry_on_transport=False))
 _NO_REDIRECT = RequestPolicy(
     retry=RetryPolicy(max_attempts=1, retry_on_transport=False),
@@ -24,11 +25,23 @@ _NO_REDIRECT = RequestPolicy(
 )
 
 
+def _chain(exc: BaseException) -> t.Iterator[BaseException]:
+    """Every exception reachable through __cause__ and __context__, displayed or not."""
+    pending, seen = [exc], set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield current
+        pending.extend(e for e in (current.__cause__, current.__context__) if e is not None)
+
+
 def _assert_clean(exc: BaseException) -> None:
-    assert SECRET not in repr(exc)
-    assert SECRET not in str(exc)
-    assert SECRET not in repr(exc.__dict__)
     assert SECRET not in "".join(traceback.format_exception(exc))
+    for link in _chain(exc):
+        for text in (str(link), repr(link), repr(link.args), repr(vars(link))):
+            assert SECRET not in text, f"{type(link).__name__} carries the secret: {text[:200]}"
 
 
 def _engine(handler) -> HttpRequestEngine:
@@ -46,6 +59,17 @@ def test_redact_userinfo_helper():
     assert redact_userinfo(URL) == "https://***@example.com/data/file.bin"
     assert redact_userinfo("see https://u@h/x and http://a:b@h2") == "see https://***@h/x and http://***@h2"
     assert redact_userinfo("https://example.com/a@b") == "https://example.com/a@b"
+    assert redact_userinfo(AT_URL) == "https://***@example.com/data/file.bin"
+    assert redact_userinfo("https://a@b:c@d@h/x?q=e@f") == "https://***@h/x?q=e@f"
+
+
+def test_redaction_regexes_are_linear():
+    import time
+
+    for text in ("a" * 200_000, "a://" + "b" * 200_000, ("x://" + "@" * 50) * 4_000):
+        started = time.perf_counter()
+        redact_url(text)
+        assert time.perf_counter() - started < 1.0
 
 
 def test_redact_url_helper():
