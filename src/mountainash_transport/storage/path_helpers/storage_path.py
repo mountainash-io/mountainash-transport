@@ -8,6 +8,7 @@ e.g. `s3://` → AWS S3 / MinIO / R2 / B2 / S3 Express).
 from __future__ import annotations
 
 import fnmatch
+import warnings
 from typing import Optional, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -23,13 +24,12 @@ _NormalizedPath = Union[UPath, "_GenericSchemePath"]
 
 
 class _GenericSchemePath(str):
-    """Fallback path wrapper for schemes in SCHEMES that UPath cannot construct.
+    """Fallback path wrapper for schemes UPath cannot represent faithfully.
 
-    UPath raises ValueError for schemes without an fsspec implementation
-    (e.g. "azure", "b2", "smb"). The hygiene spec keeps those schemes in
-    the registry because path parsing is decoupled from backend support.
-    For those schemes, normalize() returns this string subclass — stringifies
-    to the canonical URL, carries no filesystem behavior.
+    Used when UPath cannot construct the scheme (no fsspec implementation, e.g.
+    "azure", "b2"; or a missing SDK, e.g. "smb") or when its generic
+    implementation would drop part of the URL (the host of "sftp", "ftp" and
+    "ssh" URLs). Stringifies to the canonical URL, carries no filesystem behavior.
     """
 
     def __new__(cls, url: str) -> _GenericSchemePath:
@@ -120,10 +120,18 @@ class StoragePath:
             parsed.fragment,
         ))
         try:
-            return UPath(rebuilt)
-        except ValueError:
-            # Scheme not supported by UPath; use fallback string-based path
+            # Generic fallbacks warn on construction; the result is checked below.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                upath = UPath(rebuilt)
+        except (ValueError, ImportError):
+            # No fsspec implementation, or the scheme's SDK is not installed.
             return _GenericSchemePath(rebuilt)
+        # Keep UPath only if it represents the URL (a trailing "/" on a root is
+        # canonical); its generic implementation drops sftp/ftp/ssh hosts.
+        if str(upath).rstrip("/") != rebuilt.rstrip("/"):
+            return _GenericSchemePath(rebuilt)
+        return upath
 
     @staticmethod
     def _check_strict_casing(text: str, canonical_scheme: str) -> None:

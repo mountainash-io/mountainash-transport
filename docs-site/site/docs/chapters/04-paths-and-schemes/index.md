@@ -174,10 +174,10 @@ ValueError: mixed-case scheme not accepted: 'S3' (expected lowercase canonical '
 ValueError: Unknown scheme in path: 'nfs://server/share'
 ```
 
-The `azure://` path normalised to a string because no backend-independent `UPath` class exists for it. Normalising a path never implies that a backend is available; dispatch decides that.
+The `azure://` path normalised to a string because no backend-independent `UPath` class exists for it. The same string form is returned whenever `UPath` cannot represent a URL exactly: `sftp://`, `ftp://` and `ssh://` URLs (whose host `UPath`'s generic implementation would drop), and schemes such as `smb://` whose SDK is not installed. `StoragePath.normalize("sftp://files.example.com:2222/reports/")` returns `'sftp://files.example.com:2222/reports'`, and `join` on it keeps the host and port. Normalising a path never implies that a backend is available; dispatch decides that.
 
-!!! warning "`normalize` drops the host of `sftp://` and `ftp://` URLs"
-    For these two schemes the normalised result loses its host. `StoragePath.normalize("sftp://files.example.com/reports/sales.csv")` returns `sftp://reports/sales.csv`, and `StoragePath.normalize("ftp://h.example.com/a/b")` returns `ftp:///a/b`. `join` normalises first, so it drops the host too. Do not use the result of either method as an SFTP or FTP URL; keep the original string. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+!!! warning "`join` does not account for a query string"
+    `join` appends the name to the whole normalised string, so `StoragePath.join("https://h/a?x=1", "b.csv")` returns `https://h/a?x=1/b.csv`. Join before adding query parameters. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
 
 <!-- concept:121 -->
 
