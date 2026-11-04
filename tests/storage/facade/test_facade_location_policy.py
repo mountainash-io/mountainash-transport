@@ -199,15 +199,22 @@ def _parse_s3(path):
     parse_s3_path(path)
 
 
+def _normalize(path):
+    from mountainash_transport.storage.path_helpers import StoragePath
+    StoragePath.normalize(path)
+
+
 @pytest.mark.parametrize("pol", _INACTIVE)
 @pytest.mark.parametrize(("fn", "path", "kept"), [
     ("from_path", "ftp2://alice:s3cr3t@host/x", "ftp2://host/x"),
     ("parse_s3", "s3://alice:s3cr3t@", "s3://"),
     ("infer", "https://alice:s3cr3t@h/x.gpg", "https://h/x.gpg"),
+    ("normalize", "ftp2://alice:s3cr3t@host/x", "ftp2://host/x"),
+    ("normalize", "s3:alice:s3cr3t@bucket/k", "'s3'"),
 ])
 def test_dispatch_errors_redact_userinfo_without_policy(pol, fn, path, kept):
     call = {"from_path": lambda p: StorageFacade.from_path(p, policy=pol),
-            "parse_s3": _parse_s3, "infer": _infer}[fn]
+            "parse_s3": _parse_s3, "infer": _infer, "normalize": _normalize}[fn]
     with pytest.raises(ValueError) as ei:
         call(path)
     assert "s3cr3t" not in str(ei.value) and "alice" not in str(ei.value)

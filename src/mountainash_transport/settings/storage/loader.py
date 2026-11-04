@@ -103,6 +103,14 @@ def _has_reference(shape: t.Any) -> bool:
     return shape is True
 
 
+def _validation_summary(error: ValidationError) -> str:
+    """Field locations and messages only; pydantic's ``str()`` embeds input values."""
+    return "; ".join(
+        f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
+        for e in error.errors(include_url=False)
+    )
+
+
 def _sensitive_validation(error: ValidationError, shape: t.Any) -> bool:
     for entry in error.errors(include_url=False):
         location = entry["loc"]
@@ -227,19 +235,21 @@ def resolve_storage(
             name, f"unknown provider {block.provider!r}: {exc}"
         ) from exc
 
+    storage_reason = ""
     try:
         # Registry also requires Profile inheritance, beyond its storage protocol.
         storage_profile = t.cast("type[Profile]", storage_cls).model_validate(storage_params)
     except ValidationError as exc:
-        if not _sensitive_validation(exc, reference_inputs.get("parameters", {})):
-            raise ProfileResolutionError(
-                name, f"invalid parameters for provider {block.provider!r}: {exc}"
-            ) from exc
         storage_profile = None
+        storage_reason = (
+            "invalid resolved storage parameters"
+            if _sensitive_validation(exc, reference_inputs.get("parameters", {}))
+            else f"invalid parameters for provider {block.provider!r}: {_validation_summary(exc)}"
+        )
     if storage_profile is None:
-        # Leave the handler: `from None` alone still retains a secret-bearing
+        # Leave the handler: `from None` alone still retains the value-bearing
         # ValidationError in __context__.
-        raise ProfileResolutionError(name, "invalid resolved storage parameters")
+        raise ProfileResolutionError(name, storage_reason)
 
     auth_block = block.auth or AuthBlock()
     if auth_block.mode is None:
@@ -274,23 +284,19 @@ def resolve_storage(
         raise ProfileResolutionError(
             name, f"no auth profile class for mode {effective_mode.value!r}"
         ) from exc
+    auth_reason = ""
     try:
         auth_profile = auth_cls.model_validate(auth_params)
     except ValidationError as exc:
-        if not _sensitive_validation(
-            exc, reference_inputs.get("auth", {}).get("parameters", {})
-        ):
-            summary = "; ".join(
-                f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
-                for e in exc.errors(include_url=False)
-            )
-            raise ProfileResolutionError(
-                name,
-                f"invalid auth parameters for mode {effective_mode.value!r}: {summary}",
-            ) from exc
         auth_profile = None
+        auth_reason = (
+            "invalid resolved auth parameters"
+            if _sensitive_validation(exc, reference_inputs.get("auth", {}).get("parameters", {}))
+            else f"invalid auth parameters for mode {effective_mode.value!r}: "
+            f"{_validation_summary(exc)}"
+        )
     if auth_profile is None:
-        raise ProfileResolutionError(name, "invalid resolved auth parameters")
+        raise ProfileResolutionError(name, auth_reason)
 
     # Both registries enforce their protocol/base class at registration, so the
     # validated instances satisfy the declared return types.

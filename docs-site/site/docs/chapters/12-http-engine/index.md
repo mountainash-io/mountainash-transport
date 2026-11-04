@@ -112,7 +112,7 @@ Only 2xx responses are returned. Anything else raises a subclass of `HttpTranspo
 | `HttpRequestError` | invalid URL or unsupported scheme |
 | `HttpDecodeError` | `json()` could not parse the body |
 
-Status errors share the base `HttpResponseError`, which carries `status_code`, `headers`, `url`, `method` and `body_preview` (the first 500 characters of the body from `request()`; always `None` from `stream()`, which does not drain error bodies). `HttpRateLimitError` adds `retry_after` in seconds when the server sent one.
+Status errors share the base `HttpResponseError`, which carries `status_code`, `headers`, `url` and `method`. It does not carry the response body, which may hold tokens or personal data; read the body from the response yourself when you need it. `HttpRateLimitError` adds `retry_after` in seconds when the server sent one.
 
 These classes do not subclass `StorageError`. When you read through `StorageFacade`, the HTTP backend translates them into the storage errors described in [Errors](../03-installation/index.md#errors); when you use the engine directly, catch the HTTP classes.
 
@@ -153,7 +153,7 @@ with httpx.Client(base_url=base_url) as client:
     try:
         engine.request("POST", "/flaky", content=b"{}")
     except HttpServiceUnavailableError as exc:
-        print(type(exc).__name__, exc.status_code, exc.body_preview)
+        print(type(exc).__name__, exc.status_code)
 
 print(dict(hits))
 ```
@@ -163,7 +163,7 @@ Output (`hits` is the test server's request counter):
 ```text
 ok
 ok
-HttpServiceUnavailableError 503 busy
+HttpServiceUnavailableError 503
 {('GET', '/flaky'): 2, ('GET', '/limited'): 2, ('POST', '/flaky'): 1}
 ```
 
@@ -234,7 +234,7 @@ For OAuth 2.0 you do not write a strategy. `mountainash-auth-client` owns token 
 
 <!-- concept:195 -->
 
-URLs sometimes carry credentials as userinfo: `https://user:password@host/path`. The engine keeps that part out of what errors display. Every `HttpTransportError` replaces the userinfo in its message with `***`, as do `HttpResponseError.url`, `HttpResponse.url` and `HttpStreamResponse.url`. When the request URL or the underlying httpx exception contains userinfo, the engine raises its error without a displayed cause, so a standard traceback does not print the native exception either. Without userinfo, the httpx exception remains attached as `__cause__` for debugging.
+URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). The engine keeps both out of what errors display. Every `HttpTransportError` replaces the userinfo and each query value in its message with `***`, keeping query keys for diagnosis; so do `HttpResponseError.url` and the values of `HttpResponseError.headers`, such as a `Location` pointing at a presigned URL. `HttpResponse.url` and `HttpStreamResponse.url` on successful responses redact userinfo only. When the request URL or the underlying httpx exception contains either, the engine raises its error without a displayed cause, so a standard traceback does not print the native exception either. Otherwise the httpx exception remains attached as `__cause__` for debugging.
 
 ```python
 import socket
@@ -254,10 +254,10 @@ no_retry = RequestPolicy(retry=RetryPolicy(max_attempts=1))
 with httpx.Client() as client:
     engine = HttpRequestEngine(client, no_retry)
     try:
-        engine.request("GET", f"http://analyst:s3cret@127.0.0.1:{port}/reports/old.csv")
+        engine.request("GET", f"http://analyst:s3cret@127.0.0.1:{port}/reports/old.csv?sig=abc123")
     except HttpNotFoundError as exc:
         print(exc)
-        print(exc.url, "|", exc.body_preview)
+        print(exc.url)
 
     for label, userinfo in (("with userinfo", "analyst:s3cret@"), ("no userinfo", "")):
         try:
@@ -269,13 +269,13 @@ with httpx.Client() as client:
 Output (the port differs on each run):
 
 ```text
-HTTP 404 GET http://***@127.0.0.1:43981/reports/old.csv
-http://***@127.0.0.1:43981/reports/old.csv | no such report
+HTTP 404 GET http://***@127.0.0.1:43981/reports/old.csv?sig=***
+http://***@127.0.0.1:43981/reports/old.csv?sig=***
 with userinfo: cause shown = False
 no userinfo: cause shown = True
 ```
 
 !!! warning "Redaction covers display, not memory"
-    Only URL userinfo is redacted. Tokens in query strings, headers and response bodies (including `body_preview`) are not. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+    URL userinfo and query values are redacted, and error objects do not carry response bodies. Other header values, such as `Set-Cookie`, are kept as sent. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
 
 Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helper is `src/mountainash_transport/_core/http/redact.py`; its tests are in `tests/_core/http/test_url_userinfo_redaction.py`.

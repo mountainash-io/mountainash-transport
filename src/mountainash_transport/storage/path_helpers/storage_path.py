@@ -95,7 +95,7 @@ class StoragePath:
         if scheme == "":
             return cls._normalize_bare(text)
         if scheme is None:
-            raise ValueError(f"Unknown scheme in path: {text!r}")
+            raise ValueError(f"Unknown scheme in path: {location._redact(text)!r}")
         cls._check_strict_casing(text, scheme)
         cls._check_url_form(text)
         return cls._normalize_schemed(text, scheme)
@@ -155,5 +155,5 @@ class StoragePath:
             return
         if text[colon : colon + 3] != "://":
             raise ValueError(
-                f"malformed URL — missing '//' after scheme: {text!r}"
+                f"malformed URL — missing '//' after scheme {text[:colon]!r}"
             )

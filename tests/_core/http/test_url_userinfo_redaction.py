@@ -1,4 +1,4 @@
-"""URL userinfo (credentials) must never leak through HTTP errors or attributes."""
+"""URL credentials (userinfo, query values) must never leak through HTTP errors or attributes."""
 from __future__ import annotations
 
 import traceback
@@ -11,10 +11,12 @@ from mountainash_transport._core.exceptions import StorageConnectionError, Stora
 from mountainash_transport._core.http.engine import HttpRequestEngine
 from mountainash_transport._core.http.errors import HttpTransportError
 from mountainash_transport._core.http.policy import RedirectPolicy, RequestPolicy, RetryPolicy
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.http.redact import redact_url, redact_userinfo
 
 SECRET = "s3cr3t-sentinel-pw"
 URL = f"https://alice:{SECRET}@example.com/data/file.bin"
+QUERY_URL = f"https://example.com/data/file.bin?sig={SECRET}&X-Amz-Expires=60"
+ERROR_URLS = [URL, QUERY_URL]
 _NO_RETRY = RequestPolicy(retry=RetryPolicy(max_attempts=1, retry_on_transport=False))
 _NO_REDIRECT = RequestPolicy(
     retry=RetryPolicy(max_attempts=1, retry_on_transport=False),
@@ -46,26 +48,45 @@ def test_redact_userinfo_helper():
     assert redact_userinfo("https://example.com/a@b") == "https://example.com/a@b"
 
 
+def test_redact_url_helper():
+    assert redact_url(URL) == "https://***@example.com/data/file.bin"
+    assert redact_url(QUERY_URL) == "https://example.com/data/file.bin?sig=***&X-Amz-Expires=***"
+    assert redact_url(f"HTTP 404 GET https://u:p@h/x?{SECRET}#f") == "HTTP 404 GET https://***@h/x?***#f"
+    assert redact_url("https://h/x?") == "https://h/x?"
+    assert redact_url("no url ?a=b") == "no url ?a=b"
+
+
+@pytest.mark.parametrize("url", ERROR_URLS)
 @pytest.mark.parametrize("status", [404, 500, 302])
-def test_engine_request_errors_redact_userinfo(status):
+def test_engine_request_errors_redact_userinfo(status, url):
     engine = _engine(lambda r: httpx.Response(status, headers={"location": "/x"} if status == 302 else {}))
     with pytest.raises(HttpTransportError) as ei:
-        engine.request("GET", URL, policy=_NO_REDIRECT)
+        engine.request("GET", url, policy=_NO_REDIRECT)
     _assert_clean(ei.value)
 
 
-def test_engine_stream_error_redacts_userinfo():
+@pytest.mark.parametrize("url", ERROR_URLS)
+def test_engine_stream_error_redacts_userinfo(url):
     engine = _engine(lambda r: httpx.Response(500))
     with pytest.raises(HttpTransportError) as ei:
-        with engine.stream("GET", URL):
+        with engine.stream("GET", url):
             pass
     _assert_clean(ei.value)
-    assert ei.value.url == "https://***@example.com/data/file.bin"
+    assert ei.value.url == redact_url(url)
 
 
+@pytest.mark.parametrize("status", [400, 500])
+def test_engine_error_does_not_carry_response_body(status):
+    engine = _engine(lambda r: httpx.Response(status, text=f"denied: token={SECRET}"))
+    with pytest.raises(HttpTransportError) as ei:
+        engine.request("GET", "https://example.com/x")
+    _assert_clean(ei.value)
+
+
+@pytest.mark.parametrize("url", ERROR_URLS)
 @pytest.mark.parametrize("mode", ["buffered", "stream"])
 @pytest.mark.parametrize("error_type", [httpx.InvalidURL, httpx.ConnectError, httpx.ReadTimeout])
-def test_engine_transport_error_redacts_userinfo(mode: str, error_type: type[Exception]) -> None:
+def test_engine_transport_error_redacts_userinfo(mode: str, error_type: type[Exception], url: str) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise error_type(f"request failed for {request.url}")
 
@@ -73,9 +94,9 @@ def test_engine_transport_error_redacts_userinfo(mode: str, error_type: type[Exc
         engine = HttpRequestEngine(client, policy=_NO_RETRY)
         with pytest.raises(HttpTransportError) as ei:
             if mode == "buffered":
-                engine.request("GET", URL)
+                engine.request("GET", url)
             else:
-                with engine.stream("GET", URL):
+                with engine.stream("GET", url):
                     pass
         _assert_clean(ei.value)
 
@@ -88,28 +109,31 @@ def test_response_url_attributes_redacted():
         assert SECRET not in s.url
 
 
+@pytest.mark.parametrize("url", ERROR_URLS)
 @pytest.mark.parametrize("status", [404, 401, 403, 500])
-def test_storage_backend_errors_redact_userinfo(status):
+def test_storage_backend_errors_redact_userinfo(status, url):
     with pytest.raises(StorageError) as ei:
-        _backend(lambda r: httpx.Response(status)).read_to_bytes(URL)
+        _backend(lambda r: httpx.Response(status, text=SECRET)).read_to_bytes(url)
     _assert_clean(ei.value)
     assert SECRET not in repr(ei.value.__cause__.__dict__)
 
 
-def test_storage_backend_connection_error_redacts_userinfo():
+@pytest.mark.parametrize("url", ERROR_URLS)
+def test_storage_backend_connection_error_redacts_userinfo(url):
     def handler(request):
         raise httpx.ConnectError(f"cannot reach {request.url}", request=request)
 
     with pytest.raises(StorageError) as ei:
-        _backend(handler).read_to_bytes(URL)
+        _backend(handler).read_to_bytes(url)
     _assert_clean(ei.value)
 
 
+@pytest.mark.parametrize("url", ERROR_URLS)
 @pytest.mark.parametrize("value", ["abc", URL])
-def test_storage_backend_invalid_content_length_redacts_userinfo(value: str) -> None:
+def test_storage_backend_invalid_content_length_redacts_userinfo(value: str, url: str) -> None:
     backend = _backend(lambda r: httpx.Response(200, headers={"content-length": value}))
     with pytest.raises(StorageError) as ei:
-        backend.get_metadata(URL)
+        backend.get_metadata(url)
     _assert_clean(ei.value)
 
 

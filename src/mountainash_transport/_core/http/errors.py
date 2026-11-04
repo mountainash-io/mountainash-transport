@@ -7,7 +7,7 @@ to storage errors where needed.
 Hierarchy
 ---------
 HttpTransportError (base)
-├── HttpResponseError        status_code, headers, body_preview, url, method
+├── HttpResponseError        status_code, headers, url, method
 │   ├── HttpClientError      4xx
 │   │   ├── HttpNotFoundError            404
 │   │   ├── HttpAuthenticationError      401
@@ -30,19 +30,20 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.http.redact import redact_url
 
 
 class HttpTransportError(Exception):
     """Base class for all HTTP transport exceptions.
 
-    String arguments are stripped of URL userinfo so credentials embedded in a
-    request URL never reach ``str(exc)``, ``repr(exc)`` or ``exc.args``.
+    String arguments are stripped of URL userinfo and query values so
+    credentials embedded in a request URL never reach ``str(exc)``,
+    ``repr(exc)`` or ``exc.args``.
     """
 
     def __init__(self, *args: object) -> None:
         super().__init__(
-            *(redact_userinfo(a) if isinstance(a, str) else a for a in args)
+            *(redact_url(a) if isinstance(a, str) else a for a in args)
         )
 
 
@@ -56,11 +57,10 @@ class HttpResponseError(HttpTransportError):
     status_code:
         The HTTP status code received.
     headers:
-        Response headers as a mapping.
-    body_preview:
-        A truncated preview of the response body (for logging/debugging).
+        Response headers as a mapping; URL credentials in values are redacted.
+        The response body is deliberately not carried.
     url:
-        The request URL.
+        The request URL, with userinfo and query values redacted.
     method:
         The HTTP method used (GET, POST, etc.).
     """
@@ -71,15 +71,15 @@ class HttpResponseError(HttpTransportError):
         *,
         status_code: t.Optional[int] = None,
         headers: t.Optional[t.Mapping[str, str]] = None,
-        body_preview: t.Optional[str] = None,
         url: t.Optional[str] = None,
         method: t.Optional[str] = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
-        self.headers = headers
-        self.body_preview = body_preview
-        self.url = redact_userinfo(url) if url is not None else None
+        self.headers = (
+            {k: redact_url(v) for k, v in headers.items()} if headers is not None else None
+        )
+        self.url = redact_url(url) if url is not None else None
         self.method = method
 
 
@@ -114,7 +114,6 @@ class HttpRateLimitError(HttpClientError):
         *,
         status_code: t.Optional[int] = None,
         headers: t.Optional[t.Mapping[str, str]] = None,
-        body_preview: t.Optional[str] = None,
         url: t.Optional[str] = None,
         method: t.Optional[str] = None,
         retry_after: t.Optional[float] = None,
@@ -123,7 +122,6 @@ class HttpRateLimitError(HttpClientError):
             message,
             status_code=status_code,
             headers=headers,
-            body_preview=body_preview,
             url=url,
             method=method,
         )
