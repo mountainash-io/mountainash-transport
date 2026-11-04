@@ -86,26 +86,33 @@ class Pipeline:
         must not close borrowed inputs. Empty/identity pipelines return it as-is.
         Construction failures unwind built layers without masking the failure.
         """
-        cleanup = contextlib.ExitStack()
-        seen = {id(stream)}
-        try:
-            for transform in self._outer_to_inner:
-                stream = transform.unwrap(stream)
-                if id(stream) not in seen:
-                    seen.add(id(stream))
-                    cleanup.callback(_close_if_open, stream)
-            if len(seen) == 1:
-                return stream
-            return t.cast(BinaryIO, _ReadStream(stream, cleanup))
-        except BaseException:
-            try:
-                cleanup.close()
-            except Exception:
-                pass
-            raise
+        return _layered(stream, [tr.unwrap for tr in self._outer_to_inner])
 
     def apply_write(self, stream: BinaryIO) -> BinaryIO:
-        """Add layers innermost → outermost (reverse of list)."""
-        for transform in reversed(self._outer_to_inner):
-            stream = transform.wrap(stream)
-        return stream
+        """Add layers innermost → outermost (reverse of list).
+
+        Same ownership as :meth:`apply_read`: closing the result closes the
+        layers built here, never the caller's input stream.
+        """
+        return _layered(stream, [tr.wrap for tr in reversed(self._outer_to_inner)])
+
+
+def _layered(stream: BinaryIO, steps: list[t.Callable[[BinaryIO], BinaryIO]]) -> BinaryIO:
+    """Apply *steps* in order, returning a stream that owns the layers they create."""
+    cleanup = contextlib.ExitStack()
+    seen = {id(stream)}
+    try:
+        for step in steps:
+            stream = step(stream)
+            if id(stream) not in seen:
+                seen.add(id(stream))
+                cleanup.callback(_close_if_open, stream)
+        if len(seen) == 1:
+            return stream
+        return t.cast(BinaryIO, _ReadStream(stream, cleanup))
+    except BaseException:
+        try:
+            cleanup.close()
+        except Exception:
+            pass
+        raise

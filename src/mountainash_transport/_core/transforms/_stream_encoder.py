@@ -52,11 +52,8 @@ class GzipCompressingReader(io.RawIOBase):
         del self._buffer[:n]
         return n
 
-    def close(self) -> None:
-        try:
-            self._source.close()
-        finally:
-            super().close()
+    # close() is inherited: the source is borrowed and stays open. Pipeline
+    # owns and closes only the layers it creates (see Pipeline.apply_write).
 
     def _fill(self) -> None:
         if not self._header_emitted:
