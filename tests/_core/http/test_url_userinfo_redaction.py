@@ -83,6 +83,23 @@ def test_engine_error_does_not_carry_response_body(status):
     _assert_clean(ei.value)
 
 
+@pytest.mark.parametrize("mode", ["buffered", "stream"])
+def test_engine_error_redacts_credential_headers_keeps_others(mode):
+    headers = [("set-cookie", f"session={SECRET}; HttpOnly"), ("set-cookie", f"csrf={SECRET}"),
+               ("etag", '"v1"'), ("www-authenticate", 'Bearer realm="api"')]
+    engine = _engine(lambda r: httpx.Response(401, headers=headers))
+    with pytest.raises(HttpTransportError) as ei:
+        if mode == "buffered":
+            engine.request("GET", "https://example.com/x")
+        else:
+            with engine.stream("GET", "https://example.com/x"):
+                pass
+    _assert_clean(ei.value)
+    assert ei.value.headers["set-cookie"] == "***"
+    assert ei.value.headers["etag"] == '"v1"'
+    assert ei.value.headers["www-authenticate"] == 'Bearer realm="api"'
+
+
 @pytest.mark.parametrize("url", ERROR_URLS)
 @pytest.mark.parametrize("mode", ["buffered", "stream"])
 @pytest.mark.parametrize("error_type", [httpx.InvalidURL, httpx.ConnectError, httpx.ReadTimeout])

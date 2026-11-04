@@ -148,7 +148,7 @@ Explained in [How transport delegates credentials](chapters/02-mountainash-ecosy
 
 ## Credential redaction (HTTP engine)
 
-The HTTP request engine's replacement of URL userinfo and query values with `***` in every `HttpTransportError` message and in the `url` and `headers` attributes of response errors; successful responses' `url` redacts userinfo only. Response errors do not carry the body. When the URL or native exception holds credentials, the engine also drops the displayed cause, so a traceback does not print the native httpx exception.
+The HTTP request engine's replacement of URL userinfo and query values with `***` in every `HttpTransportError` message and in the `url` and `headers` attributes of response errors; credential headers such as `Set-Cookie` and `Authorization` are replaced whole. Successful responses' `url` redacts userinfo only. Response errors do not carry the body. When the URL or native exception holds credentials, the engine also drops the displayed cause, so a traceback does not print the native httpx exception.
 
 Related: [`HttpTransportError`](#httptransporterror), [Credential redaction (location policy)](#credential-redaction-location-policy).
 

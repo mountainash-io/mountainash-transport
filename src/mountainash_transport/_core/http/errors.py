@@ -30,7 +30,16 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.http.redact import redact_url
+from mountainash_transport._core.http.redact import REDACTED, redact_url
+
+# Response headers whose whole value is a credential (session or auth material).
+_CREDENTIAL_HEADERS = frozenset({
+    "set-cookie", "set-cookie2", "cookie", "authorization", "proxy-authorization",
+})
+
+
+def _redact_header(name: str, value: str) -> str:
+    return REDACTED if name.lower() in _CREDENTIAL_HEADERS else redact_url(value)
 
 
 class HttpTransportError(Exception):
@@ -57,8 +66,9 @@ class HttpResponseError(HttpTransportError):
     status_code:
         The HTTP status code received.
     headers:
-        Response headers as a mapping; URL credentials in values are redacted.
-        The response body is deliberately not carried.
+        Response headers as a mapping. Credential headers (``Set-Cookie``,
+        ``Authorization`` and similar) are replaced with ``***``; URL credentials
+        in other values are redacted. The response body is deliberately not carried.
     url:
         The request URL, with userinfo and query values redacted.
     method:
@@ -77,7 +87,7 @@ class HttpResponseError(HttpTransportError):
         super().__init__(message)
         self.status_code = status_code
         self.headers = (
-            {k: redact_url(v) for k, v in headers.items()} if headers is not None else None
+            {k: _redact_header(k, v) for k, v in headers.items()} if headers is not None else None
         )
         self.url = redact_url(url) if url is not None else None
         self.method = method

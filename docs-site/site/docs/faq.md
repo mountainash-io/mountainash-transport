@@ -307,7 +307,7 @@ The object was replaced while a random-access read was in progress. On S3 and HT
 
 ### Can error messages expose credentials?
 
-Errors redact what they can see. `LocationNotAllowed`, scheme detection, `StoragePath`, S3 path parsing and suffix inference strip user information from URLs, with or without a location policy. HTTP engine errors replace userinfo and query values with `***`, do not carry the response body, and drop the native cause when it contained credentials. Other header values such as `Set-Cookie` are not redacted, and exception context or traceback locals can still hold credentials. Keep credentials in auth profiles, not URLs. See [Error redaction](chapters/12-http-engine/index.md#error-redaction) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+Errors redact what they can see. `LocationNotAllowed`, scheme detection, `StoragePath`, S3 path parsing and suffix inference strip user information from URLs, with or without a location policy. HTTP engine errors replace userinfo and query values with `***`, replace credential headers such as `Set-Cookie` with `***`, do not carry the response body, and drop the native cause when it contained credentials. Exception context or traceback locals can still hold credentials. Keep credentials in auth profiles, not URLs. See [Error redaction](chapters/12-http-engine/index.md#error-redaction) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
 
 ## Known limits
 

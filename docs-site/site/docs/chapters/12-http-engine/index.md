@@ -276,6 +276,6 @@ no userinfo: cause shown = True
 ```
 
 !!! warning "Redaction covers display, not memory"
-    URL userinfo and query values are redacted, and error objects do not carry response bodies. Other header values, such as `Set-Cookie`, are kept as sent. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+    URL userinfo and query values are redacted, credential headers (`Set-Cookie`, `Cookie`, `Authorization`, `Proxy-Authorization`) on `HttpResponseError.headers` are replaced with `***`, and error objects do not carry response bodies. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
 
 Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helper is `src/mountainash_transport/_core/http/redact.py`; its tests are in `tests/_core/http/test_url_userinfo_redaction.py`.

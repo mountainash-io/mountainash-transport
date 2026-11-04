@@ -110,7 +110,7 @@
     "HttpTransportError does not subclass StorageError (errors.py docstring); callers using the engine directly must catch the HTTP hierarchy, while facade users see StorageError translations — two error vocabularies for HTTP.",
     "request(stream=...) reads a stream body into bytes up front but still gates retries on stream.seekable(), so a non-seekable stream body is never retried even though the bytes are already buffered (engine.py _is_body_replayable/_resolve_body).",
     "stream() accepts only content=bytes, not a stream body, and does not drain error bodies.",
-    "Redaction is display-only: hidden __context__, request objects and traceback locals can still hold credentials; header values other than URLs (e.g. Set-Cookie) are kept (README 'Storage errors').",
+    "Redaction is display-only: hidden __context__, request objects and traceback locals can still hold credentials (README 'Storage errors'). HttpResponseError.headers masks Set-Cookie/Cookie/Authorization-style values entirely and URL credentials in the rest.",
     "map_status_to_error raises ValueError for non-4xx/5xx codes; a 1xx final status reaching _raise_for_status would surface as ValueError rather than an HTTP error.",
     "Backoff uses time.sleep in the calling thread; large backoff_max/max_retry_after values block callers."
   ],
