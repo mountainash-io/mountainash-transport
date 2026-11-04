@@ -31,7 +31,7 @@ from mountainash_transport._core.http.errors import (
     HttpTransportError,
     map_status_to_error,
 )
-from mountainash_transport._core.http.redact import _safe_cause, redact_url, redact_userinfo
+from mountainash_transport._core.redact import raise_redacted, redact_url, redact_userinfo
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse
 
@@ -54,9 +54,11 @@ _HTTPX_EXCEPTION_MAP: list[tuple[type[Exception], type[HttpTransportError]]] = [
     (httpx.PoolTimeout, HttpTimeoutError),
     # Redirects
     (httpx.TooManyRedirects, HttpRedirectError),
-    # Connection (ProxyError before ConnectError — ProxyError is a subclass)
+    # Connection (ProxyError before ConnectError — ProxyError is a subclass).
+    # NetworkError also covers ReadError, WriteError and CloseError on the socket.
     (httpx.ProxyError, HttpConnectionError),
     (httpx.ConnectError, HttpConnectionError),
+    (httpx.NetworkError, HttpConnectionError),
     # Protocol
     (httpx.ProtocolError, HttpProtocolError),
     (httpx.DecodingError, HttpProtocolError),
@@ -376,7 +378,7 @@ class HttpRequestEngine:
                     policy=pol,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(redact_url(str(exc))) from _safe_cause(exc, url)
+                raise_redacted(HttpRequestError(redact_url(str(exc))), exc, url)
             except httpx.HTTPError as exc:
                 transport_exc = _map_httpx_exception(exc)
 
@@ -398,7 +400,7 @@ class HttpRequestEngine:
                     time.sleep(delay)
                     continue
 
-                raise transport_exc from _safe_cause(exc, url)
+                raise_redacted(transport_exc, exc, url)
 
             status = response.status_code
 
@@ -514,7 +516,7 @@ class HttpRequestEngine:
                     params=params, policy=pol, stream=True,
                 )
             except httpx.InvalidURL as exc:
-                raise HttpRequestError(redact_url(str(exc))) from _safe_cause(exc, url)
+                raise_redacted(HttpRequestError(redact_url(str(exc))), exc, url)
             except httpx.HTTPError as exc:
                 mapped = _map_httpx_exception(exc)
                 if (safe and retry.retry_on_transport
@@ -522,7 +524,7 @@ class HttpRequestEngine:
                         and attempt < retry.max_attempts):
                     time.sleep(delay())
                     continue
-                raise mapped from _safe_cause(exc, url)
+                raise_redacted(mapped, exc, url)
             status = response.status_code
             if 200 <= status < 300:
                 break
@@ -554,9 +556,9 @@ class HttpRequestEngine:
                         kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
                     raise cls(f"HTTP {status} {method_upper} {redact_url(url)}", **kwargs)
             except httpx.HTTPError as exc:
-                raise _map_httpx_exception(exc) from _safe_cause(exc, url)
+                raise_redacted(_map_httpx_exception(exc), exc, url)
         try:
             with contextlib.closing(response):
                 yield HttpStreamResponse(response)
         except httpx.HTTPError as exc:
-            raise _map_httpx_exception(exc) from _safe_cause(exc, url)
+            raise_redacted(_map_httpx_exception(exc), exc, url)

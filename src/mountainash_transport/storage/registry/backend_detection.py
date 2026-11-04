@@ -3,6 +3,7 @@
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._schemes import SCHEMES
 from mountainash_transport import location
+from mountainash_transport._core.redact import redact_location
 
 
 def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
@@ -20,7 +21,7 @@ def detect_provider_from_path(path: str) -> CONST_STORAGE_PROVIDER_TYPE:
     """
     scheme = location.identify_scheme(str(path)) if path else ""
     if scheme is None:
-        raise ValueError(f"Unrecognised scheme in path {location._redact(path)!r}")
+        raise ValueError(f"Unrecognised scheme in path {redact_location(path)!r}")
     spec = SCHEMES[scheme]
     if spec.provider is None:
         raise ValueError(

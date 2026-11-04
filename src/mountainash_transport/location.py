@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import SplitResult, unquote, urlsplit
 from mountainash_transport._core.exceptions import StorageError
+from mountainash_transport._core.redact import redact_location
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
 _ANY_HOST = "*"  # an allowed_remote entry that allows every host for its scheme
@@ -31,28 +32,9 @@ class LocationPolicy:
 
 class LocationNotAllowed(StorageError):
     def __init__(self, location: str, reason: str) -> None:
-        self.location = _redact(location)
+        self.location = redact_location(location)
         self.reason = reason
         super().__init__(f"location not allowed: {self.location} ({reason})")
-
-_C0_OR_SPACE = "".join(chr(c) for c in range(0x21)) 
-
-def _redact(location: str) -> str:
-    """Strip userinfo without urllib, mirroring what urllib sees; never raises."""
-    text = location.strip(_C0_OR_SPACE)
-    for ch in "\t\r\n":
-        text = text.replace(ch, "")
-    start = text.find("//")
-    if start < 0:
-        return text
-    start += 2
-    end = len(text)
-    for ch in "/?#":
-        i = text.find(ch, start)
-        if i != -1:
-            end = min(end, i)
-    at = text.rfind("@", start, end)
-    return text if at < 0 else text[:start] + text[at + 1:]
 
 def _split(location: str) -> SplitResult:
     return urlsplit(location)  # ValueError propagates; enforcement boundaries sanitize it

@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.http.redact import REDACTED, redact_url
+from mountainash_transport._core.redact import REDACTED, redact_url
 
 # Response headers whose whole value is a credential (session or auth material).
 _CREDENTIAL_HEADERS = frozenset({

@@ -225,14 +225,14 @@ failures into public exceptions, retaining native causes except for the HTTP
 credential-redaction case below. The same contract applies when reading,
 fetching ranges or closing an opened stream—not only when opening it.
 
-HTTP translation suppresses native exception chains containing URL userinfo
-(`user:password@`) or query values from standard formatted tracebacks, and
-HTTP error messages and attributes show userinfo and query values as `***`.
-HTTP errors do not carry the response body. Clean chains remain available for
-debugging, and public error classification is unchanged. This is display
-redaction, not secret erasure: Python's hidden `__context__`, request objects
-and traceback locals may still retain credentials. Configure error reporters
-accordingly.
+HTTP translation drops native exception chains containing URL userinfo
+(`user:password@`, up to the last `@` of the authority) or query values: the
+native exception is neither the `__cause__` nor the hidden `__context__` of the
+error you receive. HTTP error messages and attributes show userinfo and query
+values as `***`, and HTTP errors do not carry the response body. Clean chains
+remain available for debugging, and public error classification is unchanged.
+Traceback frame locals are outside this guarantee; configure error reporters
+that capture locals accordingly.
 
 | Condition | Exception |
 |---|---|

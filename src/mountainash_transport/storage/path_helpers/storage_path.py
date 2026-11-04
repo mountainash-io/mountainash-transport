@@ -15,6 +15,7 @@ from urllib.parse import urlparse, urlunparse
 from upath import UPath
 
 from mountainash_transport import location
+from mountainash_transport._core.redact import redact_location
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
 # Return type for normalize: UPath for schemes fsspec supports,
@@ -95,7 +96,7 @@ class StoragePath:
         if scheme == "":
             return cls._normalize_bare(text)
         if scheme is None:
-            raise ValueError(f"Unknown scheme in path: {location._redact(text)!r}")
+            raise ValueError(f"Unknown scheme in path: {redact_location(text)!r}")
         cls._check_strict_casing(text, scheme)
         cls._check_url_form(text)
         return cls._normalize_schemed(text, scheme)
