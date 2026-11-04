@@ -203,3 +203,56 @@ def test_every_registered_remote_backend_declares_a_location_check():
     from mountainash_transport.storage.registry import get_registered_backends
     remote = set(get_registered_backends()) - {CONST_STORAGE_PROVIDER_TYPE.LOCAL}
     assert remote - set(_REMOTE_CHECKS) == set()
+
+
+@pytest.fixture
+def restore_registry():
+    from mountainash_transport.storage.registry import registry as reg
+    snapshot = dict(reg._backend_registry)
+    try:
+        yield reg
+    finally:
+        reg._backend_registry.clear()
+        reg._backend_registry.update(snapshot)
+
+
+@pytest.mark.parametrize("policy", [None, LocationPolicy(allow_unconfined=True)])
+def test_backend_gets_no_location_check_without_active_policy(restore_registry, policy):
+    got = {}
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SFTP)
+    class Deriving:
+        def __init__(self, profile, *, connection=None, location_check=None):
+            got["check"] = location_check
+
+    StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=policy)
+    assert got["check"] is None
+
+
+def test_non_http_backend_receives_enforcing_location_check(restore_registry):
+    """A backend that derives locations (redirects, links) can veto them with the facade's check."""
+    got = {}
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SFTP)
+    class Deriving:
+        def __init__(self, profile, *, connection=None, location_check=None):
+            got["check"] = location_check
+
+    pol = LocationPolicy(allowed_remote={"sftp": frozenset({"host-a"})})
+    StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=pol)
+    got["check"]("sftp://host-a/p")
+    with pytest.raises(LocationNotAllowed):
+        got["check"]("sftp://evil/p")
+
+
+def test_kwargs_wrapper_of_builtin_backend_constructs_under_policy(restore_registry, tmp_path):
+    from mountainash_transport.storage.backends.local import LocalStorageBackend
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
+    class Wrapped(LocalStorageBackend):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+    (tmp_path / "f").write_bytes(b"ok")
+    fac = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.LOCAL, policy=LocationPolicy(root=str(tmp_path)))
+    assert fac.read("f") == b"ok"

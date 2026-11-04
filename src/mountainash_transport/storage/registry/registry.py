@@ -11,12 +11,12 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 _backend_registry: dict[CONST_STORAGE_PROVIDER_TYPE, type] = {}
 
 
-def _accepts(cls: type, name: str) -> bool:
+def _accepts(cls: type, name: str, *, var_keyword: bool = True) -> bool:
     """True if ``cls.__init__`` accepts keyword *name*.
 
-    Either an explicit parameter or a ``**kwargs`` catch-all counts. When the
-    signature cannot be introspected we assume acceptance rather than block a
-    legitimate backend.
+    An explicit parameter always counts; a ``**kwargs`` catch-all counts only
+    when *var_keyword* is true. When the signature cannot be introspected we
+    assume acceptance rather than block a legitimate backend.
     """
     try:
         params = inspect.signature(cls).parameters
@@ -24,7 +24,7 @@ def _accepts(cls: type, name: str) -> bool:
         return True
     if name in params:
         return True
-    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    return var_keyword and any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
 def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Callable[[type], type]:
@@ -67,7 +67,8 @@ def get_storage_backend(
         connection: Optional pre-built connection object forwarded to the backend.
         auth_strategy: Optional auth strategy forwarded to the backend constructor (HTTP backends only).
         location_check: Optional location check for locations the backend derives itself
-            (e.g. HTTP redirects); forwarded only to constructors that accept it.
+            (e.g. HTTP redirects); forwarded only to constructors that name it explicitly,
+            so wrappers passing ``**kwargs`` to a built-in backend are not broken.
 
     Returns:
         An instantiated backend object.
@@ -92,7 +93,7 @@ def get_storage_backend(
                     "currently only supported by the HTTP backend."
                 )
             kwargs["auth_strategy"] = auth_strategy
-        if location_check is not None and _accepts(cls, "location_check"):
+        if location_check is not None and _accepts(cls, "location_check", var_keyword=False):
             kwargs["location_check"] = location_check
         return cls(storage_profile, **kwargs)
 

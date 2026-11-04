@@ -233,9 +233,9 @@ Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host
 
 An empty set means no restriction for that scheme. To allow no hosts for a scheme, leave the scheme out of `allowed_remote`. Take care when building the mapping from configuration that an empty list cannot stand in for "nothing allowed". See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
-### Why can my S3 facade reach other buckets?
+### Which buckets can an S3 facade reach under a policy?
 
-An S3-family profile without `BUCKET` grants every bucket at its endpoint, and the facade does not check bucket names. Set `BUCKET` on the profile to hold a facade to one bucket, and list any extra buckets in `allowed_remote["s3"]`. See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
+An S3-family profile with `BUCKET` grants that bucket; one without `BUCKET` grants none. List every other bucket the facade should reach in `allowed_remote` under the flavour's scheme (for example `allowed_remote["s3"]`). See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
 
 ### Are HTTP redirects checked against the policy?
 
@@ -343,7 +343,7 @@ Each backend class inherits one mixin per capability and adds a constructor and 
 
 ### Can I register my own backend without changing the package?
 
-Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
+Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. Under an active location policy, a backend registered for a provider with no built-in host check (GCS, Azure, FTP, SMB, GitHub) refuses every path. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
 
 ### How do I add a new backend to the package?
 
