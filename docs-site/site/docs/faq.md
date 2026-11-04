@@ -325,7 +325,7 @@ The whole payload. The SFTP backend reads the entire source stream into memory b
 
 ### Is there a size limit on S3 `copy()`?
 
-Yes. An S3-family `copy()` is one `CopyObject` request with no multipart fallback, so it is bounded by the provider's single-request copy limit (5 GB on Amazon S3). To copy a larger object, stream it with `read_stream` and `write_stream`, which uploads through boto3's multipart-capable upload, or use `copy_between` with facades that do not share one profile object. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
+No practical one. An S3-family `copy()` uses boto3's managed copy: objects under 4 GiB are copied with one `CopyObject` request, and larger ones with multipart `UploadPartCopy` in 256 MiB parts, keeping the content type and metadata. The 4 GiB threshold sits below every supported provider's single-request copy limit (5 GB on Amazon S3, S3 Express and Backblaze B2; 5 GiB less 5 MiB on Cloudflare R2). The copy stays server side; no bytes pass through your process. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
 
 ### Why is an S3 listing with `max_results` slow on a large prefix?
 

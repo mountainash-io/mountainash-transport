@@ -346,7 +346,6 @@ True
 True
 ```
 
-!!! warning "S3 copies use a single request"
-    An S3-family `copy()` is one `CopyObject` request with no multipart fallback. It is bounded by the provider's single-request copy limit, which is [5 GB on Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html); copying a larger object fails. See the [support matrix and known limits](../../reference/support-matrix.md).
+An S3-family `copy()` stays server side at any size: objects under 4 GiB are copied with one `CopyObject` request, larger ones with multipart `UploadPartCopy`, below every provider's [single-request copy limit](../14-backends/index.md#where-backends-differ).
 
 To copy between two different stores, for example from SFTP to S3, or to copy within SFTP, use `copy_between()`, which streams from one facade into another and can apply transforms on the way ([Copying between backends](../10-stream-transforms/index.md#copying-between-backends)).
