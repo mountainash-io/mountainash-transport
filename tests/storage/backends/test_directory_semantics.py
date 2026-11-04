@@ -43,6 +43,12 @@ class _FilesystemSFTP:
     def listdir_attr(self, path: str) -> list[SFTPAttributes]:
         return [SFTPAttributes.from_stat(os.lstat(os.path.join(path, name)), name) for name in os.listdir(path)]
 
+    def rmdir(self, path: str) -> None:
+        os.rmdir(path)
+
+    def remove(self, path: str) -> None:
+        os.remove(path)
+
 
 @pytest.fixture(params=["local", "sftp"])
 def backend(request: pytest.FixtureRequest) -> LocalStorageBackend | SFTPStorageBackend:
@@ -144,6 +150,76 @@ def test_metadata_and_listing_timestamps_are_utc(backend: t.Any, tmp_path: Path)
     expected = datetime(2023, 11, 14, 22, 13, 20, tzinfo=timezone.utc)
     assert backend.get_metadata(str(path)).last_modified == expected
     assert backend.list_dir(str(tmp_path))[0].last_modified == expected
+
+
+def _tree(root: Path) -> Path:
+    target = root / "doomed"
+    (target / "sub" / "deeper").mkdir(parents=True)
+    (target / "a.txt").write_bytes(b"a")
+    (target / "sub" / "b.txt").write_bytes(b"b")
+    return target
+
+
+def test_rmdir_removes_empty_directory(backend: t.Any, tmp_path: Path) -> None:
+    (tmp_path / "empty").mkdir()
+    backend.rmdir(str(tmp_path / "empty"))
+    assert not (tmp_path / "empty").exists()
+
+
+def test_rmdir_refuses_non_empty_directory_by_default(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    with pytest.raises(StorageError):
+        backend.rmdir(str(target))
+    assert (target / "a.txt").read_bytes() == b"a" and (target / "sub" / "b.txt").exists()
+
+
+def test_recursive_rmdir_removes_tree(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    backend.rmdir(str(target), recursive=True)
+    assert not target.exists() and tmp_path.exists()
+
+
+def test_recursive_rmdir_removes_links_without_following_them(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"keep")
+    (target / "sub" / "link").symlink_to(outside)
+    backend.rmdir(str(target), recursive=True)
+    assert not target.exists()
+    assert (outside / "keep.txt").read_bytes() == b"keep"
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+def test_rmdir_missing_path_is_not_found(backend: t.Any, tmp_path: Path, recursive: bool) -> None:
+    with pytest.raises(PathNotFoundError):
+        backend.rmdir(str(tmp_path / "missing"), recursive=recursive)
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+@pytest.mark.parametrize("kind", ["file", "directory-link"])
+def test_rmdir_refuses_non_directories(backend: t.Any, tmp_path: Path, recursive: bool, kind: str) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "keep.txt").write_bytes(b"keep")
+    target = tmp_path / "target"
+    if kind == "file":
+        target.write_bytes(b"file")
+    else:
+        target.symlink_to(real)
+    with pytest.raises(StorageError) as caught:
+        backend.rmdir(str(target), recursive=recursive)
+    assert not isinstance(caught.value, PathNotFoundError)
+    assert os.path.lexists(target) and (real / "keep.txt").exists()
+
+
+def test_facade_rmdir_passes_recursive(tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    storage = StorageFacade.for_local()
+    with pytest.raises(StorageError):
+        storage.rmdir(str(target))
+    storage.rmdir(str(target), recursive=True)
+    assert not target.exists()
 
 
 @pytest.mark.parametrize("winner", ["directory", "file", "absent"])

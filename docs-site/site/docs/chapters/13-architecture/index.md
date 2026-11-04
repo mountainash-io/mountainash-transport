@@ -103,7 +103,7 @@ All of them share one error rule: a backend translates its native I/O failures i
 <!-- concept:204 -->
 ### Directory
 
-`StorageDirectoryProtocol` has `list_dir(path)`, `mkdir(path, *, parents=True)` and `rmdir(path)`. With `parents=True`, `mkdir` creates missing ancestors and accepts an existing directory; with `parents=False` it creates only the final directory and fails if the parent is missing or the target exists. The protocol leaves `rmdir`'s handling of non-empty and missing directories to the backend, and local and SFTP differ (see [Where backends differ](../14-backends/index.md#where-backends-differ)). Object stores have no directories and do not implement this protocol.
+`StorageDirectoryProtocol` has `list_dir(path)`, `mkdir(path, *, parents=True)` and `rmdir(path, *, recursive=False)`. With `parents=True`, `mkdir` creates missing ancestors and accepts an existing directory; with `parents=False` it creates only the final directory and fails if the parent is missing or the target exists. `rmdir` removes only an empty directory unless `recursive=True`, which removes the tree without following symbolic links; a missing path raises `PathNotFoundError` and a non-directory is refused. Local and SFTP implement the same contract. Object stores have no directories and do not implement this protocol.
 
 <!-- concept:205 -->
 ### Ranged read

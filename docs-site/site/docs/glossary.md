@@ -12,7 +12,7 @@ Explained in [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles
 
 ## Backend divergence
 
-A behaviour that differs between backends because each keeps its store's own semantics instead of emulating the others. Documented cases include `rmdir` removing a non-empty local directory but failing on SFTP, SFTP buffering stream writes in memory, single-request S3 copy and S3 listing with a limit.
+A behaviour that differs between backends because each keeps its store's own semantics instead of emulating the others. Documented cases include SFTP buffering stream writes in memory, single-request S3 copy and S3 listing with a limit.
 
 Related: [Support matrix](#support-matrix).
 
@@ -852,7 +852,7 @@ Explained in [Delete](chapters/13-architecture/index.md#delete).
 
 ## `StorageDirectoryProtocol`
 
-The storage protocol for directories, with `list_dir`, `mkdir` and `rmdir`. Local storage and SFTP implement it; object stores and HTTP do not. The handling of non-empty and missing directories by `rmdir` is left to each backend.
+The storage protocol for directories, with `list_dir`, `mkdir` and `rmdir`. Local storage and SFTP implement it; object stores and HTTP do not. `rmdir` removes only an empty directory unless `recursive=True` is passed.
 
 Related: [Directory operations](#directory-operations), [Backend divergence](#backend-divergence).
 

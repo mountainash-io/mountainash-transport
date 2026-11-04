@@ -196,7 +196,7 @@ https: missing enumerate, delete, copy, directory
 S3StorageBackend does not support 'list_dir'
 ```
 
-`supports()` checks that the methods exist, not how they behave. Two backends that both support an operation can still differ in detail, for example in how `rmdir` treats a non-empty directory; [File operations](../07-file-operations/index.md) notes each difference where it applies. `supports()` keeps working after the facade is closed.
+`supports()` checks that the methods exist, not how they behave. Two backends that both support an operation can still differ in detail, for example SFTP buffering a whole stream in memory on `write_stream`; [File operations](../07-file-operations/index.md) notes each difference where it applies. `supports()` keeps working after the facade is closed.
 
 ## Opening and closing
 

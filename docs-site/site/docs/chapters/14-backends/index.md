@@ -79,7 +79,7 @@ with StorageFacade.for_local() as local:
         fh.seek(-3, os.SEEK_END)
         print(fh.read())                              # -> b'789'
 
-    local.rmdir(os.path.join(root, "data"))           # removes the file too
+    local.rmdir(os.path.join(root, "data"), recursive=True)  # removes the file too
     print(os.path.exists(path))                       # -> False
 
     try:
@@ -217,9 +217,6 @@ The facade returns two kinds of remote read stream. Sequential reads use forward
 
 <!-- concept:217 -->
 The protocols fix method names and error types. Some behaviour is left to the store, and the backends keep the store's semantics rather than emulating one another.
-
-!!! warning "Directory removal"
-    `rmdir` on local storage calls `shutil.rmtree`, so it removes the directory and everything in it. On SFTP it calls the server's `rmdir`, which removes only an empty directory and fails on a non-empty one. S3 and HTTP have no `rmdir`. Code that must behave the same on both should empty the directory first. See [Deleting, directories and parent creation](../07-file-operations/index.md#deleting-directories-and-parent-creation) and the [support matrix and known limits](../../reference/support-matrix.md).
 
 !!! warning "SFTP write buffering"
     The SFTP backend's `write_from_stream` reads the whole source stream into memory and then writes it as bytes. This applies to `write_stream`, to `write` with a transform pipeline, and to `copy_between` with an SFTP destination. Memory use grows with the payload. See the [support matrix and known limits](../../reference/support-matrix.md).

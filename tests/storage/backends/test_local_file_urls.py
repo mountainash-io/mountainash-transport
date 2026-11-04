@@ -52,7 +52,7 @@ def test_writes_and_directories(fac, url, tmp_path):
     assert not (tmp_path / "d" / "c.txt").exists()
     fac.mkdir(url("d/sub/deeper"))
     assert (tmp_path / "d" / "sub" / "deeper").is_dir()
-    fac.rmdir(url("d/sub"))
+    fac.rmdir(url("d/sub"), recursive=True)
     assert not (tmp_path / "d" / "sub").exists()
 
 
