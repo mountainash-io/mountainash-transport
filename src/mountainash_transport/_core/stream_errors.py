@@ -6,11 +6,19 @@ from types import TracebackType
 
 
 class _CallerInput:
-    """Delegate input capabilities unchanged; retain errors only for this transfer."""
+    """Delegate input capabilities; retain errors only for this transfer.
+
+    ``close()`` is a no-op: the caller owns the stream, and an SDK that closes
+    what it is given (boto3 does after a single-request upload) must not close
+    the caller's stream. ``closed`` still reports the source's state.
+    """
 
     def __init__(self, source: t.BinaryIO) -> None:
         self._source = source
         self._errors: list[tuple[BaseException, TracebackType | None]] = []
+
+    def close(self) -> None:
+        """Leave the borrowed source open."""
 
     def __getattr__(self, name: str) -> t.Any:
         try:

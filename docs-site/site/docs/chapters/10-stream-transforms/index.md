@@ -272,7 +272,7 @@ plain write, caller stream closed: False
 unwrap, caller stream closed: False
 ```
 
-A backend may still close the stream it is handed: a small single-request S3 upload does so (see the [support matrix and known limits](../../reference/support-matrix.md#known-limits)). With a pipeline that stream is a transform layer, not yours.
+Backends do not close it either: the stream an SDK receives is a guard that leaves yours open, including after a single-request S3 upload, where boto3 closes what it is given.
 
 ## Copying between backends
 

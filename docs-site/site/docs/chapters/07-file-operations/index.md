@@ -118,8 +118,7 @@ How much of the payload each backend holds in memory differs:
 !!! warning "SFTP buffers stream writes"
     On SFTP, `write_stream()` reads the entire source stream into memory and then writes it in one call. Memory use grows with the payload size, and this also applies when `copy_between()` copies into SFTP. Writing a multi-gigabyte stream to SFTP needs that much free memory. See the [support matrix and known limits](../../reference/support-matrix.md).
 
-!!! note "S3 uploads may close your stream"
-    `write_stream()` to an S3-family store hands the stream to boto3's managed upload. After a small upload, sent as a single request, the source stream is closed; after a larger multipart upload it is left open. In a local run, a 100-byte `BytesIO` and file handle were both closed afterwards, and 20 MiB ones were not. Do not rely on the source stream's state after `write_stream()` returns. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+`write_stream()` never closes the stream you pass it: after a single-request or a multipart S3 upload, a local write or an HTTP `PUT`, the source is still open and yours to close.
 
 A stream returned by `read_stream()` must stay open for the whole read, and its facade must stay open until the stream is closed. Closing the stream also closes every transform layer stacked on it. Errors from lazy decoding appear when you read, not when you open. These rules are covered in [Errors and ownership](../09-read-access-modes/index.md#errors-and-ownership).
 

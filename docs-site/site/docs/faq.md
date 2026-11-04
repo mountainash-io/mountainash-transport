@@ -211,9 +211,9 @@ Use `copy_between(source_path, destination_path, source_facade, destination_faca
 
 The native copy is used only when no pipeline is given, both facades use the same backend class and equal location policies, they share the identical storage profile object (compared with `is`), and the backend supports copy. Two facades built from separate but equal profiles stream the bytes through your process. See [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
 
-### Why is my source stream closed after `write_stream()`?
+### Does `write_stream()` close my source stream?
 
-One case still closes it: a small single-request upload to an S3-family store written without a pipeline closes the stream you supplied, while a larger multipart upload leaves it open. Transforms never close your stream; with a pipeline the backend receives a transform layer that the facade owns. Do not rely on the source stream's state after an unpiped S3 write; pass a separate handle if you need it again. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
+No. The stream you pass stays open after `write_stream()` and `copy_between()` return, on every backend, for every payload size and with or without a pipeline. Transforms leave it open, the facade closes only the layers it builds, and the stream boto3 or httpx receives is a guard whose `close()` leaves yours open (boto3 closes what it is given after a small single-request S3 upload). Close it yourself when you are done. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
 
 ### Can I write my own transform?
 
@@ -313,7 +313,7 @@ Errors redact what they can see. `LocationNotAllowed`, scheme detection, `Storag
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [closed source streams](#why-is-my-source-stream-closed-after-write_stream), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
