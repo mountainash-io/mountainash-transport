@@ -12,7 +12,11 @@ import typing as t
 
 from typing_extensions import Self
 
-from mountainash_transport.connections.errors import ConnectionTimeoutError, TransportConnectionError
+from mountainash_transport.connections.errors import (
+    ConnectionTimeoutError,
+    TransportConnectionError,
+    TunnelEndpointError,
+)
 from mountainash_transport._core.protocols import ConnectionProtocol
 
 
@@ -193,6 +197,14 @@ class _PatchedEndpointProfile:
         self._port = port
 
     def _patch_endpoint(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        # boto kwargs without endpoint_url make botocore resolve the public AWS
+        # endpoint itself; refuse rather than connect around the tunnel.
+        if "service_name" in kwargs and "endpoint_url" not in kwargs:
+            raise TunnelEndpointError(
+                f"Tunnel cannot redirect {kwargs['service_name']!r} target: it emits no "
+                "endpoint_url, so its SDK would connect directly and bypass the bastion. "
+                "Set ENDPOINT_URL on the target profile."
+            )
         if "hostname" in kwargs:
             kwargs["hostname"] = self._host
             kwargs["port"] = self._port
