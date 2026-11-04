@@ -673,6 +673,62 @@ def test_connect_refuses_aws_s3_target_and_releases_tunnel(rig) -> None:
         assert not worker.is_alive()
 
 
+@pytest.fixture
+def aws_config(tmp_path, monkeypatch):
+    cfg = tmp_path / "config"
+    cfg.write_text(
+        "[profile plain]\nregion = ap-southeast-2\n"
+        "[profile roley]\nrole_arn = arn:aws:iam::123456789012:role/r\nsource_profile = plain\n"
+    )
+    creds = tmp_path / "credentials"
+    creds.write_text("[plain]\naws_access_key_id = AKIAEXAMPLE\naws_secret_access_key = example\n")
+    monkeypatch.setenv("AWS_CONFIG_FILE", str(cfg))
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(creds))
+
+
+def _tunnelled_s3(rig, auth):
+    from mountainash_transport.connections import _tunnel_inner_factory
+    from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+    target = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports",
+                              ENDPOINT_URL="https://s3.internal.example")
+    return TunnelledConnection(rig.ssh, _tunnel_inner_factory(target, auth), "127.0.0.1", rig.peer.server_port)
+
+
+@pytest.mark.parametrize("auth_kwargs", [
+    {"ACCESS_KEY_ID": "AKIAEXAMPLE", "SECRET_ACCESS_KEY": "example",
+     "ROLE_ARN": "arn:aws:iam::123456789012:role/r"},
+    {"PROFILE_NAME": "plain", "ROLE_ARN": "arn:aws:iam::123456789012:role/r"},
+    {"PROFILE_NAME": "roley"},
+], ids=["role_arn", "profile_and_role_arn", "profile_config_assumes_role"])
+def test_connect_refuses_assume_role_through_tunnel_and_releases(rig, aws_config, auth_kwargs) -> None:
+    from mountainash_auth_client import IAMAuthProfile
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(**auth_kwargs))
+    with pytest.raises(TunnelEndpointError, match="STS"):
+        connection.connect()
+    assert rig.servers, "refusal should come after the listener started"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+    assert all(server.socket.fileno() == -1 for server in rig.servers)
+    for worker in rig.threads:
+        worker.join(2)
+        assert not worker.is_alive()
+
+
+@pytest.mark.parametrize("auth_kwargs", [
+    {"ACCESS_KEY_ID": "AKIAEXAMPLE", "SECRET_ACCESS_KEY": "example"},
+    {"PROFILE_NAME": "plain"},
+], ids=["static_keys", "profile_without_role"])
+def test_connect_allows_non_assume_role_credentials_through_tunnel(rig, aws_config, auth_kwargs) -> None:
+    from mountainash_auth_client import IAMAuthProfile
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(**auth_kwargs))
+    with connection:
+        connection.connect()
+        assert connection.client.meta.endpoint_url == f"http://127.0.0.1:{connection.local_port}"
+
+
 @pytest.mark.parametrize("boundary", ["listener", "socket"])
 def test_cleanup_cancellation_is_not_wrapped(rig, monkeypatch, boundary) -> None:
     rig.connection.connect()

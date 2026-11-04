@@ -310,6 +310,7 @@ The rewrite touches only specific keys in the target's emitted arguments, so wha
 | `hostname` and `port` (SFTP) | `127.0.0.1` and `local_port` | the inner SSH session goes through the tunnel |
 | `endpoint_url` or `base_url` (for example an S3 profile with `ENDPOINT_URL`) | `http://127.0.0.1:<local_port>` | through the tunnel, always as plain HTTP |
 | no `endpoint_url` for an S3 (boto3) target (an `aws` or `express` flavour profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
+| an S3 target that assumes a role (`ROLE_ARN` on the `IAMAuthProfile`, or a `PROFILE_NAME` whose AWS config sets `role_arn`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; botocore would call AWS STS directly, outside the bastion. Use static or session credentials for tunnelled targets |
 | none of these (an `HTTPStorageProfile`) | unchanged | the profile names no destination; build request URLs from `local_port` |
 
 The rewrite is visible on a boto3 client's endpoint. Bastion setup is again not shown:
@@ -359,7 +360,7 @@ Connection failures raise `TransportConnectionError` (exported from `mountainash
 |---|---|
 | `TransportConnectionError` | Client construction, socket, DNS, SSH authentication or host-key failure; missing boto3 or paramiko; tunnel cleanup failure |
 | `ConnectionTimeoutError` | A connect timed out, or tunnel workers did not stop within one second |
-| `TunnelEndpointError` | A tunnelled target's SDK would resolve its own remote endpoint (S3 `aws`/`express` without `ENDPOINT_URL`), bypassing the bastion |
+| `TunnelEndpointError` | A tunnelled target would reach the network outside the tunnel: its SDK would resolve its own endpoint (S3 `aws`/`express` without `ENDPOINT_URL`), or an S3 target assumes a role and would call AWS STS directly |
 | `UnsupportedAuthProfileError` | The auth mode is not in the profile's `supported_auth` (raised by `create_connection` and by named-profile resolution) |
 | `TokenExchangeError`, `TokenRefreshError`, `AuthorizationRequired` | Defined for OAuth token failures; transport's own connection code does not raise them, since OAuth flows belong to `mountainash-auth-client` |
 
