@@ -41,7 +41,7 @@ from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedRead
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 from mountainash_transport.location import (
-    LocationNotAllowed, LocationPolicy, allow_remote, confine_local, identify_scheme,
+    LocationNotAllowed, LocationPolicy, allow_remote, confine_local,
     require_known_scheme, url_host,
 )
 from mountainash_transport._schemes import SCHEMES
@@ -53,6 +53,37 @@ _S3_FAMILY = frozenset({
 })
 
 _PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider in _S3_FAMILY}
+
+
+def _check_s3(facade: "StorageFacade", path: str, scheme: str) -> None:
+    if facade._profile_any:
+        return
+    from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+    try:
+        bucket, _ = parse_s3_path(path)
+    except ValueError:
+        raise LocationNotAllowed(path, "invalid location") from None
+    allow_remote(_PROVIDER_SCHEME[facade._provider_type], bucket.lower(), facade._policy,
+                 profile_host=facade._profile_host)
+
+
+def _check_sftp(facade: "StorageFacade", path: str, scheme: str) -> None:
+    # A bare remote path addresses the profile's own HOST.
+    if scheme == "sftp":
+        allow_remote("sftp", url_host(path), facade._policy, profile_host=facade._profile_host)
+
+
+def _check_http(facade: "StorageFacade", path: str, scheme: str) -> None:
+    allow_remote(scheme, url_host(path), facade._policy)
+
+
+# Remote host check per provider. Under an active policy a remote provider
+# missing here is refused (fail closed); a new backend must add its entry.
+_REMOTE_CHECKS: dict[CONST_STORAGE_PROVIDER_TYPE, t.Callable[["StorageFacade", str, str], None]] = {
+    **{p: _check_s3 for p in _S3_FAMILY},
+    CONST_STORAGE_PROVIDER_TYPE.SFTP: _check_sftp,
+    CONST_STORAGE_PROVIDER_TYPE.HTTP: _check_http,
+}
 
 
 def _has_static_token(auth_profile: t.Any) -> bool:
@@ -142,7 +173,7 @@ class StorageFacade:
                 self._connection.connect()
 
             backend_kwargs: dict[str, t.Any] = {"connection": self._connection}
-            if provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP and self._policy is not None and self._policy.active:
+            if self._policy is not None and self._policy.active:
                 backend_kwargs["location_check"] = self._check
             if strategy is not None:
                 backend_kwargs["auth_strategy"] = strategy
@@ -161,23 +192,13 @@ class StorageFacade:
         if self._policy is None or not self._policy.active:
             return path
         scheme = require_known_scheme(path, self._policy)
-        provider = self._provider_type
-        if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+        assert scheme is not None  # active policy refuses unknown schemes
+        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
-        if provider in _S3_FAMILY:
-            if not self._profile_any:
-                from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
-                try:
-                    bucket, _ = parse_s3_path(path)
-                except ValueError:
-                    raise LocationNotAllowed(path, "invalid location") from None
-                allow_remote(_PROVIDER_SCHEME[provider], bucket.lower(), self._policy,
-                             profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
-            if identify_scheme(path) == "sftp":
-                allow_remote("sftp", url_host(path), self._policy, profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP and scheme is not None:
-            allow_remote(scheme, url_host(path), self._policy)
+        check = _REMOTE_CHECKS.get(self._provider_type)
+        if check is None:
+            raise LocationNotAllowed(path, f"no location check for provider {self._provider_type}")
+        check(self, path, scheme)
         return path
 
     def _ensure_open(self) -> None:

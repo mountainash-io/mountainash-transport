@@ -347,11 +347,11 @@ Yes. Decorate a class with `register_storage_backend(provider_type)` from `mount
 
 ### How do I add a new backend to the package?
 
-Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host checks to the facade's location policy, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host check to the facade's `_REMOTE_CHECKS` table, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Does a new remote backend get location policy checks automatically?
 
-No. `StorageFacade` applies `allowed_remote` host checks per provider family, and a new remote provider needs its own branch there, or its hosts are not checked against the policy. A missing connection mapping is also silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping is still silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Why must a backend import its SDK inside functions?
 
