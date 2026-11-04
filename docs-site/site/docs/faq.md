@@ -227,11 +227,11 @@ Pass `policy=LocationPolicy(root=...)` to `StorageFacade.for_local`, `from_path`
 
 ### How do I limit which hosts or buckets a facade can reach?
 
-Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host names, or bucket names for the S3 family. `http` and `https` are separate keys, and ports are not compared. A scheme that is absent from the mapping refuses every host. The storage profile you pass also grants its own host or bucket. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
+Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host names, or bucket names for the S3 family. `http` and `https` are separate keys, and ports are not compared. A scheme that is absent from the mapping, or mapped to an empty set, refuses every host. The storage profile you pass also grants its own host or bucket. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
-### Why does `allowed_remote={"https": frozenset()}` allow every host?
+### How do I allow every host for a scheme?
 
-An empty set means no restriction for that scheme. To allow no hosts for a scheme, leave the scheme out of `allowed_remote`. Take care when building the mapping from configuration that an empty list cannot stand in for "nothing allowed". See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
+Use the entry `"*"`: `allowed_remote={"https": frozenset({"*"})}` allows any `https` host, redirects included. Only the whole entry `"*"` is special; `"*.example.com"` is not a pattern. An empty set, `frozenset()`, allows no host, so an allow-list built from configuration that comes out empty fails closed. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
 ### Which buckets can an S3 facade reach under a policy?
 
@@ -313,7 +313,7 @@ Errors redact what they can see. `LocationNotAllowed`, scheme detection, `Storag
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [empty host sets](#why-does-allowed_remotehttps-frozenset-allow-every-host), [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [closed source streams](#why-is-my-source-stream-closed-after-write_stream), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [closed source streams](#why-is-my-source-stream-closed-after-write_stream), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 

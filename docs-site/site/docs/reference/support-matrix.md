@@ -29,7 +29,6 @@ These behaviours are current and affect correct use. Each one is also noted wher
 
 | Area | Behaviour | Where it is explained |
 |---|---|---|
-| Location policy | An empty host set in `allowed_remote` (for example `{"https": frozenset()}`) allows any host for that scheme. To allow no remote hosts for a scheme, leave the scheme out. | [Allowing remote hosts](../chapters/08-location-policy/index.md#allowing-remote-hosts) |
 | Tunnels | A tunnelled connection rewrites `base_url` and `endpoint_url` to `http://127.0.0.1:<port>`. The SSH hop is encrypted, but an HTTPS-only target receives plain HTTP and the request fails; any path prefix on the URL is dropped. | [Decorator connections](../chapters/11-connections/index.md#decorator-connections) |
 | Tunnels (SDK-resolved endpoints) | An `aws` or `express` flavour S3 profile without `ENDPOINT_URL` cannot be redirected through a tunnel; `connect()` raises `TunnelEndpointError` instead of connecting directly to AWS. | [Decorator connections](../chapters/11-connections/index.md#decorator-connections) |
 | Path joining | `StoragePath.join` appends the name after any query string (`https://h/a?x=1` joined with `b.csv` gives `https://h/a?x=1/b.csv`). | [StoragePath](../chapters/04-paths-and-schemes/index.md#storagepath) |

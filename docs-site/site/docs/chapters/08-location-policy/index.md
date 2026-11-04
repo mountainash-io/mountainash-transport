@@ -17,7 +17,7 @@ The policy lives in `mountainash_transport.location`, a standard-library-only mo
 | Field | Default | Meaning |
 |---|---|---|
 | `root` | `None` | A directory that local paths must stay inside. Relative paths resolve beneath it. |
-| `allowed_remote` | `{}` | A mapping from canonical URL scheme (`"http"`, `"https"`, `"s3"`, `"sftp"` and so on) to a `frozenset` of host names or S3 bucket names that scheme may reach. |
+| `allowed_remote` | `{}` | A mapping from canonical URL scheme (`"http"`, `"https"`, `"s3"`, `"sftp"` and so on) to a `frozenset` of host names or S3 bucket names that scheme may reach. An empty set allows no host; the entry `"*"` allows every host for that scheme. |
 | `allow_unconfined` | `False` | An explicit opt-out. When `True`, the policy is inactive and checks nothing. |
 
 You pass a policy as `policy=` to `StorageFacade(...)`, `StorageFacade.from_path(...)` or `StorageFacade.for_local(...)`. A facade with no policy behaves as if confinement did not exist: no path is checked. A facade with an active policy checks every path, and refuses any URL whose scheme is not in transport's scheme registry (see [how a path picks a backend](../04-paths-and-schemes/index.md#how-a-path-picks-a-backend)).
@@ -38,7 +38,7 @@ flowchart TD
     IN -->|no| X
     B -->|"S3 family, SFTP, HTTP"| PH{"host or bucket matches<br/>caller's profile?"}
     PH -->|yes| OK
-    PH -->|no| AL{"listed in<br/>allowed_remote[scheme]?"}
+    PH -->|no| AL{"listed in<br/>allowed_remote[scheme],<br/>or '*' listed?"}
     AL -->|yes| OK
     AL -->|no| X
 ```
@@ -176,6 +176,7 @@ redirected = f"http://127.0.0.1:{port}/moved.csv"
 
 policies = {
     "listed host": LocationPolicy(allowed_remote={"http": frozenset({"127.0.0.1"})}),
+    "any host": LocationPolicy(allowed_remote={"http": frozenset({"*"})}),
     "empty set": LocationPolicy(allowed_remote={"http": frozenset()}),
     "https only": LocationPolicy(allowed_remote={"https": frozenset({"127.0.0.1"})}),
     "no entries": LocationPolicy(),
@@ -198,9 +199,12 @@ Output:
 listed host  127.0.0.1 sales.csv  read 23 bytes
 listed host  localhost sales.csv  refused (remote not allowed)
 listed host  127.0.0.1 moved.csv  refused (remote not allowed)
-empty set    127.0.0.1 sales.csv  read 23 bytes
-empty set    localhost sales.csv  read 23 bytes
-empty set    127.0.0.1 moved.csv  read 23 bytes
+any host     127.0.0.1 sales.csv  read 23 bytes
+any host     localhost sales.csv  read 23 bytes
+any host     127.0.0.1 moved.csv  read 23 bytes
+empty set    127.0.0.1 sales.csv  refused (remote not allowed)
+empty set    localhost sales.csv  refused (remote not allowed)
+empty set    127.0.0.1 moved.csv  refused (remote not allowed)
 https only   127.0.0.1 sales.csv  refused (remote not allowed)
 https only   localhost sales.csv  refused (remote not allowed)
 https only   127.0.0.1 moved.csv  refused (remote not allowed)
@@ -209,10 +213,7 @@ no entries   localhost sales.csv  refused (remote not allowed)
 no entries   127.0.0.1 moved.csv  refused (remote not allowed)
 ```
 
-With `127.0.0.1` listed, the same server is refused under the name `localhost`, and the redirect to `localhost` is refused before it is followed. A scheme with no entry refuses every host, which is why the `https`-only policy blocks plain `http`.
-
-!!! warning "An empty set allows every host"
-    `allowed_remote={"http": frozenset()}` does not block `http`; it allows any host for that scheme, as the "empty set" rows above show. This is the current behaviour of `allow_remote` in `src/mountainash_transport/location.py`: a scheme that is absent from the mapping is refused, while a scheme mapped to an empty set is unrestricted. To block a scheme, leave it out of `allowed_remote`. Do not build an allow-list from configuration in a way that can produce an empty set when you mean "nothing allowed". See the [support matrix and known limits](../../reference/support-matrix.md).
+With `127.0.0.1` listed, the same server is refused under the name `localhost`, and the redirect to `localhost` is refused before it is followed. `"*"` allows every host for its scheme, redirects included. An empty set allows nothing, exactly like a scheme with no entry, which is also why the `https`-only policy blocks plain `http`. So an allow-list built from configuration that comes out empty fails closed. `"*"` is only special as a whole entry: `"*.example.com"` is compared as a literal host name and matches nothing.
 
 !!! note "DNS resolution and token endpoints after the host check"
     The check compares host names, so it does not defend against DNS rebinding, where an allowed name resolves to an unexpected address. Token endpoints used by managed OAuth2 are not checked by the policy.
