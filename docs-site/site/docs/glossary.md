@@ -644,7 +644,7 @@ Explained in [Registry completeness tests](chapters/15-maintaining/index.md#regi
 
 ## Remote allow-list
 
-The `allowed_remote` field of a `LocationPolicy`: a mapping from canonical URL scheme to the host names, or S3 bucket names, a facade may reach. Hosts are compared lowercased and IDNA-encoded, ignoring ports, and for HTTP the check also runs on every redirect.
+The `allowed_remote` field of a `LocationPolicy`: a mapping from canonical URL scheme to the host names, or S3 bucket names, a facade may reach. A scheme that is absent or mapped to an empty set reaches no host; the entry `"*"` allows every host for that scheme. Hosts are compared lowercased and IDNA-encoded, ignoring ports, and for HTTP the check also runs on every redirect.
 
 Related: [`LocationPolicy`](#locationpolicy), [Profile-granted host](#profile-granted-host).
 

@@ -364,9 +364,10 @@ facade may touch.
   `MOUNT_SPEC` has been removed. `LocalStorageProfile` is a settings profile
   and needs `[http]`; on a base install use `LocationPolicy(root=...)`.
 - **`allowed_remote`** maps a scheme to the hosts (or S3 buckets) it may reach,
-  e.g. `{"http": frozenset({"api.example.com"})}`. HTTP is refused unless listed;
-  every request is checked, including redirects and auth-flow follow-ups,
-  before it is sent.
+  e.g. `{"http": frozenset({"api.example.com"})}`. A scheme that is absent or
+  mapped to an empty set reaches no host; `frozenset({"*"})` allows any host for
+  that scheme. HTTP is refused unless listed; every request is checked,
+  including redirects and auth-flow follow-ups, before it is sent.
 - **Profile permission.** A caller-supplied SFTP profile permits its own `HOST`;
   an S3-family profile with a `BUCKET` permits only that bucket, and one with no
   `BUCKET` permits none (list its buckets in `allowed_remote`). A profile never
