@@ -574,8 +574,11 @@ class StorageFacade:
         path = self._check(path)
         self._backend.mkdir(path, parents=parents)
 
-    def rmdir(self, path: str) -> None:
-        """Remove the directory at *path*."""
+    def rmdir(self, path: str, *, recursive: bool = False) -> None:
+        """Remove the directory at *path*: empty-only unless ``recursive=True``.
+
+        See :meth:`StorageDirectoryProtocol.rmdir` for the contract.
+        """
         self._require(StorageDirectoryProtocol, "rmdir")
         path = self._check(path)
-        self._backend.rmdir(path)
+        self._backend.rmdir(path, recursive=recursive)

@@ -278,9 +278,10 @@ file. SFTP metadata and listing timestamps are now UTC-aware, matching Local;
 missing timestamps remain `None`. Code comparing these timestamps with naive
 datetimes must supply a timezone.
 
-Directory removal remains backend-specific: Local removes a directory tree;
-SFTP removes an empty directory. This change does not alter removal or
-symlink classification in directory listings.
+`rmdir(path)` removes only an empty directory on Local and SFTP alike; a
+non-empty directory raises `StorageError` and is left untouched. Pass
+`recursive=True` to remove the tree (symbolic links inside are removed, not
+followed). This does not alter symlink classification in directory listings.
 
 ### Exact-path object enumeration
 

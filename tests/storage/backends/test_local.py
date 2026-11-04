@@ -261,13 +261,6 @@ class TestDirectory:
         backend.mkdir(deep, parents=True)
         assert os.path.isdir(deep)
 
-    def test_rmdir_removes_directory_and_contents(self, backend, tmp_dir):
-        target = os.path.join(tmp_dir, "to_remove")
-        os.makedirs(target)
-        backend.write_from_bytes(os.path.join(target, "file.txt"), b"data")
-        backend.rmdir(target)
-        assert not os.path.exists(target)
-
 
 @pytest.mark.parametrize("operation", ["read_to_bytes", "read_to_stream", "get_metadata", "get_size"])
 def test_missing_operations_preserve_native_cause(
@@ -305,7 +298,7 @@ def test_denied_stat_is_not_absence(
         ("copy", "shutil.copy2", ("source", "destination")),
         ("delete_file", "os.remove", ("file",)),
         ("mkdir", "os.mkdir", ("directory",)),
-        ("rmdir", "shutil.rmtree", ("directory",)),
+        ("rmdir", "os.rmdir", ("directory",)),
         ("list_dir", "os.scandir", (".",)),
     ],
 )

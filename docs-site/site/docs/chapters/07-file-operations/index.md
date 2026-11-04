@@ -4,7 +4,7 @@ title: File operations
 
 # File operations
 
-A `StorageFacade` reads and writes files, streams them, lists and inspects them, deletes them, manages directories and copies within one store. Each operation has one signature for every backend that supports it, so code written against a local directory runs unchanged against an S3 bucket or an SFTP server, apart from operations whose behaviour differs by backend: SFTP has no `copy()`, and `rmdir()` removes a whole tree locally but only an empty directory on SFTP ([known limits](../../reference/support-matrix.md#known-limits)). Each difference is noted beside the operation.
+A `StorageFacade` reads and writes files, streams them, lists and inspects them, deletes them, manages directories and copies within one store. Each operation has one signature for every backend that supports it, so code written against a local directory runs unchanged against an S3 bucket or an SFTP server, apart from operations whose behaviour differs by backend, such as SFTP having no `copy()` ([known limits](../../reference/support-matrix.md#known-limits)). Each difference is noted beside the operation.
 
 Creating, checking and closing facades is described in [Opening storage with StorageFacade](../06-storage-facade/index.md). The examples on this page share one setup: a local facade, an S3 facade on a bucket named `reports`, and a temporary directory `root`. `ENDPOINT` is the URL of a local S3-compatible server; the examples were run in page order against moto's server. Each example writes under its own paths, so its output does not depend on the examples before it.
 
@@ -257,10 +257,10 @@ Local and SFTP stores have real directories and support three directory methods.
 
 - `list_dir(path)` returns a list of `StorageEntry`, one per immediate child, with `entry_type` set to `FILE` or `DIRECTORY`. A missing path raises `PathNotFoundError`, and a path that is a file raises a storage error rather than returning an empty list.
 - `mkdir(path, parents=True)` creates the directory and any missing ancestors, and accepts a directory that already exists. With `parents=False`, only the final directory is created, and a missing parent or an existing destination raises. Recursive creation is not atomic: ancestors created before a failure remain.
-- `rmdir(path)` removes a directory.
+- `rmdir(path)` removes an empty directory; a non-empty one raises `StorageError` and is left untouched. `rmdir(path, recursive=True)` removes the directory and everything inside it, removing symbolic links rather than following them. A missing path raises `PathNotFoundError`, and a file or a link to a directory is refused in both modes. Local and SFTP behave the same.
 
 ```python
-from mountainash_transport import PathNotFoundError
+from mountainash_transport import PathNotFoundError, StorageError
 
 folder = f"{root}/projects/2026"
 local.mkdir(folder)                           # parents=True by default
@@ -275,7 +275,11 @@ try:
 except PathNotFoundError as error:
     print("parents=False:", type(error).__name__)
 
-local.rmdir(f"{root}/projects")              # local removes the whole tree
+try:
+    local.rmdir(f"{root}/projects")          # not empty: refused
+except StorageError as error:
+    print("rmdir:", type(error).__name__)
+local.rmdir(f"{root}/projects", recursive=True)
 print(local.exists(f"{root}/projects"))
 ```
 
@@ -285,11 +289,9 @@ Output:
 archive directory None
 q1.csv file 13
 parents=False: PathNotFoundError
+rmdir: StorageError
 False
 ```
-
-!!! warning "`rmdir` is recursive on local stores and empty-only on SFTP"
-    On a local store, `rmdir()` removes the directory and everything inside it, using `shutil.rmtree`. On SFTP, `rmdir()` issues the protocol's remove-directory request, which succeeds only for an empty directory; the server refuses a non-empty directory and the call raises. Code that must behave the same on both should delete the contents first, then call `rmdir()` on the empty directory. See the [support matrix and known limits](../../reference/support-matrix.md).
 
 <!-- concept:155 -->
 

@@ -7,10 +7,7 @@ from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 
 @runtime_checkable
 class StorageDirectoryProtocol(Protocol):
-    """Manage directories, translating backend I/O into StorageError subclasses.
-
-    Removal's missing-path and recursion semantics remain backend-specific.
-    """
+    """Manage directories, translating backend I/O into StorageError subclasses."""
 
     def list_dir(self, path: str) -> list[StorageEntry]:
         """List the direct children of a directory, returning StorageEntry objects."""
@@ -25,6 +22,14 @@ class StorageDirectoryProtocol(Protocol):
         """
         ...
 
-    def rmdir(self, path: str) -> None:
-        """Remove the directory at the given path."""
+    def rmdir(self, path: str, *, recursive: bool = False) -> None:
+        """Remove the directory at *path*.
+
+        By default only an empty directory is removed; a non-empty one raises
+        ``StorageError`` and is left untouched. ``recursive=True`` removes the
+        directory and everything beneath it; symbolic links inside are removed,
+        never followed. A missing path raises ``PathNotFoundError``; a file or a
+        link to a directory raises ``StorageError`` and is not removed, in
+        either mode.
+        """
         ...

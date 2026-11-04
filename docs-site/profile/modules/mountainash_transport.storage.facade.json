@@ -31,7 +31,7 @@
     "StorageFacade.list_objects(prefix, *, delimiter='/', max_results=None) -> EnumerateResult",
     "StorageFacade.delete(path), exists(path), metadata(path), get_size(path)",
     "StorageFacade.copy(source, destination) — same-backend copy (StorageCopyProtocol)",
-    "StorageFacade.list_dir(path), mkdir(path, parents=True), rmdir(path) — StorageDirectoryProtocol",
+    "StorageFacade.list_dir(path), mkdir(path, parents=True), rmdir(path, *, recursive=False) — StorageDirectoryProtocol",
     "StorageFacade.close() / context manager — terminal close of the owned connection"
   ],
   "dependencies": [
