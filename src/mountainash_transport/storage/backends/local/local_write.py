@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import BinaryIO
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _native
 
 _CHUNK_SIZE = 65_536  # 64 KiB
 
@@ -15,6 +15,7 @@ class LocalWriteMixin:
 
     def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
         """Write bytes to a local file, optionally creating parent directories."""
+        path = _native(path)
         with _mapped(path):
             if create_parents:
                 os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -26,6 +27,7 @@ class LocalWriteMixin:
 
         Parent directories are created only when create_parents is True.
         """
+        path = _native(path)
         with _mapped(path):
             if create_parents:
                 os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _native
 
 
 class LocalCopyMixin:
@@ -13,6 +13,7 @@ class LocalCopyMixin:
 
     def copy(self, source: str, destination: str) -> None:
         """Copy *source* to *destination*, creating parent directories as needed."""
+        source, destination = _native(source), _native(destination)
         with _mapped(destination):
             os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
             shutil.copy2(source, destination)
