@@ -14,7 +14,11 @@ import httpx
 import pytest
 
 from mountainash_transport._core.protocols import ConnectionProtocol
-from mountainash_transport.connections.errors import ConnectionTimeoutError, TransportConnectionError
+from mountainash_transport.connections.errors import (
+    ConnectionTimeoutError,
+    TransportConnectionError,
+    TunnelEndpointError,
+)
 from mountainash_transport.connections.http import HTTPConnection
 from mountainash_transport.connections.tunnel import TunnelledConnection, _PatchedEndpointProfile
 
@@ -606,6 +610,67 @@ class TestPatchedEndpointEmit:
         patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
         out = patched.emit(TargetFamily.BOTO)
         assert out["endpoint_url"] == "http://127.0.0.1:7777"
+
+    @pytest.mark.parametrize("flavor", ["aws", "express"])
+    def test_emit_refuses_s3_flavor_resolved_by_boto(self, flavor):
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+        inner = S3StorageProfile(FLAVOR=flavor, REGION="ap-southeast-2", BUCKET="reports")
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        with pytest.raises(TunnelEndpointError):
+            patched.emit(TargetFamily.BOTO)
+
+    def test_emit_refuses_any_boto_target_without_endpoint_url(self):
+        # A custom profile routed to boto3 need not emit service_name; the
+        # refusal keys on the target family, not on S3-adapter field names.
+        from mountainash_auth_client.targets import TargetFamily
+
+        inner = MagicMock()
+        inner.emit.return_value = {"region_name": "ap-southeast-2"}
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        with pytest.raises(TunnelEndpointError):
+            patched.emit(TargetFamily.BOTO)
+
+    @pytest.mark.parametrize("flavor,extra", [("r2", {"ACCOUNT_ID": "abc"}), ("b2", {})])
+    def test_emit_patches_s3_flavor_with_derived_endpoint(self, flavor, extra):
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+        inner = S3StorageProfile(FLAVOR=flavor, BUCKET="reports", **extra)
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        assert patched.emit(TargetFamily.BOTO)["endpoint_url"] == "http://127.0.0.1:7777"
+
+    def test_emit_leaves_http_profile_without_base_url_unchanged(self):
+        # HTTPStorageProfile names no destination; callers address the tunnel
+        # via local_port, so there is nothing to bypass and nothing to refuse.
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
+
+        inner = HTTPStorageProfile()
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        assert patched.emit(TargetFamily.HTTP) == inner.emit(TargetFamily.HTTP)
+
+
+def test_connect_refuses_aws_s3_target_and_releases_tunnel(rig) -> None:
+    from mountainash_transport.connections import create_connection
+    from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+    target = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
+
+    def factory(port):
+        return create_connection(_PatchedEndpointProfile(target, "127.0.0.1", port))
+
+    connection = TunnelledConnection(rig.ssh, factory, "127.0.0.1", rig.peer.server_port)
+    with pytest.raises(TunnelEndpointError):
+        connection.connect()
+    assert rig.servers, "refusal should come after the listener started"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+    assert all(server.socket.fileno() == -1 for server in rig.servers)
+    for worker in rig.threads:
+        worker.join(2)
+        assert not worker.is_alive()
 
 
 @pytest.mark.parametrize("boundary", ["listener", "socket"])

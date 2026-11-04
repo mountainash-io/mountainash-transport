@@ -12,7 +12,11 @@ import typing as t
 
 from typing_extensions import Self
 
-from mountainash_transport.connections.errors import ConnectionTimeoutError, TransportConnectionError
+from mountainash_transport.connections.errors import (
+    ConnectionTimeoutError,
+    TransportConnectionError,
+    TunnelEndpointError,
+)
 from mountainash_transport._core.protocols import ConnectionProtocol
 
 
@@ -204,11 +208,22 @@ class _PatchedEndpointProfile:
     def to_handler_kwargs(self) -> dict[str, t.Any]:
         return self._patch_endpoint(self._inner.to_handler_kwargs())
 
-    def emit(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+    def emit(self, family: t.Any, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
         # MUST override (not delegate via __getattr__) so the tunnel's local
         # endpoint is injected — otherwise the inner profile's emit returns the
         # real remote host/port and the tunnel is silently bypassed.
-        return self._patch_endpoint(self._inner.emit(*args, **kwargs))
+        from mountainash_auth_client.targets import TargetFamily
+
+        out = self._inner.emit(family, *args, **kwargs)
+        # Without endpoint_url botocore resolves the public AWS endpoint itself;
+        # refuse rather than connect around the tunnel.
+        if family is TargetFamily.BOTO and "endpoint_url" not in out:
+            raise TunnelEndpointError(
+                "Tunnel cannot redirect this S3 target: it emits no endpoint_url, so "
+                "boto3 would connect directly and bypass the bastion. "
+                "Set ENDPOINT_URL on the target profile."
+            )
+        return self._patch_endpoint(out)
 
     def get_connection_url(self) -> str:
         if hasattr(self._inner, "get_connection_url"):

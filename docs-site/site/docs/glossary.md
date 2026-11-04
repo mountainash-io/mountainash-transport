@@ -540,7 +540,7 @@ Explained in [Pipelines](chapters/10-stream-transforms/index.md#pipelines).
 
 ## Profile-granted host
 
-A host or bucket that a storage profile passed to the facade allows without an `allowed_remote` entry: an SFTP profile's `HOST`, or an S3-family profile's `BUCKET`. An S3-family profile without a `BUCKET` allows every bucket at its endpoint.
+A host or bucket that a storage profile passed to the facade allows without an `allowed_remote` entry: an SFTP profile's `HOST`, or an S3-family profile's `BUCKET`. An S3-family profile without a `BUCKET` allows no bucket; each one must be listed in `allowed_remote`.
 
 Related: [Remote allow-list](#remote-allow-list), [`LocationPolicy`](#locationpolicy).
 

@@ -221,7 +221,7 @@ With `127.0.0.1` listed, the same server is refused under the name `localhost`, 
 
 ### Hosts granted by a profile
 
-A storage profile you pass to the facade grants its own host without an `allowed_remote` entry. An SFTP profile grants its `HOST`: an `sftp://` URL for another host is refused with `profile host mismatch`, while plain paths go to the profile's host and need no host check. An S3-family profile with a `BUCKET` grants that bucket only. An S3-family profile without a `BUCKET` grants every bucket at its endpoint, and the facade does not check bucket names at all. `allowed_remote` can add hosts beyond the profile's own, but a profile never grants anything other than its own host or bucket.
+A storage profile you pass to the facade grants its own host without an `allowed_remote` entry. An SFTP profile grants its `HOST`: an `sftp://` URL for another host is refused with `profile host mismatch`, while plain paths go to the profile's host and need no host check. An S3-family profile with a `BUCKET` grants that bucket only. An S3-family profile without a `BUCKET` grants nothing: every bucket it reaches must be listed in `allowed_remote` under the flavour's scheme. `allowed_remote` can add hosts beyond the profile's own, but a profile never grants anything other than its own host or bucket.
 
 The example below runs against an in-process S3 service with buckets `reports`, `archive` and `payroll`, each holding `sales.csv`. The bootstrap line that starts it is omitted.
 
@@ -239,6 +239,10 @@ cases = {
         LocationPolicy(allowed_remote={"s3": frozenset({"archive"})}),
     ),
     "no BUCKET": (S3StorageProfile(), LocationPolicy()),
+    "no BUCKET, archive listed": (
+        S3StorageProfile(),
+        LocationPolicy(allowed_remote={"s3": frozenset({"archive"})}),
+    ),
 }
 
 for label, (profile, policy) in cases.items():
@@ -259,7 +263,8 @@ Output:
 ```text
 BUCKET=reports: reports=ok, archive: profile host mismatch, payroll: profile host mismatch
 BUCKET=reports, archive listed: reports=ok, archive=ok, payroll: profile host mismatch
-no BUCKET: reports=ok, archive=ok, payroll=ok
+no BUCKET: reports: remote not allowed, archive: remote not allowed, payroll: remote not allowed
+no BUCKET, archive listed: reports: remote not allowed, archive=ok, payroll: remote not allowed
 ```
 
 Set `BUCKET` on S3 profiles whenever a facade should be held to one bucket. The SFTP rules are exercised in `tests/test_location.py`.
