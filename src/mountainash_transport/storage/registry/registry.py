@@ -11,20 +11,20 @@ from mountainash_transport.settings.profile_protocol import StorageProfileProtoc
 _backend_registry: dict[CONST_STORAGE_PROVIDER_TYPE, type] = {}
 
 
-def _accepts_auth_strategy(cls: type) -> bool:
-    """True if ``cls.__init__`` accepts an ``auth_strategy`` keyword.
+def _accepts(cls: type, name: str, *, var_keyword: bool = True) -> bool:
+    """True if ``cls.__init__`` accepts keyword *name*.
 
-    Either an explicit ``auth_strategy`` parameter or a ``**kwargs`` catch-all
-    counts. When the signature cannot be introspected we assume acceptance
-    rather than block a legitimate backend.
+    An explicit parameter always counts; a ``**kwargs`` catch-all counts only
+    when *var_keyword* is true. When the signature cannot be introspected we
+    assume acceptance rather than block a legitimate backend.
     """
     try:
         params = inspect.signature(cls).parameters
     except (ValueError, TypeError):  # pragma: no cover - un-introspectable ctor
         return True
-    if "auth_strategy" in params:
+    if name in params:
         return True
-    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    return var_keyword and any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
 def register_storage_backend(provider_type: CONST_STORAGE_PROVIDER_TYPE) -> t.Callable[[type], type]:
@@ -66,7 +66,9 @@ def get_storage_backend(
         storage_profile: Optional profile forwarded to the backend constructor.
         connection: Optional pre-built connection object forwarded to the backend.
         auth_strategy: Optional auth strategy forwarded to the backend constructor (HTTP backends only).
-        location_check: Optional per-request location check forwarded to the backend (HTTP only).
+        location_check: Optional location check for locations the backend derives itself
+            (e.g. HTTP redirects); forwarded only to constructors that name it explicitly,
+            so wrappers passing ``**kwargs`` to a built-in backend are not broken.
 
     Returns:
         An instantiated backend object.
@@ -84,14 +86,14 @@ def get_storage_backend(
             # Guard: forwarding a strategy to a backend whose ctor cannot accept
             # it would raise a bare TypeError. Fail with a clear message instead
             # (today only HTTP both declares OAUTH2 and accepts auth_strategy).
-            if not _accepts_auth_strategy(cls):
+            if not _accepts(cls, "auth_strategy"):
                 raise BackendNotImplementedError(
                     f"The '{provider_type}' backend ({cls.__name__}) does not accept "
                     "an auth_strategy; strategy-based auth (managed OAuth2) is "
                     "currently only supported by the HTTP backend."
                 )
             kwargs["auth_strategy"] = auth_strategy
-        if location_check is not None:
+        if location_check is not None and _accepts(cls, "location_check", var_keyword=False):
             kwargs["location_check"] = location_check
         return cls(storage_profile, **kwargs)
 

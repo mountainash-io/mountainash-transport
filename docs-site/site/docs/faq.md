@@ -233,9 +233,9 @@ Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host
 
 An empty set means no restriction for that scheme. To allow no hosts for a scheme, leave the scheme out of `allowed_remote`. Take care when building the mapping from configuration that an empty list cannot stand in for "nothing allowed". See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
-### Why can my S3 facade reach other buckets?
+### Which buckets can an S3 facade reach under a policy?
 
-An S3-family profile without `BUCKET` grants every bucket at its endpoint, and the facade does not check bucket names. Set `BUCKET` on the profile to hold a facade to one bucket, and list any extra buckets in `allowed_remote["s3"]`. See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
+An S3-family profile with `BUCKET` grants that bucket; one without `BUCKET` grants none. List every other bucket the facade should reach in `allowed_remote` under the flavour's scheme (for example `allowed_remote["s3"]`). See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
 
 ### Are HTTP redirects checked against the policy?
 
@@ -343,15 +343,15 @@ Each backend class inherits one mixin per capability and adds a constructor and 
 
 ### Can I register my own backend without changing the package?
 
-Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
+Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. Under an active location policy, a backend registered for a provider with no built-in host check (GCS, Azure, FTP, SMB, GitHub) refuses every path. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
 
 ### How do I add a new backend to the package?
 
-Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host checks to the facade's location policy, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host check to the facade's `_REMOTE_CHECKS` table, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Does a new remote backend get location policy checks automatically?
 
-No. `StorageFacade` applies `allowed_remote` host checks per provider family, and a new remote provider needs its own branch there, or its hosts are not checked against the policy. A missing connection mapping is also silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping is still silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Why must a backend import its SDK inside functions?
 

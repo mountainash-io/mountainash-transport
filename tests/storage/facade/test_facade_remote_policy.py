@@ -99,10 +99,17 @@ def test_s3_profile_bucket_permits_own_bucket_only(fake_backend):
     with pytest.raises(LocationNotAllowed): fac.read("s3://bucket-b/k")
     assert [c[1] for c in fake_backend] == ["s3://bucket-a/k", "bucket-a/k"]
 
-def test_s3_profile_without_bucket_permits_any_bucket(fake_backend):
+def test_s3_profile_without_bucket_needs_allow_list(fake_backend):
     fac = StorageFacade.from_path("s3://x/k", _s3(None), policy=LocationPolicy())
-    fac.read("s3://any-bucket/k")
-    assert fake_backend == [("read", "s3://any-bucket/k")]
+    with pytest.raises(LocationNotAllowed):
+        fac.read("s3://any-bucket/k")
+    assert fake_backend == []
+    pol = LocationPolicy(allowed_remote={"s3": frozenset({"bucket-b"})})
+    fac = StorageFacade.from_path("s3://x/k", _s3(None), policy=pol)
+    fac.read("s3://bucket-b/k")
+    with pytest.raises(LocationNotAllowed):
+        fac.read("s3://other/k")
+    assert fake_backend == [("read", "s3://bucket-b/k")]
 
 def test_s3_without_profile_needs_allow_list(fake_backend):
     with pytest.raises(LocationNotAllowed):
@@ -152,3 +159,100 @@ def test_http_backend_rejects_location_check_with_injected_engine():
     with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as c:
         with pytest.raises(ValueError, match="location_check cannot be combined"):
             HTTPStorageBackend(engine=HttpRequestEngine(c), location_check=lambda u: None)
+
+
+@pytest.fixture
+def toy_gcs_backend():
+    """Register an in-memory backend for GCS (no built-in check); restore the registry after."""
+    import io
+    from mountainash_transport.storage.registry import registry as reg
+    snapshot = dict(reg._backend_registry)
+    calls = []
+
+    @reg.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS)
+    class Toy:
+        def __init__(self, profile, connection=None): pass
+        def read_to_bytes(self, path): calls.append(path); return b"x"
+        def read_to_stream(self, path): calls.append(path); return io.BytesIO(b"x")
+        def write_from_bytes(self, path, data, *, create_parents=True): calls.append(path)
+        def write_from_stream(self, path, stream, *, create_parents=True): calls.append(path)
+
+    try:
+        yield calls
+    finally:
+        reg._backend_registry.clear()
+        reg._backend_registry.update(snapshot)
+
+
+def test_remote_provider_without_check_refused_under_policy(toy_gcs_backend):
+    pol = LocationPolicy(allowed_remote={"gs": frozenset({"bucket-a"})})
+    fac = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS, policy=pol)
+    with pytest.raises(LocationNotAllowed, match="no location check"):
+        fac.read("gs://bucket-a/k")
+    with pytest.raises(LocationNotAllowed, match="no location check"):
+        fac.write("gs://bucket-a/k", b"x")
+    assert toy_gcs_backend == []
+
+
+def test_remote_provider_without_check_unaffected_without_policy(toy_gcs_backend):
+    assert StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS).read("gs://b/k") == b"x"
+
+
+def test_every_registered_remote_backend_declares_a_location_check():
+    from mountainash_transport.storage.facade.facade import _REMOTE_CHECKS
+    from mountainash_transport.storage.registry import get_registered_backends
+    remote = set(get_registered_backends()) - {CONST_STORAGE_PROVIDER_TYPE.LOCAL}
+    assert remote - set(_REMOTE_CHECKS) == set()
+
+
+@pytest.fixture
+def restore_registry():
+    from mountainash_transport.storage.registry import registry as reg
+    snapshot = dict(reg._backend_registry)
+    try:
+        yield reg
+    finally:
+        reg._backend_registry.clear()
+        reg._backend_registry.update(snapshot)
+
+
+@pytest.mark.parametrize("policy", [None, LocationPolicy(allow_unconfined=True)])
+def test_backend_gets_no_location_check_without_active_policy(restore_registry, policy):
+    got = {}
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SFTP)
+    class Deriving:
+        def __init__(self, profile, *, connection=None, location_check=None):
+            got["check"] = location_check
+
+    StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=policy)
+    assert got["check"] is None
+
+
+def test_non_http_backend_receives_enforcing_location_check(restore_registry):
+    """A backend that derives locations (redirects, links) can veto them with the facade's check."""
+    got = {}
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.SFTP)
+    class Deriving:
+        def __init__(self, profile, *, connection=None, location_check=None):
+            got["check"] = location_check
+
+    pol = LocationPolicy(allowed_remote={"sftp": frozenset({"host-a"})})
+    StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=pol)
+    got["check"]("sftp://host-a/p")
+    with pytest.raises(LocationNotAllowed):
+        got["check"]("sftp://evil/p")
+
+
+def test_kwargs_wrapper_of_builtin_backend_constructs_under_policy(restore_registry, tmp_path):
+    from mountainash_transport.storage.backends.local import LocalStorageBackend
+
+    @restore_registry.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
+    class Wrapped(LocalStorageBackend):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+    (tmp_path / "f").write_bytes(b"ok")
+    fac = StorageFacade(CONST_STORAGE_PROVIDER_TYPE.LOCAL, policy=LocationPolicy(root=str(tmp_path)))
+    assert fac.read("f") == b"ok"
