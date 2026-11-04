@@ -257,7 +257,7 @@ Use `create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, 
 
 ### Can I reach an HTTPS service through a tunnel?
 
-No. A tunnelled connection rewrites `endpoint_url` or `base_url` to `http://127.0.0.1:<port>`, dropping the original scheme, host name and path prefix. The SSH hop to the bastion is encrypted, but an HTTPS-only service receives plain HTTP and the request fails. Tunnel plain-HTTP or SSH targets only. An `HTTPStorageProfile` or `aws` flavour S3 profile is not rewritten at all, so build HTTP URLs from `local_port` yourself. See [How the target endpoint is rewritten](chapters/11-connections/index.md#how-the-target-endpoint-is-rewritten).
+No. A tunnelled connection rewrites `endpoint_url` or `base_url` to `http://127.0.0.1:<port>`, dropping the original scheme, host name and path prefix. The SSH hop to the bastion is encrypted, but an HTTPS-only service receives plain HTTP and the request fails. Tunnel plain-HTTP or SSH targets only. An `HTTPStorageProfile` is not rewritten, so build HTTP URLs from `local_port` yourself. An `aws` or `express` flavour S3 profile without `ENDPOINT_URL` raises `TunnelEndpointError` at `connect()`. See [How the target endpoint is rewritten](chapters/11-connections/index.md#how-the-target-endpoint-is-rewritten).
 
 ### Why does SFTP through a tunnel fail host-key checking?
 

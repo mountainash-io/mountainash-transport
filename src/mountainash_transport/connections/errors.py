@@ -43,6 +43,15 @@ class AuthorizationRequired(TransportConnectionError):
         super().__init__(f"Authorization required for {provider}/{user}")
 
 
+class TunnelEndpointError(TransportConnectionError):
+    """A tunnelled target's endpoint cannot be redirected through the tunnel.
+
+    Raised at ``TunnelledConnection.connect()`` when the target's SDK would
+    resolve its own remote endpoint (an S3 ``aws``/``express`` profile with no
+    ``ENDPOINT_URL``), which would connect directly and bypass the bastion.
+    """
+
+
 class UnsupportedAuthProfileError(TransportConnectionError):
     """The connection factory was given an auth profile it does not handle.
 

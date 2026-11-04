@@ -309,7 +309,8 @@ The rewrite touches only specific keys in the target's emitted arguments, so wha
 |---|---|---|
 | `hostname` and `port` (SFTP) | `127.0.0.1` and `local_port` | the inner SSH session goes through the tunnel |
 | `endpoint_url` or `base_url` (for example an S3 profile with `ENDPOINT_URL`) | `http://127.0.0.1:<local_port>` | through the tunnel, always as plain HTTP |
-| neither (an `HTTPStorageProfile`; an `aws` flavour S3 profile) | unchanged | the client is not pointed at the tunnel |
+| no `endpoint_url` for an S3 (boto3) target (an `aws` or `express` flavour profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
+| none of these (an `HTTPStorageProfile`) | unchanged | the profile names no destination; build request URLs from `local_port` |
 
 The rewrite is visible on a boto3 client's endpoint. Bastion setup is again not shown:
 
@@ -324,29 +325,21 @@ bastion_profile = SFTPStorageProfile(
 )
 bastion_auth = PasswordAuthProfile(USERNAME="analyst", PASSWORD="example-password")
 
-targets = {
-    "minio": S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="https://minio.internal:9000",
-                              BUCKET="reports"),
-    "aws": S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports"),
-}
-for name, target in targets.items():
-    with create_tunnelled_connection(bastion_profile, bastion_auth, target, None,
-                                     "minio.internal", 9000) as tunnel:
-        tunnel.connect()
-        print(f"{name}: {tunnel.client.meta.endpoint_url}")
+target = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="https://minio.internal:9000",
+                          BUCKET="reports")
+with create_tunnelled_connection(bastion_profile, bastion_auth, target, None,
+                                 "minio.internal", 9000) as tunnel:
+    tunnel.connect()
+    print(f"minio: {tunnel.client.meta.endpoint_url}")
 ```
 
 Output (the port differs on each run):
 
 ```text
 minio: http://127.0.0.1:40731
-aws: https://s3.ap-southeast-2.amazonaws.com
 ```
 
 For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does.
-
-!!! warning "Some targets bypass the tunnel without an error"
-    Through `create_tunnelled_connection`, an `aws` flavour S3 profile (one without `ENDPOINT_URL`) keeps its public AWS endpoint and connects directly to AWS, silently bypassing the bastion. An `HTTPStorageProfile` target does the same unless you build its URLs from `local_port`. Nothing raises in either case. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
 
 !!! warning "HTTPS targets do not work through a tunnel"
     The bastion hop is SSH, so traffic between your machine and the bastion is encrypted. The problem is the last leg: a rewritten `endpoint_url` or `base_url` always becomes `http://127.0.0.1:<port>`, dropping the original scheme, host name and any path prefix. An HTTPS-only service then receives plain HTTP on its TLS port and the request fails; Host headers, SNI and certificate checks would no longer name the real service in any case. Tunnel only plain-HTTP or SSH targets. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
@@ -366,6 +359,7 @@ Connection failures raise `TransportConnectionError` (exported from `mountainash
 |---|---|
 | `TransportConnectionError` | Client construction, socket, DNS, SSH authentication or host-key failure; missing boto3 or paramiko; tunnel cleanup failure |
 | `ConnectionTimeoutError` | A connect timed out, or tunnel workers did not stop within one second |
+| `TunnelEndpointError` | A tunnelled target's SDK would resolve its own remote endpoint (S3 `aws`/`express` without `ENDPOINT_URL`), bypassing the bastion |
 | `UnsupportedAuthProfileError` | The auth mode is not in the profile's `supported_auth` (raised by `create_connection` and by named-profile resolution) |
 | `TokenExchangeError`, `TokenRefreshError`, `AuthorizationRequired` | Defined for OAuth token failures; transport's own connection code does not raise them, since OAuth flows belong to `mountainash-auth-client` |
 
