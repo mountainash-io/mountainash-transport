@@ -106,3 +106,18 @@ def test_gpg_unwrap_wrong_passphrase_raises_transform_error(tmp_path):
     decrypt = GPG(gnupghome=str(gpg_home), passphrase="wrong-passphrase")
     with pytest.raises(TransformError, match="decryption failed"):
         decrypt.unwrap(io.BytesIO(ciphertext)).read()
+
+
+@pytest.mark.parametrize("layers", ["gzip", "gpg", "gzip+gpg"])
+def test_write_stream_leaves_caller_stream_open(gpg_home, tmp_path, layers):
+    from mountainash_transport import StorageFacade
+    from mountainash_transport._core.transforms import GPG, Gzip
+
+    gpg = GPG(recipients=[_RECIPIENT], gnupghome=str(gpg_home), always_trust=True)
+    pipeline = {"gzip": Pipeline(Gzip()), "gpg": Pipeline(gpg), "gzip+gpg": Pipeline(Gzip(), gpg)}[layers]
+    source = io.BytesIO(b"caller-owned payload" * 20)
+    target = str(tmp_path / "out.bin")
+    storage = StorageFacade.for_local()
+    storage.write_stream(target, source, pipeline=pipeline)
+    assert not source.closed, "write_stream must not close the caller's stream"
+    assert storage.read(target, pipeline=pipeline) == b"caller-owned payload" * 20

@@ -237,9 +237,7 @@ The second call shows the gzip decompression bound: the payload decodes to 60,00
 
 ### Who closes what
 
-The read path follows the ownership rules in [Errors and ownership](../09-read-access-modes/index.md#errors-and-ownership): the stream returned by `read_stream` owns every transform layer the facade built plus the backend stream, and closing it closes them in reverse construction order. If you call `Pipeline.apply_read(source)` or `unwrap()` yourself, the stream you supplied stays yours: transforms leave borrowed inputs open, and you close the source separately.
-
-The gzip write path does not follow that rule. The compressing reader returned by `Gzip.wrap()` closes its source when it is closed or garbage-collected, so after `write_stream(..., pipeline=Gzip())` returns, the stream you passed in is closed:
+Both directions follow the ownership rules in [Errors and ownership](../09-read-access-modes/index.md#errors-and-ownership). On the read path, the stream returned by `read_stream` owns every transform layer the facade built plus the backend stream, and closing it closes them in reverse construction order. On the write path, the facade closes the layers it built once the backend has consumed them, and leaves the stream you passed to `write_stream` open. If you call `Pipeline.apply_read(source)`, `Pipeline.apply_write(source)`, `unwrap()` or `wrap()` yourself, the stream you supplied stays yours: transforms leave borrowed inputs open, the stream returned by `apply_*` owns only the layers it built, and you close the source separately.
 
 ```python
 import io
@@ -269,13 +267,12 @@ with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage
 Output:
 
 ```text
-gzip write, caller stream closed: True
+gzip write, caller stream closed: False
 plain write, caller stream closed: False
 unwrap, caller stream closed: False
 ```
 
-!!! warning "Gzip writes close the caller's stream"
-    Writing through a `Gzip` layer (`write_stream`, `copy_between` with a gzip `destination_pipeline`, or `Gzip.wrap()` directly) closes the source stream you supplied. Do not reuse that stream afterwards; if you need it, pass a separate handle. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+A backend may still close the stream it is handed: a small single-request S3 upload does so (see the [support matrix and known limits](../../reference/support-matrix.md#known-limits)). With a pipeline that stream is a transform layer, not yours.
 
 ## Copying between backends
 

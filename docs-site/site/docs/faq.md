@@ -213,7 +213,7 @@ The native copy is used only when no pipeline is given, both facades use the sam
 
 ### Why is my source stream closed after `write_stream()`?
 
-Two cases close it. Writing through a `Gzip` layer closes the stream you supplied, including `copy_between` with a gzip `destination_pipeline`. A small single-request upload to an S3-family store also closes it, while a larger multipart upload leaves it open. Do not rely on the source stream's state after the call; pass a separate handle if you need it again. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
+One case still closes it: a small single-request upload to an S3-family store written without a pipeline closes the stream you supplied, while a larger multipart upload leaves it open. Transforms never close your stream; with a pipeline the backend receives a transform layer that the facade owns. Do not rely on the source stream's state after an unpiped S3 write; pass a separate handle if you need it again. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
 
 ### Can I write my own transform?
 

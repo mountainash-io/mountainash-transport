@@ -50,7 +50,7 @@
     "Gzip is stdlib-only and imports on a base install; GPG imports gnupg lazily in _get_client() and raises ImportError naming [encryption] when missing (not MissingExtraError).",
     "GPG caches its gnupg client and imports key_file once per instance.",
     "Gzip.unwrap over a non-seekable source returns a forward-only BufferedReader; over a seekable source it returns the seekable (bounded) GzipFile.",
-    "The write-side GzipCompressingReader closes its source on close(), unlike the read-side contract where transforms leave borrowed inputs open.",
+    "The write-side GzipCompressingReader leaves its source open on close(), matching the read-side borrowed-input contract (#44).",
     "materialize() exhausts the input stream and returns a buffer positioned at 0; the caller owns both."
   ],
   "documentation_hooks": [
@@ -85,7 +85,7 @@
   "open_questions": [
     "Should materialize() be promoted to a public export (root or transforms __all__), given it is referenced in user docs?",
     "Should GPG raise MissingExtraError and gain a decode size bound to match Gzip?",
-    "Should GzipCompressingReader.close() leave its source open to match the read-side borrowed-input contract?"
+    "Resolved (#44): GzipCompressingReader.close() leaves its source open."
   ],
   "evidence": [
     {

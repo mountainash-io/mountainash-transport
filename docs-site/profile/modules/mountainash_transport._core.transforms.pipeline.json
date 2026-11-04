@@ -1,7 +1,7 @@
 {
   "id": "mountainash_transport._core.transforms.pipeline",
   "path": "src/mountainash_transport/_core/transforms/pipeline.py",
-  "summary": "Pipeline is an ordered stack of StreamTransforms listed outermost-first, matching file-suffix order. apply_read unwraps outer to inner and returns a handle that, on close, closes every distinct layer it built in reverse construction order while leaving the caller's source open; apply_write wraps inner to outer. The same instance serves both directions and is reused by the facade for read, write and cross-backend copy.",
+  "summary": "Pipeline is an ordered stack of StreamTransforms listed outermost-first, matching file-suffix order. apply_read unwraps outer to inner and apply_write wraps inner to outer; both return a handle that, on close, closes every distinct layer it built in reverse construction order while leaving the caller's source open. The same instance serves both directions and is reused by the facade for read, write and cross-backend copy.",
   "role": "public-api",
   "visibility": "public",
   "stability": "stable",
@@ -22,7 +22,7 @@
     "Pipeline(*transforms: StreamTransform) — construct; order is outermost-first",
     "Pipeline.is_empty() -> bool — whether the pipeline leaves bytes unchanged",
     "Pipeline.apply_read(stream) -> BinaryIO — strip layers outer→inner; returns source unchanged for empty/identity pipelines",
-    "Pipeline.apply_write(stream) -> BinaryIO — add layers inner→outer (reverse list order)"
+    "Pipeline.apply_write(stream) -> BinaryIO — add layers inner→outer (reverse list order); returns source unchanged for empty/identity pipelines"
   ],
   "dependencies": [
     "mountainash_transport._core.transforms"
@@ -38,7 +38,7 @@
     "apply_read ownership: the returned stream owns layers it constructed, not the supplied source; callers close the source separately (docs/read-access-modes.md).",
     "Layer close order is LIFO; layers already closed by a cascading transform are skipped via _close_if_open.",
     "Construction failures unwind built layers and re-raise the original exception; cleanup exceptions during that unwind are swallowed.",
-    "apply_write performs no ownership tracking; closing the outermost writer-side reader cascades only as far as each transform's own close() does.",
+    "apply_write shares apply_read's ownership (_layered): the result owns the layers it built, not the caller's stream; the facade closes it after the backend write.",
     "_ReadStream.seek/tell raise io.UnsupportedOperation when the innermost decoded layer is not seekable."
   ],
   "documentation_hooks": [

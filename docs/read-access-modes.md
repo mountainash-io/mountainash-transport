@@ -91,11 +91,13 @@ handle is still marked closed, and closing it again is a no-op. Cleanup errors
 propagate (the last one wins); construction failures
 retain their original exception even if cleanup fails.
 
-For direct `Pipeline.apply_read(source)` callers, the returned stream owns the
-distinct layers it constructed, **not** the supplied source. Close the source
-separately. Empty or identity-only pipelines return the source unchanged.
-Transforms should leave borrowed inputs open; layers already closed by a
-cascading transform are not explicitly closed again.
+For direct `Pipeline.apply_read(source)` and `Pipeline.apply_write(source)`
+callers, the returned stream owns the distinct layers it constructed, **not** the
+supplied source. Close the source separately. Empty or identity-only pipelines
+return the source unchanged. Transforms leave borrowed inputs open (on both the
+read and write paths); layers already closed by a cascading transform are not
+explicitly closed again. `StorageFacade.write`/`write_stream` close the layers
+they build after the backend consumes them and never close the caller's stream.
 
 Entering a context does not validate the entire payload:
 

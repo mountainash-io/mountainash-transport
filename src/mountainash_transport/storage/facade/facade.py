@@ -461,9 +461,10 @@ class StorageFacade:
         if pipeline is None:
             self._backend.write_from_bytes(path, data, create_parents=create_parents)
             return
-        source = io.BytesIO(data)
-        encoded = self._coerce_pipeline(pipeline).apply_write(source)
-        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+        with io.BytesIO(data) as source, contextlib.closing(
+            self._coerce_pipeline(pipeline).apply_write(source)
+        ) as encoded:
+            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     def write_stream(
         self,
@@ -477,7 +478,11 @@ class StorageFacade:
         self._require(StorageWriteProtocol, "write_stream")
         path = self._check(path)
         encoded = self._coerce_pipeline(pipeline).apply_write(stream)
-        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+        if encoded is stream:  # no layers: the caller's stream is not ours to close
+            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+            return
+        with contextlib.closing(encoded):  # closes only the layers built here
+            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Enumerate operations (StorageEnumerateProtocol)
