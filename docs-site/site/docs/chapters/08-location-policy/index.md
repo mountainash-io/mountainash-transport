@@ -281,7 +281,7 @@ The facade applies the policy in one place: every operation that takes a path ch
 
 ### Credential redaction
 
-URLs sometimes carry credentials in their user-info part, as in `https://user:password@host/path`. `LocationNotAllowed` strips that part before storing `location` or building its message, and a URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception, which could quote the input. The redaction applies to policy errors. Without an active policy, other errors may still quote the path as given:
+URLs sometimes carry credentials in their user-info part, as in `https://user:password@host/path`. `LocationNotAllowed` strips that part before storing `location` or building its message, and a URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception, which could quote the input. Scheme detection, `StoragePath`, S3 path parsing and suffix inference strip it too, with or without a policy:
 
 ```python
 from mountainash_transport import StorageFacade
@@ -313,7 +313,7 @@ Output:
 location not allowed: nfs://files.example.com/share (unknown scheme)
 nfs://files.example.com/share
 location not allowed: https://files.example.com (remote not allowed)
-ValueError: Unrecognised scheme in path 'nfs://admin:hunter2@files.example.com/share'
+ValueError: Unrecognised scheme in path 'nfs://files.example.com/share'
 ```
 
-The last call had no policy, and the `ValueError` from scheme detection quotes the path, password included. Keep credentials in auth profiles rather than URLs (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)). HTTP errors have their own redaction, described in [error redaction](../12-http-engine/index.md#error-redaction).
+The last call had no policy, and its `ValueError` still omits the password. Keep credentials in auth profiles rather than URLs anyway (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)): exception context and traceback locals can still hold them. HTTP errors have their own redaction, described in [error redaction](../12-http-engine/index.md#error-redaction).

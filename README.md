@@ -226,12 +226,13 @@ credential-redaction case below. The same contract applies when reading,
 fetching ranges or closing an opened stream—not only when opening it.
 
 HTTP translation suppresses native exception chains containing URL userinfo
-(`user:password@`) from standard formatted tracebacks. Clean chains remain
-available for debugging, and public error classification is unchanged.
-This is display redaction, not secret erasure: Python's hidden `__context__`,
-request objects and traceback locals may still retain credentials. Configure
-error reporters accordingly; query tokens and response bodies are not covered
-by URL-userinfo redaction.
+(`user:password@`) or query values from standard formatted tracebacks, and
+HTTP error messages and attributes show userinfo and query values as `***`.
+HTTP errors do not carry the response body. Clean chains remain available for
+debugging, and public error classification is unchanged. This is display
+redaction, not secret erasure: Python's hidden `__context__`, request objects
+and traceback locals may still retain credentials. Configure error reporters
+accordingly.
 
 | Condition | Exception |
 |---|---|
