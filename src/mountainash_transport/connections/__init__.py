@@ -16,7 +16,7 @@ from mountainash_transport.settings.profile_protocol import ProfileProtocol
 # --- Legacy/existing public API (kept for backward compat) -------------------
 from .errors import (
     ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
-    TransportConnectionError, ConnectionTimeoutError,
+    TransportConnectionError, ConnectionTimeoutError, TunnelEndpointError,
 )
 from mountainash_auth_client.oauth.oauth2.flow import OAuthFlow
 from mountainash_auth_client.oauth.oauth1.flow import OAuth1Flow
@@ -183,6 +183,29 @@ def create_connection(
     return leaf_cls(_emit_kwargs(profile, auth_profile, family))
 
 
+def _tunnel_inner_factory(
+    target_profile: ProfileProtocol, target_auth: AuthProfile | None,
+) -> t.Callable[[int], ConnectionProtocol]:
+    """Build the target connection for a tunnel's local port, refusing bypasses.
+
+    The endpoint rewrite (and #54's refusal) live in ``_PatchedEndpointProfile``.
+    An assume-role S3 target is refused here: botocore would call AWS STS
+    directly, outside the bastion.
+    """
+    def inner_factory(local_port: int) -> ConnectionProtocol:
+        patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)
+        connection = create_connection(patched, target_auth)
+        if isinstance(connection, S3Connection) and connection._assumes_role():
+            raise TunnelEndpointError(
+                "Tunnel cannot redirect this S3 target's assume-role call: botocore "
+                "would call AWS STS directly and bypass the bastion. Use static or "
+                "session credentials for tunnelled targets."
+            )
+        return connection
+
+    return inner_factory
+
+
 def create_tunnelled_connection(
     bastion_profile: ProfileProtocol,
     bastion_auth: AuthProfile | None,
@@ -194,12 +217,9 @@ def create_tunnelled_connection(
     """Create a tunnelled connection through an SSH bastion host."""
     bastion_family = _family_for_provider(CONST_STORAGE_PROVIDER_TYPE.SSH)
     ssh_conn = SSHConnection(_emit_kwargs(bastion_profile, bastion_auth, bastion_family))
-
-    def inner_factory(local_port: int) -> ConnectionProtocol:
-        patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)
-        return create_connection(patched, target_auth)
-
-    return TunnelledConnection(ssh_conn, inner_factory, remote_host, remote_port)
+    return TunnelledConnection(
+        ssh_conn, _tunnel_inner_factory(target_profile, target_auth), remote_host, remote_port,
+    )
 
 
 __all__ = [

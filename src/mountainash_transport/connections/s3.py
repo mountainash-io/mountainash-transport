@@ -110,6 +110,26 @@ class S3Connection(ConnectionProtocol):
             target.set_config_variable("region", region)
         return boto3.Session(botocore_session=target).client("s3", **client_config)
 
+    def _assumes_role(self) -> bool:
+        """True if connecting calls AWS STS: an explicit ROLE_ARN, or a named AWS
+        profile whose config sets ``role_arn`` (botocore then assumes the role)."""
+        env = self._connect_kwargs
+        if "client_config" not in env:
+            return False
+        if env.get("role_arn"):
+            return True
+        profile_name = env["session"].get("profile_name")
+        if not profile_name:
+            return False
+        import boto3
+        import botocore.exceptions
+
+        try:
+            config = boto3.Session(profile_name=profile_name)._session.full_config
+        except botocore.exceptions.ProfileNotFound:
+            return False  # connect() reports the missing profile
+        return bool(config.get("profiles", {}).get(profile_name, {}).get("role_arn"))
+
     def disconnect(self) -> None:
         client, self._client = self._client, None
         if client is not None:

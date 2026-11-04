@@ -44,11 +44,13 @@ class AuthorizationRequired(TransportConnectionError):
 
 
 class TunnelEndpointError(TransportConnectionError):
-    """A tunnelled target's endpoint cannot be redirected through the tunnel.
+    """A tunnelled target would reach the network outside the tunnel.
 
-    Raised at ``TunnelledConnection.connect()`` when the target's SDK would
-    resolve its own remote endpoint (an S3 ``aws``/``express`` profile with no
-    ``ENDPOINT_URL``), which would connect directly and bypass the bastion.
+    Raised at ``TunnelledConnection.connect()``, which then tears the tunnel down,
+    when the target's SDK would resolve its own remote endpoint (an S3
+    ``aws``/``express`` profile with no ``ENDPOINT_URL``) or an S3 target assumes
+    a role (``ROLE_ARN``, or a named AWS profile whose config sets ``role_arn``),
+    because botocore would call AWS STS directly and bypass the bastion.
     """
 
 
