@@ -56,8 +56,6 @@ _PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider
 
 
 def _check_s3(facade: "StorageFacade", path: str, scheme: str) -> None:
-    if facade._profile_any:
-        return
     from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
     try:
         bucket, _ = parse_s3_path(path)
@@ -130,17 +128,13 @@ class StorageFacade:
                     os.makedirs(target, exist_ok=True)
 
         # Profile permission comes only from a caller-supplied profile.
+        # A bucket-less S3 profile grants nothing; its buckets need allowed_remote.
         self._profile_host: str | None = None
-        self._profile_any = False
         if storage_profile is not None:
             if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
                 self._profile_host = getattr(storage_profile, "HOST", None)
             elif provider_type in _S3_FAMILY:
-                bucket = getattr(storage_profile, "BUCKET", None)
-                if bucket:
-                    self._profile_host = bucket
-                else:
-                    self._profile_any = True
+                self._profile_host = getattr(storage_profile, "BUCKET", None) or None
 
         if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
             from mountainash_transport.settings.storage.profiles import HTTPStorageProfile

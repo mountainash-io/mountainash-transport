@@ -368,8 +368,8 @@ facade may touch.
   before it is sent.
 - **Profile permission.** A caller-supplied SFTP profile permits its own `HOST`;
   an S3-family profile with a `BUCKET` permits only that bucket, and one with no
-  `BUCKET` permits any bucket at its endpoint. A profile never widens
-  `allowed_remote` for other hosts.
+  `BUCKET` permits none (list its buckets in `allowed_remote`). A profile never
+  widens `allowed_remote` for other hosts.
 - **`allow_unconfined=True`** opts out explicitly. With no policy, behaviour is
   unchanged.
 - Unknown URL schemes are refused with a redacted error (credentials are never

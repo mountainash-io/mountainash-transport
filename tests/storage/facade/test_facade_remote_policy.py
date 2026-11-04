@@ -99,10 +99,17 @@ def test_s3_profile_bucket_permits_own_bucket_only(fake_backend):
     with pytest.raises(LocationNotAllowed): fac.read("s3://bucket-b/k")
     assert [c[1] for c in fake_backend] == ["s3://bucket-a/k", "bucket-a/k"]
 
-def test_s3_profile_without_bucket_permits_any_bucket(fake_backend):
+def test_s3_profile_without_bucket_needs_allow_list(fake_backend):
     fac = StorageFacade.from_path("s3://x/k", _s3(None), policy=LocationPolicy())
-    fac.read("s3://any-bucket/k")
-    assert fake_backend == [("read", "s3://any-bucket/k")]
+    with pytest.raises(LocationNotAllowed):
+        fac.read("s3://any-bucket/k")
+    assert fake_backend == []
+    pol = LocationPolicy(allowed_remote={"s3": frozenset({"bucket-b"})})
+    fac = StorageFacade.from_path("s3://x/k", _s3(None), policy=pol)
+    fac.read("s3://bucket-b/k")
+    with pytest.raises(LocationNotAllowed):
+        fac.read("s3://other/k")
+    assert fake_backend == [("read", "s3://bucket-b/k")]
 
 def test_s3_without_profile_needs_allow_list(fake_backend):
     with pytest.raises(LocationNotAllowed):
