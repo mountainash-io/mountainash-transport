@@ -149,8 +149,8 @@ def test_environment_proxy_settings_do_not_bypass_tunnel(bastion, tls_target, mo
 
 def test_base_url_path_prefix_survives(bastion, tls_target) -> None:
     class PrefixedProfile(HTTPStorageProfile):
-        def emit(self, family: t.Any, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-            return {**super().emit(family, *args, **kwargs), "base_url": f"https://{TARGET}:{tls_target.port}/prefix/"}
+        def emit(self, target: t.Hashable = None, *, base: dict[str, t.Any] | None = None) -> dict[str, t.Any]:
+            return {**super().emit(target, base=base), "base_url": f"https://{TARGET}:{tls_target.port}/prefix/"}
 
     tls_target.seen.clear()
     connection = create_tunnelled_connection(
