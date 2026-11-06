@@ -188,7 +188,7 @@ def _tunnel_inner_factory(
 ) -> t.Callable[[int], ConnectionProtocol]:
     """Build the target connection for a tunnel's local port, refusing bypasses.
 
-    The endpoint rewrite (and #54's refusal) live in ``_PatchedEndpointProfile``.
+    Routing through the listener (and #54's refusal) live in ``_PatchedEndpointProfile``.
     An assume-role S3 target is refused here: botocore would call AWS STS
     directly, outside the bastion.
     """
@@ -217,8 +217,10 @@ def create_tunnelled_connection(
     """Create a tunnelled connection through an SSH bastion host."""
     bastion_family = _family_for_provider(CONST_STORAGE_PROVIDER_TYPE.SSH)
     ssh_conn = SSHConnection(_emit_kwargs(bastion_profile, bastion_auth, bastion_family))
+    family = _family_for_provider(_provider_type_from_profile(target_profile))
     return TunnelledConnection(
         ssh_conn, _tunnel_inner_factory(target_profile, target_auth), remote_host, remote_port,
+        proxy=family is not TargetFamily.PARAMIKO,
     )
 
 

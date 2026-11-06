@@ -547,33 +547,6 @@ class TestPatchedEndpointProfile:
         inner.some_attr = "value"
         return inner
 
-    def test_patches_hostname_and_port(self):
-        inner = self._make_inner({"hostname": "db.internal", "port": 5432, "user": "admin"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["hostname"] == "127.0.0.1"
-        assert kwargs["port"] == 54321
-        assert kwargs["user"] == "admin"
-
-    def test_patches_base_url(self):
-        inner = self._make_inner({"base_url": "https://s3.amazonaws.com", "region": "us-east-1"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 9000)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["base_url"] == "http://127.0.0.1:9000"
-        assert kwargs["region"] == "us-east-1"
-
-    def test_patches_endpoint_url(self):
-        inner = self._make_inner({"endpoint_url": "https://storage.googleapis.com"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 8080)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["endpoint_url"] == "http://127.0.0.1:8080"
-
-    def test_unrecognised_kwargs_pass_through(self):
-        inner = self._make_inner({"driver": "postgres", "database": "mydb"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 5432)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs == {"driver": "postgres", "database": "mydb"}
-
     def test_delegates_other_attributes(self):
         inner = self._make_inner({})
         inner.some_attr = "delegated"
@@ -592,25 +565,6 @@ class TestPatchedEndpointProfile:
 
 
 class TestPatchedEndpointEmit:
-    def test_emit_patches_hostname_and_port(self):
-        from mountainash_auth_client.targets import TargetFamily
-        from mountainash_transport.settings.storage.profiles.sftp_storage_profile import SFTPStorageProfile
-
-        inner = SFTPStorageProfile(HOST="real-remote", USERNAME="u", PORT=22)
-        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
-        out = patched.emit(TargetFamily.PARAMIKO)
-        assert out["hostname"] == "127.0.0.1"
-        assert out["port"] == 54321
-
-    def test_emit_patches_endpoint_url(self):
-        from mountainash_auth_client.targets import TargetFamily
-        from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
-
-        inner = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="http://real:9000", REGION="us-east-1")
-        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
-        out = patched.emit(TargetFamily.BOTO)
-        assert out["endpoint_url"] == "http://127.0.0.1:7777"
-
     @pytest.mark.parametrize("flavor", ["aws", "express"])
     def test_emit_refuses_s3_flavor_resolved_by_boto(self, flavor):
         from mountainash_auth_client.targets import TargetFamily
@@ -633,23 +587,14 @@ class TestPatchedEndpointEmit:
             patched.emit(TargetFamily.BOTO)
 
     @pytest.mark.parametrize("flavor,extra", [("r2", {"ACCOUNT_ID": "abc"}), ("b2", {})])
-    def test_emit_patches_s3_flavor_with_derived_endpoint(self, flavor, extra):
+    def test_emit_keeps_derived_s3_endpoint_and_routes_via_listener(self, flavor, extra):
         from mountainash_auth_client.targets import TargetFamily
         from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
         inner = S3StorageProfile(FLAVOR=flavor, BUCKET="reports", **extra)
-        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
-        assert patched.emit(TargetFamily.BOTO)["endpoint_url"] == "http://127.0.0.1:7777"
-
-    def test_emit_leaves_http_profile_without_base_url_unchanged(self):
-        # HTTPStorageProfile names no destination; callers address the tunnel
-        # via local_port, so there is nothing to bypass and nothing to refuse.
-        from mountainash_auth_client.targets import TargetFamily
-        from mountainash_transport.settings.storage.profiles.http_storage_profile import HTTPStorageProfile
-
-        inner = HTTPStorageProfile()
-        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
-        assert patched.emit(TargetFamily.HTTP) == inner.emit(TargetFamily.HTTP)
+        out = _PatchedEndpointProfile(inner, "127.0.0.1", 7777).emit(TargetFamily.BOTO)
+        assert out["endpoint_url"] == inner.emit(TargetFamily.BOTO)["endpoint_url"]
+        assert out["config"].proxies == {"http": "http://127.0.0.1:7777", "https": "http://127.0.0.1:7777"}
 
 
 def test_connect_refuses_aws_s3_target_and_releases_tunnel(rig) -> None:
@@ -726,7 +671,9 @@ def test_connect_allows_non_assume_role_credentials_through_tunnel(rig, aws_conf
     connection = _tunnelled_s3(rig, IAMAuthProfile(**auth_kwargs))
     with connection:
         connection.connect()
-        assert connection.client.meta.endpoint_url == f"http://127.0.0.1:{connection.local_port}"
+        proxy = f"http://127.0.0.1:{connection.local_port}"
+        assert connection.client.meta.endpoint_url == "https://s3.internal.example"
+        assert connection.client.meta.config.proxies == {"http": proxy, "https": proxy}
 
 
 @pytest.mark.parametrize("boundary", ["listener", "socket"])

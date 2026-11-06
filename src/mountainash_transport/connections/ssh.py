@@ -61,7 +61,12 @@ class SSHConnection(ConnectionProtocol):
             if known_hosts:
                 client.load_host_keys(known_hosts)
 
+            sock_address = post_connect.get("sock_address")
             try:
+                if sock_address is not None:
+                    # Tunnelled: dial the tunnel listener, but keep hostname/port as
+                    # the real target so its host key is checked under its own name.
+                    kwargs["sock"] = socket.create_connection(sock_address, timeout=kwargs.get("timeout"))
                 client.connect(**kwargs)
             except socket.timeout as exc:
                 raise ConnectionTimeoutError(f"SSH connection timed out: {exc}") from exc
@@ -72,6 +77,9 @@ class SSHConnection(ConnectionProtocol):
             except Exception as exc:
                 raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
         except BaseException as primary:
+            sock = kwargs.get("sock")
+            if sock is not None:
+                sock.close()
             try:
                 self.disconnect()
             except BaseException as cleanup:
