@@ -69,15 +69,18 @@ class HTTPTarget:
         target = self
 
         class Handler(BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"  # keep-alive unless the request asks to close
+
             def _reply(self) -> None:
                 target.seen.append((self.command, self.path, self.headers.get("Host"), target.sni))
+                self.rfile.read(int(self.headers.get("Content-Length") or 0))
                 self.send_response(200)
                 self.send_header("Content-Length", "7")
                 self.end_headers()
                 if self.command != "HEAD":
                     self.wfile.write(b"payload")
 
-            do_GET = do_HEAD = _reply
+            do_GET = do_HEAD = do_POST = _reply
 
             def log_message(self, *args: t.Any) -> None:
                 pass
@@ -209,7 +212,7 @@ class Bastion(_SSHServer):
                 continue
             host, port = interface.pending
             try:
-                real = socket.create_connection(("127.0.0.1" if host == TARGET else host, port), timeout=3)
+                real = socket.create_connection(("127.0.0.1" if host in (TARGET, "::1") else host, port), timeout=3)
             except OSError:
                 channel.close()
                 continue

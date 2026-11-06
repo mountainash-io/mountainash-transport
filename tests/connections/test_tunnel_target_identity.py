@@ -137,20 +137,78 @@ def test_s3_over_https_keeps_endpoint_identity(bastion, tls_target, aws_profile,
     assert tls_target.seen == [("HEAD", "/reports", f"{TARGET}:{tls_target.port}", TARGET)]
 
 
-def test_no_proxy_does_not_bypass_tunnel(bastion, tls_target, monkeypatch) -> None:
-    # target.test resolves only on the bastion: success proves the tunnel carried both.
-    monkeypatch.setenv("NO_PROXY", TARGET)
+@pytest.mark.parametrize("variable", ["NO_PROXY", "HTTPS_PROXY"])
+def test_environment_proxy_settings_do_not_bypass_tunnel(bastion, tls_target, monkeypatch, variable) -> None:
+    # target.test resolves only on the bastion, and 127.0.0.1:9 accepts nothing:
+    # success proves the tunnel carried both clients.
+    monkeypatch.setenv(variable, TARGET if variable == "NO_PROXY" else "http://127.0.0.1:9")
     with _http_tunnel(bastion, tls_target.port).connect() as conn:
         assert conn.client.get(f"https://{TARGET}:{tls_target.port}/x").status_code == 200
     _s3_head(bastion, tls_target.port, IAMAuthProfile(ACCESS_KEY_ID="AKIAX", SECRET_ACCESS_KEY="secret"))
 
 
-def test_unterminated_request_head_is_dropped(bastion, tls_target) -> None:
+def test_base_url_path_prefix_survives(bastion, tls_target) -> None:
+    class PrefixedProfile(HTTPStorageProfile):
+        def emit(self, family: t.Any, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+            return {**super().emit(family, *args, **kwargs), "base_url": f"https://{TARGET}:{tls_target.port}/prefix/"}
+
+    tls_target.seen.clear()
+    connection = create_tunnelled_connection(
+        bastion[1], _BASTION_AUTH, PrefixedProfile(), None, TARGET, tls_target.port,
+    )
+    with connection.connect() as conn:
+        assert conn.client.get("x").status_code == 200
+    assert tls_target.seen == [("GET", "/prefix/x", f"{TARGET}:{tls_target.port}", TARGET)]
+
+
+def test_plain_http_connection_carries_one_request(bastion, plain_target) -> None:
+    # Clients that pool plain-HTTP proxy connections by proxy rather than by
+    # destination (urllib3's ProxyManager) would send a second host's request
+    # down the checked connection; the listener forces Connection: close.
+    plain_target.seen.clear()
+    first = f"GET http://{TARGET}:{plain_target.port}/first HTTP/1.1\r\nHost: {TARGET}\r\n\r\n"
+    second = "POST http://other.test/private HTTP/1.1\r\nHost: other.test\r\nContent-Length: 6\r\n\r\nsecret"
+    with _http_tunnel(bastion, plain_target.port).connect() as conn:
+        assert conn.local_port is not None
+        with socket.create_connection(("127.0.0.1", conn.local_port), timeout=5) as raw:
+            raw.sendall(first.encode())
+            response = b""
+            while b"payload" not in response:
+                response += raw.recv(4096)
+            try:
+                raw.sendall(second.encode())
+                assert raw.recv(4096) == b""
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+    assert [path for _, path, _, _ in plain_target.seen] == [f"http://{TARGET}:{plain_target.port}/first"]
+
+
+def test_ipv6_destination_matches_as_httpx_sends_it(bastion, plain_target) -> None:
+    connection = create_tunnelled_connection(
+        bastion[1], _BASTION_AUTH, HTTPStorageProfile(), None, "::1", plain_target.port,
+    )
+    with connection.connect() as conn:
+        assert conn.client.get(f"http://[::1]:{plain_target.port}/v6").status_code == 200
+        assert conn.local_port is not None
+        for authority in (f"::1:{plain_target.port}", f"[::1]:{plain_target.port}"):
+            with socket.create_connection(("127.0.0.1", conn.local_port), timeout=5) as raw:
+                raw.sendall(f"CONNECT {authority} HTTP/1.1\r\n\r\n".encode())
+                assert raw.recv(1024).startswith(b"HTTP/1.1 200 Connection established")
+
+
+
+@pytest.mark.parametrize("head", [
+    b"CONNECT " + b"a" * (70 * 1024),
+    b"CONNECT " + TARGET.encode() + b":1 HTTP/1.1\r\nX-Pad: " + b"a" * (64 * 1024) + b"\r\n\r\n",
+    b"CONNECT [" + TARGET.encode() + b":1 HTTP/1.1\r\n\r\n",
+    b"CONNECT\r\n\r\n",
+], ids=["unterminated", "terminated_oversized", "bad_authority", "no_target"])
+def test_bad_request_head_is_refused_without_channel(bastion, tls_target, head) -> None:
     conn = _http_tunnel(bastion, tls_target.port).connect()
     try:
         assert conn.local_port is not None
         with socket.create_connection(("127.0.0.1", conn.local_port), timeout=5) as raw:
-            raw.sendall(b"CONNECT " + b"a" * (70 * 1024))
+            raw.sendall(head)
             assert raw.recv(1024).startswith(b"HTTP/1.1 400 Bad Request\r\n")
         assert bastion[0].destinations == []
     finally:

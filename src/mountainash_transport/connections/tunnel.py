@@ -15,7 +15,6 @@ import threading
 import time
 from types import TracebackType
 import typing as t
-from urllib.parse import urlsplit
 
 from typing_extensions import Self
 
@@ -37,6 +36,42 @@ def _refusal(status: str, reason: str) -> bytes:
         f"HTTP/1.1 {status}\r\nContent-Type: text/plain\r\nContent-Length: {len(body)}\r\n"
         "Connection: close\r\n\r\n"
     ).encode() + body
+
+
+def _authority(authority: str, default_port: int | None) -> tuple[str, int]:
+    """Split ``host[:port]`` (IPv6 bracketed or, as httpcore sends it, bare) into
+    a lower-cased host and port; raise ValueError when malformed."""
+    if "@" in authority:
+        raise ValueError(authority)
+    if authority.startswith("["):
+        host, closed, rest = authority[1:].partition("]")
+        if not closed or (rest and not rest.startswith(":")):
+            raise ValueError(authority)
+        port_text = rest[1:]
+    else:
+        host, colon, port_text = authority.rpartition(":")
+        if not colon:
+            host, port_text = authority, ""
+    if port_text and not port_text.isdigit():
+        raise ValueError(authority)
+    port = int(port_text) if port_text else default_port
+    if not host or port is None or not 0 < port < 65536:
+        raise ValueError(authority)
+    return host.lower(), port
+
+
+_HOP_HEADERS = (b"connection:", b"proxy-connection:", b"keep-alive:")
+
+
+def _close_after_one_request(head: bytes) -> bytes:
+    """Replace the hop-by-hop connection headers with ``Connection: close``.
+
+    A plain-HTTP client may reuse its proxy connection for a request to a
+    different host; closing after each response makes every request open a
+    new connection, which is checked against the tunnel destination.
+    """
+    lines = [line for line in head.split(b"\r\n") if not line.lower().startswith(_HOP_HEADERS)]
+    return b"\r\n".join([*lines, b"Connection: close"])
 
 
 class _ForwardHandler(socketserver.BaseRequestHandler):
@@ -87,6 +122,11 @@ class _ForwardHandler(socketserver.BaseRequestHandler):
         finally:
             try:
                 channel.close()
+            except EOFError as exc:
+                # Expected when the bastion session closed first (disconnect
+                # ordering): the channel went with it.
+                if owner._transport.is_active():
+                    owner._record_cleanup_error(exc)
             except BaseException as exc:
                 owner._record_cleanup_error(exc)
 
@@ -97,36 +137,40 @@ class _ForwardHandler(socketserver.BaseRequestHandler):
         host (case-insensitive) and port are the tunnel's destination.
         """
         received = b""
-        while b"\r\n\r\n" not in received:
-            if len(received) > _MAX_PROXY_HEAD:
-                self.request.sendall(_refusal("400 Bad Request", "proxy request head too large"))
-                return None
+        while b"\r\n\r\n" not in received and len(received) <= _MAX_PROXY_HEAD:
             chunk = self.request.recv(4096)
             if not chunk:
                 return None
             received += chunk
-        parts = received.split(b"\r\n", 1)[0].decode("latin-1").split(" ")
-        if len(parts) != 3:
+        end = received.find(b"\r\n\r\n")
+        if end < 0 or end + 4 > _MAX_PROXY_HEAD:
+            self.request.sendall(_refusal("400 Bad Request", "proxy request head too large"))
+            return None
+        head, rest = received[:end], received[end + 4:]
+        parts = head.split(b"\r\n", 1)[0].decode("latin-1").split(" ")
+        try:
+            method, target, _ = parts
+            if method == "CONNECT":
+                requested = _authority(target, None)
+            elif target[:7].lower() == "http://":
+                authority = target[7:]
+                for stop in "/?#":
+                    authority = authority.split(stop, 1)[0]
+                requested = _authority(authority, 80)
+            else:
+                raise ValueError(target)
+        except ValueError:
             self.request.sendall(_refusal("400 Bad Request", "malformed proxy request"))
             return None
-        method, target, _ = parts
-        if method == "CONNECT":
-            split = urlsplit(f"//{target}")
-            default_port = None
-        else:
-            split = urlsplit(target)
-            default_port = 80 if split.scheme == "http" else None
         host, port = self.owner._remote
-        try:
-            requested = (split.hostname, split.port or default_port)
-        except ValueError:
-            requested = (None, None)
-        if requested != (host.lower(), port):
+        if requested != (host.strip("[]").lower(), port):
             self.request.sendall(_refusal(
                 "403 Forbidden", f"this tunnel only reaches {host}:{port}; refused {target}",
             ))
             return None
-        return received
+        if method == "CONNECT":
+            return received
+        return _close_after_one_request(head) + b"\r\n\r\n" + rest
 
 
 class _Forwarder:
