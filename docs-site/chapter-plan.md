@@ -22,7 +22,7 @@ Readers can enter at the level they need: each chapter states its assumed starti
 - **users**: chapters 1, 3–12 are the core path; chapter 14's support matrix is linked from 6 and 7.
 - **backend-architecture**: chapters 2, 4–6, 11 (connection layer), 13 and 14. All concepts in the facet's six concept groups have primary sections: protocols and support matrix (13, 14), registry dispatch (4, 13), S3 flavours (5, 11, 14), connection layer (6, 11), read plumbing (9, 14), HTTP engine (12).
 - **maintainers**: internals sections in 3, 9, 10 and 12, plus chapters 13–15. Lifecycle invariants (6, 11), conformance (15), extras and base install (3, 15), stream internals (9, 10, 14), engine policy and redaction (12), scheme identification (4, 8) and the settings pipeline (5).
-- **broader-hype**: no chapter (brief). Feeds the home and About pages only, from "same call, any store" (6, 7, 14), location guard rails (8) and bastion access (11). Every claim is backed by an example or test; the tunnel claim carries the HTTPS limitation.
+- **broader-hype**: no chapter (brief). Feeds the home and About pages only, from "same call, any store" (6, 7, 14), location guard rails (8) and bastion access (11). Every claim is backed by an example or test.
 - **Ecosystem context**: chapter 2 (brief decision), linked at each boundary: credentials (5, 11, 12), configuration (5), formats and access modes (9).
 
 ## Chapters
@@ -226,7 +226,6 @@ Readers can enter at the level they need: each chapter states its assumed starti
 
 - **Support matrix and known limits** (reference page, brief decision). It collects the matrix including RangedRead, the settings-only providers and the documented limits:
   - empty `allowed_remote` set allows any host;
-  - HTTPS targets fail through tunnels;
   - `rmdir` divergence;
   - SFTP write buffering;
   - S3 single-request copy;

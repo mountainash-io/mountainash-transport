@@ -42,7 +42,7 @@
   ],
   "key_functions": [
     "create_connection(profile, auth_profile=None, *, auto_authorize=False) -> ConnectionProtocol — validate auth, emit kwargs, return an unconnected leaf/decorator connection",
-    "create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, target_auth, remote_host, remote_port) -> TunnelledConnection — SSH bastion chain whose inner connection targets 127.0.0.1:<ephemeral port>",
+    "create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, target_auth, remote_host, remote_port) -> TunnelledConnection — SSH bastion chain; HTTP/S3 inner clients keep the real URL and use the tunnel listener as a proxy, SFTP dials the listener under the real host name",
     "create_auth_strategy(auth_profile, *, oauth_provider=None, token_store=None) -> OAuth2RefreshableAuthStrategy | None — managed OAuth2 strategy or None for static tokens; fails closed on misconfiguration",
     "_emit_kwargs(profile, auth_profile, family) -> dict — kwargs assembly incl. boto Session envelope; rejects ROLE_ARN for r2/minio/b2"
   ],
