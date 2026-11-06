@@ -262,11 +262,13 @@ A bastion (jump host) is an SSH server you can reach that can, in turn, reach a 
 
 1. connects an `SSHConnection` to the bastion, built from `bastion_profile` (an `SFTPStorageProfile` works) and `bastion_auth`;
 2. starts a listener on `127.0.0.1` at an ephemeral port, exposed as `local_port`, that forwards each accepted socket to `remote_host:remote_port` through the bastion;
-3. builds the inner connection from `target_profile` and `target_auth` with `create_connection`, after rewriting the target's endpoint to point at the listener, and connects it.
+3. builds the inner connection from `target_profile` and `target_auth` with `create_connection`, routed through the listener, and connects it.
+
+The target keeps its real identity. HTTP and S3 clients keep the profile's real URL and use the listener as their HTTP proxy, so TLS, SNI, certificate checks, the `Host` header and S3 request signing all name the real service, end to end through the bastion. An SFTP target keeps its real host name, so its host key is checked against the real target.
 
 `client` is the inner connection's client. `disconnect()` closes the inner connection, the listener and its sockets, then the SSH session, and waits up to one second for forwarding threads before raising `ConnectionTimeoutError`. `StorageFacade` has no tunnel option, so you use the tunnelled client directly.
 
-The example below reaches a private web service through a bastion. Both the bastion (an in-process SSH server) and the web service (a local `http.server`) ran in the same process; their setup is not shown.
+The example below reaches a private HTTPS service through a bastion. The bastion (an in-process SSH server that alone resolves `target.test`) and the web service (an HTTPS server whose certificate for `target.test` comes from a test CA trusted through `SSL_CERT_FILE`) ran in the same process; their setup is not shown.
 
 ```python
 from mountainash_auth_client import PasswordAuthProfile
@@ -274,10 +276,11 @@ from mountainash_transport import create_tunnelled_connection
 from mountainash_transport.settings.storage.profiles import HTTPStorageProfile, SFTPStorageProfile
 
 bastion_profile = SFTPStorageProfile(
-    HOST="127.0.0.1", PORT=bastion.port, USERNAME="analyst",
+    HOST="127.0.0.1", PORT=bastion.port, USERNAME="u",
     KNOWN_HOSTS_FILE=known_hosts, ALLOW_AGENT=False, LOOK_FOR_KEYS=False,
 )
-bastion_auth = PasswordAuthProfile(USERNAME="analyst", PASSWORD="example-password")
+bastion_auth = PasswordAuthProfile(USERNAME="u", PASSWORD="p")
+service_host, service_port = "target.test", service.port
 
 tunnel = create_tunnelled_connection(
     bastion_profile, bastion_auth,
@@ -285,70 +288,82 @@ tunnel = create_tunnelled_connection(
     service_host, service_port,          # where the bastion forwards to
 )
 with tunnel.connect():
-    url = f"http://127.0.0.1:{tunnel.local_port}/sales.csv"
-    response = tunnel.client.get(url)
+    response = tunnel.client.get(f"https://{service_host}:{service_port}/reports/sales.csv")
     print(type(tunnel.client).__name__, response.status_code, response.content)
-
-print("bastion forwarded to:", bastion.forwards == [(service_host, service_port)])
+    try:
+        tunnel.client.get("https://example.org/")
+    except Exception as exc:
+        print(type(exc).__name__, exc)
+print("bastion forwarded to:", bastion.destinations == [(service_host, service_port)])
 print("connected after exit:", tunnel.is_connected)
-```
-
-Output:
-
-```text
-Client 200 b'region,total\nnorth,120\n'
-bastion forwarded to: True
-connected after exit: False
-```
-
-#### How the target endpoint is rewritten
-
-The rewrite touches only specific keys in the target's emitted arguments, so what the inner client points at depends on the profile:
-
-| Target profile emits | Rewritten to | Effect |
-|---|---|---|
-| `hostname` and `port` (SFTP) | `127.0.0.1` and `local_port` | the inner SSH session goes through the tunnel |
-| `endpoint_url` or `base_url` (for example an S3 profile with `ENDPOINT_URL`) | `http://127.0.0.1:<local_port>` | through the tunnel, always as plain HTTP |
-| no `endpoint_url` for an S3 (boto3) target (an `aws` or `express` flavour profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
-| an S3 target that assumes a role (`ROLE_ARN` on the `IAMAuthProfile`, or a `PROFILE_NAME` whose AWS config sets `role_arn`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; botocore would call AWS STS directly, outside the bastion. Use static or session credentials for tunnelled targets |
-| none of these (an `HTTPStorageProfile`) | unchanged | the profile names no destination; build request URLs from `local_port` |
-
-The rewrite is visible on a boto3 client's endpoint. Bastion setup is again not shown:
-
-```python
-from mountainash_auth_client import PasswordAuthProfile
-from mountainash_transport import create_tunnelled_connection
-from mountainash_transport.settings.storage.profiles import S3StorageProfile, SFTPStorageProfile
-
-bastion_profile = SFTPStorageProfile(
-    HOST="127.0.0.1", PORT=bastion.port, USERNAME="analyst",
-    KNOWN_HOSTS_FILE=known_hosts, ALLOW_AGENT=False, LOOK_FOR_KEYS=False,
-)
-bastion_auth = PasswordAuthProfile(USERNAME="analyst", PASSWORD="example-password")
-
-target = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="https://minio.internal:9000",
-                          BUCKET="reports")
-with create_tunnelled_connection(bastion_profile, bastion_auth, target, None,
-                                 "minio.internal", 9000) as tunnel:
-    tunnel.connect()
-    print(f"minio: {tunnel.client.meta.endpoint_url}")
+print("service saw:", service.seen)
 ```
 
 Output (the port differs on each run):
 
 ```text
-minio: http://127.0.0.1:40731
+Client 200 b'payload'
+ProxyError 403 Forbidden
+bastion forwarded to: True
+connected after exit: False
+service saw: [('GET', '/reports/sales.csv', 'target.test:35775', 'target.test')]
 ```
 
-For an HTTP target, build URLs from `local_port` yourself, as the first tunnel example does.
+The service saw the real path, `Host` header and TLS server name (the last field). The request for another host was refused by the listener and never reached the bastion: a tunnel reaches exactly one destination.
 
-!!! warning "HTTPS targets do not work through a tunnel"
-    The bastion hop is SSH, so traffic between your machine and the bastion is encrypted. The problem is the last leg: a rewritten `endpoint_url` or `base_url` always becomes `http://127.0.0.1:<port>`, dropping the original scheme, host name and any path prefix. An HTTPS-only service then receives plain HTTP on its TLS port and the request fails; Host headers, SNI and certificate checks would no longer name the real service in any case. Tunnel only plain-HTTP or SSH targets. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+#### How the target is routed
 
-!!! warning "SFTP through a tunnel and host-key checking"
-    An SFTP target's host key is looked up under the rewritten address, `[127.0.0.1]:<local_port>`, and the port changes on every connect. A known-hosts entry for the real target never matches, so the default `reject` policy refuses the connection with `Server '[127.0.0.1]:<port>' not found in known_hosts`. Connecting succeeds only with `HOST_KEY_POLICY="warn"` or `"auto_add"` on the target profile, which do not verify the target's identity.
+| Target profile | Routed by | Effect |
+|---|---|---|
+| SFTP (`hostname` and `port`) | `SSHConnection` dials the listener, keeping the real `hostname` and `port` | the SSH session goes through the tunnel; the host key is checked under the real name, so a known-hosts entry for `[target]:port` matches and the default `reject` policy works |
+| HTTP (`HTTPStorageProfile`) | httpx `proxy=` set to the listener | request the real URL (`https://` or `http://`); scheme, host, port and path are kept |
+| S3 with an endpoint (`ENDPOINT_URL`, or the endpoint an `r2`/`b2`/`minio` profile derives) | botocore `Config(proxies=...)` set to the listener, merged with the profile's own config | `endpoint_url` is unchanged; TLS and request signing use the real endpoint |
+| no `endpoint_url` for an S3 (boto3) target (an `aws` or `express` flavour profile without `ENDPOINT_URL`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; boto3 would otherwise resolve the public AWS endpoint and bypass the bastion |
+| an S3 target that assumes a role (`ROLE_ARN` on the `IAMAuthProfile`, or a `PROFILE_NAME` whose AWS config sets `role_arn`) | refused | `connect()` raises `TunnelEndpointError` and tears the tunnel down; botocore would call AWS STS directly, outside the bastion. Use static or session credentials for tunnelled targets |
 
-The listener on `127.0.0.1` has no access control: any local process can use the tunnel while it is open. Unit tests for the tunnel, including the endpoint rewrite and cleanup ordering, are in `tests/connections/test_tunnel_connection.py`; the source is `src/mountainash_transport/connections/tunnel.py`.
+For HTTP and S3 targets the listener accepts one proxy request per connection, either `CONNECT host:port` (HTTPS) or an absolute-form `http://` request, and only when the host (case-insensitive; IPv6 with or without brackets) and port equal `remote_host` and `remote_port`. Anything else gets `403 Forbidden` (`400` for a malformed request head or one over 64 KiB) and no channel is opened. A plain-HTTP request is forwarded with `Connection: close`, so the next request, possibly for another host, opens a new connection and is checked again. Request URLs must use the same host name you passed as `remote_host`; an IP address does not match a host name. An explicit proxy takes precedence over `NO_PROXY` in both httpx and botocore, so environment proxy settings cannot route a tunnelled client around the bastion.
+
+An S3 target, with bastion setup again not shown:
+
+```python
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
+
+target = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="https://minio.internal:9000", BUCKET="reports")
+with create_tunnelled_connection(bastion_profile, bastion_auth, target, None,
+                                 "minio.internal", 9000) as tunnel:
+    tunnel.connect()
+    print(f"endpoint: {tunnel.client.meta.endpoint_url}")
+    print(f"proxies:  {tunnel.client.meta.config.proxies}")
+```
+
+Output (the port differs on each run):
+
+```text
+endpoint: https://minio.internal:9000
+proxies:  {'http': 'http://127.0.0.1:46211', 'https': 'http://127.0.0.1:46211'}
+```
+
+An SFTP target behind the same bastion, with its real host key in `known_hosts` as `[target.test]:<port>` and the default `reject` policy:
+
+```python
+target = SFTPStorageProfile(HOST="target.test", PORT=sftp.port, USERNAME="u",
+                            KNOWN_HOSTS_FILE=known_hosts, ALLOW_AGENT=False, LOOK_FOR_KEYS=False)
+with create_tunnelled_connection(bastion_profile, bastion_auth, target, bastion_auth,
+                                 "target.test", sftp.port) as tunnel:
+    tunnel.connect()
+    print(tunnel.client.listdir("."))
+```
+
+Output:
+
+```text
+['remote.csv']
+```
+
+!!! note "Changed in this release"
+    Earlier builds rewrote `base_url` and `endpoint_url` to `http://127.0.0.1:<local_port>`, which broke HTTPS targets and dropped path prefixes, and looked SFTP host keys up under `[127.0.0.1]:<local_port>`. HTTP callers that built `http://127.0.0.1:<local_port>/...` URLs themselves must now request the real URL; a local-port URL is refused with `403`.
+
+The listener on `127.0.0.1` has no access control: any local process can use the tunnel while it is open, though only to reach the tunnel's one destination. Tests for the tunnel are in `tests/connections/test_tunnel_connection.py` (lifecycle and cleanup) and `tests/connections/test_tunnel_target_identity.py` (a real bastion, HTTPS, S3 and SFTP targets); the source is `src/mountainash_transport/connections/tunnel.py`.
 
 ## Connection errors
 

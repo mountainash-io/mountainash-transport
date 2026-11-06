@@ -257,11 +257,11 @@ Use `create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, 
 
 ### Can I reach an HTTPS service through a tunnel?
 
-No. A tunnelled connection rewrites `endpoint_url` or `base_url` to `http://127.0.0.1:<port>`, dropping the original scheme, host name and path prefix. The SSH hop to the bastion is encrypted, but an HTTPS-only service receives plain HTTP and the request fails. Tunnel plain-HTTP or SSH targets only. An `HTTPStorageProfile` is not rewritten, so build HTTP URLs from `local_port` yourself. An `aws` or `express` flavour S3 profile without `ENDPOINT_URL`, and an S3 target that assumes a role (`ROLE_ARN`, or a `PROFILE_NAME` whose AWS config sets `role_arn`), raise `TunnelEndpointError` at `connect()`, because they would reach AWS or AWS STS outside the bastion. See [How the target endpoint is rewritten](chapters/11-connections/index.md#how-the-target-endpoint-is-rewritten).
+Yes. HTTP and S3 clients keep the target's real URL and use the tunnel's local listener as their HTTP proxy, so TLS runs end to end to the real service and SNI, certificate checks and the `Host` header name it. Request the real URL, with the same host name you passed as `remote_host`; the listener refuses any other destination with `403`. An `aws` or `express` flavour S3 profile without `ENDPOINT_URL`, and an S3 target that assumes a role (`ROLE_ARN`, or a `PROFILE_NAME` whose AWS config sets `role_arn`), still raise `TunnelEndpointError` at `connect()`, because they would reach AWS or AWS STS outside the bastion. See [How the target is routed](chapters/11-connections/index.md#how-the-target-is-routed).
 
-### Why does SFTP through a tunnel fail host-key checking?
+### Does SFTP through a tunnel check the target's host key?
 
-The target's host key is looked up under the rewritten address, `[127.0.0.1]:<local_port>`, and the port changes on every connect, so a known-hosts entry for the real target never matches. The default `reject` policy refuses the connection. Only `HOST_KEY_POLICY="warn"` or `"auto_add"` connect, and neither verifies the target's identity. See [Bastion tunnels](chapters/11-connections/index.md#bastion-tunnels).
+Yes. The SSH session dials the tunnel's listener but keeps the target's real host name and port, so its key is looked up as `[host]:port` (or `host` on port 22) in `known_hosts`, and the default `reject` policy works. See [Bastion tunnels](chapters/11-connections/index.md#bastion-tunnels).
 
 ### Why does my SFTP connection fail with "not found in known_hosts"?
 
@@ -313,7 +313,7 @@ Errors redact what they can see. `LocationNotAllowed`, scheme detection, `Storag
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 

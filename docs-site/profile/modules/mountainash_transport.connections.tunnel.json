@@ -1,7 +1,7 @@
 {
   "id": "mountainash_transport.connections.tunnel",
   "path": "src/mountainash_transport/connections/tunnel.py",
-  "summary": "TunnelledConnection is a decorator that reaches a remote service through an SSH bastion: connect() starts a local 127.0.0.1 TCP listener on an ephemeral port that forwards each accepted socket over a paramiko direct-tcpip channel, then builds and connects an inner connection targeting that port. _PatchedEndpointProfile rewrites hostname/port and base_url/endpoint_url in emitted kwargs so the inner connection uses the tunnel. Shutdown closes the inner connection, listener, accepted sockets and SSH, then waits up to one second for workers before raising ConnectionTimeoutError.",
+  "summary": "TunnelledConnection is a decorator that reaches a remote service through an SSH bastion: connect() starts a local 127.0.0.1 TCP listener on an ephemeral port that forwards each accepted socket over a paramiko direct-tcpip channel, then builds and connects an inner connection routed through it. With proxy=True (HTTP and S3 targets) the listener accepts one CONNECT or absolute-form http:// request per connection for the tunnel's destination only. _PatchedEndpointProfile keeps the real URL/host and adds httpx proxy=, botocore Config(proxies=) or an SSH sock_address. Shutdown closes the inner connection, listener, accepted sockets and SSH, then waits up to one second for workers before raising ConnectionTimeoutError.",
   "role": "integration",
   "visibility": "public",
   "stability": "stable",
@@ -21,10 +21,10 @@
     "TunnelledConnection — decorator connection owning SSH, a _Forwarder and an inner connection; exposes local_port",
     "_Forwarder — private threaded TCP listener with per-request workers, stop/wait with a shared 1 s budget and first-error recording",
     "_ForwardHandler — private socketserver handler relaying bytes between socket and direct-tcpip channel via select()",
-    "_PatchedEndpointProfile — private profile wrapper overriding to_handler_kwargs() and emit() to point at the tunnel"
+    "_PatchedEndpointProfile — private profile wrapper overriding to_handler_kwargs() and emit() to route the SDK client through the tunnel listener"
   ],
   "key_functions": [
-    "TunnelledConnection(ssh_connection, inner_connection_factory: Callable[[int], ConnectionProtocol], remote_host, remote_port)",
+    "TunnelledConnection(ssh_connection, inner_connection_factory: Callable[[int], ConnectionProtocol], remote_host, remote_port, *, proxy=False)",
     "TunnelledConnection.connect() -> Self — tear down previous inner/forwarder (keeping SSH), connect SSH if needed, start forwarder, build+connect inner",
     "TunnelledConnection.disconnect() -> None — ordered teardown; ConnectionTimeoutError wins over other cleanup errors"
   ],
@@ -48,21 +48,21 @@
   "documentation_hooks": [
     "Tunnelling guide: reaching internal services through a bastion with create_tunnelled_connection",
     "Tunnel shutdown semantics and timeout behaviour",
-    "Security note: tunnel endpoint scheme rewriting"
+    "Security note: proxy handshake restricted to the tunnel destination"
   ],
   "examples": [],
   "tests": [
-    "tests/connections/test_tunnel_connection.py"
+    "tests/connections/test_tunnel_connection.py",
+    "tests/connections/test_tunnel_target_identity.py"
   ],
   "risks": [
-    "_PatchedEndpointProfile rewrites base_url/endpoint_url to 'http://127.0.0.1:<port>' (connections/tunnel.py:201), dropping the scheme, host and any path prefix. The bastion hop is SSH-encrypted, but an HTTPS-only target receives plain HTTP on its TLS port (request fails) and Host/SNI/certificate checks no longer reference the real service; HTTPS endpoints through a tunnel are effectively unsupported.",
+    "The proxy check compares the request host with remote_host literally (case-insensitive); a URL using an IP address for a tunnel built with a host name (or the reverse) is refused with 403.",
     "The forwarder listens on 127.0.0.1 without access control, so any local process can use the tunnel while it is open.",
     "_ForwardHandler swallows channel-open and relay exceptions (except Exception: pass/return), so forwarding failures surface only as closed sockets.",
     "_PatchedEndpointProfile.__getattr__ delegates everything else to the inner profile, so attributes other than emitted kwargs (e.g. HOST on the profile object) still describe the real remote host.",
     "No example or README snippet shows create_tunnelled_connection end to end; only AGENTS.md gives the signature."
   ],
   "open_questions": [
-    "Is the forced http:// scheme for tunnelled base_url/endpoint_url intentional, and how should HTTPS targets be tunnelled?",
     "Is TunnelledConnection integrated with StorageFacade, or only usable directly?"
   ],
   "evidence": [
@@ -74,7 +74,7 @@
     {
       "kind": "symbol",
       "path": "src/mountainash_transport/connections/tunnel.py",
-      "detail": "_PatchedEndpointProfile._patch_endpoint sets url keys to f'http://{host}:{port}'"
+      "detail": "_PatchedEndpointProfile._route adds proxy=/Config(proxies=)/sock_address; _ForwardHandler._accept_proxy_request checks the destination"
     },
     {
       "kind": "symbol",

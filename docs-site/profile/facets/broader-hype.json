@@ -52,7 +52,7 @@
   "documentation_plan": [
     "Hero demo: one script copying local -> S3-compatible -> SFTP with gzip in flight (proof: examples/cross_backend_copy, conformance tests).",
     "Only claim backends that exist: local, S3/R2/MinIO/B2/S3 Express, SFTP, HTTP. GCS/Azure/FTP/SMB/GitHub are profiles only.",
-    "Tunnel callout must state the HTTPS-through-tunnel limitation and needs an example before promotion."
+    "Tunnel callout: HTTPS, S3 and SFTP keep the real service identity through the bastion (#38); the executable examples/ recipe is #50."
   ],
   "open_questions": [
     "Is there a runnable tunnel example to back the bastion claim?"
