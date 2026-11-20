@@ -19,6 +19,7 @@ from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.safe_display import raise_safe, safe_detail
 
 __all__ = ["HTTP_SPEC", "HTTPStorageProfile"]
 
@@ -136,9 +137,13 @@ def _verify(profile: Profile) -> bool | ssl.SSLContext:
     if not ca_bundle:
         return True
     # httpx 0.28 deprecates verify=<str>; this is the form it recommends.
-    if os.path.isdir(ca_bundle):
-        return ssl.create_default_context(capath=ca_bundle)
-    return ssl.create_default_context(cafile=ca_bundle)
+    try:
+        if os.path.isdir(ca_bundle):
+            return ssl.create_default_context(capath=ca_bundle)
+        return ssl.create_default_context(cafile=ca_bundle)
+    except (OSError, ValueError) as exc:
+        # W8: the native error may carry the bundle value (e.g. UnicodeEncodeError.object).
+        raise_safe(ValueError(f"CA_BUNDLE could not be loaded ({safe_detail(exc)})"), exc)
 
 
 @register

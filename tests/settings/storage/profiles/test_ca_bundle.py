@@ -60,6 +60,28 @@ def test_http_bundle_becomes_ssl_context(tmp_path: Path, as_directory: bool):
         assert stats["x509_ca"] > 0
 
 
+@pytest.mark.parametrize("bundle", [
+    "/nonexistent/SENTP/ca.pem",
+    "https://SENTU:SENTP@host/\ud800?token=SENTQ#SENTF",   # unencodable: UnicodeEncodeError carries the input
+], ids=["missing", "unencodable"])
+def test_http_bundle_load_failure_shows_no_input(bundle):
+    """W8: a bad CA_BUNDLE fails at connection creation without echoing the value."""
+    import traceback
+    from mountainash_auth_client import TokenAuthProfile
+    from mountainash_transport import create_connection
+
+    with pytest.raises(ValueError) as caught:
+        create_connection(HTTPStorageProfile(CA_BUNDLE=bundle), TokenAuthProfile(TOKEN="t"))
+    exc = caught.value
+    text = "".join(traceback.format_exception(exc)) + repr(exc.args) + repr(vars(exc))
+    assert exc.__cause__ is None or (isinstance(exc.__cause__, OSError) and exc.__cause__.filename is None)
+    assert exc.__context__ is None
+    for sentinel in ("SENTU", "SENTP", "SENTQ", "SENTF"):
+        assert sentinel not in text
+    assert str(exc).startswith("CA_BUNDLE could not be loaded (")
+
+
+
 def test_http_bundle_builds_client_without_deprecation_warning(recwarn):
     import httpx
 
