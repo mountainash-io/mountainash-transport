@@ -17,7 +17,9 @@ if t.TYPE_CHECKING:
 
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
-from mountainash_transport._core.exceptions import StorageConnectionError, UnsupportedOperationError
+from mountainash_transport._core.exceptions import (
+    RandomAccessUnavailableError, StorageConnectionError, UnsupportedOperationError,
+)
 from mountainash_transport._core.protocols import ConnectionProtocol
 from mountainash_transport._core.safe_display import add_cleanup_note
 from mountainash_transport.storage.protocols import (
@@ -403,7 +405,7 @@ class StorageFacade:
         path = checked
         if access == "random":
             if not effective.is_empty():
-                raise ValueError("access='random' cannot be combined with transforms")
+                raise RandomAccessUnavailableError("access='random' cannot be combined with transforms")
             if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
                 return self._backend.read_to_stream(path)
             self._require(RangedReadProtocol, "random reads")

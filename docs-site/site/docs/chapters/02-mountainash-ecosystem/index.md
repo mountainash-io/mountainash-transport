@@ -259,7 +259,7 @@ table.bin.gz ('buffered', b'FOOT')
 
 `infer_pipeline` returns a pair: the pipeline and the path without its transform suffixes. The pipeline is `None` when the path has no transform suffix, and a `Pipeline` containing `Gzip` when the suffix is `.gz`. Nothing in the consumer depends on the backend: the same function works for an `https://` or `s3://` path.
 
-!!! note "Random access with transforms raises `ValueError`"
-    Requesting `access="random"` together with a non-empty transform pipeline raises a plain `ValueError` ("access='random' cannot be combined with transforms"), not one of the typed refusals. Check the pipeline with `infer_pipeline` before choosing random access, as the example does. See the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "Random access with transforms raises `RandomAccessUnavailableError`"
+    Requesting `access="random"` together with a non-empty transform pipeline raises `RandomAccessUnavailableError`, a `ValueError` subclass exported from the package root. A consumer can catch it to fall back to buffered access, or check the pipeline with `infer_pipeline` before choosing random access, as the example does.
 
 Access modes and range policies are covered in [Choosing an access mode](../09-read-access-modes/index.md#choosing-an-access-mode), and transforms on random reads in [Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership).

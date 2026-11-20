@@ -75,7 +75,7 @@ How each backend serves ranges:
 - SFTP: a native remote file handle without prefetch, and no ETag pinning.
 - Local: a reader that wraps the native file object from `open(path, "rb")` and forwards its attributes, with no ranged reader or extra buffer. Local has no ranged-read capability and needs none, so `supports(RangedReadProtocol)` is `False` even though random mode works. `readinto`, `seek`, `tell` and `fileno` behave as on any file.
 
-Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `ValueError`; decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
+Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `RandomAccessUnavailableError` (a `ValueError` subclass); decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
 
 ```python
 from mountainash_transport import ObjectChangedError, RangePolicy

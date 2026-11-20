@@ -404,7 +404,7 @@ Explained in [LocationPolicy](chapters/08-location-policy/index.md#locationpolic
 
 ## `materialize`
 
-A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is imported from `mountainash_transport._core.transforms.util`, not the package root.
+A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is exported from the package root.
 
 Related: [Buffered access](#buffered-access).
 

@@ -145,9 +145,9 @@ The default access mode is sequential, and remote sequential streams are forward
 
 `access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For PyArrow's Parquet reader, a 64 KiB read-ahead (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in the measured setup. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
 
-### Why does `access="random"` raise `ValueError` on a `.gz` file?
+### Why does `access="random"` raise `RandomAccessUnavailableError` on a `.gz` file?
 
-Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is a plain `ValueError`. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
+Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is `RandomAccessUnavailableError`, a `ValueError` subclass, so a consumer can catch it and fall back to buffered access. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can also check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
 
 ### Why did `read_stream()` succeed and reading fail later?
 

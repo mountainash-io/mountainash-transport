@@ -21,6 +21,7 @@ if t.TYPE_CHECKING:
     from ._core.ranged_io import RangePolicy as RangePolicy
     from ._core.exceptions import (
         RangeNotSupportedError as RangeNotSupportedError,
+        RandomAccessUnavailableError as RandomAccessUnavailableError,
         ObjectChangedError as ObjectChangedError,
         StorageError as StorageError,
         UnsupportedOperationError as UnsupportedOperationError,
@@ -119,6 +120,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'copy_between': ('.storage.facade', 'copy_between'),
     'RangePolicy': ('._core.ranged_io', 'RangePolicy'),
     'RangeNotSupportedError': ('._core.exceptions', 'RangeNotSupportedError'),
+    'RandomAccessUnavailableError': ('._core.exceptions', 'RandomAccessUnavailableError'),
     'ObjectChangedError': ('._core.exceptions', 'ObjectChangedError'),
     'RangedReadProtocol': ('.storage.protocols.prtcl_ranged_read', 'RangedReadProtocol'),
     'get_storage_backend': ('.storage.registry', 'get_storage_backend'),
@@ -205,7 +207,8 @@ def __getattr__(name: str) -> t.Any:
 
 
 __all__ = [
-    "RangePolicy", "RangeNotSupportedError", "ObjectChangedError", "RangedReadProtocol",
+    "RangePolicy", "RangeNotSupportedError", "RandomAccessUnavailableError",
+    "ObjectChangedError", "RangedReadProtocol",
     "__version__",
     "StorageFacade", "copy_between",
     "get_storage_backend", "detect_provider_from_path",
