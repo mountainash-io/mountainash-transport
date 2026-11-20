@@ -23,6 +23,8 @@ import mountainash_transport.storage.backends  # noqa: F401
 from mountainash_transport.storage.backends.s3 import S3StorageBackend
 from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
 
+from ._safe_cause import assert_safe_cause
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -374,7 +376,7 @@ def test_s3_structured_failure_categories(code: str, status: int, category: str)
     with pytest.raises(getattr(transport, category)) as caught:
         _make_backend(client).get_metadata("s3://bucket/key")
     assert type(caught.value) is getattr(transport, category)
-    assert caught.value.__cause__ is original
+    assert_safe_cause(caught.value, original)
 
 
 @pytest.mark.parametrize(
@@ -396,7 +398,7 @@ def test_s3_operation_denial(
     client.list_objects_v2.side_effect = AssertionError("denial must not fall back to LIST")
     with pytest.raises(PermissionDeniedError) as caught:
         getattr(_make_backend(client), operation)("s3://bucket/key", *extra)
-    assert caught.value.__cause__ is original
+    assert_safe_cause(caught.value, original)
 
 
 def test_s3_page_failure_does_not_return_partial_listing() -> None:
@@ -409,7 +411,7 @@ def test_s3_page_failure_does_not_return_partial_listing() -> None:
     client.get_paginator.return_value.paginate.return_value = pages()
     with pytest.raises(PermissionDeniedError) as caught:
         _make_backend(client).list_objects("s3://bucket/prefix")
-    assert caught.value.__cause__ is original
+    assert_safe_cause(caught.value, original)
 
 
 @pytest.mark.parametrize("operation", ["read_to_bytes", "read_to_stream"])
@@ -430,7 +432,7 @@ def test_s3_body_failure_is_mapped(operation: str, fault: str) -> None:
                     result.read(1)
             finally:
                 result.close()
-    assert caught.value.__cause__ is original
+    assert_safe_cause(caught.value, original)
 
 
 def test_s3_managed_upload_preserves_colliding_caller_error() -> None:
@@ -495,7 +497,7 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
                 backend.write_from_stream("s3://bucket/key", source)
             from mountainash_transport import PermissionDeniedError
             assert type(caught.value) is PermissionDeniedError
-            assert isinstance(caught.value.__cause__, ClientError)
+            assert caught.value.__cause__ is None
             stub.assert_no_pending_responses()
 
 

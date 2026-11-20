@@ -81,7 +81,7 @@ def test_deferred_close_maps_error_and_remains_closed() -> None:
     reader = ForwardOnlyReader(lambda n: b"", close, lambda exc: StorageError("backend"))
     with pytest.raises(StorageError) as caught:
         reader.close()
-    assert caught.value.__cause__ is original
+    assert caught.value.__cause__ is None  # OSError without an errno is not chained (W8)
     assert reader.closed
     reader.close()
     assert closes == [True]

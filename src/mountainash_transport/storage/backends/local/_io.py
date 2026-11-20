@@ -5,6 +5,8 @@ import errno
 import typing as t
 from types import TracebackType
 
+from mountainash_transport._core.safe_display import raise_safe
+
 from ._helpers import _map_local_error, _mapped
 
 
@@ -37,7 +39,7 @@ class _LocalReader:
                 mapped = _map_local_error(exc, self._path)
                 if mapped is None:
                     raise
-                raise mapped from exc
+                raise_safe(mapped, exc)
         return invoke
 
     def __iter__(self) -> _LocalReader:
