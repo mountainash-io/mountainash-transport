@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-def assert_safe_cause(error: BaseException, native: BaseException) -> None:
+def assert_safe_chain(error: BaseException, native: BaseException) -> None:
     """*error* chains only what ``safe_cause`` allows of *native*, and no hidden context.
 
     An ``OSError`` with an errno becomes a fresh exception of the same type with

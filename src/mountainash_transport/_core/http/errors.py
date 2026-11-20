@@ -30,30 +30,32 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.redact import REDACTED, redact_url
+from mountainash_transport._core.safe_display import safe_location
 
-# Response headers whose whole value is a credential (session or auth material).
-_CREDENTIAL_HEADERS = frozenset({
-    "set-cookie", "set-cookie2", "cookie", "authorization", "proxy-authorization",
+# Response headers an error may carry; location-valued ones in display form.
+_SAFE_HEADERS = frozenset({
+    "accept-ranges", "content-encoding", "content-length", "content-location",
+    "content-range", "content-type", "date", "etag", "last-modified", "location",
+    "retry-after", "www-authenticate",
 })
+_URL_HEADERS = frozenset({"location", "content-location"})
 
 
-def _redact_header(name: str, value: str) -> str:
-    return REDACTED if name.lower() in _CREDENTIAL_HEADERS else redact_url(value)
+def _safe_headers(headers: t.Mapping[str, str]) -> dict[str, str]:
+    safe: dict[str, str] = {}
+    for name, value in headers.items():
+        key = name.lower()
+        if key in _SAFE_HEADERS:
+            safe[key] = safe_location(value) if key in _URL_HEADERS else value
+    return safe
 
 
 class HttpTransportError(Exception):
     """Base class for all HTTP transport exceptions.
 
-    String arguments are stripped of URL userinfo and query values so
-    credentials embedded in a request URL never reach ``str(exc)``,
-    ``repr(exc)`` or ``exc.args``.
+    Transport builds every message from a location's display form, a fixed
+    category and an exception class name (W8 safe-location display).
     """
-
-    def __init__(self, *args: object) -> None:
-        super().__init__(
-            *(redact_url(a) if isinstance(a, str) else a for a in args)
-        )
 
 
 class HttpResponseError(HttpTransportError):
@@ -66,11 +68,10 @@ class HttpResponseError(HttpTransportError):
     status_code:
         The HTTP status code received.
     headers:
-        Response headers as a mapping. Credential headers (``Set-Cookie``,
-        ``Authorization`` and similar) are replaced with ``***``; URL credentials
-        in other values are redacted. The response body is deliberately not carried.
+        Response headers as a mapping, reduced to an allow-list of safe headers;
+        location-valued ones are in display form. The body is deliberately not carried.
     url:
-        The request URL, with userinfo and query values redacted.
+        The request URL in display form.
     method:
         The HTTP method used (GET, POST, etc.).
     """
@@ -86,10 +87,8 @@ class HttpResponseError(HttpTransportError):
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
-        self.headers = (
-            {k: _redact_header(k, v) for k, v in headers.items()} if headers is not None else None
-        )
-        self.url = redact_url(url) if url is not None else None
+        self.headers = _safe_headers(headers) if headers is not None else None
+        self.url = safe_location(url) if url is not None else None
         self.method = method
 
 

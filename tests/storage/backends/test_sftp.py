@@ -17,7 +17,7 @@ from mountainash_transport._core.exceptions import (
     StorageError,
 )
 
-from ._safe_cause import assert_safe_cause
+from ._safe_chain import assert_safe_chain
 
 
 class _FakeConnection:
@@ -78,7 +78,7 @@ class TestReadToBytes:
         from mountainash_transport import PermissionDeniedError
         with pytest.raises(PermissionDeniedError) as caught:
             backend.read_to_bytes("/remote/secret.txt")
-        assert_safe_cause(caught.value, original)
+        assert_safe_chain(caught.value, original)
 
 
 class TestPathExists:
@@ -267,7 +267,7 @@ def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
     backend, _ = _make_backend(client)
     with pytest.raises(StorageConnectionError) as caught:
         getattr(backend, operation)("/remote/file")
-    assert_safe_cause(caught.value, original)
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize(
@@ -285,7 +285,7 @@ def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.
     backend, _ = _make_backend(client)
     with pytest.raises(StorageConnectionError) as caught:
         getattr(backend, operation)("/remote/file", *extra)
-    assert_safe_cause(caught.value, original)
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize("ranged", [False, True])
@@ -305,7 +305,7 @@ def test_sftp_late_failure_is_portable(ranged: bool, fault: str) -> None:
                 source.fetch(0, 3) if ranged else source.read(3)
         finally:
             source.on_close() if ranged else source.close()
-    assert_safe_cause(caught.value, original)
+    assert_safe_chain(caught.value, original)
 
 
 def test_sftp_caller_input_failure_is_unchanged() -> None:

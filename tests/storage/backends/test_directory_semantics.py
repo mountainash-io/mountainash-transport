@@ -20,7 +20,7 @@ from mountainash_transport.storage.backends.local import LocalStorageBackend
 from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
 from mountainash_transport import Gzip, StorageFacade
 
-from ._safe_cause import assert_safe_cause
+from ._safe_chain import assert_safe_chain
 
 
 class _FilesystemSFTP:
@@ -249,7 +249,7 @@ def test_sftp_mkdir_race_requires_a_directory(tmp_path: Path, winner: str) -> No
     else:
         with pytest.raises(StorageError) as caught:
             backend.mkdir(str(path))
-        assert_safe_cause(caught.value, original)
+        assert_safe_chain(caught.value, original)
         if winner == "file":
             assert path.read_bytes() == b"winner"
 
@@ -267,7 +267,7 @@ def test_sftp_recursive_mkdir_preserves_failures(
     backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
     with pytest.raises(expected) as caught:
         backend.mkdir(str(tmp_path / "new"))
-    assert_safe_cause(caught.value, original)
+    assert_safe_chain(caught.value, original)
     assert not (tmp_path / "new").exists()
 
 
@@ -318,7 +318,7 @@ def test_sftp_mkdir_does_not_hide_failure_after_server_creation(
     backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
     with pytest.raises(expected) as caught:
         backend.mkdir(str(path))
-    assert_safe_cause(caught.value, original)
+    assert_safe_chain(caught.value, original)
     assert path.is_dir()  # Failure does not imply rollback.
 
 
@@ -444,7 +444,7 @@ class TestFilesystemEnumeration:
         else:
             with pytest.raises(PermissionDeniedError) as caught:
                 backend.list_objects(str(tmp_path))
-            assert_safe_cause(caught.value, fault)
+            assert_safe_chain(caught.value, fault)
 
     @pytest.mark.parametrize("delimiter", [None, "/"])
     def test_enumeration_link_policy(
@@ -504,7 +504,7 @@ class TestFilesystemEnumeration:
         monkeypatch.setattr(owner, method, denied)
         with pytest.raises(PermissionDeniedError) as caught:
             getattr(backend, operation)(str(tmp_path))
-        assert_safe_cause(caught.value, fault)
+        assert_safe_chain(caught.value, fault)
 
 
 @pytest.mark.parametrize("operation, suffix", [
@@ -629,7 +629,7 @@ def test_sftp_enumeration_propagates_native_failures(
     selection = str(tmp_path / "absent") if fault_at == "ancestor" else str(tmp_path)
     with pytest.raises(expected) as caught:
         backend.list_objects(selection)
-    assert_safe_cause(caught.value, fault)
+    assert_safe_chain(caught.value, fault)
 
 
 def test_sftp_enumeration_preserves_optional_file_metadata(tmp_path: Path) -> None:
