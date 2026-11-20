@@ -28,9 +28,9 @@ def test_backends_register_on_first_lookup_after_lazy_import():
          "StorageFacade.for_local()")
 
 
-def test_storage_factory_survives_submodule_import_order():
-    _run("from mountainash_transport import StorageFacade; import mountainash_transport.storage.facade; "
-         "from mountainash_transport import storage; f = storage(); assert f.__class__.__name__ == 'StorageFacade'")
+def test_storage_subpackage_dotted_import_in_fresh_process():
+    _run("import mountainash_transport.storage.backends as b; import mountainash_transport as t; "
+         "assert t.storage.backends is b")
 
 
 def test_lazy_exports_are_real_objects():

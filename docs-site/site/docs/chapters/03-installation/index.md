@@ -132,8 +132,6 @@ create_connection  needs [http]
 HttpRequestEngine  needs [http]
 ```
 
-The root also binds `storage`, a convenience factory that returns a `StorageFacade` for a provider type (see [Creating a facade](../06-storage-facade/index.md#creating-a-facade)). Because of that binding, `mountainash_transport.storage` is the factory function, not the `storage` subpackage. Import submodules with `from` imports, for example `from mountainash_transport.storage.facade import StorageFacade`, rather than `import mountainash_transport.storage.backends as backends`, which raises `ImportError`. The lazy-export table is in `src/mountainash_transport/__init__.py`.
-
 ## Errors
 
 <!-- concept:218 -->

@@ -5,10 +5,9 @@ import pytest
 class TestPublicAPI:
 
     def test_facade_importable(self):
-        from mountainash_transport import StorageFacade, copy_between, storage
+        from mountainash_transport import StorageFacade, copy_between
         assert callable(StorageFacade)
         assert callable(copy_between)
-        assert callable(storage)
 
     def test_protocols_importable(self):
         from mountainash_transport import (
@@ -37,10 +36,17 @@ class TestPublicAPI:
         from mountainash_transport import StoragePath
         assert callable(StoragePath.identify_scheme)
 
-    def test_storage_convenience_factory(self):
-        from mountainash_transport import storage, StorageReadProtocol
-        facade = storage()
-        assert facade.supports(StorageReadProtocol)
+    def test_storage_subpackage_import_forms(self):
+        """The root's `storage` attribute is the subpackage, so dotted imports work (#46)."""
+        import importlib
+
+        import mountainash_transport
+        import mountainash_transport.storage.backends as backends
+
+        assert backends is importlib.import_module("mountainash_transport.storage.backends")
+        from mountainash_transport import storage
+        assert storage is importlib.import_module("mountainash_transport.storage")
+        assert "storage" not in mountainash_transport.__all__
 
     def test_transform_exports_are_top_level(self):
         """Pipeline, Gzip, GPG, StreamTransform, TransformError import from package root."""

@@ -12,10 +12,6 @@ import typing as t
 from .__version__ import __version__
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
-# Docstring-only subpackage; imported eagerly *before* the ``storage`` factory is
-# defined so the factory (not the subpackage) is the final ``storage`` binding.
-from . import storage as _storage_pkg  # noqa: F401
-
 if t.TYPE_CHECKING:
     # Static view of the lazy exports below; runtime stays lazy (PEP 562).
     from .storage.facade import (
@@ -117,14 +113,6 @@ if t.TYPE_CHECKING:
     )
 
 
-def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-            profile=None, *, auth_profile=None) -> "StorageFacade":
-    """Convenience factory for creating a StorageFacade."""
-    from .storage.facade import StorageFacade
-
-    return StorageFacade(provider_type, profile, auth_profile=auth_profile)
-
-
 _LAZY: dict[str, tuple[str, str]] = {
     'StorageFacade': ('.storage.facade', 'StorageFacade'),
     'copy_between': ('.storage.facade', 'copy_between'),
@@ -217,7 +205,7 @@ def __getattr__(name: str) -> t.Any:
 __all__ = [
     "RangePolicy", "RangeNotSupportedError", "ObjectChangedError", "RangedReadProtocol",
     "__version__",
-    "StorageFacade", "copy_between", "storage",
+    "StorageFacade", "copy_between",
     "get_storage_backend", "detect_provider_from_path",
     "ConnectionProtocol", "TransportConnectionError",
     "SSHConnection", "SFTPConnection", "TunnelledConnection",

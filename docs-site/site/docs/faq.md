@@ -51,13 +51,9 @@ Packages built on transport pass their extras through: `mountainash-files[s3]` i
 
 The package root resolves its public names on first use (PEP 562). `import mountainash_transport` loads almost nothing, and local-only code never imports `httpx` or the cloud SDKs. A name that needs a missing extra fails when you first access it, for example `StoragePath` raises `MissingExtraError` on a base install. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
 
-### Why does `import mountainash_transport.storage.backends as backends` raise `ImportError`?
-
-The package root binds `storage` to a factory function, so `mountainash_transport.storage` is that function and not the subpackage. Use `from` imports for submodules, for example `from mountainash_transport.storage.facade import StorageFacade`. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
-
 ### What is the quickest way to open storage?
 
-`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. The root `storage(provider_type, profile, auth_profile=...)` function builds a facade from a provider type and defaults to local, but it does not accept a location policy or the OAuth arguments. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
+`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. `StorageFacade(provider_type, profile, auth_profile=...)` builds a facade from a provider type. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
 
 ### What does transport leave to other packages?
 

@@ -810,14 +810,6 @@ Related: [Leaf connection](#leaf-connection), [`SFTPConnection`](#sftpconnection
 
 Explained in [SSHConnection](chapters/11-connections/index.md#sshconnection).
 
-## `storage()`
-
-A package-root function that constructs a `StorageFacade` from a provider type, defaulting to local, with an optional storage profile and auth profile. It accepts no location policy or OAuth arguments.
-
-Related: [`StorageFacade`](#storagefacade), [`from_path`](#from_path).
-
-Explained in [The storage() factory](chapters/06-storage-facade/index.md#the-storage-factory).
-
 ## Storage profile
 
 An instance of a provider's profile class, built on the `mountainash-settings` `Profile`, that describes a store, such as its endpoint, region, bucket, host and timeouts, but holds no credentials. Its uppercase fields are validated on construction and can come from arguments, environment or configuration.
