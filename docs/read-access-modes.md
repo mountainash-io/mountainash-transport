@@ -111,4 +111,4 @@ except gzip.BadGzipFile:
     assert handle.closed
 ```
 
-Consumer exceptions also close handles. To spool explicitly, the existing `materialize(stream, to="tempfile")` utility is available; a facade spooling option remains deferred (backlog #25).
+Consumer exceptions also close handles. To spool explicitly, use `materialize(stream, to="tempfile")` (`from mountainash_transport import materialize`); a facade spooling option remains deferred (backlog #25).

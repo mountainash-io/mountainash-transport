@@ -62,6 +62,19 @@ class TestPublicAPI:
         assert issubclass(TransformError, Exception)
         assert isinstance(Gzip(), StreamTransform)
 
+    def test_materialize_is_public(self):
+        """`materialize` imports from the root and the transforms package (#56)."""
+        import io
+
+        import mountainash_transport
+        from mountainash_transport import materialize
+        from mountainash_transport._core.transforms import materialize as from_transforms
+
+        assert materialize is from_transforms
+        assert "materialize" in mountainash_transport.__all__
+        buffer, length = materialize(io.BytesIO(b"abc"))
+        assert (length, buffer.read()) == (3, b"abc")
+
 
 class TestHttpTransportPublicApi:
 

@@ -77,6 +77,7 @@ if t.TYPE_CHECKING:
         StreamTransform as StreamTransform,
         Gzip as Gzip,
         GPG as GPG,
+        materialize as materialize,
     )
     from ._core.http import (
         HttpRequestEngine as HttpRequestEngine,
@@ -160,6 +161,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'StreamTransform': ('._core.transforms', 'StreamTransform'),
     'Gzip': ('._core.transforms', 'Gzip'),
     'GPG': ('._core.transforms', 'GPG'),
+    'materialize': ('._core.transforms', 'materialize'),
     'HttpRequestEngine': ('._core.http', 'HttpRequestEngine'),
     'RequestPolicy': ('._core.http', 'RequestPolicy'),
     'RetryPolicy': ('._core.http', 'RetryPolicy'),
@@ -222,7 +224,7 @@ __all__ = [
     "PermissionDeniedError",
     "ProfileResolutionError", "ProfileNotFoundError",
     "StoragePath", "infer_pipeline",
-    "Pipeline", "StreamTransform", "Gzip", "GPG",
+    "Pipeline", "StreamTransform", "Gzip", "GPG", "materialize",
     # HTTP transport foundation
     "HttpRequestEngine",
     "RequestPolicy", "RetryPolicy", "TimeoutPolicy", "RedirectPolicy",
