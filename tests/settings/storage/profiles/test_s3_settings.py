@@ -107,7 +107,7 @@ class TestS3HandlerKwargsMatrix:
         assert kw["service_name"] == "s3"
         assert "region_name" in kw
         assert kw["use_ssl"] is True
-        assert kw["verify"] is True
+        assert "verify" not in kw  # botocore resolves AWS_CA_BUNDLE / ca_bundle (#67)
 
     def test_aws_default_has_no_endpoint_override(self):
         """AWS flavor lets boto3's default resolver pick the endpoint."""
@@ -244,7 +244,7 @@ class TestS3EmitGolden:
         flat, cfg = _split_config(out)
         assert flat == {
             "service_name": "s3", "region_name": "us-east-1",
-            "use_ssl": True, "verify": True,
+            "use_ssl": True,
         }
         assert cfg.s3 == {"addressing_style": "auto"}
 
@@ -254,7 +254,7 @@ class TestS3EmitGolden:
         flat, cfg = _split_config(out)
         assert flat == {
             "service_name": "s3", "region_name": "auto", "use_ssl": True,
-            "verify": True, "endpoint_url": "https://acct123.r2.cloudflarestorage.com",
+            "endpoint_url": "https://acct123.r2.cloudflarestorage.com",
         }
         assert cfg.s3 == {"addressing_style": "auto"}
 
