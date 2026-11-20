@@ -32,17 +32,15 @@ from mountainash_transport._core.http.errors import (
     HttpTransportError,
     map_status_to_error,
 )
+from mountainash_transport._core.http.log_safety import install_log_filters
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse, url_without_userinfo
 from mountainash_transport._core.safe_display import raise_safe, safe_location
 
-# httpx logs every request URL (userinfo, query, fragment) at INFO, and httpcore
-# logs connection details at DEBUG. Keep both quiet unless the application has
-# set their levels itself (W8: no location in log records).
-for _name in ("httpx", "httpcore"):
-    _logger = logging.getLogger(_name)
-    if _logger.level == logging.NOTSET:
-        _logger.setLevel(logging.WARNING)
+# httpx logs every request URL (userinfo, query, fragment) at INFO, and httpcore logs
+# header lists at DEBUG. Filters on the emitting loggers hold at any level (W8).
+_install_log_filters = install_log_filters
+_install_log_filters()
 
 
 if t.TYPE_CHECKING:
