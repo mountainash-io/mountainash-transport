@@ -105,15 +105,15 @@ def _location_header(value: str, base: t.Optional[str]) -> str:
     """
     from urllib.parse import urljoin
 
-    if base is not None:
-        try:
-            return safe_location(urljoin(base, value))
-        except ValueError:
-            pass
     shown = safe_location(value)
     if shown == "***" or shown.startswith("//") or _SCHEME.match(shown):
-        return shown
-    # A relative reference: path only.
+        return shown  # absolute or opaque: never resolved
+    # A genuinely relative reference (normalized by safe_location).
+    if base is not None:
+        try:
+            return safe_location(urljoin(base, shown))
+        except ValueError:
+            pass
     return shown[: min((i for i in (shown.find(c) for c in "?#") if i != -1), default=len(shown))]
 
 

@@ -280,12 +280,15 @@ def test_www_authenticate_keeps_only_schemes(mode, value, expected):
 @pytest.mark.parametrize("value, expected", [
     ("/next?sig=SENTQ#SENTF", "https://h/next"),
     ("other?sig=SENTQ#SENTF", "https://h/dir/other"),
-    ("//SENTU:SENTP@o/p?sig=SENTQ", "https://o/p"),
+    ("//SENTU:SENTP@o/p?sig=SENTQ", "//o/p"),
     ("https://SENTU:SENTP@o/p?sig=SENTQ#SENTF", "https://o/p"),
     ("https://SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "https://[bad]/next"),
     ("//SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "//[bad]/next"),
     ("ht\ttps://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
     ("\x00https://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
+    ("https:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***"),
+    ("ht\ttps:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***"),
+    ("http:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***"),
 ])
 def test_location_headers_resolved_then_displayed(mode, name, value, expected):
     assert _error_headers(mode, {name: value}) == {name: expected}
@@ -298,6 +301,9 @@ def test_relative_location_without_base_shows_only_path():
                             ("a/b#SENTF", "a/b"),
                             ("https://SENTU:SENTP@[bad]/n?sig=SENTQ#SENTF", "https://[bad]/n"),
                             ("ht\ttps://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
-                            ("\x00https://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x")]:
+                            ("\x00https://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
+                            ("https:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***"),
+                            ("ht\ttps:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***"),
+                            ("http:/SENTU:SENTP@h?sig=SENTQ#SENTF", "***")]:
         error = HttpResponseError("x", headers={"location": value})
         assert error.headers == {"location": expected}
