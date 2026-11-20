@@ -62,11 +62,10 @@ def bastion(tmp_path: Path) -> t.Iterator[tuple[Bastion, SFTPStorageProfile]]:
 
 @pytest.fixture(autouse=True)
 def trust_test_ca(pki: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
+    # httpx honours SSL_CERT_FILE and botocore AWS_CA_BUNDLE when the profiles
+    # name no CA_BUNDLE (#67).
     monkeypatch.setenv("SSL_CERT_FILE", str(pki[0]))
-    # The S3 profile always passes verify=True, which makes botocore ignore
-    # AWS_CA_BUNDLE; point its default bundle at the test CA instead.
-    import botocore.httpsession
-    monkeypatch.setattr(botocore.httpsession, "where", lambda: str(pki[0]))
+    monkeypatch.setenv("AWS_CA_BUNDLE", str(pki[0]))
     for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy"):
         monkeypatch.delenv(name, raising=False)
 
@@ -74,8 +73,8 @@ def trust_test_ca(pki: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> No
 _BASTION_AUTH = PasswordAuthProfile(USERNAME="u", PASSWORD="p")
 
 
-def _http_tunnel(bastion: t.Any, port: int) -> TunnelledConnection:
-    return create_tunnelled_connection(bastion[1], _BASTION_AUTH, HTTPStorageProfile(), None, TARGET, port)
+def _http_tunnel(bastion: t.Any, port: int, profile: HTTPStorageProfile | None = None) -> TunnelledConnection:
+    return create_tunnelled_connection(bastion[1], _BASTION_AUTH, profile or HTTPStorageProfile(), None, TARGET, port)
 
 
 def test_https_keeps_url_host_and_tls_name(bastion, tls_target) -> None:
@@ -114,10 +113,45 @@ def test_request_for_another_destination_is_refused(bastion, tls_target, url) ->
     assert bastion[0].destinations == []
 
 
-def _s3_head(bastion: t.Any, port: int, auth: IAMAuthProfile) -> None:
-    profile = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL=f"https://{TARGET}:{port}", REGION="us-east-1")
+def _s3_head(bastion: t.Any, port: int, auth: IAMAuthProfile, **fields: t.Any) -> None:
+    profile = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL=f"https://{TARGET}:{port}", REGION="us-east-1", **fields)
     with create_tunnelled_connection(bastion[1], _BASTION_AUTH, profile, auth, TARGET, port).connect() as conn:
         conn.client.head_bucket(Bucket="reports")
+
+
+_KEYS = lambda: IAMAuthProfile(ACCESS_KEY_ID="AKIAX", SECRET_ACCESS_KEY="secret")  # noqa: E731
+
+
+@pytest.fixture
+def no_env_ca(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("AWS_CA_BUNDLE", raising=False)
+
+
+def test_s3_ca_bundle_trusts_private_ca(bastion, tls_target, pki, no_env_ca) -> None:
+    import botocore.exceptions
+
+    with pytest.raises(botocore.exceptions.SSLError):
+        _s3_head(bastion, tls_target.port, _KEYS())
+    _s3_head(bastion, tls_target.port, _KEYS(), CA_BUNDLE=str(pki[0]))
+
+
+def test_http_ca_bundle_trusts_private_ca(bastion, tls_target, pki, no_env_ca) -> None:
+    url = f"https://{TARGET}:{tls_target.port}/x"
+    with _http_tunnel(bastion, tls_target.port).connect() as conn:
+        with pytest.raises(httpx.ConnectError):
+            conn.client.get(url)
+    with _http_tunnel(bastion, tls_target.port, HTTPStorageProfile(CA_BUNDLE=str(pki[0]))).connect() as conn:
+        assert conn.client.get(url).status_code == 200
+
+
+@pytest.mark.filterwarnings("ignore::urllib3.exceptions.InsecureRequestWarning")  # verification is off by design here
+@pytest.mark.parametrize("bundle", [False, True], ids=["no_bundle", "with_bundle"])
+def test_verify_off_skips_verification(bastion, tls_target, pki, no_env_ca, bundle) -> None:
+    fields: dict[str, t.Any] = {"VERIFY_SSL": False, **({"CA_BUNDLE": str(pki[0])} if bundle else {})}
+    _s3_head(bastion, tls_target.port, _KEYS(), **fields)
+    with _http_tunnel(bastion, tls_target.port, HTTPStorageProfile(**fields)).connect() as conn:
+        assert conn.client.get(f"https://{TARGET}:{tls_target.port}/x").status_code == 200
 
 
 @pytest.fixture

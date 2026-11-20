@@ -133,7 +133,7 @@ One profile class, `S3StorageProfile`, covers AWS S3, S3 Express One Zone, Cloud
 | `minio` | `ENDPOINT_URL`, required | `REGION` | `ADDRESSING_STYLE` |
 | `b2` | `https://s3.{REGION}.backblazeb2.com`, or `ENDPOINT_URL` | `REGION` | `ADDRESSING_STYLE` |
 
-An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)).
+An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
 
 ```python
 from mountainash_transport.settings.storage.profiles import S3StorageProfile
@@ -197,7 +197,7 @@ The host-key settings travel in a separate envelope because paramiko applies the
 
 ### HTTP profile
 
-`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on) and `HEADERS`, plus the `RANGE_*` fields. The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
+`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on), `CA_BUNDLE` and `HEADERS`, plus the `RANGE_*` fields. The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
 
 ```python
 web = HTTPStorageProfile(HEADERS={"User-Agent": "reports-sync"}, FOLLOW_REDIRECTS=False)
@@ -209,6 +209,18 @@ Output:
 ```text
 {'timeout': Timeout(connect=10.0, read=30.0, write=60.0, pool=5.0), 'follow_redirects': False, 'max_redirects': 10, 'verify': True, 'headers': {'User-Agent': 'reports-sync'}}
 ```
+
+### Trusting a private CA
+
+An S3-compatible endpoint (MinIO, an on-premises gateway, a target reached through a tunnel) or an HTTPS server may present a certificate signed by your own CA. Point the profile's `CA_BUNDLE` at that CA's PEM file; the HTTP profile also accepts a directory of hashed certificates. `VERIFY_SSL=False` turns verification off and wins over `CA_BUNDLE` without an error.
+
+| `VERIFY_SSL` | `CA_BUNDLE` | S3 client | HTTP client |
+|---|---|---|---|
+| `False` | any | `verify=False` | `verify=False` |
+| `True` | path | `verify=<path>` | an SSL context loaded from the path |
+| `True` (default) | unset | no `verify`: botocore uses `AWS_CA_BUNDLE` or the `ca_bundle` config key, else its default bundle | `verify=True`: httpx's default, which honours `SSL_CERT_FILE` |
+
+Without `CA_BUNDLE`, S3 follows botocore's own resolution, so `AWS_CA_BUNDLE` and `ca_bundle` in `~/.aws/config` apply as they do for plain boto3.
 
 Authorization headers are added from the auth profile and merged with `HEADERS`. Request behaviour beyond the client settings, such as retries, is configured on the [HTTP request engine](../12-http-engine/index.md#making-requests).
 
@@ -459,8 +471,8 @@ except UnsupportedAuthProfileError as exc:
 Output:
 
 ```text
-['config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl', 'verify']
-['aws_access_key_id', 'aws_secret_access_key', 'config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl', 'verify']
+['config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl']
+['aws_access_key_id', 'aws_secret_access_key', 'config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl']
 {'Authorization': 'Bearer example-token'}
 UnsupportedAuthProfileError: PasswordAuthProfile is not supported: mode 'password' not in supported_auth ['iam', 'none']
 ```
