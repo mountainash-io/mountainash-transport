@@ -231,3 +231,25 @@ def map_status_to_error(status_code: int) -> type[HttpResponseError]:
         f"status_code {status_code!r} is not a 4xx or 5xx error code; "
         "cannot map to an HttpResponseError subclass."
     )
+
+
+TRUSTED_ERRORS: tuple[type[HttpTransportError], ...] = (
+    HttpTransportError,
+    HttpResponseError,
+    HttpClientError,
+    HttpNotFoundError,
+    HttpAuthenticationError,
+    HttpForbiddenError,
+    HttpRateLimitError,
+    HttpConflictError,
+    HttpServerError,
+    HttpBadGatewayError,
+    HttpServiceUnavailableError,
+    HttpGatewayTimeoutError,
+    HttpConnectionError,
+    HttpTimeoutError,
+    HttpRedirectError,
+    HttpProtocolError,
+    HttpRequestError,
+    HttpDecodeError,
+)

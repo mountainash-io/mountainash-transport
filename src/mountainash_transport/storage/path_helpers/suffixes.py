@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 
 from mountainash_transport._core.transforms import GPG, Gzip, Pipeline, StreamTransform
-from mountainash_transport._core.redact import redact_location
+from mountainash_transport._core.safe_display import safe_location
 
 SUFFIX_TRANSFORMS: dict[str, str] = {
     ".gz":   "gzip",
@@ -78,7 +78,7 @@ def infer_pipeline(
         elif kind == "gpg":
             if gpg is None:
                 raise ValueError(
-                    f"path {redact_location(path)!r} has a {suffix} suffix; "
+                    f"path {safe_location(path)!r} has a {suffix} suffix; "
                     f"pass gpg=GPG(...) to infer"
                 )
             outer_to_inner.append(gpg)

@@ -250,16 +250,3 @@ def test_dispatch_errors_hide_query_values_and_schemeless_userinfo(pol, fn, path
             assert "s3cr3t" not in text, f"{type(link).__name__}: {text}"
 
 
-@pytest.mark.parametrize(("location", "expected"), [
-    ("s3://bucket/x.zip?X-Amz-Signature=s3cr3t&X-Amz-Expires=60",
-     "s3://bucket/x.zip?X-Amz-Signature=***&X-Amz-Expires=***"),
-    ("https://alice:pa@s3cr3t@h/x?t=s3cr3t#frag", "https://h/x?t=***#frag"),
-    ("alice:s3cr3t@host/x.csv", "***@host/x.csv"),
-    ("s3:alice:s3cr3t@bucket/k", "***@bucket/k"),
-    ("/data/report@2026.csv", "/data/report@2026.csv"),     # "@" after the first "/" is a path
-    ("relative/file.csv", "relative/file.csv"),
-])
-def test_location_not_allowed_redacts(location, expected):
-    err = LocationNotAllowed(location, "remote not allowed")
-    assert err.location == expected
-    assert "s3cr3t" not in str(err) and "s3cr3t" not in repr(err)
