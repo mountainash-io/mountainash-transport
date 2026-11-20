@@ -282,6 +282,8 @@ def test_www_authenticate_keeps_only_schemes(mode, value, expected):
     ("other?sig=SENTQ#SENTF", "https://h/dir/other"),
     ("//SENTU:SENTP@o/p?sig=SENTQ", "https://o/p"),
     ("https://SENTU:SENTP@o/p?sig=SENTQ#SENTF", "https://o/p"),
+    ("https://SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "https://[bad]/next"),
+    ("//SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "//[bad]/next"),
 ])
 def test_location_headers_resolved_then_displayed(mode, name, value, expected):
     assert _error_headers(mode, {name: value}) == {name: expected}
@@ -291,6 +293,7 @@ def test_relative_location_without_base_shows_only_path():
     from mountainash_transport._core.http.errors import HttpResponseError
 
     for value, expected in [("/next?sig=SENTQ#SENTF", "/next"), ("//SENTU:SENTP@o/p?sig=SENTQ", "//o/p"),
-                            ("a/b#SENTF", "a/b")]:
+                            ("a/b#SENTF", "a/b"),
+                            ("https://SENTU:SENTP@[bad]/n?sig=SENTQ#SENTF", "https://[bad]/n")]:
         error = HttpResponseError("x", headers={"location": value})
         assert error.headers == {"location": expected}

@@ -28,6 +28,7 @@ HttpTransportError (base)
 
 from __future__ import annotations
 
+import re
 import typing as t
 
 from mountainash_transport._core.safe_display import safe_location
@@ -43,6 +44,9 @@ _URL_HEADERS = frozenset({"location", "content-location"})
 _TOKEN_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~"
 )
+
+
+_HAS_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 
 def _auth_schemes(value: str) -> str:
@@ -100,17 +104,18 @@ def _auth_schemes(value: str) -> str:
 
 def _location_header(value: str, base: t.Optional[str]) -> str:
     """Display form of a Location-style value, resolved against *base* when one is known."""
-    from urllib.parse import urljoin, urlsplit
+    from urllib.parse import urljoin
 
-    try:
-        if base is not None:
-            return safe_location(urljoin(base, value))
-        if urlsplit(value).scheme:
-            return safe_location(value)
-    except ValueError:
-        pass
-    # No base (or unparseable): a reference shows only its path, never userinfo/query/fragment.
     value = value.strip()
+    if _HAS_SCHEME.match(value):
+        # Absolute: safe_location needs no valid host to drop userinfo, query and fragment.
+        return safe_location(value)
+    if base is not None:
+        try:
+            return safe_location(urljoin(base, value))
+        except ValueError:
+            pass
+    # No base (or unparseable): a reference shows only its path, never userinfo/query/fragment.
     if value.startswith("//"):
         end = min((i for i in (value.find(c, 2) for c in "/?#") if i != -1), default=len(value))
         value = "//" + value[2:end].rpartition("@")[2] + value[end:]
