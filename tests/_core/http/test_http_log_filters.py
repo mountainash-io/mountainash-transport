@@ -122,16 +122,13 @@ def test_filters_attach_once():
         assert sum(getattr(f, "_w8_log_filter", False) for f in logging.getLogger(name).filters) == 1, name
 
 
-def test_no_level_default_is_set():
-    import importlib
+def test_import_sets_no_level():
+    import subprocess
+    import sys
 
-    from mountainash_transport._core.http import engine
-
-    httpx_logger = logging.getLogger("httpx")
-    saved = httpx_logger.level
-    httpx_logger.setLevel(logging.NOTSET)
-    try:
-        importlib.reload(engine)
-        assert httpx_logger.level == logging.NOTSET
-    finally:
-        httpx_logger.setLevel(saved)
+    code = (
+        "import logging, mountainash_transport._core.http.engine\n"
+        "assert logging.getLogger('httpx').level == logging.NOTSET\n"
+        "assert logging.getLogger('httpcore').level == logging.NOTSET\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)

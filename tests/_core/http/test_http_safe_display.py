@@ -130,14 +130,14 @@ def _assert_logs_clean(caplog) -> None:
             assert sentinel not in message, f"{record.name}: {message}"
 
 
-def test_httpx_and_httpcore_logs_carry_no_location(caplog):
+def test_httpx_and_httpcore_logs_carry_no_location(caplog, library_loggers_debug):
     caplog.set_level(logging.DEBUG)
     engine = _engine(lambda r: httpx.Response(200, content=b"x"))
     engine.request("GET", URL)
     _assert_logs_clean(caplog)
 
 
-def test_httpx_and_httpcore_logs_carry_no_location_on_real_socket(caplog):
+def test_httpx_and_httpcore_logs_carry_no_location_on_real_socket(caplog, library_loggers_debug):
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]

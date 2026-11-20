@@ -12,11 +12,15 @@ SENT = "SENTP"
 
 
 def _assert_clean(exc):
-    text = "".join(traceback.format_exception(exc)) + repr(exc.args)
-    link = exc.__cause__
-    while link is not None:
-        text += str(link) + repr(link.args)
-        link = link.__cause__
+    text = "".join(traceback.format_exception(exc))
+    pending, seen = [exc], set()
+    while pending:
+        link = pending.pop()
+        if id(link) in seen:
+            continue
+        seen.add(id(link))
+        text += str(link) + repr(link) + repr(link.args) + repr(vars(link))
+        pending.extend(e for e in (link.__cause__, link.__context__) if e is not None)
     assert SENT not in text and exc.__context__ is None
 
 

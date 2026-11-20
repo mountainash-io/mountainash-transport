@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from mountainash_transport._core.exceptions import PermissionDeniedError, StorageConnectionError
 from mountainash_transport import StorageError, StorageFacade, UnsupportedOperationError
 from mountainash_transport.location import LocationPolicy
 
@@ -92,7 +93,7 @@ def failing_server():
 
 @pytest.mark.parametrize("policy", POLICIES)
 @pytest.mark.parametrize("operation", sorted(OPERATIONS))
-def test_http_walk(failing_server, policy, operation, caplog):
+def test_http_walk(failing_server, policy, operation, caplog, library_loggers_debug):
     caplog.set_level(logging.DEBUG)
     port, hits = failing_server
     url = f"http://SENTU:SENTP@127.0.0.1:{port}/x.csv?sig=SENTQ#SENTF"
@@ -148,9 +149,15 @@ def test_s3_walk(monkeypatch, policy, operation, caplog):
     assert bool(client.method_calls) == (operation not in UNSUPPORTED["s3"])
 
 
+REACHABLE_SFTP = ("/dir/x.csv", "sftp://SENTU:SENTP@host:22/dir/x.csv")
+SFTP_PATHS = ["/dir/x.csv", "sftp://SENTU:SENTP@host:22/dir/x.csv?sig=SENTQ#SENTF",
+              "sftp://SENTU:SENTP@host:22/dir/x.csv", "sftp://SENTU:SENTP@other:2222/dir/x.csv", "sftp://host:22/dir/x.csv?sig=SENTQ#SENTF"]
+
+
+@pytest.mark.parametrize("path", SFTP_PATHS)
 @pytest.mark.parametrize("policy", POLICIES)
 @pytest.mark.parametrize("operation", sorted(OPERATIONS))
-def test_sftp_walk(monkeypatch, policy, operation, caplog):
+def test_sftp_walk(monkeypatch, policy, operation, path, caplog):
     import paramiko
     from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
     from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
@@ -161,8 +168,87 @@ def test_sftp_walk(monkeypatch, policy, operation, caplog):
     for name in ("open", "stat", "listdir_attr", "remove", "rmdir", "mkdir"):
         getattr(client, name).side_effect = error
     backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend.storage_profile = SimpleNamespace(HOST="host", PORT=22)
     monkeypatch.setattr(import_module("mountainash_transport.storage.facade.facade"),
                         "get_storage_backend", lambda *args, **kwargs: backend)
     with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=policy) as facade:
-        _run(facade, operation, "/dir/x.csv", _expect("sftp", operation), caplog)
-    assert bool(client.method_calls) == (operation not in UNSUPPORTED["sftp"])
+        _run(facade, operation, path, _expect("sftp", operation), caplog)
+    assert bool(client.method_calls) == (operation not in UNSUPPORTED["sftp"] and path in REACHABLE_SFTP
+                                                       and (path == "/dir/x.csv" or policy is not POLICIES[2]))
+
+
+class _Faulting:
+    """Stand-in for ``os``/``shutil`` whose I/O functions raise a native error."""
+
+    def __init__(self, real, names, error):
+        self._real, self._names, self._error = real, names, error
+
+    def __getattr__(self, name):
+        if name in self._names:
+            def fail(*args, **kwargs):
+                raise self._error
+            return fail
+        return getattr(self._real, name)
+
+
+LOCAL_ERRORS = {
+    "oserror": (OSError(5, "Input/output error", "/x/SENTP"), StorageError),
+    "permission": (PermissionError(13, "Permission denied", "/x/SENTP"), PermissionDeniedError),
+    "connection": (ConnectionResetError(104, "Connection reset by peer", "/x/SENTP"), StorageConnectionError),
+    "errnoless": (OSError("SENTP native text"), StorageError),
+}
+LOCAL_OPERATIONS = sorted(set(OPERATIONS) - {"exists"})  # exists answers False on a failing stat
+LOCAL_IO = {"stat", "lstat", "remove", "rmdir", "mkdir", "makedirs", "scandir"}
+LOCAL_SHUTIL = {"copy2", "copyfile", "rmtree"}
+
+
+def _fail_local_io(monkeypatch, error):
+    """Make every local-backend I/O primitive raise *error*."""
+    import os
+    import shutil
+    import sys
+
+    def fail(*args, **kwargs):
+        raise error
+
+    for name, module in list(sys.modules.items()):
+        if not name.startswith("mountainash_transport.storage.backends.local."):
+            continue
+        if getattr(module, "os", None) is os:
+            monkeypatch.setattr(module, "os", _Faulting(os, LOCAL_IO, error))
+        if getattr(module, "shutil", None) is shutil:
+            monkeypatch.setattr(module, "shutil", _Faulting(shutil, LOCAL_SHUTIL, error))
+        monkeypatch.setattr(module, "open", fail, raising=False)
+
+
+@pytest.mark.parametrize("policy", POLICIES)
+@pytest.mark.parametrize("operation", LOCAL_OPERATIONS)
+@pytest.mark.parametrize("kind", sorted(LOCAL_ERRORS))
+def test_local_native_oserrors_walk(monkeypatch, tmp_path, kind, operation, policy, caplog):
+    """OSErrors carrying sentinels in filename or text reach the caller only as [Errno N] strerror."""
+    import mountainash_transport.storage.backends  # noqa: F401
+
+    caplog.set_level(logging.DEBUG)
+    error, expected = LOCAL_ERRORS[kind]
+    _fail_local_io(monkeypatch, error)
+    path = str(tmp_path / "a.csv")
+    with StorageFacade.from_path(path, policy=policy) as facade:
+        with pytest.raises(StorageError) as info:
+            OPERATIONS[operation](facade, path)
+    assert isinstance(info.value, expected), repr(info.value)
+    assert not isinstance(info.value, UnsupportedOperationError)
+    _walk(info.value, caplog.records)
+
+
+@pytest.mark.parametrize("operation", LOCAL_OPERATIONS)
+def test_local_non_oserror_passes_through_unclassified(monkeypatch, tmp_path, operation):
+    """A non-OSError is indistinguishable from the caller's own error, so it propagates as raised."""
+    import mountainash_transport.storage.backends  # noqa: F401
+
+    error = ValueError("native text")
+    _fail_local_io(monkeypatch, error)
+    path = str(tmp_path / "a.csv")
+    with StorageFacade.from_path(path) as facade:
+        with pytest.raises(ValueError) as info:
+            OPERATIONS[operation](facade, path)
+    assert info.value is error
