@@ -24,6 +24,7 @@ from mountainash_transport.connections.errors import (
     TunnelEndpointError,
 )
 from mountainash_transport._core.protocols import ConnectionProtocol
+from .._core.safe_display import raise_safe, safe_detail
 
 
 _MAX_PROXY_HEAD = 64 * 1024
@@ -293,12 +294,12 @@ class _Forwarder:
         if remaining:
             timeout = ConnectionTimeoutError(f"Tunnel workers did not stop: {', '.join(remaining)}")
             if error is not None:
-                timeout.add_note(f"Tunnel cleanup failed: {error!r}")
+                timeout.add_note(f"Tunnel cleanup failed ({safe_detail(error)})")
             raise timeout
         if error is not None:
             if not isinstance(error, Exception):
                 raise error
-            raise TransportConnectionError(f"Tunnel cleanup failed: {error}") from error
+            raise_safe(TransportConnectionError(f"Tunnel cleanup failed ({safe_detail(error)})"), error)
 
 
 class _PatchedEndpointProfile:
@@ -410,10 +411,10 @@ class TunnelledConnection(ConnectionProtocol):
                 if error is None:
                     error = exc
                 elif isinstance(exc, ConnectionTimeoutError):
-                    exc.add_note(f"Earlier cleanup failed: {error!r}")
+                    exc.add_note(f"Earlier cleanup failed ({safe_detail(error)})")
                     error = exc
                 else:
-                    error.add_note(f"Further cleanup failed: {exc!r}")
+                    error.add_note(f"Further cleanup failed ({safe_detail(exc)})")
         if error is not None:
             raise error
 
@@ -434,7 +435,7 @@ class TunnelledConnection(ConnectionProtocol):
                     client.get_transport(), self._remote_host, self._remote_port, proxy=self._proxy,
                 )
             except OSError as exc:
-                raise TransportConnectionError(f"Failed to bind tunnel listener: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to bind tunnel listener ({safe_detail(exc)})"), exc)
             self._local_port = self._forwarder.local_port
             self._inner = self._inner_factory(self._local_port)
             self._inner.connect()

@@ -12,6 +12,7 @@ from mountainash_transport.connections.errors import (
     TransportConnectionError,
 )
 from .._core.protocols import ConnectionProtocol
+from .._core.safe_display import raise_safe, safe_detail
 
 
 _HOST_KEY_POLICIES: dict[str, str] = {
@@ -69,13 +70,13 @@ class SSHConnection(ConnectionProtocol):
                     kwargs["sock"] = socket.create_connection(sock_address, timeout=kwargs.get("timeout"))
                 client.connect(**kwargs)
             except socket.timeout as exc:
-                raise ConnectionTimeoutError(f"SSH connection timed out: {exc}") from exc
+                raise_safe(ConnectionTimeoutError(f"SSH connection timed out ({safe_detail(exc)})"), exc)
             except socket.gaierror as exc:
-                raise TransportConnectionError(f"SSH DNS resolution failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH DNS resolution failed ({safe_detail(exc)})"), exc)
             except OSError as exc:
-                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH connection failed ({safe_detail(exc)})"), exc)
             except Exception as exc:
-                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH connection failed ({safe_detail(exc)})"), exc)
         except BaseException as primary:
             sock = kwargs.get("sock")
             if sock is not None:
@@ -93,7 +94,7 @@ class SSHConnection(ConnectionProtocol):
             try:
                 client.close()
             except Exception as exc:
-                raise TransportConnectionError(f"Failed to close SSH client: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to close SSH client ({safe_detail(exc)})"), exc)
 
     @property
     def client(self) -> t.Any:

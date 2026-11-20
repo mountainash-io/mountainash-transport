@@ -187,7 +187,7 @@ def test_both_cleanup_failures_remain_visible(body_fails) -> None:
     if body_fails:
         assert caught.value is primary
     diagnostic = repr(caught.value) + str(getattr(caught.value, "__notes__", ()))
-    assert "channel cleanup fault" in diagnostic
+    assert "Failed to close SFTP channel (OSError)" in diagnostic
     assert "SSH cleanup fault" in diagnostic
     assert conn.client is None
     channel.close.assert_called_once()

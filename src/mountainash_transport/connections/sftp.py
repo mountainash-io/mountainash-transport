@@ -8,6 +8,7 @@ from typing_extensions import Self
 
 from mountainash_transport.connections.errors import TransportConnectionError
 from .._core.protocols import ConnectionProtocol
+from .._core.safe_display import raise_safe, safe_detail
 
 
 class SFTPConnection(ConnectionProtocol):
@@ -28,9 +29,7 @@ class SFTPConnection(ConnectionProtocol):
             try:
                 self._sftp = self._ssh.client.open_sftp()
             except Exception as exc:
-                raise TransportConnectionError(
-                    f"Failed to open SFTP subsystem: {exc}"
-                ) from exc
+                raise_safe(TransportConnectionError(f"Failed to open SFTP subsystem ({safe_detail(exc)})"), exc)
         except BaseException as primary:
             try:
                 self.disconnect()
@@ -47,7 +46,7 @@ class SFTPConnection(ConnectionProtocol):
             try:
                 channel.close()
             except Exception as exc:
-                raise TransportConnectionError(f"Failed to close SFTP channel: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to close SFTP channel ({safe_detail(exc)})"), exc)
 
     def disconnect(self) -> None:
         try:

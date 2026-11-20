@@ -421,7 +421,8 @@ def test_stalled_worker_reports_timeout_after_other_cleanup(rig, monkeypatch, wo
         assert finished.wait(2.5), "disconnect blocked on the stalled worker"
         assert len(errors) == 1 and isinstance(errors[0], ConnectionTimeoutError)
         if cleanup_error != "none":
-            assert f"{cleanup_error} cleanup failed" in str(errors[0].__notes__)
+            expected = {"channel": "Tunnel cleanup failed (OSError)", "inner": "Earlier cleanup failed (TransportConnectionError)"}[cleanup_error]
+            assert expected in str(errors[0].__notes__)
         assert not rig.ssh.is_connected
         assert all(server.socket.fileno() == -1 for server in rig.servers)
         assert all(sock.fileno() == -1 for sock in rig.accepted)
@@ -465,7 +466,8 @@ def test_failed_request_socket_cleanup_is_reported(rig, monkeypatch) -> None:
         pass
     with pytest.raises(TransportConnectionError) as caught:
         rig.connection.disconnect()
-    assert isinstance(caught.value.__cause__, OSError)
+    assert str(caught.value) == "Tunnel cleanup failed (OSError)"
+    assert caught.value.__cause__ is None
     rig.assert_released()
 
 
@@ -475,7 +477,7 @@ def test_startup_error_wins_over_inner_cleanup_failure(rig) -> None:
     with pytest.raises(RuntimeError) as caught:
         rig.connection.connect()
     assert caught.value is rig.failure
-    assert "inner cleanup failed" in str(rig.failure.__notes__)
+    assert "Failed to close HTTP client (OSError)" in str(rig.failure.__notes__)
     rig.assert_released()
 
 
@@ -718,6 +720,6 @@ def test_context_retains_inner_and_ssh_cleanup_failures(rig) -> None:
             rig.inner_close_error = rig.ssh_close_error = True
             raise primary
     assert caught.value is primary
-    assert "inner cleanup failed" in str(primary.__notes__)
-    assert "SSH cleanup failed" in str(primary.__notes__)
+    assert "Failed to close HTTP client (OSError)" in str(primary.__notes__)
+    assert "Further cleanup failed (TransportConnectionError)" in str(primary.__notes__)
     rig.assert_released()
