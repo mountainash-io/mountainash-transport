@@ -28,10 +28,9 @@ HttpTransportError (base)
 
 from __future__ import annotations
 
-import re
 import typing as t
 
-from mountainash_transport._core.safe_display import safe_location
+from mountainash_transport._core.safe_display import _SCHEME, safe_location
 
 # Response headers an error may carry. Location-valued ones are shown in display form,
 # WWW-Authenticate as its auth-scheme names only, the rest verbatim (server-defined tokens).
@@ -44,9 +43,6 @@ _URL_HEADERS = frozenset({"location", "content-location"})
 _TOKEN_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~"
 )
-
-
-_HAS_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 
 
 def _auth_schemes(value: str) -> str:
@@ -103,23 +99,22 @@ def _auth_schemes(value: str) -> str:
 
 
 def _location_header(value: str, base: t.Optional[str]) -> str:
-    """Display form of a Location-style value, resolved against *base* when one is known."""
+    """Display form of a Location-style value, resolved against *base* when one is known.
+
+    Every returned value comes out of ``safe_location``.
+    """
     from urllib.parse import urljoin
 
-    value = value.strip()
-    if _HAS_SCHEME.match(value):
-        # Absolute: safe_location needs no valid host to drop userinfo, query and fragment.
-        return safe_location(value)
     if base is not None:
         try:
             return safe_location(urljoin(base, value))
         except ValueError:
             pass
-    # No base (or unparseable): a reference shows only its path, never userinfo/query/fragment.
-    if value.startswith("//"):
-        end = min((i for i in (value.find(c, 2) for c in "/?#") if i != -1), default=len(value))
-        value = "//" + value[2:end].rpartition("@")[2] + value[end:]
-    return value[: min((i for i in (value.find(c) for c in "?#") if i != -1), default=len(value))]
+    shown = safe_location(value)
+    if shown == "***" or shown.startswith("//") or _SCHEME.match(shown):
+        return shown
+    # A relative reference: path only.
+    return shown[: min((i for i in (shown.find(c) for c in "?#") if i != -1), default=len(shown))]
 
 
 def _safe_headers(headers: t.Mapping[str, str], base: t.Optional[str] = None) -> dict[str, str]:

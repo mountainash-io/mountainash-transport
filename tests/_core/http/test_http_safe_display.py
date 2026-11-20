@@ -284,6 +284,8 @@ def test_www_authenticate_keeps_only_schemes(mode, value, expected):
     ("https://SENTU:SENTP@o/p?sig=SENTQ#SENTF", "https://o/p"),
     ("https://SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "https://[bad]/next"),
     ("//SENTU:SENTP@[bad]/next?sig=SENTQ#SENTF", "//[bad]/next"),
+    ("ht\ttps://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
+    ("\x00https://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
 ])
 def test_location_headers_resolved_then_displayed(mode, name, value, expected):
     assert _error_headers(mode, {name: value}) == {name: expected}
@@ -294,6 +296,8 @@ def test_relative_location_without_base_shows_only_path():
 
     for value, expected in [("/next?sig=SENTQ#SENTF", "/next"), ("//SENTU:SENTP@o/p?sig=SENTQ", "//o/p"),
                             ("a/b#SENTF", "a/b"),
-                            ("https://SENTU:SENTP@[bad]/n?sig=SENTQ#SENTF", "https://[bad]/n")]:
+                            ("https://SENTU:SENTP@[bad]/n?sig=SENTQ#SENTF", "https://[bad]/n"),
+                            ("ht\ttps://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x"),
+                            ("\x00https://SENTU:SENTP@[bad]/x?sig=SENTQ#SENTF", "https://[bad]/x")]:
         error = HttpResponseError("x", headers={"location": value})
         assert error.headers == {"location": expected}
