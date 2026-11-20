@@ -101,7 +101,7 @@ def test_response_error_headers_allowlist(mode):
             with engine.stream("GET", "https://h/x"):
                 pass
     assert ei.value.headers == {"location": "https://h/next", "etag": '"v1"',
-                                "www-authenticate": 'Bearer realm="api"', "content-type": "text/plain"}
+                                "www-authenticate": "Bearer", "content-type": "text/plain"}
     _assert_clean(ei.value)
 
 
@@ -251,3 +251,46 @@ def test_stream_error_response_close_failure_is_clean(status: int) -> None:
             with HttpRequestEngine(client, policy=policy).stream("GET", URL):
                 pytest.fail("error response must not yield a stream")
         _assert_clean(ei.value)
+
+
+def _error_headers(mode, headers, url="https://h/dir/x"):
+    engine = _engine(lambda r: httpx.Response(404, headers=headers))
+    with pytest.raises(HttpTransportError) as ei:
+        if mode == "buffered":
+            engine.request("GET", url)
+        else:
+            with engine.stream("GET", url):
+                pass
+    _assert_clean(ei.value)
+    return ei.value.headers
+
+
+@pytest.mark.parametrize("mode", ["buffered", "stream"])
+@pytest.mark.parametrize("value, expected", [
+    ('Bearer realm="api", error_uri="https://SENTU:SENTP@h/x?sig=SENTQ#SENTF"', "Bearer"),
+    ('Basic realm="x", Bearer', "Basic, Bearer"),
+    ('Negotiate SENTP, Basic realm="a, SENTQ"', "Negotiate, Basic"),
+])
+def test_www_authenticate_keeps_only_schemes(mode, value, expected):
+    assert _error_headers(mode, {"www-authenticate": value}) == {"www-authenticate": expected}
+
+
+@pytest.mark.parametrize("mode", ["buffered", "stream"])
+@pytest.mark.parametrize("name", ["location", "content-location"])
+@pytest.mark.parametrize("value, expected", [
+    ("/next?sig=SENTQ#SENTF", "https://h/next"),
+    ("other?sig=SENTQ#SENTF", "https://h/dir/other"),
+    ("//SENTU:SENTP@o/p?sig=SENTQ", "https://o/p"),
+    ("https://SENTU:SENTP@o/p?sig=SENTQ#SENTF", "https://o/p"),
+])
+def test_location_headers_resolved_then_displayed(mode, name, value, expected):
+    assert _error_headers(mode, {name: value}) == {name: expected}
+
+
+def test_relative_location_without_base_shows_only_path():
+    from mountainash_transport._core.http.errors import HttpResponseError
+
+    for value, expected in [("/next?sig=SENTQ#SENTF", "/next"), ("//SENTU:SENTP@o/p?sig=SENTQ", "//o/p"),
+                            ("a/b#SENTF", "a/b")]:
+        error = HttpResponseError("x", headers={"location": value})
+        assert error.headers == {"location": expected}

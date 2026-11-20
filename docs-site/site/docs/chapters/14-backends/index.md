@@ -232,7 +232,7 @@ Other differences follow from the stores themselves. Deleting a missing local or
 <!-- concept:219 -->
 ### Backend error mapping
 
-Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass whose message is `{display location}: {category} ({detail})`, where the detail is the class name of the native exception (or `[Errno N] strerror` for an `OSError`). The native exception is not chained, so its text cannot leak a credential. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
+Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass whose message is the display location alone for not-found, authentication and permission errors, and `{display location}: {category} ({detail})` for the others. The detail is `[Errno N] strerror` when the native exception has an errno, and its class name otherwise. The native exception is not chained, so its text cannot leak a credential. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
 
 | Native condition | Local | S3 (botocore) | SFTP (paramiko) | HTTP (engine) |
 |---|---|---|---|---|

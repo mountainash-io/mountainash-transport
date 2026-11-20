@@ -307,7 +307,7 @@ The object was replaced while a random-access read was in progress. On S3 and HT
 
 ### Can error messages expose credentials?
 
-Errors show only a safe form of a location: `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment are never shown), `***` for any other string that starts with a scheme, and local paths unchanged. Native exceptions are not chained, HTTP error headers are limited to an allowlist, and at import transport sets the `httpx` and `httpcore` loggers to `WARNING` only when their level is unset. Path segments are shown and traceback locals can still hold what you typed, so keep credentials in auth profiles, not in URLs or path templates. See [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
+Errors show only a safe form of a location: `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment are never shown), `***` for any other string that starts with a scheme, and local paths unchanged. Native exceptions are not chained, HTTP error headers are limited to an allowlist, and at import transport attaches filters to the `httpx` and `httpcore` loggers that show request URLs in display form and reduce httpcore's request and response records, at any log level you set. Path segments are shown and traceback locals can still hold what you typed, so keep credentials in auth profiles, not in URLs or path templates. See [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ## Known limits
 

@@ -20,7 +20,7 @@ Explained in [Where backends differ](chapters/14-backends/index.md#where-backend
 
 ## Backend error mapping
 
-The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses. The native exception is not chained; only a fresh `[Errno N] strerror` copy of an `OSError` can appear as `__cause__`.
+The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses. The native exception is not chained; only a fresh `[Errno N] strerror` copy of an `OSError`, or transport's own HTTP error (for example `HttpNotFoundError` behind `PathNotFoundError`), can appear as `__cause__`.
 
 Related: [Error families](#error-families), [`StorageError`](#storageerror).
 
@@ -148,7 +148,7 @@ Explained in [How transport delegates credentials](chapters/02-mountainash-ecosy
 
 ## Safe location display (HTTP engine)
 
-The HTTP request engine's rule that errors show a URL as `scheme://host:port/path` only, in every `HttpTransportError` message and in `HttpResponseError.url`; `HttpResponseError.headers` keeps only an allowlist of non-credential headers, and native httpx exceptions are never chained. Successful responses' `url` and the HTTP `stat` entry's `path` have userinfo removed but keep query and fragment. The engine sets the `httpx` and `httpcore` loggers to `WARNING` when unset.
+The HTTP request engine's rule that errors show a URL as `scheme://host:port/path` only, in every `HttpTransportError` message and in `HttpResponseError.url`; `HttpResponseError.headers` keeps only an allowlist of non-credential headers, and native httpx exceptions are never chained. Successful responses' `url` and the HTTP `stat` entry's `path` have userinfo removed but keep query and fragment. The engine attaches filters to the `httpx` and `httpcore` loggers so their records show only the display form of a URL, at any log level.
 
 Related: [`HttpTransportError`](#httptransporterror), [Safe location display (location policy)](#safe-location-display-location-policy).
 

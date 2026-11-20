@@ -32,21 +32,103 @@ import typing as t
 
 from mountainash_transport._core.safe_display import safe_location
 
-# Response headers an error may carry; location-valued ones in display form.
+# Response headers an error may carry. Location-valued ones are shown in display form,
+# WWW-Authenticate as its auth-scheme names only, the rest verbatim (server-defined tokens).
 _SAFE_HEADERS = frozenset({
     "accept-ranges", "content-encoding", "content-length", "content-location",
     "content-range", "content-type", "date", "etag", "last-modified", "location",
     "retry-after", "www-authenticate",
 })
 _URL_HEADERS = frozenset({"location", "content-location"})
+_TOKEN_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~"
+)
 
 
-def _safe_headers(headers: t.Mapping[str, str]) -> dict[str, str]:
+def _auth_schemes(value: str) -> str:
+    """Auth-scheme names of a WWW-Authenticate value, in order; parameters are dropped.
+
+    One linear pass: a scheme is the first token at the start or after a comma that is
+    not followed by ``=``; quoted strings are skipped whole.
+    """
+    schemes: list[str] = []
+    i, n = 0, len(value)
+    expect_scheme = True
+    while i < n:
+        char = value[i]
+        if char == ",":
+            expect_scheme = True
+            i += 1
+            continue
+        if char in " \t":
+            i += 1
+            continue
+        start = i
+        while i < n and value[i] not in " \t=,\"":
+            i += 1
+        token = value[start:i]
+        while i < n and value[i] in " \t":
+            i += 1
+        if i < n and value[i] == "=":
+            # parameter (or token68 padding): skip '='s, then a quoted or bare value
+            while i < n and value[i] == "=":
+                i += 1
+            while i < n and value[i] in " \t":
+                i += 1
+            if i < n and value[i] == '"':
+                i += 1
+                while i < n and value[i] != '"':
+                    i += 2 if value[i] == "\\" else 1
+                i += 1
+            else:
+                while i < n and value[i] != ",":
+                    i += 1
+            expect_scheme = False
+        elif token:
+            if expect_scheme and all(c in _TOKEN_CHARS for c in token):
+                schemes.append(token)
+            expect_scheme = False
+        elif i < n and value[i] == '"':
+            i += 1
+            while i < n and value[i] != '"':
+                i += 2 if value[i] == "\\" else 1
+            i += 1
+        else:
+            i += 1
+    return ", ".join(schemes)
+
+
+def _location_header(value: str, base: t.Optional[str]) -> str:
+    """Display form of a Location-style value, resolved against *base* when one is known."""
+    from urllib.parse import urljoin, urlsplit
+
+    try:
+        if base is not None:
+            return safe_location(urljoin(base, value))
+        if urlsplit(value).scheme:
+            return safe_location(value)
+    except ValueError:
+        pass
+    # No base (or unparseable): a reference shows only its path, never userinfo/query/fragment.
+    value = value.strip()
+    if value.startswith("//"):
+        end = min((i for i in (value.find(c, 2) for c in "/?#") if i != -1), default=len(value))
+        value = "//" + value[2:end].rpartition("@")[2] + value[end:]
+    return value[: min((i for i in (value.find(c) for c in "?#") if i != -1), default=len(value))]
+
+
+def _safe_headers(headers: t.Mapping[str, str], base: t.Optional[str] = None) -> dict[str, str]:
     safe: dict[str, str] = {}
     for name, value in headers.items():
         key = name.lower()
-        if key in _SAFE_HEADERS:
-            safe[key] = safe_location(value) if key in _URL_HEADERS else value
+        if key not in _SAFE_HEADERS:
+            continue
+        if key in _URL_HEADERS:
+            safe[key] = _location_header(value, base)
+        elif key == "www-authenticate":
+            safe[key] = _auth_schemes(value)
+        else:
+            safe[key] = value
     return safe
 
 
@@ -69,9 +151,11 @@ class HttpResponseError(HttpTransportError):
         The HTTP status code received.
     headers:
         Response headers as a mapping, reduced to an allow-list of safe headers;
-        location-valued ones are in display form. The body is deliberately not carried.
+        Location and Content-Location are resolved against ``url`` and shown in display
+        form, WWW-Authenticate keeps only its auth-scheme names. The body is deliberately
+        not carried.
     url:
-        The request URL in display form.
+        The request URL; stored in display form and used to resolve relative Location values.
     method:
         The HTTP method used (GET, POST, etc.).
     """
@@ -87,7 +171,7 @@ class HttpResponseError(HttpTransportError):
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
-        self.headers = _safe_headers(headers) if headers is not None else None
+        self.headers = _safe_headers(headers, url) if headers is not None else None
         self.url = safe_location(url) if url is not None else None
         self.method = method
 

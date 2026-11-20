@@ -68,7 +68,7 @@ Each protocol covers one capability. A backend implements as many as its store c
 | `StorageDirectoryProtocol` | `list_dir`, `mkdir`, `rmdir` | `list_dir`, `mkdir`, `rmdir` |
 | `RangedReadProtocol` | `open_ranged` | `read_stream(access="random")` on remote backends |
 
-All of them share one error rule: a backend translates its native I/O failures into `StorageError` subclasses and does not chain the native exception, whose text can quote a location or credentials; the only chained cause is a fresh `[Errno N] strerror` copy of an `OSError`. Errors that come from the caller's own arguments, streams or transforms keep their original type. [Where backends differ](../14-backends/index.md#where-backends-differ) shows the translation for each backend.
+All of them share one error rule: a backend translates its native I/O failures into `StorageError` subclasses and does not chain the native exception, whose text can quote a location or credentials; the only chained cause is a fresh `[Errno N] strerror` copy of an `OSError` or transport's own HTTP error (for example `PathNotFoundError` chained from `HttpNotFoundError`). Errors that come from the caller's own arguments, streams or transforms keep their original type. [Where backends differ](../14-backends/index.md#where-backends-differ) shows the translation for each backend.
 
 <!-- concept:198 -->
 ### Read
