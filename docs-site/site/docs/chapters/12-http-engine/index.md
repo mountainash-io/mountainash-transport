@@ -230,11 +230,11 @@ secret report after 1 refresh
 
 For OAuth 2.0 you do not write a strategy. `mountainash-auth-client` owns token acquisition, storage and refresh (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)); transport adapts its token manager to this protocol as `OAuth2RefreshableAuthStrategy`, built by `create_auth_strategy(auth_profile, oauth_provider=..., token_store=...)` in `mountainash_transport.connections`. `StorageFacade.from_path` does this for you when you pass an OAuth2 auth profile together with `oauth_provider=` and `token_store=`. The token store stays yours to open and close.
 
-## Error redaction
+## What HTTP errors show
 
 <!-- concept:195 -->
 
-URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). The engine keeps both out of its errors. Every `HttpTransportError` replaces the userinfo (up to the last `@` of the authority, so a raw `@` inside a password is covered) and each query value in its message with `***`, keeping query keys for diagnosis; so do `HttpResponseError.url` and the values of `HttpResponseError.headers`, such as a `Location` pointing at a presigned URL. `HttpResponse.url` and `HttpStreamResponse.url` on successful responses redact userinfo only. When the request URL or the underlying httpx exception contains either, the engine raises its error with no native exception attached at all, neither as the displayed `__cause__` nor as the hidden `__context__`. Otherwise the httpx exception remains attached as `__cause__` for debugging.
+URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). HTTP errors show only the display form of the URL: `scheme://host:port/path`, with userinfo, query and fragment never shown. `HttpResponseError.url` holds that display form, and so does every `HttpTransportError` message. `HttpResponseError.headers` keeps only an allowlist: `accept-ranges`, `content-encoding`, `content-length`, `content-location`, `content-range`, `content-type`, `date`, `etag`, `last-modified`, `location`, `retry-after` and `www-authenticate`, with `location` and `content-location` resolved against the request URL (a relative reference becomes absolute) and then shown in display form; without a request URL a relative reference shows only its path. `www-authenticate` keeps only its auth-scheme names, in order and comma-separated (`Bearer realm="api", error_uri="https://u:p@h/x?sig=s"` becomes `Bearer`), with all parameters dropped. The other allowlisted headers keep their value as sent. Every other header, including `Set-Cookie` and `Authorization`, is dropped. Error objects do not carry response bodies, and native httpx exceptions are never chained: an error has no `__cause__`, and `__context__` is cleared. The successful values `HttpResponse.url`, `HttpStreamResponse.url` and the `path` of an HTTP `stat` `StorageEntry` have userinfo removed but keep query and fragment, so a presigned URL stays usable. Importing the engine also attaches `logging.Filter`s to the `httpx` logger and to httpcore's `httpcore.connection`, `httpcore.http11`, `httpcore.http2`, `httpcore.proxy` and `httpcore.socks` loggers, whatever level the application sets. The `httpx` filter rewrites the request URL in its `HTTP Request:` record to the display form (method and status stay). The httpcore filter reduces records that carry request or response data (header lists, request objects) to their event name; connection records such as `connect_tcp.started host='h' port=443` stay.
 
 ```python
 import socket
@@ -269,13 +269,13 @@ with httpx.Client() as client:
 Output (the port differs on each run):
 
 ```text
-HTTP 404 GET http://***@127.0.0.1:43981/reports/old.csv?sig=***
-http://***@127.0.0.1:43981/reports/old.csv?sig=***
+HTTP 404 GET http://127.0.0.1:34933/reports/old.csv
+http://127.0.0.1:34933/reports/old.csv
 with userinfo: cause shown = False
-no userinfo: cause shown = True
+no userinfo: cause shown = False
 ```
 
-!!! warning "Traceback locals are not redacted"
-    URL userinfo and query values are redacted, credential headers (`Set-Cookie`, `Cookie`, `Authorization`, `Proxy-Authorization`) on `HttpResponseError.headers` are replaced with `***`, error objects do not carry response bodies, and credential-bearing native exceptions are dropped from the chain. The local variables of the frames in a traceback, such as the URL you passed in, are outside that guarantee, so configure error reporters that capture frame locals accordingly.
+!!! warning "Traceback locals and path segments are not hidden"
+    Path segments are shown, so keep credentials in auth profiles rather than in URLs or path templates. The local variables of the frames in a traceback, such as the URL you passed in, are outside the guarantee, so configure error reporters that capture frame locals accordingly.
 
-Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helpers are in `src/mountainash_transport/_core/redact.py`; their tests are in `tests/_core/http/test_url_userinfo_redaction.py`.
+Location-policy errors use the same display form ([What errors show of a location](../08-location-policy/index.md#what-errors-show-of-a-location)). The helpers are in `src/mountainash_transport/_core/safe_display.py`; the HTTP tests are in `tests/_core/http/test_http_safe_display.py`.

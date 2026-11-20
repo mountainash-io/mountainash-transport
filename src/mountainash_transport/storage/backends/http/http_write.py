@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import typing as t
 
+from mountainash_transport._core.safe_display import raise_safe
 from mountainash_transport._core.stream_errors import _CallerInput
-from ._helpers import _mapped
+from ._helpers import _map_error, _mapped
 from mountainash_transport.storage.protocols import StorageWriteProtocol
 
 
@@ -34,11 +35,15 @@ class HTTPWriteMixin(StorageWriteProtocol):
         engine = self._get_engine()  # type: ignore[attr-defined]
         guarded = _CallerInput(stream)
         try:
-            with _mapped(path):
-                engine.request("PUT", path, stream=t.cast(t.BinaryIO, guarded))
+            engine.request("PUT", path, stream=t.cast(t.BinaryIO, guarded))
             return
         except BaseException as exc:
+            # Look for the caller's error in the native chain: mapping drops it
+            # from the chain it raises, so a caller error could not be found afterwards.
             original = guarded.original_in(exc)
-            if original is None or original[0] is exc:
-                raise
+            if original is None:
+                mapped = _map_error(exc, path) if isinstance(exc, Exception) else None
+                if mapped is None or mapped is exc:
+                    raise
+                raise_safe(mapped, exc)
         raise original[0].with_traceback(original[1])

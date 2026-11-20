@@ -9,12 +9,15 @@ from mountainash_transport._core.exceptions import (
     AuthenticationError, ObjectChangedError, PathNotFoundError,
     PermissionDeniedError, StorageConnectionError, StorageError,
 )
+from mountainash_transport._core.safe_display import raise_safe, safe_detail, safe_location
 
 
 def _map_error(exc: Exception, path: str) -> StorageError | None:
     if isinstance(exc, (StorageError, io.UnsupportedOperation)):
         return None
     from botocore import exceptions as errors
+
+    shown = safe_location(path)
 
     if isinstance(exc, (
         errors.ParamValidationError, errors.ValidationError, errors.BaseEndpointResolverError,
@@ -32,31 +35,31 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
         if code in ("InvalidAccessKeyId", "SignatureDoesNotMatch", "ExpiredToken",
                     "ExpiredTokenException", "InvalidToken", "TokenRefreshRequired",
                     "InvalidClientTokenId", "UnrecognizedClientException"):
-            return AuthenticationError(path)
+            return AuthenticationError(shown)
         if code in ("NoSuchKey", "NoSuchBucket", "NotFound", "404"):
-            return PathNotFoundError(path)
+            return PathNotFoundError(shown)
         if code == "AccessDenied":
-            return PermissionDeniedError(path)
+            return PermissionDeniedError(shown)
         if code in ("RequestTimeout", "RequestTimeoutException"):
-            return StorageConnectionError(path)
+            return StorageConnectionError(shown)
         if code == "PreconditionFailed" or status == 412:
-            return ObjectChangedError(path)
+            return ObjectChangedError(shown)
         if status == 401:
-            return AuthenticationError(path)
+            return AuthenticationError(shown)
         if status == 403:
-            return PermissionDeniedError(path)
+            return PermissionDeniedError(shown)
         if status == 404:
-            return PathNotFoundError(path)
-        return StorageError(f"{path}: {exc}")
+            return PathNotFoundError(shown)
+        return StorageError(f"{shown}: storage error ({safe_detail(exc)})")
     if isinstance(exc, (errors.NoCredentialsError, errors.PartialCredentialsError,
                         errors.CredentialRetrievalError)):
-        return AuthenticationError(path)
+        return AuthenticationError(shown)
     if isinstance(exc, (ConnectionError, TimeoutError, EOFError,
                         errors.ConnectionError, errors.HTTPClientError,
                         errors.IncompleteReadError)):
-        return StorageConnectionError(f"{path}: {exc}")
+        return StorageConnectionError(f"{shown}: connection failed ({safe_detail(exc)})")
     if isinstance(exc, (OSError, errors.BotoCoreError)):
-        return StorageError(f"{path}: {exc}")
+        return StorageError(f"{shown}: storage error ({safe_detail(exc)})")
     return None
 
 
@@ -68,4 +71,4 @@ def _mapped(path: str) -> t.Iterator[None]:
         mapped = _map_error(exc, path)
         if mapped is None or mapped is exc:
             raise
-        raise mapped from exc
+        raise_safe(mapped, exc)

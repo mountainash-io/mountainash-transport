@@ -109,7 +109,7 @@ A storage profile describes a store: endpoint, region, bucket or host, timeouts,
 
 ### Where do my S3 keys or SFTP password go?
 
-In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, and `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP. Do not put credentials in URLs: some errors quote the path as given. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, and `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP. Do not put credentials in URLs or path templates: errors show path segments. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ### Why is my auth profile rejected with `UnsupportedAuthProfileError`?
 
@@ -243,7 +243,7 @@ Yes. For HTTP the facade hands the check to the HTTP request engine, which appli
 
 ### Where do I import `LocationNotAllowed` from?
 
-From `mountainash_transport.location`; it is not re-exported from the package root. It subclasses `StorageError` and has `location` (the refused path, with any user name and password removed) and `reason` attributes. See [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
+From `mountainash_transport.location`; it is not re-exported from the package root. It subclasses `StorageError` and has `location` (the refused path in display form: no user information, query or fragment) and `reason` attributes. See [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
 
 ## Connections, tunnels and HTTP
 
@@ -273,7 +273,7 @@ Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or
 
 ### Do the engine's retries apply to HTTP storage reads and writes?
 
-Yes. The HTTP storage backend sends every request through `HttpRequestEngine`, so its retry, timeout, redirect and redaction behaviour and any auth strategy apply to facade calls. See [HTTP](chapters/14-backends/index.md#http).
+Yes. The HTTP storage backend sends every request through `HttpRequestEngine`, so its retry, timeout, redirect and safe-display behaviour and any auth strategy apply to facade calls. See [HTTP](chapters/14-backends/index.md#http).
 
 ### Why does a random read over HTTP raise `RangeNotSupportedError`?
 
@@ -307,7 +307,7 @@ The object was replaced while a random-access read was in progress. On S3 and HT
 
 ### Can error messages expose credentials?
 
-Errors redact what they can see. `LocationNotAllowed`, scheme detection, `StoragePath`, S3 path parsing and suffix inference strip user information from URLs, with or without a location policy. HTTP engine errors replace userinfo and query values with `***`, replace credential headers such as `Set-Cookie` with `***`, do not carry the response body, and drop the native cause when it contained credentials. Exception context or traceback locals can still hold credentials. Keep credentials in auth profiles, not URLs. See [Error redaction](chapters/12-http-engine/index.md#error-redaction) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+Errors show only a safe form of a location: `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment are never shown), `***` for any other string that starts with a scheme, and local paths unchanged. Native exceptions are not chained, HTTP error headers are limited to an allowlist, and at import transport attaches filters to the `httpx` and `httpcore` loggers that show request URLs in display form and reduce httpcore's request and response records, at any log level you set. Path segments are shown and traceback locals can still hold what you typed, so keep credentials in auth profiles, not in URLs or path templates. See [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ## Known limits
 
@@ -339,7 +339,7 @@ Each capability is a `typing.Protocol` marked `runtime_checkable`. A backend con
 
 ### How is a built-in backend put together?
 
-Each backend class inherits one mixin per capability and adds a constructor and connection handling, so adding or dropping a capability means adding or dropping a mixin. Each backend package has a private helper that translates the SDK's exceptions into `StorageError` subclasses, keeping the native exception as `__cause__`. See [Composing backends from mixins](chapters/13-architecture/index.md#composing-backends-from-mixins) and [Backend error mapping](chapters/14-backends/index.md#backend-error-mapping).
+Each backend class inherits one mixin per capability and adds a constructor and connection handling, so adding or dropping a capability means adding or dropping a mixin. Each backend package has a private helper that translates the SDK's exceptions into `StorageError` subclasses without chaining the native exception. See [Composing backends from mixins](chapters/13-architecture/index.md#composing-backends-from-mixins) and [Backend error mapping](chapters/14-backends/index.md#backend-error-mapping).
 
 ### Can I register my own backend without changing the package?
 

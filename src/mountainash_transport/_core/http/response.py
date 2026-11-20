@@ -13,11 +13,18 @@ import json
 import typing as t
 from dataclasses import dataclass
 
-from mountainash_transport._core.redact import raise_redacted, redact_userinfo
 from mountainash_transport._core.http.errors import HttpDecodeError
+from mountainash_transport._core.safe_display import raise_safe
 
 if t.TYPE_CHECKING:
     import httpx
+
+
+def url_without_userinfo(url: str | httpx.URL) -> str:
+    """A successful result's URL: userinfo removed structurally; query and fragment kept."""
+    import httpx
+
+    return str(httpx.URL(url).copy_with(userinfo=b""))
 
 
 @dataclass(frozen=True)
@@ -65,7 +72,7 @@ class HttpResponse:
         try:
             return json.loads(self.content)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise_redacted(HttpDecodeError(f"Failed to decode response body as JSON: {exc}"), exc)
+            raise_safe(HttpDecodeError(f"Failed to decode response body as JSON ({type(exc).__name__})"), exc)
 
 
 class HttpStreamResponse:
@@ -102,7 +109,7 @@ class HttpStreamResponse:
     @property
     def url(self) -> str:
         """Final request URL as a string."""
-        return redact_userinfo(str(self._response.url))
+        return url_without_userinfo(self._response.url)
 
     @property
     def method(self) -> str:

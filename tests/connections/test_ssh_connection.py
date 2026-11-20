@@ -277,7 +277,7 @@ def test_partial_startup_releases_allocated_client(mock_paramiko, stage) -> None
     conn = SSHConnection({**FAKE_SSH_KWARGS, "_post_connect": {"known_hosts_file": "known-hosts"}})
     with pytest.raises((OSError, TransportConnectionError)) as caught:
         conn.connect()
-    assert caught.value is original or caught.value.__cause__ is original
+    assert caught.value is original or str(caught.value) == "SSH connection failed (OSError)"
     client.close.assert_called_once()
     assert conn.client is None
 

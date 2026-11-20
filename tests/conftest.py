@@ -41,3 +41,17 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: Slow running tests")
     config.addinivalue_line("markers", "ssh: SSH-related tests")
     config.addinivalue_line("markers", "docker: Docker-based integration tests")
+
+
+@pytest.fixture
+def library_loggers_debug():
+    """Set the httpx and httpcore loggers to DEBUG explicitly, restoring their levels afterwards."""
+    import logging
+
+    loggers = [logging.getLogger(n) for n in ("httpx", "httpcore")]
+    saved = [logger.level for logger in loggers]
+    for logger in loggers:
+        logger.setLevel(logging.DEBUG)
+    yield
+    for logger, level in zip(loggers, saved):
+        logger.setLevel(level)

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import SplitResult, unquote, urlsplit
 from mountainash_transport._core.exceptions import StorageError
-from mountainash_transport._core.redact import redact_location
+from mountainash_transport._core.safe_display import safe_location
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
 
 _ANY_HOST = "*"  # an allowed_remote entry that allows every host for its scheme
@@ -32,12 +32,17 @@ class LocationPolicy:
 
 class LocationNotAllowed(StorageError):
     def __init__(self, location: str, reason: str) -> None:
-        self.location = redact_location(location)
+        self.location = safe_location(location)
         self.reason = reason
         super().__init__(f"location not allowed: {self.location} ({reason})")
 
 def _split(location: str) -> SplitResult:
-    return urlsplit(location)  # ValueError propagates; enforcement boundaries sanitize it
+    try:
+        return urlsplit(location)
+    except ValueError:
+        pass
+    # Raised outside the handler: urllib's text names the whole netloc.
+    raise ValueError(f"{safe_location(location)}: invalid location (ValueError)")
 
 def _sanitized(fn, location: str):
     """Run *fn* for an active-policy boundary, mapping parse ValueError to a sanitized error."""

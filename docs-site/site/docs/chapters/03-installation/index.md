@@ -140,7 +140,7 @@ The root also binds `storage`, a convenience factory that returns a `StorageFaca
 
 ### The error families
 
-Transport translates the failures of the libraries it wraps into its own exceptions, so callers catch transport types instead of `OSError`, `botocore`, `paramiko` or `httpx` exceptions. The native exception stays attached as the cause for debugging, except where HTTP credential redaction removes it. There are three families, one per layer, and they do not share a base class:
+Transport translates the failures of the libraries it wraps into its own exceptions, so callers catch transport types instead of `OSError`, `botocore`, `paramiko` or `httpx` exceptions. Native exceptions are not chained, so their text, which can quote a URL or credentials, never reaches you; the exception is at most a fresh `[Errno N] strerror` copy of an `OSError`, or transport's own HTTP error, and messages show locations in display form (`scheme://host:port/path`, see [what errors show of a location](../08-location-policy/index.md#what-errors-show-of-a-location)). There are three families, one per layer, and they do not share a base class:
 
 | Family | Root class | Raised by | Main subclasses |
 |---|---|---|---|

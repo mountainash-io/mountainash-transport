@@ -24,6 +24,7 @@ from mountainash_transport.connections.errors import (
     TunnelEndpointError,
 )
 from mountainash_transport._core.protocols import ConnectionProtocol
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 _MAX_PROXY_HEAD = 64 * 1024
@@ -212,7 +213,7 @@ class _Forwarder:
         except BaseException as primary:
             self.request_stop()
             if self._cleanup_error is not None:
-                primary.add_note(f"Tunnel cleanup failed: {self._cleanup_error!r}")
+                add_cleanup_note(primary, "Tunnel cleanup failed", self._cleanup_error)
             raise
 
     def _record_cleanup_error(self, exc: BaseException) -> None:
@@ -293,12 +294,12 @@ class _Forwarder:
         if remaining:
             timeout = ConnectionTimeoutError(f"Tunnel workers did not stop: {', '.join(remaining)}")
             if error is not None:
-                timeout.add_note(f"Tunnel cleanup failed: {error!r}")
+                timeout.add_note(f"Tunnel cleanup failed ({safe_detail(error)})")
             raise timeout
         if error is not None:
             if not isinstance(error, Exception):
                 raise error
-            raise TransportConnectionError(f"Tunnel cleanup failed: {error}") from error
+            raise_safe(TransportConnectionError(f"Tunnel cleanup failed ({safe_detail(error)})"), error)
 
 
 class _PatchedEndpointProfile:
@@ -410,10 +411,10 @@ class TunnelledConnection(ConnectionProtocol):
                 if error is None:
                     error = exc
                 elif isinstance(exc, ConnectionTimeoutError):
-                    exc.add_note(f"Earlier cleanup failed: {error!r}")
+                    exc.add_note(f"Earlier cleanup failed ({safe_detail(error)})")
                     error = exc
                 else:
-                    error.add_note(f"Further cleanup failed: {exc!r}")
+                    error.add_note(f"Further cleanup failed ({safe_detail(exc)})")
         if error is not None:
             raise error
 
@@ -434,7 +435,7 @@ class TunnelledConnection(ConnectionProtocol):
                     client.get_transport(), self._remote_host, self._remote_port, proxy=self._proxy,
                 )
             except OSError as exc:
-                raise TransportConnectionError(f"Failed to bind tunnel listener: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to bind tunnel listener ({safe_detail(exc)})"), exc)
             self._local_port = self._forwarder.local_port
             self._inner = self._inner_factory(self._local_port)
             self._inner.connect()
@@ -442,9 +443,7 @@ class TunnelledConnection(ConnectionProtocol):
             try:
                 self.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Tunnel cleanup failed", cleanup)
             raise
         return self
 
@@ -477,6 +476,4 @@ class TunnelledConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Tunnel cleanup failed", cleanup)

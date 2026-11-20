@@ -221,18 +221,19 @@ values. **Migration:** `ignore` previously behaved as `reject`; remove it or set
 ## Storage errors and strict queries
 
 Implemented Local, S3-family, SFTP and HTTP backends translate their own I/O
-failures into public exceptions, retaining native causes except for the HTTP
-credential-redaction case below. The same contract applies when reading,
+failures into public exceptions. The same contract applies when reading,
 fetching ranges or closing an opened stream—not only when opening it.
 
-HTTP translation drops native exception chains containing URL userinfo
-(`user:password@`, up to the last `@` of the authority) or query values: the
-native exception is neither the `__cause__` nor the hidden `__context__` of the
-error you receive. HTTP error messages and attributes show userinfo and query
-values as `***`, and HTTP errors do not carry the response body. Clean chains
-remain available for debugging, and public error classification is unchanged.
-Traceback frame locals are outside this guarantee; configure error reporters
-that capture locals accordingly.
+Native exceptions are not chained: the error you receive never has a native
+`__cause__`, and `__context__` is cleared, except for a fresh `[Errno N]
+strerror` copy of an `OSError` or transport's own HTTP error. Messages and
+attributes show a location as `scheme://host:port/path` only (userinfo, query
+and fragment never shown; other scheme-like strings show `***`; local paths
+unchanged), HTTP error headers are limited to an allowlist, and HTTP errors do
+not carry the response body. Successful HTTP values keep the query so presigned
+URLs stay usable. Path segments are shown, so keep credentials in auth
+profiles, not URLs. Traceback frame locals are outside this guarantee;
+configure error reporters that capture locals accordingly.
 
 | Condition | Exception |
 |---|---|
@@ -375,8 +376,8 @@ facade may touch.
   widens `allowed_remote` for other hosts.
 - **`allow_unconfined=True`** opts out explicitly. With no policy, behaviour is
   unchanged.
-- Unknown URL schemes are refused with a redacted error (credentials are never
-  echoed).
+- Unknown URL schemes are refused with an error that shows only a safe form of
+  the location (credentials are never echoed).
 
 Limits: the check is on the host name, so DNS rebinding is not defended
 against, and managed-OAuth token endpoints are not covered by the policy.

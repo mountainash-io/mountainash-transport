@@ -135,7 +135,7 @@ with StorageFacade.from_path("s3://reports/", profile, auth_profile=auth) as s3:
     try:
         s3.read("s3://reports/missing.csv")
     except PathNotFoundError as exc:
-        print(type(exc).__name__, exc, "<-", type(exc.__cause__).__name__)
+        print(type(exc).__name__, exc, "<- cause:", exc.__cause__)
 ```
 
 Output:
@@ -145,7 +145,7 @@ True
 b'789'
 ['a.csv', 'b.csv']
 True
-PathNotFoundError s3://reports/missing.csv <- NoSuchKey
+PathNotFoundError s3://reports/missing.csv <- cause: None
 ```
 
 The credentials come from an `IAMAuthProfile` owned by mountainash-auth-client, not from the storage profile; see [Credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client).
@@ -165,7 +165,7 @@ Sequential reads pull from the remote file on demand without prefetching. Ranged
 ## HTTP
 
 <!-- concept:216 -->
-`HTTPStorageBackend` (`src/mountainash_transport/storage/backends/http/`) sends every request through the `HttpRequestEngine` described in [Making requests](../12-http-engine/index.md#making-requests), so the engine's retry, timeout, redirect and redaction policy and its auth strategy apply to storage calls too. It implements read (`GET`), write (`PUT`), metadata (`HEAD`) and ranged read. It is the only backend that accepts an `auth_strategy`, which carries the managed OAuth2 token flow, and the only one that receives the facade's location check per request, so redirects are checked against the policy as well.
+`HTTPStorageBackend` (`src/mountainash_transport/storage/backends/http/`) sends every request through the `HttpRequestEngine` described in [Making requests](../12-http-engine/index.md#making-requests), so the engine's retry, timeout, redirect and safe-display policy and its auth strategy apply to storage calls too. Errors show the URL as `scheme://host:port/path` only, and the HTTP `stat` entry's `path` has userinfo removed but keeps query and fragment (see [what HTTP errors show](../12-http-engine/index.md#what-http-errors-show)). It implements read (`GET`), write (`PUT`), metadata (`HEAD`) and ranged read. It is the only backend that accepts an `auth_strategy`, which carries the managed OAuth2 token flow, and the only one that receives the facade's location check per request, so redirects are checked against the policy as well.
 
 Ranged reads probe the server with `Range: bytes=0-0` instead of relying on `HEAD` or `Accept-Ranges`. A server that answers `200` instead of `206`, or returns an encoded (for example gzip) representation, raises `RangeNotSupportedError`. Python's built-in `http.server` does not honour `Range`, which makes the refusal easy to see. The server bootstrapping lines are omitted; `base` is its URL.
 
@@ -232,7 +232,7 @@ Other differences follow from the stores themselves. Deleting a missing local or
 <!-- concept:219 -->
 ### Backend error mapping
 
-Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass and raises it `from` the original, so the native error stays available as `__cause__`. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
+Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass whose message is the display location alone for not-found, authentication and permission errors, and `{display location}: {category} ({detail})` for the others. The detail is `[Errno N] strerror` when the native exception has an errno, and its class name otherwise. The native exception is not chained, so its text cannot leak a credential. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
 
 | Native condition | Local | S3 (botocore) | SFTP (paramiko) | HTTP (engine) |
 |---|---|---|---|---|
@@ -242,4 +242,4 @@ Each backend package has a private `_helpers.py` with a `_mapped(path)` context 
 | Network or timeout | `ConnectionError`, `TimeoutError` | botocore connection errors, `RequestTimeout` | SSH and socket errors | connection and timeout errors |
 | Object changed | n/a | `PreconditionFailed`, 412 | n/a | 412 |
 
-These map to `PathNotFoundError`, `AuthenticationError`, `PermissionDeniedError`, `StorageConnectionError` and `ObjectChangedError` in that row order; anything else from the SDK becomes a plain `StorageError`. Errors that describe the caller's input (botocore parameter validation, invalid URLs, the caller's own stream failing) are not translated. The HTTP mapping also removes user information from URLs in messages. The exception hierarchy itself is described in [Errors](../03-installation/index.md#errors).
+These map to `PathNotFoundError`, `AuthenticationError`, `PermissionDeniedError`, `StorageConnectionError` and `ObjectChangedError` in that row order; anything else from the SDK becomes a plain `StorageError`. Errors that describe the caller's input (botocore parameter validation, invalid URLs, the caller's own stream failing) are not translated. The HTTP mapping shows URLs as `scheme://host:port/path`. The exception hierarchy itself is described in [Errors](../03-installation/index.md#errors).

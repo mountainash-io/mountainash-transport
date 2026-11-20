@@ -9,6 +9,7 @@ from typing_extensions import Self
 from mountainash_transport.connections.errors import TransportConnectionError
 
 from .._core.protocols import ConnectionProtocol
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 class S3Connection(ConnectionProtocol):
@@ -28,6 +29,12 @@ class S3Connection(ConnectionProtocol):
             ) from exc
 
         self.disconnect()
+        session = self._connect_kwargs.get("session") if "client_config" in self._connect_kwargs else None
+        if session and session.get("profile_name") and "aws_access_key_id" in session:
+            raise ValueError(
+                "Ambiguous S3 credentials: set either PROFILE_NAME or explicit "
+                "keys on the IAMAuthProfile, not both."
+            )
         try:
             if "client_config" in self._connect_kwargs:
                 self._client = self._build_via_session(boto3)
@@ -35,10 +42,10 @@ class S3Connection(ConnectionProtocol):
                 kwargs = dict(self._connect_kwargs)
                 kwargs.pop("service_name", None)
                 self._client = boto3.client("s3", **kwargs)
-        except (ValueError, TransportConnectionError):
+        except TransportConnectionError:
             raise
         except Exception as exc:
-            raise TransportConnectionError(f"Failed to create S3 client: {exc}") from exc
+            raise_safe(TransportConnectionError(f"Failed to create S3 client ({safe_detail(exc)})"), exc)
 
         return self
 
@@ -52,11 +59,6 @@ class S3Connection(ConnectionProtocol):
 
         profile_name = session_inputs.pop("profile_name", None)
         has_keys = "aws_access_key_id" in session_inputs
-        if profile_name and has_keys:
-            raise ValueError(
-                "Ambiguous S3 credentials: set either PROFILE_NAME or explicit "
-                "keys on the IAMAuthProfile, not both."
-            )
         region = session_inputs.get("region_name")
 
         if profile_name:
@@ -136,7 +138,7 @@ class S3Connection(ConnectionProtocol):
             try:
                 client.close()
             except Exception as exc:
-                raise TransportConnectionError(f"Failed to close S3 client: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to close S3 client ({safe_detail(exc)})"), exc)
 
     @property
     def client(self) -> t.Any:
@@ -158,6 +160,4 @@ class S3Connection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Connection cleanup also failed", cleanup)

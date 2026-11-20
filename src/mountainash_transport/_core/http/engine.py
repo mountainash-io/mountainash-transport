@@ -31,9 +31,16 @@ from mountainash_transport._core.http.errors import (
     HttpTransportError,
     map_status_to_error,
 )
-from mountainash_transport._core.redact import raise_redacted, redact_url, redact_userinfo
+from mountainash_transport._core.http.log_safety import install_log_filters
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
-from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse
+from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse, url_without_userinfo
+from mountainash_transport._core.safe_display import raise_safe, safe_location
+
+# httpx logs every request URL (userinfo, query, fragment) at INFO, and httpcore logs
+# header lists at DEBUG. Filters on the emitting loggers hold at any level (W8).
+_install_log_filters = install_log_filters
+_install_log_filters()
+
 
 if t.TYPE_CHECKING:
     from collections.abc import Iterator
@@ -78,12 +85,21 @@ _RETRYABLE_TRANSPORT_TYPES: tuple[type[HttpTransportError], ...] = (
 )
 
 
-def _map_httpx_exception(exc: httpx.HTTPError) -> HttpTransportError:
-    """Map an httpx exception to the corresponding transport exception."""
+_CATEGORY: dict[type[HttpTransportError], str] = {
+    HttpTimeoutError: "timed out",
+    HttpConnectionError: "connection failed",
+    HttpProtocolError: "protocol error",
+    HttpRequestError: "invalid location",
+}
+
+
+def _map_httpx_exception(exc: httpx.HTTPError | httpx.InvalidURL, url: str) -> HttpTransportError:
+    """Map an httpx exception to a transport exception showing only safe parts."""
     for httpx_cls, transport_cls in _HTTPX_EXCEPTION_MAP:
         if isinstance(exc, httpx_cls):
-            return transport_cls(str(exc))
-    return HttpTransportError(str(exc))  # pragma: no cover
+            category = _CATEGORY.get(transport_cls, "request failed")
+            return transport_cls(f"{safe_location(url)}: {category} ({type(exc).__name__})")
+    return HttpTransportError(f"{safe_location(url)}: request failed ({type(exc).__name__})")  # pragma: no cover
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +304,7 @@ class HttpRequestEngine:
     def _raise_for_status(response: httpx.Response) -> None:
         """Raise the appropriate transport error for a non-2xx response."""
         status = response.status_code
-        url = redact_url(str(response.url))
+        url = safe_location(str(response.url))
         method = response.request.method
         headers_dict = dict(response.headers)
 
@@ -378,9 +394,9 @@ class HttpRequestEngine:
                     policy=pol,
                 )
             except httpx.InvalidURL as exc:
-                raise_redacted(HttpRequestError(redact_url(str(exc))), exc, url)
+                raise_safe(_map_httpx_exception(exc, url), exc)
             except httpx.HTTPError as exc:
-                transport_exc = _map_httpx_exception(exc)
+                transport_exc = _map_httpx_exception(exc, url)
 
                 # Check if retryable
                 can_retry = (
@@ -400,7 +416,7 @@ class HttpRequestEngine:
                     time.sleep(delay)
                     continue
 
-                raise_redacted(transport_exc, exc, url)
+                raise_safe(transport_exc, exc)
 
             status = response.status_code
 
@@ -410,7 +426,7 @@ class HttpRequestEngine:
                     status_code=status,
                     headers=dict(response.headers),
                     content=response.content,
-                    url=redact_userinfo(str(response.url)),
+                    url=url_without_userinfo(response.url),
                     method=method_upper,
                 )
 
@@ -448,7 +464,7 @@ class HttpRequestEngine:
             # 3xx not followed
             if 300 <= status < 400:
                 raise HttpRedirectError(
-                    f"HTTP {status} redirect from {method_upper} {redact_url(url)}"
+                    f"HTTP {status} redirect from {method_upper} {safe_location(url)}"
                 )
 
             # Other retryable status codes
@@ -516,15 +532,15 @@ class HttpRequestEngine:
                     params=params, policy=pol, stream=True,
                 )
             except httpx.InvalidURL as exc:
-                raise_redacted(HttpRequestError(redact_url(str(exc))), exc, url)
+                raise_safe(_map_httpx_exception(exc, url), exc)
             except httpx.HTTPError as exc:
-                mapped = _map_httpx_exception(exc)
+                mapped = _map_httpx_exception(exc, url)
                 if (safe and retry.retry_on_transport
                         and isinstance(mapped, _RETRYABLE_TRANSPORT_TYPES)
                         and attempt < retry.max_attempts):
                     time.sleep(delay())
                     continue
-                raise_redacted(mapped, exc, url)
+                raise_safe(mapped, exc)
             status = response.status_code
             if 200 <= status < 300:
                 break
@@ -545,20 +561,20 @@ class HttpRequestEngine:
                         time.sleep(pause)
                         continue
                     if 300 <= status < 400:
-                        raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {redact_url(url)}")
+                        raise HttpRedirectError(f"HTTP {status} redirect from {method_upper} {safe_location(url)}")
                     # Error metadata is available without draining an arbitrary error body.
                     cls = map_status_to_error(status)
                     kwargs: dict[str, t.Any] = dict(
                         status_code=status, headers=dict(response.headers),
-                        url=redact_url(str(response.url)), method=method_upper,
+                        url=str(response.url), method=method_upper,
                     )
                     if status == 429:
                         kwargs["retry_after"] = _parse_retry_after(response.headers.get("retry-after"))
-                    raise cls(f"HTTP {status} {method_upper} {redact_url(url)}", **kwargs)
+                    raise cls(f"HTTP {status} {method_upper} {safe_location(url)}", **kwargs)
             except httpx.HTTPError as exc:
-                raise_redacted(_map_httpx_exception(exc), exc, url)
+                raise_safe(_map_httpx_exception(exc, url), exc)
         try:
             with contextlib.closing(response):
                 yield HttpStreamResponse(response)
         except httpx.HTTPError as exc:
-            raise_redacted(_map_httpx_exception(exc), exc, url)
+            raise_safe(_map_httpx_exception(exc, url), exc)

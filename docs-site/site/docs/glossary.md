@@ -20,7 +20,7 @@ Explained in [Where backends differ](chapters/14-backends/index.md#where-backend
 
 ## Backend error mapping
 
-The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses raised from the original, so the native exception stays available as `__cause__`.
+The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses. The native exception is not chained; only a fresh `[Errno N] strerror` copy of an `OSError`, or transport's own HTTP error (for example `HttpNotFoundError` behind `PathNotFoundError`), can appear as `__cause__`.
 
 Related: [Error families](#error-families), [`StorageError`](#storageerror).
 
@@ -146,21 +146,21 @@ Related: [Auth profile](#auth-profile), [Emission](#emission), [`mountainash-aut
 
 Explained in [How transport delegates credentials](chapters/02-mountainash-ecosystem/index.md#how-transport-delegates-credentials).
 
-## Credential redaction (HTTP engine)
+## Safe location display (HTTP engine)
 
-The HTTP request engine's replacement of URL userinfo (up to the last `@` of the authority) and query values with `***` in every `HttpTransportError` message and in the `url` and `headers` attributes of response errors; credential headers such as `Set-Cookie` and `Authorization` are replaced whole. Successful responses' `url` redacts userinfo only. Response errors do not carry the body. When the URL or native exception holds credentials, the engine attaches no native exception at all, as neither `__cause__` nor `__context__`.
+The HTTP request engine's rule that errors show a URL as `scheme://host:port/path` only, in every `HttpTransportError` message and in `HttpResponseError.url`; `HttpResponseError.headers` keeps only an allowlist of non-credential headers, and native httpx exceptions are never chained. Successful responses' `url` and the HTTP `stat` entry's `path` have userinfo removed but keep query and fragment. The engine attaches filters to the `httpx` and `httpcore` loggers so their records show only the display form of a URL, at any log level.
 
-Related: [`HttpTransportError`](#httptransporterror), [Credential redaction (location policy)](#credential-redaction-location-policy).
+Related: [`HttpTransportError`](#httptransporterror), [Safe location display (location policy)](#safe-location-display-location-policy).
 
-Explained in [Error redaction](chapters/12-http-engine/index.md#error-redaction).
+Explained in [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show).
 
-## Credential redaction (location policy)
+## Safe location display (location policy)
 
-The removal of user name and password from a URL, and the masking of its query values, before `LocationNotAllowed` stores it in `location` or its message; a location without `//` whose first segment holds an `@` has that prefix replaced with `***@`. A URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception. Scheme detection, `StoragePath`, S3 path parsing and suffix inference apply the same redaction with or without an active policy.
+The rule that `LocationNotAllowed` and other location errors show `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment never shown), `***` for any other string starting with a scheme, and local paths unchanged. Scheme detection, `StoragePath`, S3 path parsing and suffix inference follow the same rule with or without an active policy. Path segments are shown, so credentials belong in auth profiles.
 
-Related: [`LocationNotAllowed`](#locationnotallowed), [Credential redaction (HTTP engine)](#credential-redaction-http-engine).
+Related: [`LocationNotAllowed`](#locationnotallowed), [Safe location display (HTTP engine)](#safe-location-display-http-engine).
 
-Explained in [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+Explained in [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ## Decorator connection
 
@@ -252,7 +252,7 @@ Explained in [Format-agnostic storage](chapters/02-mountainash-ecosystem/index.m
 
 ## Forward-only stream
 
-The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It is wrapped in `io.BufferedReader`, so it requests data only as the caller reads and reads at most one buffer (8 KiB by default) ahead of the caller, and it translates errors raised partway through into `StorageError` subclasses with the native exception as cause.
+The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It is wrapped in `io.BufferedReader`, so it requests data only as the caller reads and reads at most one buffer (8 KiB by default) ahead of the caller, and it translates errors raised partway through into `StorageError` subclasses without chaining the native exception.
 
 Related: [Sequential access](#sequential-access), [Deferred read error](#deferred-read-error).
 
@@ -334,7 +334,7 @@ Explained in [HTTP profile](chapters/05-storage-profiles/index.md#http-profile).
 
 The root of the HTTP request engine's exception family. Responses other than 2xx raise `HttpResponseError` subclasses such as `HttpNotFoundError`, and failures to complete a request raise classes such as `HttpConnectionError` and `HttpTimeoutError`. Through a facade, these become storage errors.
 
-Related: [Error families](#error-families), [Credential redaction (HTTP engine)](#credential-redaction-http-engine).
+Related: [Error families](#error-families), [Safe location display (HTTP engine)](#safe-location-display-http-engine).
 
 Explained in [Responses and errors](chapters/12-http-engine/index.md#responses-and-errors).
 
@@ -390,7 +390,7 @@ Explained in [The local profile](chapters/08-location-policy/index.md#the-local-
 
 The `StorageError` subclass raised when a location policy refuses a path, before the backend is called. It is imported from `mountainash_transport.location` and carries `location`, with credentials removed, and `reason`, a short code such as `outside root` or `remote not allowed`.
 
-Related: [`LocationPolicy`](#locationpolicy), [Credential redaction (location policy)](#credential-redaction-location-policy).
+Related: [`LocationPolicy`](#locationpolicy), [Safe location display (location policy)](#safe-location-display-location-policy).
 
 Explained in [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
 
