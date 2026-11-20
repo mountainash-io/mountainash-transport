@@ -5,6 +5,8 @@ schemes. Uses httpx under the hood.
 """
 from __future__ import annotations
 
+import os
+import ssl
 import typing as t
 
 import httpx
@@ -17,6 +19,7 @@ from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.safe_display import raise_safe, safe_detail
 
 __all__ = ["HTTP_SPEC", "HTTPStorageProfile"]
 
@@ -80,6 +83,17 @@ HTTP_SPEC = StorageProfileSpec(
             description="Whether to verify TLS certificates.",
         ),
         ParameterSpec(
+            name="CA_BUNDLE",
+            type=t.Optional[str],
+            tier="advanced",
+            default=None,
+            description=(
+                "Path to a CA bundle file or directory that signs the server's "
+                "certificate. Unset: httpx defaults (SSL_CERT_FILE honoured). "
+                "Ignored when VERIFY_SSL is False."
+            ),
+        ),
+        ParameterSpec(
             name="HEADERS",
             type=dict,
             tier="advanced",
@@ -108,11 +122,28 @@ def _http_httpx_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.An
     )
     result["follow_redirects"] = getattr(profile, "FOLLOW_REDIRECTS", True)
     result["max_redirects"] = getattr(profile, "MAX_REDIRECTS", 10)
-    result["verify"] = getattr(profile, "VERIFY_SSL", True)
+    result["verify"] = _verify(profile)
     custom_headers = getattr(profile, "HEADERS", None) or {}
     if custom_headers:
         result["headers"] = dict(custom_headers)
     return result
+
+
+def _verify(profile: Profile) -> bool | ssl.SSLContext:
+    """httpx ``verify``: False, a context loaded from CA_BUNDLE, or True."""
+    if not getattr(profile, "VERIFY_SSL", True):
+        return False
+    ca_bundle = getattr(profile, "CA_BUNDLE", None)
+    if not ca_bundle:
+        return True
+    # httpx 0.28 deprecates verify=<str>; this is the form it recommends.
+    try:
+        if os.path.isdir(ca_bundle):
+            return ssl.create_default_context(capath=ca_bundle)
+        return ssl.create_default_context(cafile=ca_bundle)
+    except (OSError, ValueError) as exc:
+        # W8: the native error may carry the bundle value (e.g. UnicodeEncodeError.object).
+        raise_safe(ValueError(f"CA_BUNDLE could not be loaded ({safe_detail(exc)})"), exc)
 
 
 @register
@@ -130,6 +161,7 @@ class HTTPStorageProfile(Profile):
         FOLLOW_REDIRECTS: bool
         MAX_REDIRECTS: int
         VERIFY_SSL: bool
+        CA_BUNDLE: str | None
         HEADERS: dict[str, t.Any] | None
 
     __spec__ = HTTP_SPEC

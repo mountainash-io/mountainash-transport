@@ -83,10 +83,12 @@ class S3Connection(ConnectionProtocol):
             ) from exc
 
         bc = source._session
-        verify = client_config.get("verify", True)
+        # No default: an absent verify lets botocore resolve AWS_CA_BUNDLE / ca_bundle.
+        verify = client_config.get("verify")
 
         def _sts_creator(*a: t.Any, **k: t.Any) -> t.Any:
-            k.setdefault("verify", verify)
+            if verify is not None:
+                k.setdefault("verify", verify)
             return bc.create_client(*a, **k)
 
         src_creds = bc.get_credentials()

@@ -153,6 +153,16 @@ S3_SPEC = StorageProfileSpec(
             description="Whether to verify SSL certificates.",
         ),
         ParameterSpec(
+            name="CA_BUNDLE",
+            type=t.Optional[str],
+            tier="advanced",
+            default=None,
+            description=(
+                "Path to a CA bundle that signs the endpoint's certificate. Unset: "
+                "botocore resolves AWS_CA_BUNDLE / ca_bundle. Ignored when VERIFY_SSL is False."
+            ),
+        ),
+        ParameterSpec(
             name="CONNECT_TIMEOUT",
             type=t.Optional[float],
             tier="advanced",
@@ -213,6 +223,7 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     accelerate = bool(getattr(profile, "ACCELERATE_ENDPOINT", False))
     dualstack = bool(getattr(profile, "DUALSTACK_ENDPOINT", False))
     verify_ssl = getattr(profile, "VERIFY_SSL", True)
+    ca_bundle = getattr(profile, "CA_BUNDLE", None)
 
     effective_region = "auto" if flavor == "r2" else region
 
@@ -220,7 +231,12 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     base["service_name"] = "s3"
     base["region_name"] = effective_region
     base["use_ssl"] = use_ssl
-    base["verify"] = verify_ssl
+    # Omitting verify lets botocore resolve AWS_CA_BUNDLE / ca_bundle; an
+    # explicit True would override them.
+    if not verify_ssl:
+        base["verify"] = False
+    elif ca_bundle:
+        base["verify"] = ca_bundle
 
     resolved_endpoint = profile._resolve_endpoint_url(
         flavor, region, endpoint_url, account_id
@@ -275,6 +291,7 @@ class S3StorageProfile(Profile):
         ACCELERATE_ENDPOINT: bool
         DUALSTACK_ENDPOINT: bool
         VERIFY_SSL: bool
+        CA_BUNDLE: str | None
         CONNECT_TIMEOUT: float | None
         READ_TIMEOUT: float | None
 

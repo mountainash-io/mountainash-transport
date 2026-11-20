@@ -107,7 +107,7 @@ except UnsupportedAuthProfileError as error:
 Output:
 
 ```text
-S3 profile carries: ['config', 'region_name', 'service_name', 'use_ssl', 'verify']
+S3 profile carries: ['config', 'region_name', 'service_name', 'use_ssl']
 paired with IAMAuthProfile -> S3Connection
 refused: PasswordAuthProfile is not supported: mode 'password' not in supported_auth ['iam', 'none']
 ```
