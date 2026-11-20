@@ -115,7 +115,7 @@ def test_backend_construction_error_retains_both_sftp_cleanup_failures(monkeypat
     with pytest.raises(ValueError) as caught:
         StorageFacade.from_path("sftp://host/file", profile)
     assert caught.value is primary
-    assert "Failed to close SFTP channel (OSError)" in str(primary.__notes__)
-    assert "Failed to close SSH client (OSError)" in str(primary.__notes__)
+    assert "Facade cleanup also failed (TransportConnectionError)" in str(primary.__notes__)
+    assert "SSH cleanup also failed (TransportConnectionError)" in str(primary.__notes__)
     channel.close.assert_called_once()
     native_ssh.close.assert_called_once()

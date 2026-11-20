@@ -19,6 +19,7 @@ from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport._core.exceptions import StorageConnectionError, UnsupportedOperationError
 from mountainash_transport._core.protocols import ConnectionProtocol
+from mountainash_transport._core.safe_display import add_cleanup_note
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
@@ -176,9 +177,7 @@ class StorageFacade:
             try:
                 self.close()
             except BaseException as cleanup:
-                primary.add_note(f"Facade cleanup also failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Facade cleanup also failed", cleanup)
             raise
 
     def _check(self, path: str) -> str:
@@ -226,9 +225,7 @@ class StorageFacade:
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Facade cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Facade cleanup also failed", cleanup)
 
     # ------------------------------------------------------------------
     # Convenience factories

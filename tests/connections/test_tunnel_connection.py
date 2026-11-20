@@ -477,7 +477,7 @@ def test_startup_error_wins_over_inner_cleanup_failure(rig) -> None:
     with pytest.raises(RuntimeError) as caught:
         rig.connection.connect()
     assert caught.value is rig.failure
-    assert "Failed to close HTTP client (OSError)" in str(rig.failure.__notes__)
+    assert "Tunnel cleanup failed (TransportConnectionError)" in str(rig.failure.__notes__)
     rig.assert_released()
 
 
@@ -720,6 +720,6 @@ def test_context_retains_inner_and_ssh_cleanup_failures(rig) -> None:
             rig.inner_close_error = rig.ssh_close_error = True
             raise primary
     assert caught.value is primary
-    assert "Failed to close HTTP client (OSError)" in str(primary.__notes__)
+    assert "Tunnel cleanup failed (TransportConnectionError)" in str(primary.__notes__)
     assert "Further cleanup failed (TransportConnectionError)" in str(primary.__notes__)
     rig.assert_released()

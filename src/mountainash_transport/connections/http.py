@@ -13,7 +13,7 @@ from mountainash_transport.connections.errors import (
     TransportConnectionError,
 )
 from .._core.protocols import ConnectionProtocol
-from .._core.safe_display import raise_safe, safe_detail
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 class HTTPConnection(ConnectionProtocol):
     """Creates an authenticated httpx.Client from connect kwargs + auth strategy."""
@@ -63,6 +63,4 @@ class HTTPConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Connection cleanup also failed", cleanup)

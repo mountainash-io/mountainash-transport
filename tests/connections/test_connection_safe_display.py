@@ -59,3 +59,50 @@ def test_ssh_paramiko_error_is_class_name(monkeypatch):
         SSHConnection({"hostname": "h", "username": "u"}).connect()
     assert str(ei.value) == "SSH connection failed (SSHException)"
     _assert_clean(ei.value)
+
+
+def test_tunnel_startup_cleanup_note_hides_native_text(monkeypatch):
+    import socketserver
+    import threading
+
+    from mountainash_transport.connections.tunnel import _Forwarder
+
+    close_server = socketserver.TCPServer.server_close
+
+    def failing_close(server):
+        close_server(server)
+        raise OSError(f"close failed u:{SENT}@h")
+
+    def failing_start(thread):
+        raise RuntimeError("thread start failed")
+
+    monkeypatch.setattr(socketserver.TCPServer, "server_close", failing_close)
+    monkeypatch.setattr(threading.Thread, "start", failing_start)
+    with pytest.raises(RuntimeError) as ei:
+        _Forwarder(object(), "h", 22)
+    notes = ei.value.__notes__
+    assert notes == ["Tunnel cleanup failed (OSError)"]
+    assert SENT not in "".join(traceback.format_exception(ei.value))
+
+
+def test_cancellation_cleanup_note_hides_native_text(monkeypatch):
+    from mountainash_transport.connections.http import HTTPConnection
+
+    connection = HTTPConnection({})
+    connection.connect()
+
+    def interrupted():
+        raise KeyboardInterrupt(f"stop u:{SENT}@h")
+
+    monkeypatch.setattr(connection, "disconnect", interrupted)
+    primary = ValueError("body")
+    with pytest.raises(ValueError) as ei:
+        with connection:
+            raise primary
+    assert ei.value is primary
+    assert primary.__notes__ == ["Connection cleanup also failed (KeyboardInterrupt)"]
+    assert SENT not in "".join(traceback.format_exception(primary))
+    # cancellation with no primary error still propagates unwrapped
+    with pytest.raises(KeyboardInterrupt):
+        with connection:
+            pass

@@ -8,7 +8,7 @@ from typing_extensions import Self
 
 from mountainash_transport.connections.errors import TransportConnectionError
 from .._core.protocols import ConnectionProtocol
-from .._core.safe_display import raise_safe, safe_detail
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 class SFTPConnection(ConnectionProtocol):
@@ -34,9 +34,7 @@ class SFTPConnection(ConnectionProtocol):
             try:
                 self.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"Connection cleanup also failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Connection cleanup also failed", cleanup)
             raise
         return self
 
@@ -55,9 +53,7 @@ class SFTPConnection(ConnectionProtocol):
             try:
                 self._ssh.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"SSH cleanup also failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "SSH cleanup also failed", cleanup)
             raise
         self._ssh.disconnect()
 
@@ -81,6 +77,4 @@ class SFTPConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Connection cleanup also failed", cleanup)

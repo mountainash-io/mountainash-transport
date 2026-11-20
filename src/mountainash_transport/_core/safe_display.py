@@ -101,3 +101,15 @@ def raise_safe(error: BaseException, native: BaseException) -> t.NoReturn:
         raise error from safe_cause(native)
     finally:
         error.__context__ = None
+
+
+def add_cleanup_note(primary: BaseException, phrase: str, cleanup: BaseException) -> None:
+    """Note on *primary* that cleanup failed, showing only :func:`safe_detail`.
+
+    The notes of *cleanup* are copied only when it is one of this package's own
+    errors, whose notes are already safe; a native exception's notes are not.
+    """
+    primary.add_note(f"{phrase} ({safe_detail(cleanup)})")
+    if type(cleanup).__module__.startswith("mountainash_transport."):
+        for note in getattr(cleanup, "__notes__", ()):
+            primary.add_note(note)

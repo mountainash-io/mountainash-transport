@@ -24,7 +24,7 @@ from mountainash_transport.connections.errors import (
     TunnelEndpointError,
 )
 from mountainash_transport._core.protocols import ConnectionProtocol
-from .._core.safe_display import raise_safe, safe_detail
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 _MAX_PROXY_HEAD = 64 * 1024
@@ -213,7 +213,7 @@ class _Forwarder:
         except BaseException as primary:
             self.request_stop()
             if self._cleanup_error is not None:
-                primary.add_note(f"Tunnel cleanup failed: {self._cleanup_error!r}")
+                add_cleanup_note(primary, "Tunnel cleanup failed", self._cleanup_error)
             raise
 
     def _record_cleanup_error(self, exc: BaseException) -> None:
@@ -443,9 +443,7 @@ class TunnelledConnection(ConnectionProtocol):
             try:
                 self.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Tunnel cleanup failed", cleanup)
             raise
         return self
 
@@ -478,6 +476,4 @@ class TunnelledConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Tunnel cleanup failed", cleanup)
