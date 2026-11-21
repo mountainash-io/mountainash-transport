@@ -167,7 +167,7 @@ On S3 the prefix is a literal key prefix, so `2026` matches any key that starts 
 
 ### Are writes atomic?
 
-No. A write that fails part-way can leave partial data at the destination, and transport adds no rollback or retry. `create_parents` controls directory creation only. `copy_between` does no cleanup or atomic rename either. See [Reading and writing](chapters/07-file-operations/index.md#reading-and-writing).
+No. A write that fails part-way can leave partial data at the destination, and transport adds no rollback. A write that loses its connection is retried only when its input can be sent again ([Retries](chapters/14-backends/index.md#retries)). `create_parents` controls directory creation only. `copy_between` does no cleanup or atomic rename either. See [Reading and writing](chapters/07-file-operations/index.md#reading-and-writing).
 
 ### Does deleting a missing file raise an error?
 
@@ -263,9 +263,9 @@ Yes. The SSH session dials the tunnel's listener but keeps the target's real hos
 
 Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A body is re-sent only if it is `bytes` or a seekable stream; a non-seekable stream body is never retried (pass `materialize(stream)` to make it retryable). Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
 
-### Do the engine's retries apply to HTTP storage reads and writes?
+### Do storage operations retry?
 
-Yes. The HTTP storage backend sends every request through `HttpRequestEngine`, so its retry, timeout, redirect and safe-display behaviour and any auth strategy apply to facade calls. See [HTTP](chapters/14-backends/index.md#http).
+Yes, on HTTP, SFTP and the S3 family, configured by the profile's `RETRY_*` fields. HTTP storage sends every request through `HttpRequestEngine`; SFTP reconnects the session and runs the operation again; S3 passes `RETRY_MAX_ATTEMPTS` to botocore. `RETRY_MAX_ATTEMPTS=1` turns retry off. See [Retries](chapters/14-backends/index.md#retries).
 
 ### Why does a random read over HTTP raise `RangeNotSupportedError`?
 

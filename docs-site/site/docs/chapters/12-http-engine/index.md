@@ -120,7 +120,7 @@ These classes do not subclass `StorageError`. When you read through `StorageFaca
 
 <!-- concept:192 -->
 
-`RetryPolicy` decides which failures are tried again. `max_attempts` counts the first attempt, so the default of 3 means up to two retries.
+`RetryPolicy` decides which failures are tried again. `max_attempts` counts the first attempt, so the default of 3 means up to two retries. The same class configures SFTP retries; for storage, set it through the profile's `RETRY_*` fields ([Retries](../14-backends/index.md#retries)). `retry_on_status`, `retry_unsafe_methods` and `max_retry_after` apply to HTTP only.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -171,7 +171,7 @@ HttpServiceUnavailableError 503
 
 Both GETs succeeded on their second attempt; the POST was sent once and failed without a retry.
 
-Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay. A `request()` body passed as a non-seekable stream is read into memory first but still counts as not replayable. A 429 response is retried regardless, because that retry ignores the body; transport errors and the other retryable statuses are not retried for such a body. Pass `content=` bytes when you want every retry to apply.
+Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay.
 
 ## Authentication strategies
 
