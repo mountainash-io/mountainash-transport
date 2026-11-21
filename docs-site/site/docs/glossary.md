@@ -36,7 +36,7 @@ Explained in [The backend registry](chapters/13-architecture/index.md#the-backen
 
 ## `BackendNotImplementedError`
 
-The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile fails earlier with `TransportConnectionError`, because `create_connection` falls back to an HTTP connection; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
+The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile raises it from `create_connection`, which has no connection class for those providers; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
 
 Related: [Settings-only provider](#settings-only-provider), [Backend registry](#backend-registry).
 
@@ -404,7 +404,7 @@ Explained in [LocationPolicy](chapters/08-location-policy/index.md#locationpolic
 
 ## `materialize`
 
-A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is imported from `mountainash_transport._core.transforms.util`, not the package root.
+A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is exported from the package root.
 
 Related: [Buffered access](#buffered-access).
 
@@ -809,14 +809,6 @@ The leaf connection that creates and connects a `paramiko.SSHClient`, checking h
 Related: [Leaf connection](#leaf-connection), [`SFTPConnection`](#sftpconnection), [Bastion tunnel](#bastion-tunnel).
 
 Explained in [SSHConnection](chapters/11-connections/index.md#sshconnection).
-
-## `storage()`
-
-A package-root function that constructs a `StorageFacade` from a provider type, defaulting to local, with an optional storage profile and auth profile. It accepts no location policy or OAuth arguments.
-
-Related: [`StorageFacade`](#storagefacade), [`from_path`](#from_path).
-
-Explained in [The storage() factory](chapters/06-storage-facade/index.md#the-storage-factory).
 
 ## Storage profile
 

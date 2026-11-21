@@ -207,7 +207,7 @@ b'region,total\nnorth,120\n'
 import tempfile
 from pathlib import Path
 
-from mountainash_transport import Gzip, StorageFacade, TransformError
+from mountainash_transport import Gzip, RandomAccessUnavailableError, StorageFacade, TransformError
 
 with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage:
     path = str(Path(root) / "events.log.gz")
@@ -215,7 +215,7 @@ with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage
 
     try:
         storage.read_stream(path, infer=True, access="random")
-    except ValueError as exc:
+    except RandomAccessUnavailableError as exc:
         print("random:", exc)
 
     try:

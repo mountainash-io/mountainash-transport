@@ -51,13 +51,9 @@ Packages built on transport pass their extras through: `mountainash-files[s3]` i
 
 The package root resolves its public names on first use (PEP 562). `import mountainash_transport` loads almost nothing, and local-only code never imports `httpx` or the cloud SDKs. A name that needs a missing extra fails when you first access it, for example `StoragePath` raises `MissingExtraError` on a base install. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
 
-### Why does `import mountainash_transport.storage.backends as backends` raise `ImportError`?
-
-The package root binds `storage` to a factory function, so `mountainash_transport.storage` is that function and not the subpackage. Use `from` imports for submodules, for example `from mountainash_transport.storage.facade import StorageFacade`. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
-
 ### What is the quickest way to open storage?
 
-`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. The root `storage(provider_type, profile, auth_profile=...)` function builds a facade from a provider type and defaults to local, but it does not accept a location policy or the OAuth arguments. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
+`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. `StorageFacade(provider_type, profile, auth_profile=...)` builds a facade from a provider type. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
 
 ### What does transport leave to other packages?
 
@@ -80,10 +76,6 @@ A path never carries an endpoint. In an S3-family path the host position is the 
 ### Can I use Google Cloud Storage, Azure, FTP, SMB or GitHub repositories?
 
 Not for storage operations. These are settings-only providers: their profile classes validate fields, appear in the registry and load by name with `resolve_storage`, but no backend exists. `StorageFacade.from_path("gs://...")` raises `BackendNotImplementedError`. Installing `[gcs]` or `[azure]` adds the vendor SDK and no backend. See [Settings-only providers](chapters/05-storage-profiles/index.md#settings-only-providers).
-
-### Why does a GCS or FTP profile raise `TransportConnectionError` instead of `BackendNotImplementedError`?
-
-When you pass a settings-only profile to `StorageFacade`, the facade builds the connection before it looks up the backend. `create_connection` has no connection class for these providers and falls back to an HTTP connection, which rejects the profile's arguments. When the provider comes from configuration, check `get_spec(name).implemented` before opening storage. See [BackendNotImplementedError](chapters/05-storage-profiles/index.md#backendnotimplementederror) and [create_connection](chapters/11-connections/index.md#create_connection).
 
 ### How do I check whether a store supports an operation?
 
@@ -149,9 +141,9 @@ The default access mode is sequential, and remote sequential streams are forward
 
 `access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For PyArrow's Parquet reader, a 64 KiB read-ahead (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in the measured setup. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
 
-### Why does `access="random"` raise `ValueError` on a `.gz` file?
+### Why does `access="random"` raise `RandomAccessUnavailableError` on a `.gz` file?
 
-Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is a plain `ValueError`. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
+Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is `RandomAccessUnavailableError`, a `ValueError` subclass, so a consumer can catch it and fall back to buffered access. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can also check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
 
 ### Why did `read_stream()` succeed and reading fail later?
 
@@ -313,7 +305,7 @@ Errors show only a safe form of a location: `scheme://host:port/path` for `schem
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing) and [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
@@ -351,7 +343,7 @@ Add the provider type and URL scheme, a storage profile and spec, a connection c
 
 ### Does a new remote backend get location policy checks automatically?
 
-No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping is still silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping fails closed too: `create_connection` raises `BackendNotImplementedError`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Why must a backend import its SDK inside functions?
 

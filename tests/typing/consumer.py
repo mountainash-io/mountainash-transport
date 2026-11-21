@@ -23,6 +23,7 @@ from mountainash_transport import (
     MissingExtraError,
     PathNotFoundError,
     Pipeline,
+    RandomAccessUnavailableError,
     RangePolicy,
     StorageEntry,
     StorageError,
@@ -32,6 +33,7 @@ from mountainash_transport import (
     copy_between,
     create_connection,
     infer_pipeline,
+    materialize,
     resolve_storage,
 )
 from mountainash_transport.settings.storage.profiles.local_storage_profile import LocalStorageProfile
@@ -52,6 +54,7 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.read_stream("/tmp/sales.csv"), BinaryIO)
     assert_type(storage.read_stream("s3://reports/file", access="random",
                                   range_policy=RangePolicy("none")), BinaryIO)
+    assert_type(materialize(storage.read_stream("/tmp/sales.csv"), to="tempfile"), tuple[BinaryIO, int])
     storage.read_stream("/tmp/file", access="mmap")  # type: ignore[arg-type]
     RangePolicy(cache="invalid")  # type: ignore[arg-type]
     assert_type(storage.metadata("/tmp/sales.csv"), StorageEntry)
@@ -85,6 +88,8 @@ def error_contracts() -> None:
     assert issubclass(HttpNotFoundError, HttpTransportError)
     permission: AuthenticationError = PermissionDeniedError("access denied")
     storage_error: StorageError = permission
+    refusal: ValueError = RandomAccessUnavailableError("random access unavailable")
+    typed_refusal: StorageError = RandomAccessUnavailableError("random access unavailable")
 
 
 def profile_contracts() -> None:

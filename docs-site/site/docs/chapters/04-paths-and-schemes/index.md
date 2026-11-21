@@ -176,8 +176,7 @@ ValueError: Unknown scheme in path: 'nfs://server/share'
 
 The `azure://` path normalised to a string because no backend-independent `UPath` class exists for it. The same string form is returned whenever `UPath` cannot represent a URL exactly: `sftp://`, `ftp://` and `ssh://` URLs (whose host `UPath`'s generic implementation would drop), and schemes such as `smb://` whose SDK is not installed. `StoragePath.normalize("sftp://files.example.com:2222/reports/")` returns `'sftp://files.example.com:2222/reports'`, and `join` on it keeps the host and port. Normalising a path never implies that a backend is available; dispatch decides that.
 
-!!! warning "`join` does not account for a query string"
-    `join` appends the name to the whole normalised string, so `StoragePath.join("https://h/a?x=1", "b.csv")` returns `https://h/a?x=1/b.csv`. Join before adding query parameters. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+For a URL with a query string or fragment, `join` puts the name into the path and keeps the query and fragment after it: `StoragePath.join("https://h/a?x=1", "b.csv")` returns `https://h/a/b.csv?x=1`.
 
 <!-- concept:121 -->
 

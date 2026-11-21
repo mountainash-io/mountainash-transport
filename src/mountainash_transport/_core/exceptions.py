@@ -15,6 +15,16 @@ class ObjectChangedError(StorageError):
     """A pinned object changed during ranged reading."""
 
 
+class RandomAccessUnavailableError(StorageError, ValueError):
+    """Random access was requested but the resolved pipeline has transforms.
+
+    Byte ranges of an encoded object do not map to its decoded bytes, so
+    ``read_stream(access="random")`` refuses a non-empty pipeline, whether passed
+    or inferred from the suffix. Fall back to ``access="buffered"`` or
+    ``"sequential"``. Subclasses ``ValueError`` so existing handlers still catch it.
+    """
+
+
 class UnsupportedOperationError(StorageError):
     """Raised when a storage backend does not support a requested operation."""
 

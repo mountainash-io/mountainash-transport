@@ -71,7 +71,8 @@ with facade.read_stream(path, access="random",
 - Backend without ranged capability: `UnsupportedOperationError`.
 - Strong ETags are sent as `If-Match`; a failed precondition becomes `ObjectChangedError`. Weak or missing ETags do not prevent opening, but provide no consistency guarantee. SFTP/local handles have no ETag pinning.
 - Wrong range interval/total, short or oversized bodies: `StorageError`.
-- `range_policy` outside random mode, unknown access modes, or random mode with transforms: `ValueError`.
+- Random mode with transforms, passed or inferred: `RandomAccessUnavailableError` (exported from the package root; subclasses `ValueError`). Catch it to fall back to `access="buffered"`.
+- `range_policy` outside random mode or an unknown access mode: plain `ValueError`.
 
 Random opens can fail during the probe/HEAD/stat, and subsequent reads can fail during range fetches. Sequential errors may occur during consumption. Buffered mode consumes everything before returning, so decode/transfer errors occur within `read_stream`. HTTP retry and OAuth refresh apply before a response is yielded; no body is replayed after consumption starts.
 
@@ -111,4 +112,4 @@ except gzip.BadGzipFile:
     assert handle.closed
 ```
 
-Consumer exceptions also close handles. To spool explicitly, the existing `materialize(stream, to="tempfile")` utility is available; a facade spooling option remains deferred (backlog #25).
+Consumer exceptions also close handles. To spool explicitly, use `materialize(stream, to="tempfile")` (`from mountainash_transport import materialize`); a facade spooling option remains deferred (backlog #25).

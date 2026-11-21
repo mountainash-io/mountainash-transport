@@ -75,7 +75,7 @@ How each backend serves ranges:
 - SFTP: a native remote file handle without prefetch, and no ETag pinning.
 - Local: a reader that wraps the native file object from `open(path, "rb")` and forwards its attributes, with no ranged reader or extra buffer. Local has no ranged-read capability and needs none, so `supports(RangedReadProtocol)` is `False` even though random mode works. `readinto`, `seek`, `tell` and `fileno` behave as on any file.
 
-Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `ValueError`; decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
+Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `RandomAccessUnavailableError` (a `ValueError` subclass); decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
 
 ```python
 from mountainash_transport import ObjectChangedError, RangePolicy
@@ -264,10 +264,10 @@ If you apply a pipeline yourself with `Pipeline.apply_read(source)` instead of g
 
 `materialize(stream, *, to="memory", memory_cutoff=64 * 1024 * 1024)` drains a stream into a seekable buffer and returns `(buffer, length)`, with the buffer positioned at 0. `to="memory"` uses an `io.BytesIO`. `to="tempfile"` uses a `tempfile.SpooledTemporaryFile` that stays in memory up to `memory_cutoff` bytes and moves to disk beyond it, which makes it safe for objects too large for buffered access. The source stream is exhausted afterwards; close it as usual. Use it when you need a known length or a seekable copy and do not want the whole object in memory.
 
-`materialize` is not exported from the package root. Import it from `mountainash_transport._core.transforms.util`:
+Import it from the package root:
 
 ```python
-from mountainash_transport._core.transforms.util import materialize
+from mountainash_transport import materialize
 
 path = "s3://reports/2026/big.bin"
 s3.write(path, bytes(5_000_000))

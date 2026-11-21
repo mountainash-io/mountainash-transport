@@ -87,21 +87,19 @@ Two failures can happen before any connection is made. A scheme the package does
 
 `StorageFacade.for_local(*, policy=None)` returns a facade on the local filesystem with no storage profile. Use it when the code only ever touches local paths and you do not want to derive the provider from a path. Without a profile there is no connection to open, so construction cannot fail on the network. Pass a `LocationPolicy` to confine the facade to a directory tree; a local storage profile with a `ROOT_PATH` does the same through the constructor (see [Confining local paths](../08-location-policy/index.md#confining-local-paths)).
 
-<!-- concept:117 -->
+### The constructor with a provider type
 
-### The `storage()` factory
-
-The package root also exports a function, `storage(provider_type=CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile=None, *, auth_profile=None)`. It constructs a `StorageFacade` directly from a provider type, defaulting to local. It does not accept a location policy or the OAuth arguments; use the constructor or `from_path()` when you need those. Calling it imports the facade module on demand, in line with the package's lazy root ([Installation](../03-installation/index.md#base-install-and-extras)).
+`StorageFacade(provider_type, profile=None, *, auth_profile=None)` builds a facade from a provider type directly. Use the constructor or `from_path()` when you also need a location policy or the OAuth arguments.
 
 ```python
 from mountainash_transport import (
-    BackendNotImplementedError, CONST_STORAGE_PROVIDER_TYPE, StorageFacade, storage,
+    BackendNotImplementedError, CONST_STORAGE_PROVIDER_TYPE, StorageFacade,
 )
 
-with StorageFacade.for_local() as local, storage() as same:
-    print(type(local).__name__, type(same).__name__)
+with StorageFacade.for_local() as local:
+    print(type(local).__name__)
 
-with storage(CONST_STORAGE_PROVIDER_TYPE.HTTP) as web:
+with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.HTTP) as web:
     print("http facade ready")
 
 try:
@@ -118,7 +116,7 @@ except ValueError as error:
 Output:
 
 ```text
-StorageFacade StorageFacade
+StorageFacade
 http facade ready
 gs: BackendNotImplementedError
 foo: Unrecognised scheme in path 'foo://reports/sales.csv'

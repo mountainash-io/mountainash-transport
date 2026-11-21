@@ -7,7 +7,7 @@ import typing as t
 
 import pytest
 
-from mountainash_transport import StorageFacade
+from mountainash_transport import RandomAccessUnavailableError, StorageFacade
 from mountainash_transport._core.exceptions import UnsupportedOperationError
 from mountainash_transport._core.ranged_io import RangePolicy
 from mountainash_transport._core.transforms import Gzip
@@ -67,24 +67,28 @@ def test_each_mode_reads_bytes_and_seeks_on_local(facade, plain, access) -> None
         assert s.read() == b"fgh"
 
 
-def test_random_with_transform_raises_value_error(facade, tmp_path) -> None:
-    p = tmp_path / "d.gz"
+def test_random_with_transform_raises_typed_refusal(facade, tmp_path) -> None:
+    """The capability refusal is typed and still a ValueError (#29)."""
+    p = tmp_path / "d.parquet.gz"
     p.write_bytes(gzip.compress(b"x"))
-    with pytest.raises(ValueError, match="random"):
+    with pytest.raises(RandomAccessUnavailableError):
         facade.read_stream(str(p), access="random", pipeline=Gzip())
-    with pytest.raises(ValueError, match="random"):
+    with pytest.raises(RandomAccessUnavailableError):
         facade.read_stream(str(p), access="random", infer=True)
+    assert issubclass(RandomAccessUnavailableError, ValueError)
 
 
 @pytest.mark.parametrize("access", ["sequential", "buffered"])
 def test_range_policy_requires_random(facade, plain, access) -> None:
-    with pytest.raises(ValueError, match="range_policy"):
+    with pytest.raises(ValueError, match="range_policy") as raised:
         facade.read_stream(plain, access=access, range_policy=RangePolicy())
+    assert not isinstance(raised.value, RandomAccessUnavailableError)
 
 
 def test_unknown_access_raises(facade: StorageFacade, plain: str) -> None:
-    with pytest.raises(ValueError, match="access"):
+    with pytest.raises(ValueError, match="access") as raised:
         facade.read_stream(plain, access="mmap")  # type: ignore[arg-type]
+    assert not isinstance(raised.value, RandomAccessUnavailableError)
 
 
 def test_buffered_decodes_then_buffers(facade, tmp_path) -> None:

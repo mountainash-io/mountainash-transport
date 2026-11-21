@@ -10,7 +10,7 @@ from __future__ import annotations
 import fnmatch
 import warnings
 from typing import Optional, Union
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlsplit, urlunparse, urlunsplit
 
 from upath import UPath
 
@@ -73,7 +73,11 @@ class StoragePath:
         path: Union[str, UPath, None],
         name: Optional[str],
     ) -> Optional[_NormalizedPath]:
-        """Return normalize(path) / stripped(name). None if either is falsy."""
+        """Return normalize(path) / stripped(name). None if either is falsy.
+
+        For a URL with a query string or fragment, the name goes into the path
+        component and the query and fragment stay after it.
+        """
         if path is None or name is None:
             return None
         clean_name = name.strip("/\\") if len(name) > 0 else ""
@@ -82,6 +86,12 @@ class StoragePath:
         base = cls.normalize(path)
         if base is None:
             return None
+        text = str(base)
+        if cls.identify_scheme(text):
+            parts = urlsplit(text)
+            if parts.query or parts.fragment:
+                joined = parts._replace(path=f"{parts.path.rstrip('/')}/{clean_name}")
+                return cls.normalize(urlunsplit(joined))
         return base / clean_name
 
     @classmethod
