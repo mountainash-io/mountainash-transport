@@ -5,9 +5,8 @@ confines every path the facade handles to that directory; ``CREATE_PATH``
 creates ``ROOT_PATH`` if missing. Network filesystems must be mounted by the
 operating system; the library never issues mount commands.
 
-Adapter
-(:func:`mountainash_transport.settings.adapters.local.build_handler_kwargs`)
-emits ``{"root_path": ..., "create_path": ...}``.
+:meth:`LocalStorageProfile.to_handler_kwargs` returns
+``{"root_path": ..., "create_path": ...}``.
 """
 
 from __future__ import annotations

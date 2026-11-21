@@ -41,29 +41,23 @@ Library defaults are `RangePolicy(cache="readahead", block_size=1024*1024, max_b
 
 `block_size` must be positive; `max_blocks` must be positive for `blockcache` and is ignored for other caches. A large caller `read(n)` can allocate `n` bytes; `read()` explicitly consumes the remainder. Cache settings do not cap the caller's requested result size. Handles are not safe for concurrent seek/read operations.
 
-## Format-aware upstream tuning
+## Choosing a cache policy
 
-Transport does **not** infer cache settings from extensions. Format-aware callers, including mountainash-files, may override them per operation.
+Transport does **not** infer cache settings from extensions. Format-aware callers, including mountainash-files, choose a policy per operation; library-specific usage belongs in their documentation.
 
-| Workload | Suggested policy | Evidence / tradeoff |
+| Access pattern | Suggested policy | Evidence / tradeoff |
 |---|---|---|
-| General use, small forward reads | Default `readahead`, 1 MiB | Disposable loopback spike: 2048 × 4 KiB reads needed 9 requests versus 122 with 64 KiB read-ahead |
-| PyArrow `ParquetFile` schema / projected reads | `RangePolicy("readahead", block_size=64*1024)` | PyArrow requests large column chunks itself; smaller read-ahead avoids unnecessary adjacent bytes |
-| PyArrow reads where exact transfer matters most | `RangePolicy("none")` | Avoid speculative acquisition; repeated ranges may incur extra requests |
-| Scattered small reads with revisits | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retain blocks; smaller blocks reduce overfetch but increase request count |
+| Small forward reads | Default `readahead`, 1 MiB | Disposable loopback spike: 2048 × 4 KiB reads needed 9 requests versus 122 with 64 KiB read-ahead |
+| A reader that already requests large chunks itself | `RangePolicy("readahead", block_size=64*1024)` or `RangePolicy("none")` | A large window fetches neighbouring bytes the reader never asks for; `"none"` fetches exactly the requested intervals, so repeated ranges cost extra requests |
+| Scattered small reads with revisits | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retains blocks; smaller blocks reduce overfetch but increase request count |
 
-The disposable 363 MB Parquet spike fetched 18.8 MB for one of twenty columns with 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with 1 MiB read-ahead and 57.3 MB with 4 MiB block caching. These are workload-specific, not performance guarantees. ORC, ZIP and Arrow IPC readers were not measured: benchmark their access patterns before selecting overrides.
+One consumer measurement, reading one of twenty columns of a 363 MB file whose reader requests large chunks: 18.8 MB fetched with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. These are workload-specific, not guarantees; measure your reader's access pattern before choosing.
 
-PyArrow is not a transport runtime dependency:
+## Handle lifetime and threads
 
-```python
-import pyarrow.parquet as pq
-from mountainash_transport import RangePolicy
+A handle returned by `read_stream` is a Python file object owned by the caller. It is not safe for concurrent `seek`/`read` from several threads, and it must not outlive its use: close it (or leave its `with` block) before the facade closes and before the interpreter exits.
 
-with facade.read_stream(path, access="random",
-                        range_policy=RangePolicy("readahead", block_size=64*1024)) as handle:
-    schema = pq.ParquetFile(handle).schema_arrow
-```
+Libraries that read on native worker threads need particular care. If a worker thread holds the last reference to a handle when the interpreter shuts down, releasing it there can abort the process. Give such libraries a handle only for the duration of the call, make sure their threads have released it before you close it, or let them read from a copy they own (for example an in-memory buffer from `access="buffered"` or `materialize`). How a particular library achieves this is documented by the consumer that uses it.
 
 ## Errors, consistency and ownership
 

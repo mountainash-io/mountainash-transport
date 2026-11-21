@@ -1,4 +1,4 @@
-"""HTTP/HTTPS storage backend — read, write, and metadata via HttpRequestEngine."""
+"""HTTP/HTTPS storage backend — read, ranged read, write and metadata via HttpRequestEngine."""
 from __future__ import annotations
 
 import typing as t
@@ -22,8 +22,9 @@ if t.TYPE_CHECKING:
 class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
     """HTTP/HTTPS storage backend.
 
-    Implements StorageReadProtocol, StorageWriteProtocol,
-    and StorageMetadataProtocol using HttpRequestEngine.
+    Implements StorageReadProtocol (including ``open_ranged`` for
+    RangedReadProtocol), StorageWriteProtocol and StorageMetadataProtocol
+    using HttpRequestEngine.
     """
 
     def __init__(

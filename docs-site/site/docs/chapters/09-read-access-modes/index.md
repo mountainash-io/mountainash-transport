@@ -155,32 +155,15 @@ Unknown range cache: 'lru'
 b'@ABC' 200004
 ```
 
-The default suits small forward reads. Format-aware callers, such as `mountainash-files`, are expected to override it per read. Measurements on one local test setup give a starting point, not a guarantee:
+The default suits small forward reads. Format-aware callers, such as `mountainash-files`, are expected to override it per read; how a particular file-format library should be driven belongs in that consumer's documentation. Measurements on one local test setup give a starting point, not a guarantee:
 
-| Workload | Suggested policy | Observed tradeoff |
+| Access pattern | Suggested policy | Observed tradeoff |
 |---|---|---|
-| General small forward reads | Default `readahead`, 1 MiB | 2048 reads of 4 KiB took 9 requests, against 122 with a 64 KiB window |
-| PyArrow `ParquetFile` schema and projected column reads | `RangePolicy("readahead", block_size=64 * 1024)` | PyArrow requests large column chunks itself; a small window avoids fetching neighbouring bytes |
-| PyArrow reads where transferred bytes matter most | `RangePolicy("none")` | No speculative fetching; repeated ranges may cost extra requests |
+| Small forward reads | Default `readahead`, 1 MiB | 2048 reads of 4 KiB took 9 requests, against 122 with a 64 KiB window |
+| A reader that already requests large chunks itself | `RangePolicy("readahead", block_size=64 * 1024)`, or `RangePolicy("none")` | A large window fetches neighbouring bytes the reader never asks for; `"none"` fetches exactly the requested intervals, so repeated ranges cost extra requests |
 | Scattered small reads that revisit regions | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retains blocks; smaller blocks fetch less but make more requests |
 
-Reading one of twenty columns from a 363 MB Parquet file fetched 18.8 MB with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. ORC, ZIP and Arrow IPC readers were not measured; benchmark their access patterns before choosing a policy. PyArrow is not a dependency of transport, but a random handle is a seekable binary file, so it can be passed straight to PyArrow. Here `path` names a small Parquet file in the bucket:
-
-```python
-import pyarrow.parquet as pq
-
-with s3.read_stream(path, access="random",
-                    range_policy=RangePolicy("readahead", block_size=64 * 1024)) as handle:
-    schema = pq.ParquetFile(handle).schema_arrow
-print(schema)
-```
-
-Output:
-
-```text
-region: string
-total: int64
-```
+One consumer measured a reader that requests large chunks itself, reading one of twenty columns from a 363 MB file: 18.8 MB fetched with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. Measure your reader's access pattern before choosing a policy. A random handle is a seekable binary file, so any library that reads from file objects can use it.
 
 The random handle and its cache are implemented in `src/mountainash_transport/_core/ranged_io.py` and described for backend authors in [Read plumbing](../14-backends/index.md#read-plumbing).
 
@@ -233,6 +216,8 @@ Decoder errors keep their own types; they are not reclassified as storage errors
 The stream returned by `read_stream()` belongs to the caller. Closing it, including when the `with` block exits because of an exception, closes every transform layer the facade constructed, in reverse order of construction, and then the backend source. Every close is attempted even if one of them raises; the handle is then marked closed, a second close does nothing, and the last cleanup error propagates. If opening fails part-way, the layers built so far are closed and the original error is raised.
 
 Closing a stream never closes its facade, and the facade must stay open while sequential or random remote streams are in use. A buffered result is independent of both.
+
+A handle is a Python object, and nothing else should keep it past its use. Libraries that read on native worker threads need care: if a worker thread holds the last reference to a handle when the interpreter shuts down, releasing it there can abort the process. Hand such a library the handle only for the duration of the call, make sure its threads have released it before you close the handle, or give it a copy it owns, such as a buffered result. The consumer that drives a particular library documents how it does this.
 
 ```python
 from mountainash_transport import Gzip

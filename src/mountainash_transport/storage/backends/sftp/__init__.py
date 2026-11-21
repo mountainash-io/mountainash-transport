@@ -1,4 +1,4 @@
-"""SFTP storage backend — read, write, list, delete, and metadata via paramiko."""
+"""SFTP storage backend — read, ranged read, write, delete, metadata, directories and enumeration via paramiko."""
 from __future__ import annotations
 
 import typing as t
@@ -8,7 +8,6 @@ from mountainash_transport._core.exceptions import StorageConnectionError
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 from mountainash_transport.storage.registry import register_storage_backend
 
-from ._helpers import _is_not_found, _wrap_sftp_error
 from .sftp_delete import SFTPDeleteMixin
 from .sftp_directory import SFTPDirectoryMixin
 from .sftp_enumerate import SFTPEnumerateMixin
@@ -26,7 +25,7 @@ class SFTPStorageBackend(
     SFTPDirectoryMixin,
     SFTPEnumerateMixin,
 ):
-    """SFTP storage backend — implements Read, Write, List, Delete, Metadata."""
+    """SFTP storage backend: Read (including ranged reads), Write, Delete, Metadata, Directory and Enumerate."""
 
     def __init__(
         self,
@@ -52,6 +51,5 @@ __all__ = [
     "SFTPDeleteMixin",
     "SFTPMetadataMixin",
     "SFTPDirectoryMixin",
-    "_is_not_found",
-    "_wrap_sftp_error",
+    "SFTPEnumerateMixin",
 ]

@@ -1,12 +1,10 @@
-"""FTP / FTPS settings.
+"""FTP / FTPS profile.
 
-Descriptor-driven FTP settings class. Wraps stdlib :mod:`ftplib` —
-either :class:`ftplib.FTP` (when ``USE_TLS=False``) or
-:class:`ftplib.FTP_TLS`. The adapter
-(:func:`mountainash_transport.settings.adapters.ftp.build_handler_kwargs`)
-returns constructor kwargs plus a ``_connect_kwargs`` / ``_post_connect``
-envelope for settings (``port``, ``passive`` mode) that stdlib ``ftplib``
-applies after ``__init__``.
+Wraps stdlib :mod:`ftplib`: :class:`ftplib.FTP`, or :class:`ftplib.FTP_TLS`
+when ``USE_TLS=True``. :meth:`FTPStorageProfile.to_handler_kwargs` returns
+constructor kwargs plus a ``_connect_kwargs`` / ``_post_connect`` envelope for
+settings (``port``, ``passive`` mode) that ``ftplib`` applies after
+``__init__``. Transport has no FTP backend yet.
 """
 
 from __future__ import annotations
@@ -193,19 +191,10 @@ class FTPStorageProfile(Profile):
         host = getattr(self, "HOST", "") or ""
         port = getattr(self, "PORT", 21)
         user = getattr(self, "USERNAME", None) or "anonymous"
-        root = getattr(self, "ROOT_PATH", None)
-        url = f"{scheme}://{user}@{host}:{port}"
-        if root:
-            url = f"{url}{root}"
-        return url
-
-
-
-
-
+        return f"{scheme}://{user}@{host}:{port}"
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Build an ftplib construction envelope from an :class:`FTPSettings`.
+        """Build an ftplib construction envelope from this profile.
 
         Returns SDK-level config only (ftp class, init kwargs from profile
         fields, connect kwargs, post-connect envelope). Auth credentials

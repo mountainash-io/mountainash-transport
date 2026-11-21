@@ -139,7 +139,7 @@ The default access mode is sequential, and remote sequential streams are forward
 
 ### Which access mode should I use for Parquet and other footer-first formats?
 
-`access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For PyArrow's Parquet reader, a 64 KiB read-ahead (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in the measured setup. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
+`access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For a reader that requests large chunks itself, a small read-ahead window (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in one consumer's measurement. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
 
 ### Why does `access="random"` raise `RandomAccessUnavailableError` on a `.gz` file?
 

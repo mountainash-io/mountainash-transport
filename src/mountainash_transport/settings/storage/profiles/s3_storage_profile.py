@@ -1,15 +1,10 @@
-"""Consolidated S3-family settings (AWS S3, S3 Express, R2, MinIO, B2).
+"""S3-family profile (AWS S3, S3 Express, R2, MinIO, B2).
 
-Collapses five per-flavor settings classes into one :class:`S3StorageProfile`
-class discriminated by a ``FLAVOR`` field. All five flavors wrap boto3 for
-data-plane operations; the only structural differences are endpoint URL,
-addressing-style constraints, and a couple of flavor-specific fields
-(``ACCOUNT_ID`` for R2 endpoint templating).
-
-Mirrors the Phase 3 ``AWSSecretsSettings`` pattern: the class is a two-line
-shell; all parameters live on the descriptor; the adapter
-(:func:`mountainash_transport.settings.adapters.s3.build_handler_kwargs`)
-produces boto3 kwargs.
+One :class:`S3StorageProfile` class for five flavors, selected by ``FLAVOR``.
+All of them use boto3; they differ in endpoint URL, addressing-style
+constraints and a few flavor-specific fields (``ACCOUNT_ID`` for the R2
+endpoint). Parameters live on :data:`S3_SPEC`; ``emit(TargetFamily.BOTO)``
+(``_s3_boto_kwargs``) produces the boto3 kwargs.
 """
 
 from __future__ import annotations
@@ -271,9 +266,8 @@ class S3StorageProfile(Profile):
 
     Fields are installed from :data:`S3_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass. The
-    ``FLAVOR`` field discriminates per-flavor endpoint defaults and
-    addressing-style constraints; see
-    :func:`~mountainash_transport.settings.adapters.s3.build_handler_kwargs`.
+    ``FLAVOR`` field selects per-flavor endpoint defaults and
+    addressing-style constraints; see ``_s3_boto_kwargs``.
     """
 
     if t.TYPE_CHECKING:
@@ -362,9 +356,9 @@ class S3StorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim — kept for downstream callers (Phase 4 D2a).
+        """Return the boto3 kwargs ``emit(TargetFamily.BOTO)`` produces.
 
-        Delegates to the unified ``emit()`` pipeline. Internal callers should
-        use ``emit(TargetFamily.BOTO)`` directly. Slated for removal in a later major.
+        Required by :class:`ProfileProtocol`; auth credentials are layered on
+        by ``create_connection``.
         """
         return self.emit(self._sdk_family())

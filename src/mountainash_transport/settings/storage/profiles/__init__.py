@@ -1,19 +1,15 @@
-"""Storage provider settings classes.
+"""Storage provider profiles: one class per provider family.
 
-All 15 legacy provider classes are consolidated into eight descriptor-driven
-settings classes, plus HTTP/HTTPS:
-
-* S3 / S3Express / R2 / MinIO / Backblaze B2 → :class:`S3Settings`
-  (discriminated by ``FLAVOR``)
-* Azure Blob + Azure Files → :class:`AzureStorageSettings`
-  (discriminated by ``SERVICE_TYPE``)
-* GCS → :class:`GCSSettings`
+* S3 / S3 Express / R2 / MinIO / Backblaze B2 → :class:`S3StorageProfile`
+  (``FLAVOR`` selects the flavor)
+* Azure Blob + Azure Files → :class:`AzureStorageProfile` (``SERVICE_TYPE``)
+* GCS → :class:`GCSStorageProfile`
 * SFTP → :class:`SFTPStorageProfile` (paramiko SFTP subsystem)
-* FTP / FTPS → :class:`FTPSettings` (discriminated by ``USE_TLS``)
-* SMB / CIFS → :class:`SMBSettings`
-* Local filesystem → :class:`LocalSettings` (``ROOT_PATH`` confines the facade)
-* GitHub repository read → :class:`GitHubRepoSettings` (scope-cut)
-* HTTP / HTTPS → :class:`HTTPSettings` (httpx-backed)
+* FTP / FTPS → :class:`FTPStorageProfile` (``USE_TLS``)
+* SMB / CIFS → :class:`SMBStorageProfile`
+* Local filesystem → :class:`LocalStorageProfile` (``ROOT_PATH`` confines the facade)
+* GitHub repository read → :class:`GitHubRepoStorageProfile`
+* HTTP / HTTPS → :class:`HTTPStorageProfile` (httpx)
 """
 
 from __future__ import annotations

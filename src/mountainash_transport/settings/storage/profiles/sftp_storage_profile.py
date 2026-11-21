@@ -1,13 +1,8 @@
 """SFTP storage profile.
 
-Provides :class:`SFTPStorageProfile` — settings for the SFTP storage backend
-backed by paramiko. SSH is the connection-layer concern; this profile covers
-the storage provider that performs file operations via the SFTP subsystem.
-
-Mirrors the Phase 4 ``S3Settings`` / ``AzureStorageSettings`` pattern: the
-class is a two-line shell; all parameters live on :data:`SFTP_SPEC`;
-the adapter
-(:func:`mountainash_transport.settings.adapters.sftp.build_handler_kwargs`)
+:class:`SFTPStorageProfile` holds the settings for the SFTP storage backend,
+which uses paramiko's SFTP subsystem over an SSH connection. Parameters live
+on :data:`SFTP_SPEC`; ``emit(TargetFamily.PARAMIKO)`` (``_sftp_paramiko_kwargs``)
 produces kwargs for :meth:`paramiko.SSHClient.connect`.
 """
 
@@ -197,7 +192,7 @@ class SFTPStorageProfile(Profile):
     Fields are installed from :data:`SFTP_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
-    :func:`~mountainash_transport.settings.adapters.sftp.build_handler_kwargs`.
+    ``_sftp_paramiko_kwargs``.
 
     Auth maps onto paramiko ``SSHClient.connect`` kwargs as follows:
         - :class:`PasswordAuth`    → ``password``
@@ -235,18 +230,11 @@ class SFTPStorageProfile(Profile):
         host = getattr(self, "HOST", "") or ""
         port = getattr(self, "PORT", 22)
         user = getattr(self, "USERNAME", None)
-        root = getattr(self, "ROOT_PATH", None)
         user_part = f"{user}@" if user else ""
-        url = f"sftp://{user_part}{host}:{port}"
-        if root:
-            url = f"{url}{root}"
-        return url
-
-
-
+        return f"sftp://{user_part}{host}:{port}"
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.PARAMIKO).
+        """Return the paramiko kwargs ``emit(TargetFamily.PARAMIKO)`` produces.
 
         Returns SDK-level config only (hostname, port, timeout, agent/key
         discovery flags, post-connect envelope). Auth credentials (password,
