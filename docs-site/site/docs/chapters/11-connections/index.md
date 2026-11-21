@@ -163,38 +163,42 @@ False
 
 ### SSHConnection
 
-`SSHConnection` creates a `paramiko.SSHClient` and connects it. Its constructor takes paramiko `connect()` keyword arguments (`hostname`, `port`, `username`, `password`, `pkey`, `timeout` and so on); `create_connection` produces them from an `SFTPStorageProfile`, and you can also pass them yourself. One extra key, `_post_connect`, carries settings applied to the client rather than to `connect()`: `known_hosts_file` and `host_key_policy`. The profile fields `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY` emit into it.
+`SSHConnection` creates a `paramiko.SSHClient` and connects it. Its constructor takes paramiko `connect()` keyword arguments (`hostname`, `port`, `username`, `password`, `pkey`, `timeout` and so on), which `create_connection` produces from an `SFTPStorageProfile` and its auth profile. Host-key settings come from the profile fields `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY`; set those rather than building the keyword arguments yourself.
 
-Host keys are checked against the system known-hosts files plus `known_hosts_file`. An unknown host is handled by the policy: `reject` (the default) refuses it, `warn` logs and connects, `auto_add` trusts it for the life of the client. `warn` and `auto_add` allow a man-in-the-middle, so keep them to trusted networks.
+Host keys are checked against the system known-hosts files plus `KNOWN_HOSTS_FILE`. An unknown host is handled by the policy: `reject` (the default) refuses it, `warn` logs and connects, `auto_add` trusts it for the life of the client. `warn` and `auto_add` allow a man-in-the-middle, so keep them to trusted networks.
 
-The example ran against an in-process SSH server; starting it is not shown. `server.write_known_hosts` is that test server's helper for recording its own key in a known-hosts file.
+The example ran against an in-process SSH server; starting it is not shown. `server.known_hosts_line` is that test server's helper for its own known-hosts entry. `create_connection` returns an `SFTPConnection` for an SFTP profile, with the `SSHConnection` inside it.
 
 ```python
-from mountainash_transport import SSHConnection, TransportConnectionError
+from pathlib import Path
 
-kwargs = {
-    "hostname": "127.0.0.1", "port": server.port,
-    "username": "analyst", "password": "example-password",
-    "allow_agent": False, "look_for_keys": False,
-}
+from mountainash_auth_client import PasswordAuthProfile
+from mountainash_transport import TransportConnectionError, create_connection
+from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+
+auth = PasswordAuthProfile(USERNAME="analyst", PASSWORD="example-password")
+fields = {"HOST": "127.0.0.1", "PORT": server.port, "USERNAME": "analyst",
+          "ALLOW_AGENT": False, "LOOK_FOR_KEYS": False}
 
 try:
-    SSHConnection(kwargs).connect()              # default policy: reject unknown keys
+    create_connection(SFTPStorageProfile(**fields), auth).connect()   # default policy: reject unknown keys
 except TransportConnectionError as exc:
     print(exc)
 
-server.write_known_hosts(known_hosts)            # trust the server's key
-trusted = {**kwargs, "_post_connect": {"known_hosts_file": known_hosts}}
-with SSHConnection(trusted).connect() as ssh:
-    print(type(ssh.client).__name__, ssh.client.get_transport().is_active())
+Path(known_hosts).write_text(server.known_hosts_line("127.0.0.1"))    # trust the server's key
+profile = SFTPStorageProfile(**fields, KNOWN_HOSTS_FILE=known_hosts)
+with create_connection(profile, auth).connect() as sftp:
+    print(type(sftp).__name__, type(sftp.client).__name__)
 ```
 
-Output (the port differs on each run):
+Output:
 
 ```text
-SSH connection failed: Server '[127.0.0.1]:46735' not found in known_hosts
-SSHClient True
+SSH connection failed (SSHException)
+SFTPConnection SFTPClient
 ```
+
+The refusal names only the native exception type, not its text (see [what errors show of a location](../08-location-policy/index.md#what-errors-show-of-a-location)).
 
 Timeouts raise `ConnectionTimeoutError`; DNS, socket, authentication and host-key failures raise `TransportConnectionError`. A missing paramiko raises `MissingExtraError` naming the `[sftp]` extra.
 
