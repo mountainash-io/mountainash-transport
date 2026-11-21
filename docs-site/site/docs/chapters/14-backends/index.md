@@ -248,10 +248,10 @@ Every remote backend retries transient failures, each in the way its SDK allows,
 | `read_stream` | Only opening the stream; bytes already returned cannot be taken back. HTTP and S3 random-access reads retry each range; SFTP ones do not, because the file handle dies with the session |
 | `write` (bytes) | Yes |
 | `write_stream`, `copy_between` into the store | Only when the source is seekable, sent again from the position it started at (the [HTTP body rule](../12-http-engine/index.md#retries)) |
-| `delete`, `mkdir`, `rmdir` | Yes |
+| `delete`, `mkdir`, `rmdir`, `move` | Yes |
 | `copy` (S3) | Yes, by botocore |
 
-An SFTP delete whose reply is lost with the session has already removed the file, so its retry raises `PathNotFoundError`. A reconnect that SSH rejects, for a password or host key, is retried like a network failure until the attempts run out, because the connection layer does not keep paramiko's reason.
+An SFTP delete or move whose reply is lost with the session has already happened, so its retry finds the source gone and raises `PathNotFoundError`. A reconnect that SSH rejects, for a password or host key, is retried like a network failure until the attempts run out, because the connection layer does not keep paramiko's reason.
 
 <!-- concept:219 -->
 ### Backend error mapping
