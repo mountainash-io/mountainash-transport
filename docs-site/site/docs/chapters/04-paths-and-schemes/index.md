@@ -44,7 +44,7 @@ Recognising a scheme does not mean a backend exists for it. The registry is a pa
 | `github` | | `github` | none |
 | `ssh` | | `ssh` | none |
 
-The five S3-compatible schemes each map to their own provider type, and one S3 backend class is registered for all five. The scheme says which family a path belongs to; the [storage profile](../05-storage-profiles/index.md#provider-profiles) says which endpoint, region and addressing style to use. `ssh` is recognised because SSH is a connection type in transport (see [leaf connections](../11-connections/index.md#leaf-connections)), but there is no storage backend that reads or writes over a plain `ssh://` path. Two provider types, `nfs` and `azure_files`, exist in the enum with no scheme at all.
+The five S3-compatible schemes each map to their own provider type, and one S3 backend class is registered for all five. The scheme says which family a path belongs to; the [storage profile](../05-storage-profiles/index.md#provider-profiles) says which endpoint, region and addressing style to use. `ssh` is recognised because SSH is a connection type in transport (see [leaf connections](../11-connections/index.md#leaf-connections)), but there is no storage backend that reads or writes over a plain `ssh://` path. Every provider type in the enum is reachable from at least one scheme.
 
 Scheme identification is case-insensitive and resolves aliases. A scheme that is not in the table is reported as unknown (`None`), not guessed.
 

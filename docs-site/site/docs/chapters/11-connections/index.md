@@ -378,7 +378,6 @@ Connection failures raise `TransportConnectionError` (exported from `mountainash
 | `ConnectionTimeoutError` | A connect timed out, or tunnel workers did not stop within one second |
 | `TunnelEndpointError` | A tunnelled target would reach the network outside the tunnel: its SDK would resolve its own endpoint (S3 `aws`/`express` without `ENDPOINT_URL`), or an S3 target assumes a role and would call AWS STS directly |
 | `UnsupportedAuthProfileError` | The auth mode is not in the profile's `supported_auth` (raised by `create_connection` and by named-profile resolution) |
-| `TokenExchangeError`, `TokenRefreshError`, `AuthorizationRequired` | Defined for OAuth token failures; transport's own connection code does not raise them, since OAuth flows belong to `mountainash-auth-client` |
 
 `TransportConnectionError` is separate from the `StorageError` hierarchy ([Errors](../03-installation/index.md#errors)): handlers for storage errors do not catch it.
 

@@ -85,8 +85,7 @@ def _validate_container_or_share(v: t.Optional[str]) -> t.Optional[str]:
 
 AZURE_STORAGE_SPEC = StorageProfileSpec(
     name="azure_storage",
-    # Canonical provider_type is AZURE_BLOB; the AZURE_FILES type is
-    # handled by the same settings class with SERVICE_TYPE='files'.
+    # One provider type for Blob and Files; SERVICE_TYPE selects the service.
     provider_type=CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB,
     sdk_package="azure-storage-blob",
     handler_module="mountainash_transport.storage.backends.azure",
