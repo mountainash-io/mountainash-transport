@@ -305,7 +305,7 @@ The [support matrix and known limits](reference/support-matrix.md#known-limits) 
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
-Yes. On both, `rmdir()` removes only an empty directory and raises `StorageError` for a non-empty one, leaving it untouched. Pass `recursive=True` to remove the directory and everything inside it; symbolic links inside are removed, not followed. See [Directory operations](chapters/07-file-operations/index.md#directory-operations).
+Yes. On both, `rmdir()` removes only an empty directory and raises `StorageError` for a non-empty one, leaving it untouched. Pass `recursive=True` to remove the directory and everything inside it; symbolic links inside are removed, not followed. A file, a link to a directory or a path below a file raises `StorageError` rather than `PathNotFoundError`, even on SFTP servers that report it as "no such file". See [Directory operations](chapters/07-file-operations/index.md#directory-operations).
 
 ### How much memory does writing a large stream to SFTP use?
 

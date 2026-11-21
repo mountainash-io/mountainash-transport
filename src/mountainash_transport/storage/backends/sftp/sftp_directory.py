@@ -99,12 +99,36 @@ class SFTPDirectoryMixin:
         path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
-            if not recursive:
-                sftp.rmdir(path)
-                return
-            if _require_file_type(sftp.lstat(path).st_mode, path) != stat_module.S_IFDIR:
+            try:
+                if not recursive:
+                    sftp.rmdir(path)
+                    return
+                kind = _require_file_type(sftp.lstat(path).st_mode, path)
+            except OSError as error:
+                if _is_not_found(error):
+                    _check_not_absent(sftp, path)
+                raise
+            if kind != stat_module.S_IFDIR:
                 raise NotADirectoryError(errno.ENOTDIR, "Not a directory", path)
             _remove_tree(sftp, path)
+
+
+def _check_not_absent(sftp: object, path: str) -> None:
+    """Recover ENOTDIR that servers report as NO_SUCH_FILE (OpenSSH, paramiko).
+
+    Raises ``NotADirectoryError`` when *path* exists but is not a directory (a
+    file, or a link, which is not followed) or when an ancestor is not a directory.
+    Returns when *path* is really absent, so the caller re-raises its original error.
+    """
+    try:
+        attrs = sftp.lstat(path)  # type: ignore[attr-defined]
+    except OSError as error:
+        if not _is_not_found(error):
+            raise
+        _check_not_directory(sftp, posixpath.dirname(path.rstrip("/")))
+        return
+    if _require_file_type(attrs.st_mode, path) != stat_module.S_IFDIR:
+        raise NotADirectoryError(errno.ENOTDIR, "Not a directory", path)
 
 
 def _remove_tree(sftp: object, path: str) -> None:
