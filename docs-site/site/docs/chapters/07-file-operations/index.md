@@ -348,3 +348,22 @@ True
 An S3-family `copy()` stays server side at any size: objects under 4 GiB are copied with one `CopyObject` request, larger ones with multipart `UploadPartCopy`, below every provider's [single-request copy limit](../14-backends/index.md#where-backends-differ).
 
 To copy between two different stores, for example from SFTP to S3, or to copy within SFTP, use `copy_between()`, which streams from one facade into another and can apply transforms on the way ([Copying between backends](../10-stream-transforms/index.md#copying-between-backends)).
+
+## Moving
+
+`move(source, destination, *, create_parents=True)` renames a file in the same store with the store's own rename, so it is atomic where the store's rename is: `os.replace` on local disk (within one filesystem) and the OpenSSH `posix-rename@openssh.com` extension on SFTP. An existing destination is replaced. Missing parent directories are created unless `create_parents=False`, in which case the missing parent raises `PathNotFoundError`. A missing source raises `PathNotFoundError`, and both paths are checked against the location policy.
+
+```python
+for folder in (root, f"{root}/outbox"):
+    local.write(f"{folder}/draft.csv", b"region,total\n")
+local.move(f"{root}/draft.csv", f"{root}/outbox/draft.csv")   # replaces the existing file
+print(local.exists(f"{root}/draft.csv"), local.read(f"{root}/outbox/draft.csv"))
+```
+
+Output:
+
+```text
+False b'region,total\n'
+```
+
+The S3 family and HTTP have no rename and raise `UnsupportedOperationError`; on S3, copy and then delete if a non-atomic move is acceptable. A local move to another filesystem raises `StorageError` and leaves the source in place. SFTP servers without the OpenSSH extension raise `StorageError` as well, because plain SFTP rename refuses an existing destination.

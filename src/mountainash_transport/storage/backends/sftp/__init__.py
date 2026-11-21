@@ -14,6 +14,7 @@ from .sftp_delete import SFTPDeleteMixin
 from .sftp_directory import SFTPDirectoryMixin
 from .sftp_enumerate import SFTPEnumerateMixin
 from .sftp_metadata import SFTPMetadataMixin
+from .sftp_move import SFTPMoveMixin
 from .sftp_read import SFTPReadMixin
 from .sftp_write import SFTPWriteMixin
 
@@ -30,14 +31,16 @@ class SFTPStorageBackend(
     SFTPMetadataMixin,
     SFTPDirectoryMixin,
     SFTPEnumerateMixin,
+    SFTPMoveMixin,
 ):
-    """SFTP storage backend: Read (including ranged reads), Write, Delete, Metadata, Directory and Enumerate.
+    """SFTP storage backend: Read (including ranged reads), Write, Delete, Metadata, Directory, Enumerate and Move.
 
     Every operation that loses its SSH session is retried under the profile's
     ``RETRY_*`` fields, reconnecting before each retry. A stream returned by
     ``read_to_stream`` or ``open_ranged`` is not: only opening it is retried.
     ``write_from_stream`` is retried only for a seekable source, which is sent
-    again from the position it started at.
+    again from the position it started at. A ``move`` whose reply was lost
+    with the session finds its source gone on retry and raises ``PathNotFoundError``.
     """
 
     def __init__(
@@ -125,6 +128,10 @@ class SFTPStorageBackend(
     ) -> EnumerateResult:
         return self._retry.call(lambda: super(SFTPStorageBackend, self).list_objects(
             prefix, delimiter=delimiter, max_results=max_results))
+
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> None:
+        self._retry.call(lambda: super(SFTPStorageBackend, self).move(
+            source, destination, create_parents=create_parents))
 
 
 __all__ = [

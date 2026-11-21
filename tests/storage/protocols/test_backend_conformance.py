@@ -8,7 +8,7 @@ from mountainash_transport.storage.protocols import (
     RangedReadProtocol,
     StorageReadProtocol, StorageWriteProtocol,
     StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
-    StorageCopyProtocol, StorageDirectoryProtocol,
+    StorageCopyProtocol, StorageDirectoryProtocol, StorageMoveProtocol,
 )
 from mountainash_transport.storage.registry import get_registered_backends
 import mountainash_transport.storage.backends  # noqa: F401
@@ -25,14 +25,14 @@ EXPECTED_PROTOCOLS = {
         StorageReadProtocol, StorageWriteProtocol,
         StorageDeleteProtocol, StorageMetadataProtocol,
         StorageCopyProtocol, StorageDirectoryProtocol,
-        StorageEnumerateProtocol,
+        StorageEnumerateProtocol, StorageMoveProtocol,
     },
     **{provider: _S3_PROTOCOLS for provider in _S3_FAMILY},
     P.SFTP: {
         StorageReadProtocol, StorageWriteProtocol,
         StorageDeleteProtocol, StorageMetadataProtocol,
         StorageDirectoryProtocol,
-        StorageEnumerateProtocol, RangedReadProtocol,
+        StorageEnumerateProtocol, RangedReadProtocol, StorageMoveProtocol,
     },
     P.HTTP: {
         StorageReadProtocol, StorageWriteProtocol, StorageMetadataProtocol,
@@ -43,11 +43,11 @@ EXPECTED_PROTOCOLS = {
 # Local random access uses the native file handle, not the ranged-read protocol.
 EXCLUDED_PROTOCOLS = {
     P.LOCAL: {RangedReadProtocol},
-    **{provider: {StorageDirectoryProtocol} for provider in _S3_FAMILY},
+    **{provider: {StorageDirectoryProtocol, StorageMoveProtocol} for provider in _S3_FAMILY},
     P.SFTP: {StorageCopyProtocol},
     P.HTTP: {
         StorageEnumerateProtocol,
-        StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol,
+        StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol, StorageMoveProtocol,
     },
 }
 
@@ -70,6 +70,7 @@ _README_COLUMNS = {
     "Metadata": StorageMetadataProtocol,
     "Delete": StorageDeleteProtocol,
     "Copy": StorageCopyProtocol,
+    "Move": StorageMoveProtocol,
     "Directories": StorageDirectoryProtocol,
     "Object enumeration": StorageEnumerateProtocol,
     "Ranged reads": RangedReadProtocol,

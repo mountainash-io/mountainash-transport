@@ -124,7 +124,7 @@ Explained in [Copying](chapters/07-file-operations/index.md#copying).
 
 ## `copy_between`
 
-The function that copies one file between two open facades, possibly on different backends, by streaming the source's `read_stream` into the destination's `write_stream`. Optional source and destination pipelines decode and encode during the copy, and both facades stay open afterwards.
+The function that copies one file between two open facades, possibly on different backends, by streaming the source's `read_stream` into the destination's `write_stream`. With no pipeline it uses the store's native copy when the facades are the [same store](#same_store). Optional source and destination pipelines decode and encode during the copy, and both facades stay open afterwards.
 
 Related: [`copy`](#copy), [`Pipeline`](#pipeline).
 
@@ -466,6 +466,14 @@ Related: [Storage profile](#storage-profile), [`STORAGE_REGISTRY`](#storage_regi
 
 Explained in [Configuration comes from settings](chapters/02-mountainash-ecosystem/index.md#configuration-comes-from-settings).
 
+## `move`
+
+The facade method that renames a file in the same store with the store's native rename, replacing an existing destination: `os.replace` on local disk and OpenSSH's `posix-rename` on SFTP. The S3 family and HTTP have no rename and raise `UnsupportedOperationError`.
+
+Related: [`StorageMoveProtocol`](#storagemoveprotocol), [`copy`](#copy).
+
+Explained in [Moving](chapters/07-file-operations/index.md#moving).
+
 ## Named profile
 
 A storage profile and its credentials declared by name in a configuration file's `storage_profiles:` section, with a `provider`, `parameters` and an optional `auth` block. Secret references in it are resolved by `mountainash-settings`, and `resolve_storage` loads it.
@@ -738,6 +746,14 @@ Related: [S3 family](#s3-family), [Support matrix](#support-matrix).
 
 Explained in [S3 family](chapters/14-backends/index.md#s3-family).
 
+## `same_store`
+
+The facade method that reports whether another facade addresses the same store with the same credentials: both open, the same provider type, and equal storage profiles, auth profiles and location policies, compared by value. `copy_between` uses it to choose the native copy.
+
+Related: [`copy_between`](#copy_between).
+
+Explained in [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
+
 ## Scheme dispatch
 
 The chain that turns a path into a backend: identify the canonical URL scheme, take the provider type from its `SchemeSpec`, then look up the backend registered for that provider type. `StorageFacade.from_path` runs it, and `detect_provider_from_path` exposes the first two steps.
@@ -889,6 +905,14 @@ The storage protocol for querying a path without reading it: `get_metadata` retu
 Related: [Metadata queries](#metadata-queries), [Storage protocol](#storage-protocol).
 
 Explained in [Metadata](chapters/13-architecture/index.md#metadata).
+
+## `StorageMoveProtocol`
+
+The storage protocol for renaming within one backend through `move(source, destination, *, create_parents=True)`, using the store's native rename. Local storage and SFTP implement it; the S3 family and HTTP do not.
+
+Related: [`move`](#move), [Storage protocol](#storage-protocol).
+
+Explained in [Move](chapters/13-architecture/index.md#move).
 
 ## `StoragePath`
 

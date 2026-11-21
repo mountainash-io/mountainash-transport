@@ -280,7 +280,7 @@ Backends do not close it either: the stream an SDK receives is a guard that leav
 
 `copy_between(source_path, destination_path, source_facade, destination_facade, *, source_pipeline=None, destination_pipeline=None)` copies one file between two open facades, which may use different backends. `source_pipeline` decodes what is read; `destination_pipeline` encodes what is written. Use them to recompress, encrypt or decrypt during the copy. Both facades are borrowed: they must already be open, and `copy_between` never closes them.
 
-The function streams the source's `read_stream` into the destination's `write_stream`. It uses the backend's native copy instead ([Copying](../07-file-operations/index.md#copying)) only when no pipeline is given, both facades use the same backend class and equal location policies, they share the *identical* storage profile object (compared with `is`, not equality), and the backend supports copy. Two facades built from separate but equal profiles therefore stream the bytes through your process.
+The function streams the source's `read_stream` into the destination's `write_stream`. It uses the backend's native copy instead ([Copying](../07-file-operations/index.md#copying)) when no pipeline is given, the backend supports copy, and `source_facade.same_store(destination_facade)` is true: both facades are open, have the same provider type, and have equal storage profiles, auth profiles and location policies. Profiles compare by value, so two facades built from separate but equal profiles and credentials copy natively. Different credentials for the same endpoint stream through your process, because a native copy would run with only the source's rights.
 
 This example copies a local file to an S3 bucket, compressing on the way. It ran against an in-process S3 endpoint; the endpoint setup is not shown. The `IAMAuthProfile` comes from `mountainash-auth-client` (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)).
 
@@ -321,8 +321,8 @@ True
 
 A failure part-way through can leave a partial destination object; `copy_between` does no cleanup or atomic rename. The destination backend decides how the stream is written.
 
-!!! note "SFTP destinations buffer the payload"
-    An SFTP backend reads the whole incoming stream into memory before writing it, so a streamed copy to SFTP holds the full payload in memory. See [Where backends differ](../14-backends/index.md#where-backends-differ) and the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+!!! note "Memory use"
+    Every backend reads the incoming stream in chunks, so a streamed copy uses bounded memory; a `GPG` pipeline is the exception. See [Where backends differ](../14-backends/index.md#where-backends-differ).
 
 The function is defined in `src/mountainash_transport/storage/facade/cross_backend.py`.
 
