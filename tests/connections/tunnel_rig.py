@@ -1,11 +1,13 @@
-"""Real paramiko bastion, TLS/plain HTTP targets and an SSH/SFTP target for tunnel tests.
+"""Real paramiko SSH servers and HTTP targets for tunnel, SFTP and example tests.
 
 Only the bastion resolves ``target.test`` (to 127.0.0.1), so a request that
-reaches a target proves it went through the tunnel.
+reaches a target proves it went through the tunnel. :class:`DirectorySFTPTarget`
+serves a local directory over SFTP for tests and recipes that read and write.
 """
 from __future__ import annotations
 
 import datetime
+import os
 import select
 import socket
 import ssl
@@ -235,3 +237,98 @@ class _ListingSFTP(paramiko.SFTPServerInterface):
         attrs.filename = "remote.csv"
         attrs.st_mode = 0o100644
         return [attrs]
+
+
+class DirectorySFTPTarget(_SSHServer):
+    """SSH server whose SFTP subsystem reads and writes real files.
+
+    With *root*, SFTP paths resolve under that directory (``/a`` is ``root/a``).
+    Without it, paths are host paths, relative ones against the process's cwd.
+    """
+
+    def __init__(self, root: Path | None = None) -> None:
+        self.root = root
+        super().__init__()
+
+    def _interface(self) -> paramiko.ServerInterface:
+        return _PasswordInterface()
+
+    def _prepare(self, transport: paramiko.Transport) -> None:
+        transport.set_subsystem_handler("sftp", paramiko.SFTPServer, _DirectorySFTP, self.root)
+
+
+class _FileHandle(paramiko.SFTPHandle):
+    def stat(self) -> t.Any:
+        try:
+            return paramiko.SFTPAttributes.from_stat(os.fstat(self.readfile.fileno()))
+        except OSError as exc:
+            return paramiko.SFTPServer.convert_errno(exc.errno)
+
+    def chattr(self, attr: t.Any) -> int:
+        return paramiko.sftp.SFTP_OK
+
+
+class _DirectorySFTP(paramiko.SFTPServerInterface):
+    """Map SFTP paths onto the filesystem; errors become SFTP status codes."""
+
+    def __init__(self, server: t.Any, root: Path | None) -> None:
+        super().__init__(server)
+        self._root = root
+
+    def _real(self, path: str) -> str:
+        if self._root is None:
+            return path  # like sftp-server: the kernel resolves links and "..", relative to cwd
+        return str(self._root / path.lstrip("/"))
+
+    def _attempt(self, action: t.Callable[[], t.Any]) -> t.Any:
+        try:
+            return action()
+        except OSError as exc:
+            return paramiko.SFTPServer.convert_errno(exc.errno)
+
+    def list_folder(self, path: str) -> t.Any:
+        def listing() -> list[paramiko.SFTPAttributes]:
+            real = self._real(path)
+            entries = []
+            for name in os.listdir(real):
+                attrs = paramiko.SFTPAttributes.from_stat(os.lstat(os.path.join(real, name)))
+                attrs.filename = name
+                entries.append(attrs)
+            return entries
+        return self._attempt(listing)
+
+    def stat(self, path: str) -> t.Any:
+        return self._attempt(lambda: paramiko.SFTPAttributes.from_stat(os.stat(self._real(path))))
+
+    def lstat(self, path: str) -> t.Any:
+        return self._attempt(lambda: paramiko.SFTPAttributes.from_stat(os.lstat(self._real(path))))
+
+    def open(self, path: str, flags: int, attr: t.Any) -> t.Any:
+        def opened() -> _FileHandle:
+            fd = os.open(self._real(path), flags, 0o644)
+            if flags & os.O_WRONLY:
+                mode = "ab" if flags & os.O_APPEND else "wb"
+            elif flags & os.O_RDWR:
+                mode = "a+b" if flags & os.O_APPEND else "r+b"
+            else:
+                mode = "rb"
+            handle = _FileHandle(flags)
+            handle.filename = self._real(path)
+            handle.readfile = handle.writefile = os.fdopen(fd, mode)
+            return handle
+        return self._attempt(opened)
+
+    def remove(self, path: str) -> t.Any:
+        return self._attempt(lambda: os.remove(self._real(path)) or paramiko.sftp.SFTP_OK)
+
+    def rename(self, oldpath: str, newpath: str) -> t.Any:
+        return self._attempt(lambda: os.rename(self._real(oldpath), self._real(newpath)) or paramiko.sftp.SFTP_OK)
+
+    def mkdir(self, path: str, attr: t.Any) -> t.Any:
+        return self._attempt(lambda: os.mkdir(self._real(path)) or paramiko.sftp.SFTP_OK)
+
+    def rmdir(self, path: str) -> t.Any:
+        return self._attempt(lambda: os.rmdir(self._real(path)) or paramiko.sftp.SFTP_OK)
+
+    def chattr(self, path: str, attr: t.Any) -> int:
+        return paramiko.sftp.SFTP_OK

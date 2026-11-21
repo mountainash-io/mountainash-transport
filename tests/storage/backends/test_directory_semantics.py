@@ -1,4 +1,4 @@
-"""Shared filesystem contracts, with SFTP SDK calls backed by temporary files."""
+"""Shared filesystem contracts: Local, SFTP with a file-backed fake client, and SFTP over a real paramiko server."""
 from __future__ import annotations
 
 import errno
@@ -52,10 +52,31 @@ class _FilesystemSFTP:
         os.remove(path)
 
 
-@pytest.fixture(params=["local", "sftp"])
+@pytest.fixture(scope="module")
+def sftp_server_connection(tmp_path_factory: pytest.TempPathFactory) -> t.Iterator[t.Any]:
+    """A connected SFTPConnection to an in-process paramiko server serving host paths."""
+    from connections.tunnel_rig import DirectorySFTPTarget
+    from mountainash_auth_client import PasswordAuthProfile
+    from mountainash_transport import create_connection
+    from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+
+    server = DirectorySFTPTarget()
+    known = tmp_path_factory.mktemp("sftp") / "known_hosts"
+    known.write_text(server.known_hosts_line("127.0.0.1"))
+    profile = SFTPStorageProfile(HOST="127.0.0.1", PORT=server.port, USERNAME="u",
+                                 KNOWN_HOSTS_FILE=str(known), LOOK_FOR_KEYS=False, ALLOW_AGENT=False)
+    connection = create_connection(profile, PasswordAuthProfile(USERNAME="u", PASSWORD="p")).connect()
+    yield connection
+    connection.disconnect()
+    server.close()
+
+
+@pytest.fixture(params=["local", "sftp", "sftp_server"])
 def backend(request: pytest.FixtureRequest) -> LocalStorageBackend | SFTPStorageBackend:
     if request.param == "local":
         return LocalStorageBackend()
+    if request.param == "sftp_server":
+        return SFTPStorageBackend(connection=request.getfixturevalue("sftp_server_connection"))
     return SFTPStorageBackend(connection=SimpleNamespace(client=_FilesystemSFTP()))
 
 
@@ -200,7 +221,14 @@ def test_rmdir_missing_path_is_not_found(backend: t.Any, tmp_path: Path, recursi
 
 @pytest.mark.parametrize("recursive", [False, True])
 @pytest.mark.parametrize("kind", ["file", "directory-link"])
-def test_rmdir_refuses_non_directories(backend: t.Any, tmp_path: Path, recursive: bool, kind: str) -> None:
+def test_rmdir_refuses_non_directories(
+    backend: t.Any, tmp_path: Path, recursive: bool, kind: str, request: pytest.FixtureRequest,
+) -> None:
+    if request.node.callspec.params["backend"] == "sftp_server" and not recursive:
+        request.applymarker(pytest.mark.xfail(strict=True, reason=(
+            "backlog #68: SFTP servers (OpenSSH, paramiko) report rmdir's ENOTDIR as NO_SUCH_FILE, "
+            "so the backend raises PathNotFoundError for a file or directory link"
+        )))
     real = tmp_path / "real"
     real.mkdir()
     (real / "keep.txt").write_bytes(b"keep")
