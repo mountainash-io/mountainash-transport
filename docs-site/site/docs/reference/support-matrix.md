@@ -30,7 +30,4 @@ These behaviours are current and affect correct use. Each one is also noted wher
 | Area | Behaviour | Where it is explained |
 |---|---|---|
 | Tunnels (SDK-resolved endpoints) | An `aws` or `express` flavour S3 profile without `ENDPOINT_URL`, or an S3 target that assumes a role (`ROLE_ARN`, or a `PROFILE_NAME` whose AWS config sets `role_arn`), cannot be routed through a tunnel; `connect()` raises `TunnelEndpointError` instead of connecting directly to AWS or AWS STS. | [Decorator connections](../chapters/11-connections/index.md#decorator-connections) |
-| HTTP retries | A 429 is retried for any method and any body. Transport errors and other retryable statuses are not retried when the body was passed as a non-seekable stream. | [Retries](../chapters/12-http-engine/index.md#retries) |
-| SFTP writes | `write_stream` to SFTP reads the whole source stream into memory before uploading, including during `copy_between` into SFTP. | [Where backends differ](../chapters/14-backends/index.md#where-backends-differ) |
-| S3 listing | Enumeration with a result limit lists every page before truncating. | [Where backends differ](../chapters/14-backends/index.md#where-backends-differ) |
 | Native copy | `copy_between` uses a backend's native copy only when both facades share the same profile object; equal but separate profiles download and re-upload. | [Copying between backends](../chapters/10-stream-transforms/index.md#copying-between-backends) |

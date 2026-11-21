@@ -3,6 +3,9 @@
 from enum import StrEnum
 import typing as t
 
+DEFAULT_CHUNK_SIZE = 64 * 1024
+"""Bytes read or sent per chunk when transport moves a stream (local writes, uploads, codecs)."""
+
 
 class _FindMemberMixin(StrEnum):
     """Shared ``find_member`` classmethod for storage enums.

@@ -8,7 +8,7 @@ import time
 import zlib
 from typing import BinaryIO
 
-_DEFAULT_CHUNK = 64 * 1024
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE as _DEFAULT_CHUNK
 
 
 class GzipCompressingReader(io.RawIOBase):
