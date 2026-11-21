@@ -35,8 +35,8 @@ def example_servers(tmp_path_factory: pytest.TempPathFactory) -> t.Iterator[dict
         "TRANSPORT_EXAMPLE_TARGET_HOST": TARGET,  # only the bastion resolves this name
         "TRANSPORT_EXAMPLE_TARGET_PORT": str(target.port),
     }
-    for server in (sftp, bastion, target):
-        server.close()
+    for close in (sftp.close, bastion.close, target.close):
+        close()
     assert not any((sftp_root / "home").iterdir()), "the SFTP recipe must clean up after itself"
 
 

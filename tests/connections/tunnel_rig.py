@@ -258,6 +258,10 @@ class DirectorySFTPTarget(_SSHServer):
 
 
 class _FileHandle(paramiko.SFTPHandle):
+    filename: str
+    readfile: t.IO[t.Any]
+    writefile: t.IO[t.Any]
+
     def stat(self) -> t.Any:
         try:
             return paramiko.SFTPAttributes.from_stat(os.fstat(self.readfile.fileno()))
@@ -285,6 +289,12 @@ class _DirectorySFTP(paramiko.SFTPServerInterface):
             return action()
         except OSError as exc:
             return paramiko.SFTPServer.convert_errno(exc.errno)
+
+    def _done(self, action: t.Callable[..., None], *paths: str) -> t.Any:
+        def run() -> int:
+            action(*(self._real(path) for path in paths))
+            return paramiko.sftp.SFTP_OK
+        return self._attempt(run)
 
     def list_folder(self, path: str) -> t.Any:
         def listing() -> list[paramiko.SFTPAttributes]:
@@ -319,16 +329,16 @@ class _DirectorySFTP(paramiko.SFTPServerInterface):
         return self._attempt(opened)
 
     def remove(self, path: str) -> t.Any:
-        return self._attempt(lambda: os.remove(self._real(path)) or paramiko.sftp.SFTP_OK)
+        return self._done(os.remove, path)
 
     def rename(self, oldpath: str, newpath: str) -> t.Any:
-        return self._attempt(lambda: os.rename(self._real(oldpath), self._real(newpath)) or paramiko.sftp.SFTP_OK)
+        return self._done(os.rename, oldpath, newpath)
 
     def mkdir(self, path: str, attr: t.Any) -> t.Any:
-        return self._attempt(lambda: os.mkdir(self._real(path)) or paramiko.sftp.SFTP_OK)
+        return self._done(os.mkdir, path)
 
     def rmdir(self, path: str) -> t.Any:
-        return self._attempt(lambda: os.rmdir(self._real(path)) or paramiko.sftp.SFTP_OK)
+        return self._done(os.rmdir, path)
 
     def chattr(self, path: str, attr: t.Any) -> int:
         return paramiko.sftp.SFTP_OK
