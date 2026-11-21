@@ -13,9 +13,8 @@ except ImportError as _exc:
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
-# --- Legacy/existing public API (kept for backward compat) -------------------
 from .errors import (
-    ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
+    TokenExchangeError, TokenRefreshError, AuthorizationRequired,
     TransportConnectionError, ConnectionTimeoutError, TunnelEndpointError,
 )
 from mountainash_auth_client.oauth.oauth2.flow import OAuthFlow
@@ -78,11 +77,22 @@ _PROVIDER_CONNECTION_MAP: dict[str, type] = {
 
 
 def _connection_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) -> type:
-    """Map provider_type to a leaf connection class."""
+    """Map provider_type to a leaf connection class.
+
+    A profile without a provider type gets ``HTTPConnection``. A provider type
+    with no connection class raises instead of falling back to HTTP.
+    """
     if provider_type is None:
         return HTTPConnection
     provider_str = str(provider_type.value) if hasattr(provider_type, "value") else str(provider_type)
-    return _PROVIDER_CONNECTION_MAP.get(provider_str, HTTPConnection)
+    try:
+        return _PROVIDER_CONNECTION_MAP[provider_str]
+    except KeyError:
+        from mountainash_transport._core.exceptions import BackendNotImplementedError
+        raise BackendNotImplementedError(
+            f"The '{provider_str}' storage provider has no connection implementation. "
+            f"Implemented providers: {sorted(_PROVIDER_CONNECTION_MAP)}"
+        ) from None
 
 
 # --- Provider → SDK target family map ----------------------------------------
@@ -153,8 +163,6 @@ def _emit_kwargs(
 def create_connection(
     profile: ProfileProtocol,
     auth_profile: AuthProfile | None = None,
-    *,
-    auto_authorize: bool = False,
 ) -> ConnectionProtocol:
     """Create the right connection for a profile + auth combination."""
     spec = getattr(profile, "__spec__", None)
@@ -226,7 +234,7 @@ def create_tunnelled_connection(
 
 __all__ = [
     # Legacy
-    "ConnectionError", "TokenExchangeError", "TokenRefreshError", "AuthorizationRequired",
+    "TokenExchangeError", "TokenRefreshError", "AuthorizationRequired",
     "TransportConnectionError", "ConnectionTimeoutError",
     "OAuthFlow",
     "OAuth1Flow",

@@ -5,23 +5,12 @@ import pytest
 
 from mountainash_transport.connections.errors import (
     AuthorizationRequired,
-    ConnectionError,
     TokenExchangeError,
     TokenRefreshError,
     TransportConnectionError,
     ConnectionTimeoutError,
     UnsupportedAuthProfileError,
 )
-
-
-class TestConnectionErrorBase:
-    def test_all_errors_inherit_from_connection_error(self):
-        assert issubclass(TokenExchangeError, ConnectionError)
-        assert issubclass(TokenRefreshError, ConnectionError)
-        assert issubclass(AuthorizationRequired, ConnectionError)
-
-    def test_connection_error_is_exception(self):
-        assert issubclass(ConnectionError, Exception)
 
 
 class TestTokenExchangeError:
@@ -48,10 +37,6 @@ class TestTokenExchangeError:
         with pytest.raises(TokenExchangeError) as exc_info:
             raise TokenExchangeError(url="https://example.com/token", status_code=500, body="server error")
         assert exc_info.value.status_code == 500
-
-    def test_catchable_as_connection_error(self):
-        with pytest.raises(ConnectionError):
-            raise TokenExchangeError(url="https://example.com/token", status_code=400, body="err")
 
 
 class TestTokenRefreshError:
@@ -94,11 +79,6 @@ class TestAuthorizationRequired:
 class TestTransportConnectionError:
     def test_is_exception(self):
         assert issubclass(TransportConnectionError, Exception)
-
-    def test_backwards_compat_alias(self):
-        """ConnectionError name still importable for transition period."""
-        from mountainash_transport.connections.errors import ConnectionError as LegacyAlias
-        assert LegacyAlias is TransportConnectionError
 
 
 class TestConnectionTimeoutError:

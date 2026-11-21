@@ -77,10 +77,6 @@ A path never carries an endpoint. In an S3-family path the host position is the 
 
 Not for storage operations. These are settings-only providers: their profile classes validate fields, appear in the registry and load by name with `resolve_storage`, but no backend exists. `StorageFacade.from_path("gs://...")` raises `BackendNotImplementedError`. Installing `[gcs]` or `[azure]` adds the vendor SDK and no backend. See [Settings-only providers](chapters/05-storage-profiles/index.md#settings-only-providers).
 
-### Why does a GCS or FTP profile raise `TransportConnectionError` instead of `BackendNotImplementedError`?
-
-When you pass a settings-only profile to `StorageFacade`, the facade builds the connection before it looks up the backend. `create_connection` has no connection class for these providers and falls back to an HTTP connection, which rejects the profile's arguments. When the provider comes from configuration, check `get_spec(name).implemented` before opening storage. See [BackendNotImplementedError](chapters/05-storage-profiles/index.md#backendnotimplementederror) and [create_connection](chapters/11-connections/index.md#create_connection).
-
 ### How do I check whether a store supports an operation?
 
 Call `facade.supports(protocol)` with one of the eight protocol classes exported from the package root, such as `StorageDirectoryProtocol` or `StorageCopyProtocol`. Calling an operation the backend lacks raises `UnsupportedOperationError` before any I/O. HTTP cannot list, delete, copy or manage directories; the S3 family has no directories; SFTP has no `copy()`. See [Checking before you call](chapters/06-storage-facade/index.md#checking-before-you-call).
@@ -309,7 +305,7 @@ Errors show only a safe form of a location: `scheme://host:port/path` for `schem
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing) and [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
@@ -347,7 +343,7 @@ Add the provider type and URL scheme, a storage profile and spec, a connection c
 
 ### Does a new remote backend get location policy checks automatically?
 
-No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping is still silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping fails closed too: `create_connection` raises `BackendNotImplementedError`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Why must a backend import its SDK inside functions?
 

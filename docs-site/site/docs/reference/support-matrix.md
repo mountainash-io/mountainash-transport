@@ -21,7 +21,7 @@ The table was produced from `get_registered_backends()` and the protocol classes
 
 ## Settings-only providers
 
-GCS, Azure (Blob and Files), FTP/FTPS, SMB and GitHub repositories have storage profile classes but no backend. A path-only facade such as `StorageFacade.from_path("gs://...")`, or a backend lookup, raises `BackendNotImplementedError`. A facade built with one of these profiles fails earlier, during connection setup, with `TransportConnectionError`, because `create_connection` falls back to an HTTP connection for these providers. See [specs, the registry and settings-only providers](../chapters/05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers).
+GCS, Azure (Blob and Files), FTP/FTPS, SMB and GitHub repositories have storage profile classes but no backend. A path-only facade such as `StorageFacade.from_path("gs://...")`, a facade built with one of these profiles, `create_connection` and a backend lookup all raise `BackendNotImplementedError`. See [specs, the registry and settings-only providers](../chapters/05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers).
 
 ## Known limits
 
@@ -36,4 +36,3 @@ These behaviours are current and affect correct use. Each one is also noted wher
 | S3 listing | Enumeration with a result limit lists every page before truncating. | [Where backends differ](../chapters/14-backends/index.md#where-backends-differ) |
 | Missing extras | `MissingExtraError` names the missing extra only for the `[http]` stack. A missing boto3, paramiko or python-gnupg surfaces as a plain import or connection error. | [Errors](../chapters/03-installation/index.md#errors) |
 | Native copy | `copy_between` uses a backend's native copy only when both facades share the same profile object; equal but separate profiles download and re-upload. | [Copying between backends](../chapters/10-stream-transforms/index.md#copying-between-backends) |
-| Connections | `create_connection` uses `HTTPConnection` for a provider type it has no connection class for, so a settings-only profile fails with a `TransportConnectionError` about unexpected client arguments. | [create_connection](../chapters/11-connections/index.md#create_connection) |

@@ -6,10 +6,6 @@ class TransportConnectionError(Exception):
     """Base exception for all connection operations."""
 
 
-# Backwards-compatible alias during transition.
-ConnectionError = TransportConnectionError
-
-
 class ConnectionTimeoutError(TransportConnectionError):
     """Connection or request timed out."""
 
@@ -35,7 +31,7 @@ class TokenRefreshError(TransportConnectionError):
 
 
 class AuthorizationRequired(TransportConnectionError):
-    """No valid token exists and auto_authorize is False."""
+    """No valid token exists for the provider and user."""
 
     def __init__(self, *, provider: str, user: str) -> None:
         self.provider = provider

@@ -36,7 +36,7 @@ Explained in [The backend registry](chapters/13-architecture/index.md#the-backen
 
 ## `BackendNotImplementedError`
 
-The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile fails earlier with `TransportConnectionError`, because `create_connection` falls back to an HTTP connection; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
+The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile raises it from `create_connection`, which has no connection class for those providers; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
 
 Related: [Settings-only provider](#settings-only-provider), [Backend registry](#backend-registry).
 

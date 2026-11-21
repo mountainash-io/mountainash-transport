@@ -320,25 +320,7 @@ https://storage.googleapis.com/reports
 BackendNotImplementedError: The 'gcs' storage provider is not yet implemented. Implemented providers: ['b2', 'http', 'local', 'minio', 'r2', 's3', 's3express', 'sftp']
 ```
 
-!!! warning "A settings-only profile on the facade fails during connection setup"
-    When you pass a settings-only profile to `StorageFacade`, the facade creates a connection before it looks up the backend. `create_connection` has no connection class for these providers and falls back to an HTTP connection, which rejects the profile's arguments. The error is therefore `TransportConnectionError`, not `BackendNotImplementedError`:
-
-    ```python
-    from mountainash_transport import CONST_STORAGE_PROVIDER_TYPE, StorageFacade, TransportConnectionError
-    from mountainash_transport.settings.storage.profiles import GCSStorageProfile
-
-    gcs = GCSStorageProfile(PROJECT="reports-project", BUCKET_NAME="reports")
-    try:
-        StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS, gcs)
-    except TransportConnectionError as exc:
-        print(f"{type(exc).__name__}: {exc}")
-    ```
-
-    ```text
-    TransportConnectionError: Failed to create HTTP client: Client.__init__() got an unexpected keyword argument 'project'
-    ```
-
-    The same happens for the Azure, FTP, SMB and GitHub profiles. Check `get_spec(name).implemented` before opening storage when the provider comes from configuration. See the [support matrix](../../reference/support-matrix.md) and [create_connection](../11-connections/index.md#create_connection).
+A facade built with a settings-only profile, such as `StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS, gcs)`, also raises `BackendNotImplementedError`. It comes from connection setup, which runs before the backend lookup, so its message says the provider has no connection implementation. The same holds for the Azure, FTP, SMB and GitHub profiles. When the provider comes from configuration, `get_spec(name).implemented` tells you in advance. See [create_connection](../11-connections/index.md#create_connection).
 
 <!-- concept:135 -->
 

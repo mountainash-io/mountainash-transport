@@ -104,8 +104,7 @@ A new backend touches the provider vocabulary, settings, connections, the backen
 5. Facade policy. Add the provider's host check to `_REMOTE_CHECKS` in `src/mountainash_transport/storage/facade/facade.py`. Under an active `LocationPolicy`, a remote provider with no entry is refused with `LocationNotAllowed`, and `test_every_registered_remote_backend_declares_a_location_check` fails for any registered remote backend without one. If the backend reaches locations it derives itself (redirects, followed links), accept a `location_check` keyword and call it on each one; the registry forwards it to constructors that accept it.
 6. Tests and documentation. Add the provider's expected and excluded protocols to the conformance test, write behaviour tests for its calls and error mapping, and update the root README's support matrix, which must match `get_registered_backends()`. A new example under `examples/` needs an index row in `examples/README.md`; `tests/examples/` runs every recipe.
 
-!!! warning "Unmapped providers get an HTTP connection"
-    `create_connection` falls back to `HTTPConnection` for a provider type with no entry in its connection table, without raising. A new backend whose connection mapping is missing receives an HTTP client instead of its own. See the [support matrix and known limits](../../reference/support-matrix.md).
+A provider type with no entry in `_PROVIDER_CONNECTION_MAP` (`src/mountainash_transport/connections/__init__.py`) makes `create_connection` raise `BackendNotImplementedError`, so a new backend also needs its connection class mapped there.
 
 A backend that accepts `auth_strategy` must name it in its constructor (or take `**kwargs`). Otherwise the registry raises `BackendNotImplementedError` when a facade with managed OAuth2 tries to build it.
 

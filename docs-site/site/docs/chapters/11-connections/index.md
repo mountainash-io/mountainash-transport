@@ -22,7 +22,7 @@ The returned connection is not yet connected; call `connect()` or use it as a co
 
 ```python
 from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
-from mountainash_transport import create_connection
+from mountainash_transport import BackendNotImplementedError, create_connection
 from mountainash_transport.settings.storage.profiles import (
     FTPStorageProfile, HTTPStorageProfile, LocalStorageProfile, S3StorageProfile,
     SFTPStorageProfile,
@@ -35,12 +35,16 @@ pairs = [
      IAMAuthProfile(ACCESS_KEY_ID="example-access-key", SECRET_ACCESS_KEY="example-secret")),
     (SFTPStorageProfile(HOST="sftp.example.com", USERNAME="analyst"),
      PasswordAuthProfile(USERNAME="analyst", PASSWORD="example-password")),
-    (FTPStorageProfile(HOST="ftp.example.com"), None),
 ]
 for profile, auth in pairs:
     connection = create_connection(profile, auth)        # no network I/O yet
     print(f"{type(profile).__name__:20} -> {type(connection).__name__}"
           f" (connected={connection.is_connected})")
+
+try:
+    create_connection(FTPStorageProfile(HOST="ftp.example.com"))
+except BackendNotImplementedError as exc:
+    print(f"FTPStorageProfile    -> {type(exc).__name__}")
 
 with create_connection(HTTPStorageProfile()).connect() as http:
     print(type(http.client).__name__, http.client.timeout.read)
@@ -53,14 +57,11 @@ LocalStorageProfile  -> NullConnection (connected=True)
 HTTPStorageProfile   -> HTTPConnection (connected=False)
 S3StorageProfile     -> S3Connection (connected=False)
 SFTPStorageProfile   -> SFTPConnection (connected=False)
-FTPStorageProfile    -> HTTPConnection (connected=False)
+FTPStorageProfile    -> BackendNotImplementedError
 Client 30.0
 ```
 
-The FTP line shows the factory's fallback. A provider type with no entry in the factory's map, which includes the settings-only providers (GCS, Azure, FTP, SMB, GitHub) and profiles with no provider type, is given an `HTTPConnection`. Construction succeeds; `connect()` then fails because httpx does not accept the FTP profile's arguments (see [Connection errors](#connection-errors)).
-
-!!! note "Fallback to `HTTPConnection`"
-    `create_connection` does not reject providers it has no mapping for; it returns an `HTTPConnection` built from that profile's arguments. The error appears at `connect()` as a `TransportConnectionError`, not as `BackendNotImplementedError`. The factory also accepts an `auto_authorize` keyword that currently has no effect. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+A provider type with no entry in the factory's map, which includes the settings-only providers (GCS, Azure, FTP, SMB, GitHub), raises `BackendNotImplementedError` naming the provider, before any client is built. A profile with no provider type at all is given an `HTTPConnection`.
 
 <!-- concept:181 -->
 
@@ -379,7 +380,7 @@ Connection failures raise `TransportConnectionError` (exported from `mountainash
 | `UnsupportedAuthProfileError` | The auth mode is not in the profile's `supported_auth` (raised by `create_connection` and by named-profile resolution) |
 | `TokenExchangeError`, `TokenRefreshError`, `AuthorizationRequired` | Defined for OAuth token failures; transport's own connection code does not raise them, since OAuth flows belong to `mountainash-auth-client` |
 
-The module also exports `ConnectionError` as an alias of `TransportConnectionError`; it shadows Python's built-in `ConnectionError` if you star-import the module. `TransportConnectionError` is separate from the `StorageError` hierarchy ([Errors](../03-installation/index.md#errors)): handlers for storage errors do not catch it.
+`TransportConnectionError` is separate from the `StorageError` hierarchy ([Errors](../03-installation/index.md#errors)): handlers for storage errors do not catch it.
 
 ```python
 import socket
