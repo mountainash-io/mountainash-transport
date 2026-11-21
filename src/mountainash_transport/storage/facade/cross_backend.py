@@ -24,17 +24,17 @@ def copy_between(
 ) -> None:
     """Copy a file between two facades, optionally applying transforms on each side.
 
-    Native same-backend copy is used only when both pipelines are None.
-    Any pipeline argument forces a stream-through copy.
+    Uses the store's native copy when no pipeline is given, the facades address
+    the same store (:meth:`StorageFacade.same_store`) and the store can copy;
+    otherwise streams from the source into the destination.
     """
+    # Fail before any I/O when either side is closed (facade-internal check).
     source_facade._ensure_open()
     destination_facade._ensure_open()
     if (
         source_pipeline is None
         and destination_pipeline is None
-        and isinstance(source_facade._backend, type(destination_facade._backend))
-        and source_facade._policy == destination_facade._policy
-        and source_facade._storage_profile is destination_facade._storage_profile
+        and source_facade.same_store(destination_facade)
         and source_facade.supports(StorageCopyProtocol)
     ):
         source_facade.copy(source_path, destination_path)

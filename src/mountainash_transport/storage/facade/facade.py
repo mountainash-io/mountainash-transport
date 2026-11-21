@@ -113,6 +113,7 @@ class StorageFacade:
     ) -> None:
         self._provider_type = provider_type
         self._storage_profile = storage_profile
+        self._auth_profile = auth_profile  # kept only for same_store(); never displayed
 
         declared = None
         if provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and storage_profile is not None:
@@ -199,6 +200,23 @@ class StorageFacade:
     def _ensure_open(self) -> None:
         if self._closed:
             raise StorageConnectionError("StorageFacade is closed")
+
+    def same_store(self, other: StorageFacade) -> bool:
+        """Whether *other* addresses the same store with the same credentials and location policy.
+
+        True when both facades are open, share a provider type, and their storage
+        profiles, auth profiles and location policies are equal by value. Equal
+        but separately built profiles count as the same store. ``copy_between``
+        uses this to choose the store's native copy.
+        """
+        return (
+            not self._closed
+            and not other._closed
+            and self._provider_type == other._provider_type
+            and self._storage_profile == other._storage_profile
+            and self._auth_profile == other._auth_profile
+            and self._policy == other._policy
+        )
 
     def close(self) -> None:
         """Disconnect the owned connection; further I/O is forbidden.
