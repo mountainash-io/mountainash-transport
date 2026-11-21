@@ -46,38 +46,7 @@ Shape and behaviour are tested separately:
 
 `tests/storage/protocols/test_registry_completeness.py` keeps three sources of truth in step. For every storage profile spec, `spec.implemented` must be `True` exactly when a backend is registered for its provider type. For every scheme with a provider, `get_storage_backend()` must either return a backend or raise `BackendNotImplementedError`, never an opaque `ValueError`. The settings-only providers in [Specs, the registry and settings-only providers](../05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers) pass because their specs say `implemented=False`. `tests/storage/registry/` tests registration, override, lookup, scheme detection and the `auth_strategy` guard.
 
-Registry tests mutate process-wide state. `clear_registry()` empties the mapping, and the built-ins do not come back: they register when the backends package is first imported, and later registry calls see that package as already loaded. A test that clears the registry must restore it itself. A snapshot from `get_registered_backends()` can be re-registered with the public decorator:
-
-```python
-from mountainash_transport import BackendNotImplementedError, StorageFacade
-from mountainash_transport.storage.registry import (
-    clear_registry, get_registered_backends, register_storage_backend,
-)
-
-saved = get_registered_backends()                     # a copy
-clear_registry()
-print(get_registered_backends())                      # -> {}
-
-try:
-    StorageFacade.for_local()
-except BackendNotImplementedError as exc:
-    print(exc)
-
-for provider, cls in saved.items():                   # restore from the snapshot
-    register_storage_backend(provider)(cls)
-print(sorted(get_registered_backends()) == sorted(saved))   # -> True
-```
-
-Output:
-
-```text
-{}
-The 'local' storage provider is not yet implemented. Implemented providers: []
-True
-```
-
-!!! warning
-    `clear_registry()` cannot restore the built-in backends in the same process. After it runs, every facade raises `BackendNotImplementedError` until the backends are registered again by hand. Use it only in tests that save and restore the registry.
+Registry tests mutate process-wide state. The built-in backends register once, when the backends package is first imported, so a test that empties or overrides the registry must put it back. `tests/conftest.py` provides two fixtures for this: `isolated_backend_registry` snapshots the registry and restores it after the test, and `empty_backend_registry` also empties it for the test's duration. Use them rather than editing the registry by hand.
 
 <!-- concept:223 -->
 ### Slim install test

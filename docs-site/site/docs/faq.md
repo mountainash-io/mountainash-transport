@@ -357,10 +357,6 @@ The conformance test checks each backend's expected and excluded protocols. The 
 
 Clone `mountainash-settings` and `mountainash-auth-client` next to the transport checkout, then use the `hatch.toml` scripts: `hatch run test:test` for the full suite with coverage, `hatch run test:test-quick` without coverage, and `hatch run test:test-target-quick <path>` for one file, directory or test id. `hatch run mypy:check` and `hatch run ruff:check` run type checks and lint. See [Tests that guard the contracts](chapters/15-maintaining/index.md#tests-that-guard-the-contracts).
 
-### What happens if I call `clear_registry()`?
-
-The built-in backends do not come back in the same process, so every facade raises `BackendNotImplementedError` until backends are registered again by hand. Use it only in tests that save a snapshot from `get_registered_backends()` and re-register it afterwards. See [Registry completeness tests](chapters/15-maintaining/index.md#registry-completeness-tests).
-
 ### Does the fsspec version matter?
 
 Yes for random reads. The random-access reader uses an internal method of fsspec's cache classes rather than a documented API, so an fsspec release that changes it would affect random reads on S3, SFTP and HTTP. The `[http]` extra constrains fsspec to `>=2026.6.0,<2027`. See [RangedReader](chapters/14-backends/index.md#rangedreader).

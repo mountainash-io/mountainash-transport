@@ -162,11 +162,10 @@ def test_http_backend_rejects_location_check_with_injected_engine():
 
 
 @pytest.fixture
-def toy_gcs_backend():
+def toy_gcs_backend(isolated_backend_registry):
     """Register an in-memory backend for GCS (no built-in check); restore the registry after."""
     import io
     from mountainash_transport.storage.registry import registry as reg
-    snapshot = dict(reg._backend_registry)
     calls = []
 
     @reg.register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS)
@@ -177,11 +176,7 @@ def toy_gcs_backend():
         def write_from_bytes(self, path, data, *, create_parents=True): calls.append(path)
         def write_from_stream(self, path, stream, *, create_parents=True): calls.append(path)
 
-    try:
-        yield calls
-    finally:
-        reg._backend_registry.clear()
-        reg._backend_registry.update(snapshot)
+    return calls
 
 
 def test_remote_provider_without_check_refused_under_policy(toy_gcs_backend):
@@ -206,14 +201,9 @@ def test_every_registered_remote_backend_declares_a_location_check():
 
 
 @pytest.fixture
-def restore_registry():
+def restore_registry(isolated_backend_registry):
     from mountainash_transport.storage.registry import registry as reg
-    snapshot = dict(reg._backend_registry)
-    try:
-        yield reg
-    finally:
-        reg._backend_registry.clear()
-        reg._backend_registry.update(snapshot)
+    return reg
 
 
 @pytest.mark.parametrize("policy", [None, LocationPolicy(allow_unconfined=True)])

@@ -1,20 +1,12 @@
 import pytest
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.exceptions import BackendNotImplementedError
-from mountainash_transport.storage.registry import registry as reg
 from mountainash_transport.storage.registry import register_storage_backend, get_storage_backend
 
 
 @pytest.fixture(autouse=True)
-def restore_backend_registry():
-    """Snapshot the global backend registry and restore it after each test, so the
-    temporary LOCAL override below can't leak into other tests."""
-    snapshot = dict(reg._backend_registry)
-    try:
-        yield
-    finally:
-        reg._backend_registry.clear()
-        reg._backend_registry.update(snapshot)
+def _restore(isolated_backend_registry):
+    """The temporary LOCAL overrides below must not leak into other tests."""
 
 
 def test_auth_strategy_forwarded_when_set():
