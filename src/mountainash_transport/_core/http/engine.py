@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import contextlib
 import email.utils
-import random
 import time
 import typing as t
 
@@ -35,6 +34,7 @@ from mountainash_transport._core.http.errors import (
 )
 from mountainash_transport._core.http.log_safety import install_log_filters
 from mountainash_transport._core.http.policy import IDEMPOTENT_METHODS, RequestPolicy
+from mountainash_transport._core.retry import backoff_delay
 from mountainash_transport._core.http.response import HttpResponse, HttpStreamResponse, url_without_userinfo
 from mountainash_transport._core.safe_display import raise_safe, safe_location
 
@@ -445,13 +445,7 @@ class HttpRequestEngine:
                     and attempt < retry.max_attempts
                 )
                 if can_retry:
-                    delay = min(
-                        retry.backoff_base * (2 ** (attempt - 1)),
-                        retry.backoff_max,
-                    )
-                    if retry.backoff_jitter:
-                        delay = random.uniform(0, delay)
-                    time.sleep(delay)
+                    time.sleep(backoff_delay(retry, attempt))
                     continue
 
                 raise_safe(transport_exc, exc)
@@ -494,15 +488,9 @@ class HttpRequestEngine:
             ):
                 retry_after = _parse_retry_after(response.headers.get("retry-after"))
                 if retry_after is not None:
-                    delay = min(retry_after, retry.max_retry_after)
+                    time.sleep(min(retry_after, retry.max_retry_after))
                 else:
-                    delay = min(
-                        retry.backoff_base * (2 ** (attempt - 1)),
-                        retry.backoff_max,
-                    )
-                    if retry.backoff_jitter:
-                        delay = random.uniform(0, delay)
-                time.sleep(delay)
+                    time.sleep(backoff_delay(retry, attempt))
                 continue
 
             # 3xx not followed
@@ -518,13 +506,7 @@ class HttpRequestEngine:
                 and body_replayable
                 and attempt < retry.max_attempts
             ):
-                delay = min(
-                    retry.backoff_base * (2 ** (attempt - 1)),
-                    retry.backoff_max,
-                )
-                if retry.backoff_jitter:
-                    delay = random.uniform(0, delay)
-                time.sleep(delay)
+                time.sleep(backoff_delay(retry, attempt))
                 continue
 
             # Non-retryable error
@@ -565,8 +547,7 @@ class HttpRequestEngine:
                 after = _parse_retry_after(response.headers.get("retry-after"))
                 if after is not None:
                     return min(after, retry.max_retry_after)
-            value = min(retry.backoff_base * 2 ** (attempt - 1), retry.backoff_max)
-            return random.uniform(0, value) if retry.backoff_jitter else value
+            return backoff_delay(retry, attempt)
 
         while True:
             attempt += 1
