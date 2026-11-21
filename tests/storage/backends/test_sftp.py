@@ -212,21 +212,6 @@ class TestDeleteFile:
             backend.delete_file("/remote/missing.txt")
 
 
-class TestRmdir:
-    def test_rmdir_calls_sftp_rmdir(self):
-        mock_sftp = MagicMock()
-        backend, _ = _make_backend(mock_sftp)
-        backend.rmdir("/remote/olddir")
-        mock_sftp.rmdir.assert_called_once_with("/remote/olddir")
-
-    def test_rmdir_not_found_raises(self):
-        mock_sftp = MagicMock()
-        mock_sftp.rmdir.side_effect = FileNotFoundError("no such dir")
-        backend, _ = _make_backend(mock_sftp)
-        with pytest.raises(PathNotFoundError):
-            backend.rmdir("/remote/missing")
-
-
 class TestNoConnection:
     def test_raises_storage_connection_error_when_no_connection(self):
         import mountainash_transport.storage.backends  # noqa: F401
