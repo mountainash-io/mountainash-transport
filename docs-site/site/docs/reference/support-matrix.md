@@ -17,7 +17,7 @@ mountainash-transport has four storage backends: local files, the S3 family, SFT
 
 One `S3StorageBackend` class is registered for all five S3-family provider types. The flavour on the storage profile selects endpoint and region handling. Local files support random access through the native file handle rather than the ranged-read protocol. See [read access modes](../chapters/09-read-access-modes/index.md#choosing-an-access-mode).
 
-The table was produced from `get_registered_backends()` and the protocol classes in `src/mountainash_transport/storage/protocols/`. `tests/storage/protocols/test_backend_conformance.py` asserts the first seven capability columns. Ranged read is satisfied structurally by an `open_ranged` method.
+The table was produced from `get_registered_backends()` and the protocol classes in `src/mountainash_transport/storage/protocols/`. `tests/storage/protocols/test_backend_conformance.py` asserts every capability column, including ranged read, for each registered provider, and checks the root README's support table against the same backends. Ranged read is satisfied structurally by an `open_ranged` method.
 
 ## Settings-only providers
 
