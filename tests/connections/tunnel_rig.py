@@ -6,6 +6,7 @@ serves a local directory over SFTP for tests and recipes that read and write.
 """
 from __future__ import annotations
 
+import errno
 import datetime
 import os
 import select
@@ -342,7 +343,15 @@ class _DirectorySFTP(paramiko.SFTPServerInterface):
         return self._done(os.remove, path)
 
     def rename(self, oldpath: str, newpath: str) -> t.Any:
-        return self._done(os.rename, oldpath, newpath)
+        # OpenSSH's plain rename refuses an existing destination (link + unlink).
+        def refuse_existing(old: str, new: str) -> None:
+            if os.path.lexists(new):
+                raise FileExistsError(errno.EEXIST, "File exists")
+            os.rename(old, new)
+        return self._done(refuse_existing, oldpath, newpath)
+
+    def posix_rename(self, oldpath: str, newpath: str) -> t.Any:
+        return self._done(os.replace, oldpath, newpath)
 
     def mkdir(self, path: str, attr: t.Any) -> t.Any:
         return self._done(os.mkdir, path)

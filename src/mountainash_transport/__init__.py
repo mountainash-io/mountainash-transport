@@ -48,6 +48,7 @@ if t.TYPE_CHECKING:
         StorageMetadataProtocol as StorageMetadataProtocol,
         StorageCopyProtocol as StorageCopyProtocol,
         StorageDirectoryProtocol as StorageDirectoryProtocol,
+        StorageMoveProtocol as StorageMoveProtocol,
     )
     from ._core.protocols import ConnectionProtocol as ConnectionProtocol
     from .settings.profile_protocol import (
@@ -132,6 +133,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'StorageMetadataProtocol': ('.storage.protocols', 'StorageMetadataProtocol'),
     'StorageCopyProtocol': ('.storage.protocols', 'StorageCopyProtocol'),
     'StorageDirectoryProtocol': ('.storage.protocols', 'StorageDirectoryProtocol'),
+    'StorageMoveProtocol': ('.storage.protocols', 'StorageMoveProtocol'),
     'ConnectionProtocol': ('._core.protocols', 'ConnectionProtocol'),
     'ProfileProtocol': ('.settings.profile_protocol', 'ProfileProtocol'),
     'StorageProfileProtocol': ('.settings.profile_protocol', 'StorageProfileProtocol'),
@@ -217,7 +219,7 @@ __all__ = [
     "create_connection", "create_tunnelled_connection",
     "StorageReadProtocol", "StorageWriteProtocol",
     "StorageEnumerateProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
-    "StorageCopyProtocol", "StorageDirectoryProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol", "StorageMoveProtocol",
     "ProfileProtocol", "StorageProfileProtocol",
     "resolve_storage", "StorageProfilesSettings", "StorageProfileBlock", "AuthBlock",
     "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",

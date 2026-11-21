@@ -28,12 +28,12 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 Operations follow the backend's capability protocols; unsupported calls raise
 `UnsupportedOperationError`.
 
-| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Object enumeration | Ranged reads |
-|---|---|---|---|---|---|---|---|---|---|
-| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
-| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ |
-| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ |
-| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | | ✓ |
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Move | Directories | Object enumeration | Ranged reads |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ |
+| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | | | ✓ |
 
 Ranged reads back `read_stream(access="random")` on remote stores; local files
 support random access through their native file handle instead. A test checks

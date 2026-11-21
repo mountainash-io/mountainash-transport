@@ -28,6 +28,7 @@ from mountainash_transport.storage.protocols import (
     StorageDirectoryProtocol,
     StorageEnumerateProtocol,
     StorageMetadataProtocol,
+    StorageMoveProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
 )
@@ -603,6 +604,22 @@ class StorageFacade:
                 raise LocationNotAllowed(destination, "copy destination is a directory")
             dst = final
         self._backend.copy(src, dst)
+
+    # ------------------------------------------------------------------
+    # Move operations (StorageMoveProtocol)
+    # ------------------------------------------------------------------
+
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> None:
+        """Rename *source* to *destination* with the store's native rename, replacing an existing destination.
+
+        Local and SFTP only; stores without a rename (S3, HTTP) raise
+        ``UnsupportedOperationError`` rather than copying and deleting.
+        Both paths are checked against the location policy.
+        """
+        self._require(StorageMoveProtocol, "move")
+        src = self._check(source)
+        dst = self._check(destination)
+        self._backend.move(src, dst, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)

@@ -77,7 +77,7 @@ def test_read_after_a_dropped_session_reconnects(rig: t.Any) -> None:
     assert server.sessions == 2
 
 
-@pytest.mark.parametrize("operation", ["metadata", "list_dir", "list_objects", "mkdir", "delete", "read_stream"])
+@pytest.mark.parametrize("operation", ["metadata", "list_dir", "list_objects", "mkdir", "delete", "move", "read_stream"])
 def test_every_operation_reconnects(rig: t.Any, operation: str) -> None:
     server, root, backend = rig
     (root / "d").mkdir()
@@ -96,6 +96,9 @@ def test_every_operation_reconnects(rig: t.Any, operation: str) -> None:
     elif operation == "delete":
         sftp.delete_file("/d/a.csv")
         assert not (root / "d" / "a.csv").exists()
+    elif operation == "move":
+        sftp.move("/d/a.csv", "/d/b.csv")
+        assert (root / "d" / "b.csv").read_bytes() == PAYLOAD
     else:
         with sftp.read_to_stream("/d/a.csv") as stream:
             assert stream.read() == PAYLOAD
