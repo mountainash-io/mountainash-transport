@@ -169,6 +169,16 @@ class _SSHServer:
     def _prepare(self, transport: paramiko.Transport) -> None:
         pass
 
+    @property
+    def sessions(self) -> int:
+        """SSH sessions accepted so far."""
+        return len(self._transports)
+
+    def drop_sessions(self) -> None:
+        """Close every open session from the server side, as a network outage would."""
+        for transport in self._transports:
+            transport.close()
+
     def close(self) -> None:
         self._closed = True
         self._listener.close()

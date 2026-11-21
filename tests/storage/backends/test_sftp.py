@@ -5,6 +5,7 @@ import errno
 import io
 import stat
 import typing as t
+from types import SimpleNamespace
 
 import pytest
 from unittest.mock import MagicMock
@@ -39,7 +40,8 @@ def _make_backend(sftp_client=None):
     import mountainash_transport.storage.backends  # noqa: F401
     from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
     conn = _FakeConnection(sftp_client)
-    return SFTPStorageBackend(None, connection=conn), sftp_client
+    # One attempt: the fake connection cannot reconnect (retry has its own tests).
+    return SFTPStorageBackend(SimpleNamespace(RETRY_MAX_ATTEMPTS=1), connection=conn), sftp_client
 
 
 class TestReadToBytes:

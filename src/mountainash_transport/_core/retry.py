@@ -62,6 +62,20 @@ def backoff_delay(policy: RetryPolicy, attempt: int) -> float:
     return random.uniform(0, delay) if policy.backoff_jitter else delay
 
 
+_PROFILE_FIELDS = (
+    ("RETRY_MAX_ATTEMPTS", "max_attempts"),
+    ("RETRY_BACKOFF_BASE", "backoff_base"),
+    ("RETRY_BACKOFF_MAX", "backoff_max"),
+)
+
+
+def retry_policy_from(profile: object) -> RetryPolicy:
+    """A ``RetryPolicy`` from a storage profile's ``RETRY_*`` fields; unset fields keep the defaults."""
+    settings = {arg: value for field, arg in _PROFILE_FIELDS
+                if (value := getattr(profile, field, None)) is not None}
+    return RetryPolicy(**settings)
+
+
 class RetryStrategy(t.Protocol):
     """Runs one storage operation, re-running it on transient failure."""
 

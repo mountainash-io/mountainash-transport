@@ -167,8 +167,8 @@ def test_sftp_walk(monkeypatch, policy, operation, path, caplog):
     client = MagicMock()
     for name in ("open", "stat", "listdir_attr", "remove", "rmdir", "mkdir"):
         getattr(client, name).side_effect = error
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
-    backend.storage_profile = SimpleNamespace(HOST="host", PORT=22)
+    backend = SFTPStorageBackend(SimpleNamespace(HOST="host", PORT=22, RETRY_MAX_ATTEMPTS=1),
+                                 connection=SimpleNamespace(client=client))
     monkeypatch.setattr(import_module("mountainash_transport.storage.facade.facade"),
                         "get_storage_backend", lambda *args, **kwargs: backend)
     with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=policy) as facade:
