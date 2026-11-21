@@ -241,6 +241,29 @@ b'region,total\n' True True
 b'region,total\nnorth,120\n'
 ```
 
+For local files a native reader can skip the Python handle altogether. `local_path(path)` returns the absolute path of the file after the same resolution and checks as `read_stream`: a missing file raises `PathNotFoundError` and the location policy applies. It returns `None` for remote backends, without any I/O, and when a transform pipeline is passed or inferred, so a consumer branches on the result:
+
+```python
+import tempfile
+from pathlib import Path
+
+from mountainash_transport import Gzip, StorageFacade
+
+with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as local:
+    local.write(f"{root}/sales.csv", b"region,total\nnorth,120\n")
+    local.write(f"{root}/sales.csv.gz", b"region,total\nnorth,120\n", pipeline=Gzip())
+    for name in ("sales.csv", "sales.csv.gz"):
+        path = local.local_path(f"{root}/{name}", infer=True)
+        print(name, "->", "native" if path else "read_stream", Path(path).name if path else "")
+```
+
+Output:
+
+```text
+sales.csv -> native sales.csv
+sales.csv.gz -> read_stream
+```
+
 If you apply a pipeline yourself with `Pipeline.apply_read(source)` instead of going through the facade, the returned stream owns only the layers it built, not `source`; close the source separately. Transform ownership in both directions is covered in [Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership).
 
 <!-- concept:168 -->

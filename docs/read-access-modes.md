@@ -59,6 +59,8 @@ A handle returned by `read_stream` is a Python file object owned by the caller. 
 
 Libraries that read on native worker threads need particular care. If a worker thread holds the last reference to a handle when the interpreter shuts down, releasing it there can abort the process. Give such libraries a handle only for the duration of the call, make sure their threads have released it before you close it, or let them read from a copy they own (for example an in-memory buffer from `access="buffered"` or `materialize`). How a particular library achieves this is documented by the consumer that uses it.
 
+For local files there is a third option: `facade.local_path(path)` returns the absolute path of the file, resolved and checked exactly as `read_stream` would (missing files raise `PathNotFoundError`; the location policy applies), so a native reader can open the file itself and no Python handle is involved. It returns `None` for remote backends, without any I/O, and when a transform pipeline is passed or inferred, because an encoded file is not a plain file; fall back to `read_stream` then.
+
 ## Errors, consistency and ownership
 
 - Unsupported HTTP ranges, unknown size, ignored ranges (`200`), or non-identity `Content-Encoding`: `RangeNotSupportedError`. No implicit whole-object fallback.
