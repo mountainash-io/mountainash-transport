@@ -8,6 +8,8 @@ import subprocess
 import sys
 import textwrap
 
+import pytest
+
 BLOCKER = textwrap.dedent('''
     import importlib.abc, sys
     ALLOWED = set(sys.stdlib_module_names) | {"typing_extensions", "mountainash_transport"}
@@ -108,3 +110,39 @@ def test_remote_surfaces_name_the_http_extra_on_base_install():
             expect(lambda name=name: getattr(root, name))
         from mountainash_transport import HttpNotFoundError, RetryPolicy  # stdlib-only HTTP names stay importable
     ''')
+
+
+_ONE_EXTRA_MISSING = textwrap.dedent('''
+    import importlib.abc, sys
+    BLOCKED = {blocked!r}
+    class _ExtraMissing(importlib.abc.MetaPathFinder):
+        def find_spec(self, name, path=None, target=None):
+            if name.partition(".")[0] in BLOCKED:
+                raise ModuleNotFoundError(f"No module named {{name!r}}", name=name)
+            return None
+    for loaded in [m for m in sys.modules if m.partition(".")[0] in BLOCKED]:
+        del sys.modules[loaded]
+    sys.meta_path.insert(0, _ExtraMissing())
+    from mountainash_transport import MissingExtraError
+    try:
+        {call}
+    except MissingExtraError as err:
+        assert err.extra == {extra!r}, err
+        assert "pip install 'mountainash-transport[{extra}]'" in str(err), err
+    else:
+        raise AssertionError("no MissingExtraError")
+''')
+
+
+@pytest.mark.parametrize("extra,blocked,call", [
+    ("s3", {"boto3", "botocore", "s3transfer", "aiobotocore", "s3fs", "minio"},
+     "__import__('mountainash_transport.connections', fromlist=['S3Connection']).S3Connection({}).connect()"),
+    ("sftp", {"paramiko", "smart_open"},
+     "__import__('mountainash_transport.connections', fromlist=['SSHConnection']).SSHConnection({}).connect()"),
+    ("encryption", {"gnupg"},
+     "__import__('mountainash_transport').GPG(passphrase='x').unwrap(__import__('io').BytesIO(b''))"),
+])
+def test_each_missing_extra_is_named(extra, blocked, call):
+    """With [http] installed but one extra's packages missing, that extra is named (#39)."""
+    code = _ONE_EXTRA_MISSING.format(blocked=sorted(blocked), extra=extra, call=call)
+    subprocess.run([sys.executable, "-c", code], check=True)

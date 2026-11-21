@@ -258,13 +258,14 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
-    def test_paramiko_none_raises_transport_connection_error(self):
-        from mountainash_transport.connections.errors import TransportConnectionError
+    def test_missing_paramiko_names_sftp_extra(self):
+        from mountainash_transport import MissingExtraError
 
         with patch.dict(sys.modules, {"paramiko": None}):
             conn = SSHConnection(FAKE_SSH_KWARGS)
-            with pytest.raises(TransportConnectionError, match="paramiko is required"):
+            with pytest.raises(MissingExtraError, match=r"mountainash-transport\[sftp\]") as caught:
                 conn.connect()
+        assert caught.value.extra == "sftp"
 
 
 @pytest.mark.parametrize("stage", ["load_system_host_keys", "load_host_keys", "connect"])

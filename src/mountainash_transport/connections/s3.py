@@ -8,6 +8,7 @@ from typing_extensions import Self
 
 from mountainash_transport.connections.errors import TransportConnectionError
 
+from .._core.extras import raise_for_missing_extra
 from .._core.protocols import ConnectionProtocol
 from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
@@ -23,10 +24,7 @@ class S3Connection(ConnectionProtocol):
         try:
             import boto3
         except ImportError as exc:
-            raise TransportConnectionError(
-                "boto3 is required for S3 connections — install with: "
-                "pip install mountainash-transport[s3]"
-            ) from exc
+            raise_for_missing_extra("S3 connections", "s3", exc)
 
         self.disconnect()
         session = self._connect_kwargs.get("session") if "client_config" in self._connect_kwargs else None
@@ -77,10 +75,8 @@ class S3Connection(ConnectionProtocol):
                 AssumeRoleCredentialFetcher,
                 DeferredRefreshableCredentials,
             )
-        except ImportError as exc:  # pragma: no cover - botocore ships with boto3
-            raise TransportConnectionError(
-                "botocore is required for assume-role S3 connections"
-            ) from exc
+        except ImportError as exc:
+            raise_for_missing_extra("assume-role S3 connections", "s3", exc)
 
         bc = source._session
         # No default: an absent verify lets botocore resolve AWS_CA_BUNDLE / ca_bundle.
@@ -125,8 +121,11 @@ class S3Connection(ConnectionProtocol):
         profile_name = env["session"].get("profile_name")
         if not profile_name:
             return False
-        import boto3
-        import botocore.exceptions
+        try:
+            import boto3
+            import botocore.exceptions
+        except ImportError as exc:
+            raise_for_missing_extra("S3 connections", "s3", exc)
 
         try:
             config = boto3.Session(profile_name=profile_name)._session.full_config

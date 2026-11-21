@@ -663,6 +663,21 @@ def test_connect_refuses_assume_role_through_tunnel_and_releases(rig, aws_config
         assert not worker.is_alive()
 
 
+def test_tunnelled_s3_without_botocore_names_s3_extra_and_releases(rig, monkeypatch) -> None:
+    import sys
+
+    from mountainash_auth_client import IAMAuthProfile
+    from mountainash_transport import MissingExtraError
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(ACCESS_KEY_ID="AKIAEXAMPLE", SECRET_ACCESS_KEY="example"))
+    monkeypatch.setitem(sys.modules, "botocore.config", None)
+    with pytest.raises(MissingExtraError) as caught:
+        connection.connect()
+    assert caught.value.extra == "s3"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+
+
 @pytest.mark.parametrize("auth_kwargs", [
     {"ACCESS_KEY_ID": "AKIAEXAMPLE", "SECRET_ACCESS_KEY": "example"},
     {"PROFILE_NAME": "plain"},

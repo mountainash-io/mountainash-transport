@@ -23,6 +23,7 @@ from mountainash_transport.connections.errors import (
     TransportConnectionError,
     TunnelEndpointError,
 )
+from mountainash_transport._core.extras import raise_for_missing_extra
 from mountainash_transport._core.protocols import ConnectionProtocol
 from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
@@ -324,7 +325,10 @@ class _PatchedEndpointProfile:
                 **kwargs.get("_post_connect", {}), "sock_address": (self._host, self._port),
             }
         elif family is TargetFamily.BOTO:
-            from botocore.config import Config
+            try:
+                from botocore.config import Config
+            except ImportError as exc:
+                raise_for_missing_extra("tunnelled S3 targets", "s3", exc)
 
             routed = Config(proxies={"http": proxy, "https": proxy})
             existing = kwargs.get("config")
