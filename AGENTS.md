@@ -103,7 +103,9 @@ Package-local map. The *why* behind each layer lives in the central principles.
 forward-only remote streams. Random mode uses `RangedReadProtocol` on HTTP/S3/SFTP
 and native local handles; buffered mode materializes decoded bytes in memory.
 `RangePolicy` precedence is call → profile `RANGE_*` fields → readahead/1 MiB.
-See `docs/read-access-modes.md` for migration, error timing and Parquet tuning.
+`facade.local_path(path)` returns the resolved local file for native readers, or
+`None` for remote backends and transformed reads.
+See `docs/read-access-modes.md` for migration, error timing and cache-policy tuning.
 
 ### Package structure
 

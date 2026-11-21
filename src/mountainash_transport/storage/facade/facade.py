@@ -516,6 +516,32 @@ class StorageFacade:
         path = self._check(path)
         self._backend.delete_file(path)
 
+    def local_path(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+        infer: bool = False,
+        gpg: GPG | None = None,
+        gzip: Gzip | None = None,
+    ) -> str | None:
+        """Return the absolute local file behind *path*, or ``None`` if there is none.
+
+        For consumers that open local files with their own native readers. The
+        path is resolved and checked exactly as :meth:`read_stream` would, so a
+        missing file raises ``PathNotFoundError`` and the location policy applies.
+        Returns ``None`` for remote backends (without any I/O) and when the
+        resolved pipeline, passed or inferred, has transforms: an encoded file
+        is not a plain file. Opening and reading the path is the caller's concern.
+        """
+        self._require(StorageReadProtocol, "local_path")
+        checked = self._check(path)
+        effective = self._resolve_pipeline(path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip)
+        if self._provider_type != CONST_STORAGE_PROVIDER_TYPE.LOCAL or not effective.is_empty():
+            return None
+        with self._backend.read_to_stream(checked) as handle:  # same checks as read_stream
+            return os.path.abspath(handle.name)
+
     # ------------------------------------------------------------------
     # Metadata operations (StorageMetadataProtocol)
     # ------------------------------------------------------------------
