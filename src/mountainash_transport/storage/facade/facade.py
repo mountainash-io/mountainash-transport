@@ -253,18 +253,21 @@ class StorageFacade:
 
         Args:
             path: Path string, optionally with a URL scheme.
-            profile: Optional storage profile forwarded to the backend.
-            auth: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
-                When provided, overrides any Authorization header set by *profile*.
+            storage_profile: Optional storage profile forwarded to the backend.
+            auth_profile: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
+                When provided, overrides any Authorization header set by *storage_profile*.
             oauth_provider: Optional OAuth2 provider profile for the managed token flow.
             token_store: Raw ClearableSecretStore for managed tokens, distinct from
                 the config reader. The caller owns its lifetime.
+            policy: Optional LocationPolicy; when active, the path must be allowed.
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
 
         Raises:
-            ValueError: If *path*'s scheme is unrecognised or has no backend.
+            ValueError: If *path*'s scheme is unrecognised.
+            BackendNotImplementedError: If the scheme's provider has no backend.
+            LocationNotAllowed: If an active *policy* refuses the path.
         """
         if policy is not None and policy.active:
             require_known_scheme(path, policy)

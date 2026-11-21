@@ -196,7 +196,7 @@ SSH connection failed: Server '[127.0.0.1]:46735' not found in known_hosts
 SSHClient True
 ```
 
-Timeouts raise `ConnectionTimeoutError`; DNS, socket, authentication and host-key failures raise `TransportConnectionError`. A missing paramiko also raises `TransportConnectionError`, naming the `[sftp]` extra.
+Timeouts raise `ConnectionTimeoutError`; DNS, socket, authentication and host-key failures raise `TransportConnectionError`. A missing paramiko raises `MissingExtraError` naming the `[sftp]` extra.
 
 <!-- concept:188 -->
 

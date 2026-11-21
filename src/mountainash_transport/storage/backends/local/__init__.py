@@ -49,6 +49,7 @@ __all__ = [
     "LocalReadMixin",
     "LocalWriteMixin",
     "LocalListMixin",
+    "LocalEnumerateMixin",
     "LocalDeleteMixin",
     "LocalMetadataMixin",
     "LocalCopyMixin",

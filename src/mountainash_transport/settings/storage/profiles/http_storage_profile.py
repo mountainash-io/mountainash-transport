@@ -175,5 +175,5 @@ class HTTPStorageProfile(Profile):
         return "http(s)://<dynamic>"
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.HTTP)."""
+        """Return the httpx kwargs ``emit(TargetFamily.HTTP)`` produces; required by ``ProfileProtocol``."""
         return self.emit(self._sdk_family())

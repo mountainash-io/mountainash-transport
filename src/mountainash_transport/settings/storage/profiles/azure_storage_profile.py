@@ -1,18 +1,11 @@
-"""Azure Storage settings (unified Blob + Files).
+"""Azure Storage profile (Blob and Files).
 
-Collapses the legacy ``AzureBlobStorageAuthSettings`` and
-``AzureFilesStorageAuthSettings`` classes into a single
-:class:`AzureStorageProfile` class discriminated by a ``SERVICE_TYPE``
-field (``"blob"`` or ``"files"``). Both services share the same
-authentication surface (shared-key, SAS, AAD, connection string) and
-differ only in the hostname suffix (``.blob.`` vs ``.file.``) and a
-handful of Files-specific flags.
-
-Mirrors the Phase 3 ``AzureKeyVaultSettings`` pattern and the Phase 4
-``S3Settings`` pattern: the class is a two-line shell; all parameters
-live on the descriptor; the adapter
-(:func:`mountainash_transport.settings.adapters.azure.build_handler_kwargs`)
-produces kwargs for ``BlobServiceClient`` or ``ShareServiceClient``.
+:class:`AzureStorageProfile` covers both services; ``SERVICE_TYPE``
+(``"blob"`` or ``"files"``) selects the host suffix (``.blob.`` or ``.file.``)
+and the Files-only flags. Parameters live on :data:`AZURE_STORAGE_SPEC`;
+:meth:`AzureStorageProfile.to_handler_kwargs` returns kwargs for
+``BlobServiceClient`` or ``ShareServiceClient``. Transport has no Azure
+backend yet.
 """
 
 from __future__ import annotations

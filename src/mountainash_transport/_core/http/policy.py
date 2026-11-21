@@ -58,8 +58,8 @@ class RetryPolicy:
     retry_unsafe_methods:
         Whether to retry non-idempotent methods (POST, PATCH).
     max_retry_after:
-        Maximum number of seconds to honour a ``Retry-After`` header value.
-        Requests with a ``Retry-After`` exceeding this value will not be retried.
+        Maximum number of seconds to wait for a ``Retry-After`` header value.
+        A longer ``Retry-After`` is capped at this value; the request is still retried.
     """
 
     max_attempts: int = 3
