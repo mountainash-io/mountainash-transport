@@ -13,6 +13,7 @@ import json
 import typing as t
 from dataclasses import dataclass
 
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE
 from mountainash_transport._core.http.errors import HttpDecodeError
 from mountainash_transport._core.safe_display import raise_safe
 
@@ -120,7 +121,7 @@ class HttpStreamResponse:
     # Body consumption
     # ------------------------------------------------------------------
 
-    def iter_bytes(self, chunk_size: int = 65536) -> t.Iterator[bytes]:
+    def iter_bytes(self, chunk_size: int = DEFAULT_CHUNK_SIZE) -> t.Iterator[bytes]:
         """Iterate over the response body in raw byte chunks.
 
         Parameters
@@ -130,7 +131,7 @@ class HttpStreamResponse:
         """
         return self._response.iter_bytes(chunk_size=chunk_size)
 
-    def iter_text(self, chunk_size: int = 65536) -> t.Iterator[str]:
+    def iter_text(self, chunk_size: int = DEFAULT_CHUNK_SIZE) -> t.Iterator[str]:
         """Iterate over the response body decoded as text chunks.
 
         Parameters

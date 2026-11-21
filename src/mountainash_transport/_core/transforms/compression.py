@@ -8,11 +8,11 @@ from typing import BinaryIO, cast
 
 from ._stream_encoder import GzipCompressingReader
 from .base import StreamTransform
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE as _CHUNK
 from mountainash_transport._core.exceptions import TransformError
 from mountainash_transport._core.sequential_io import ForwardOnlyReader
 
 DEFAULT_MAX_DECOMPRESSED_BYTES = 1024**3  # 1 GiB
-_CHUNK = 64 * 1024
 
 
 class _BoundedGzipFile(gzip.GzipFile):

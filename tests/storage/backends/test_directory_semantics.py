@@ -51,6 +51,11 @@ class _FilesystemSFTP:
     def remove(self, path: str) -> None:
         os.remove(path)
 
+    def putfo(self, fl: t.BinaryIO, path: str) -> None:
+        with open(path, "wb") as target:
+            while chunk := fl.read(32768):  # paramiko's transfer chunk
+                target.write(chunk)
+
 
 @pytest.fixture(scope="module")
 def sftp_server_connection(tmp_path_factory: pytest.TempPathFactory) -> t.Iterator[t.Any]:

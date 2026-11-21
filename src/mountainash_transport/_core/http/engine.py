@@ -6,7 +6,8 @@ The ``HttpRequestEngine`` wraps an ``httpx.Client`` and applies a
 - Exponential backoff with jitter on retryable status codes and transport errors
 - Auth token refresh on 401 responses (via ``RefreshableAuthStrategy``)
 - ``Retry-After`` header parsing and capping
-- Body replayability checks (seekable streams, bytes, None)
+- One replay rule for request bodies: bytes and seekable streams are re-sent;
+  non-seekable streams are sent once, never buffered
 - httpx exception → transport exception mapping
 - Streaming responses via a context-manager API
 """
@@ -21,6 +22,7 @@ import typing as t
 
 import httpx
 
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE
 from mountainash_transport._core.http.auth_protocol import AuthStrategy, RefreshableAuthStrategy
 from mountainash_transport._core.http.errors import (
     HttpConnectionError,
@@ -43,7 +45,7 @@ _install_log_filters()
 
 
 if t.TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from typing import BinaryIO
 
 
@@ -140,22 +142,50 @@ def _parse_retry_after(value: str | None) -> float | None:
 
 
 def _is_body_replayable(content: bytes | None, stream: BinaryIO | None) -> bool:
-    """Check whether the request body can be replayed for retries."""
+    """Whether the request body can be re-sent: None, bytes, or a seekable stream."""
     if content is not None or stream is None:
-        # None body or bytes body → always replayable
         return True
-    # Stream body — replayable only if seekable
     return hasattr(stream, "seekable") and stream.seekable()
 
 
-def _resolve_body(content: bytes | None, stream: BinaryIO | None) -> bytes | None:
-    """Resolve the request body to bytes.
+class _SeekableBody:
+    """Request body over a seekable stream that httpx may send more than once.
 
-    For ``request()`` (buffered), we read streams into bytes upfront.
+    Not a generator, so httpx re-iterates it for redirects and auth challenges;
+    every pass starts at the stream's position when the request was made.
     """
-    if stream is not None:
-        return stream.read()
-    return content
+
+    def __init__(self, stream: BinaryIO) -> None:
+        self._stream = stream
+        self._start = stream.tell()
+
+    def length(self) -> int:
+        end = self._stream.seek(0, 2)
+        self._stream.seek(self._start)
+        return end - self._start
+
+    def __iter__(self) -> Iterator[bytes]:
+        self._stream.seek(self._start)
+        while chunk := self._stream.read(DEFAULT_CHUNK_SIZE):
+            yield chunk
+
+
+def _one_pass(stream: BinaryIO) -> Iterator[bytes]:
+    """A generator body: httpx sends it chunked and refuses to send it twice."""
+    while chunk := stream.read(DEFAULT_CHUNK_SIZE):
+        yield chunk
+
+
+def _request_body(
+    content: bytes | None, stream: BinaryIO | None,
+) -> tuple[bytes | Iterable[bytes] | None, int | None]:
+    """The httpx content for a request and, when known, its length; never buffers a stream."""
+    if stream is None:
+        return content, None
+    if _is_body_replayable(None, stream):
+        body = _SeekableBody(stream)
+        return body, body.length()
+    return _one_pass(stream), None
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +254,7 @@ class HttpRequestEngine:
         url: str,
         *,
         headers: dict[str, str],
-        content: bytes | None,
+        content: bytes | Iterable[bytes] | None,
         params: dict[str, str] | None,
         policy: RequestPolicy,
         stream: bool = False,
@@ -342,7 +372,7 @@ class HttpRequestEngine:
         params: dict[str, str] | None = None,
         policy: RequestPolicy | None = None,
     ) -> HttpResponse:
-        """Send a buffered HTTP request with retry and error handling.
+        """Send an HTTP request, buffering the response, with retry and error handling.
 
         Parameters
         ----------
@@ -355,7 +385,11 @@ class HttpRequestEngine:
         content:
             Request body as bytes.
         stream:
-            Request body as a binary stream (read into bytes upfront).
+            Request body as a binary stream, sent in chunks without being read
+            into memory. A seekable stream is sent from its current position and
+            re-sent from there for retries, the 401 refresh, redirects and auth
+            challenges. A non-seekable stream is sent once: none of those
+            re-sends happen, and one that httpx needs raises ``HttpRequestError``.
         params:
             URL query parameters.
         policy:
@@ -370,13 +404,11 @@ class HttpRequestEngine:
         retry = pol.retry
         method_upper = method.upper()
 
-        # Check body replayability BEFORE reading the stream
         body_replayable = _is_body_replayable(content, stream)
-
-        # Resolve body to bytes (reads stream if present)
-        body = _resolve_body(content, stream)
-
+        body, length = _request_body(content, stream)
         merged_headers = self._merge_headers(headers)
+        if length is not None and not any(name.lower() == "content-length" for name in merged_headers):
+            merged_headers["Content-Length"] = str(length)
 
         auth_refreshed = False
         attempt = 0
@@ -395,6 +427,12 @@ class HttpRequestEngine:
                 )
             except httpx.InvalidURL as exc:
                 raise_safe(_map_httpx_exception(exc, url), exc)
+            except httpx.StreamConsumed as exc:
+                raise_safe(HttpRequestError(
+                    f"{safe_location(url)}: the request body is a non-seekable stream and "
+                    "cannot be re-sent for a redirect or authentication challenge; "
+                    "pass bytes or a seekable stream"
+                ), exc)
             except httpx.HTTPError as exc:
                 transport_exc = _map_httpx_exception(exc, url)
 
@@ -430,11 +468,12 @@ class HttpRequestEngine:
                     method=method_upper,
                 )
 
-            # 401 + auth refresh
+            # 401 + auth refresh (re-sends the body: replayable bodies only)
             if (
                 status == 401
                 and pol.auth_refresh_on_401
                 and not auth_refreshed
+                and body_replayable
                 and isinstance(self._auth_strategy, RefreshableAuthStrategy)
             ):
                 if self._auth_strategy.refresh():
@@ -446,8 +485,13 @@ class HttpRequestEngine:
                 else:
                     self._raise_for_status(response)
 
-            # 429 rate limit — exempt from method safety check
-            if status == 429 and status in retry.retry_on_status and attempt < retry.max_attempts:
+            # 429 rate limit — exempt from method safety check, not from the replay rule
+            if (
+                status == 429
+                and status in retry.retry_on_status
+                and body_replayable
+                and attempt < retry.max_attempts
+            ):
                 retry_after = _parse_retry_after(response.headers.get("retry-after"))
                 if retry_after is not None:
                     delay = min(retry_after, retry.max_retry_after)

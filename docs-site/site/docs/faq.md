@@ -261,7 +261,7 @@ Yes. The SSH session dials the tunnel's listener but keeps the target's real hos
 
 ### How do I retry failed HTTP requests?
 
-Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A 429 is retried for any method and any body; transport errors and other retryable statuses are not retried when the body was passed as a non-seekable stream. Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
+Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A body is re-sent only if it is `bytes` or a seekable stream; a non-seekable stream body is never retried (pass `materialize(stream)` to make it retryable). Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
 
 ### Do the engine's retries apply to HTTP storage reads and writes?
 
@@ -309,15 +309,11 @@ Yes. On both, `rmdir()` removes only an empty directory and raises `StorageError
 
 ### How much memory does writing a large stream to SFTP use?
 
-The whole payload. The SFTP backend reads the entire source stream into memory before writing it, for `write_stream`, for `write` with a transform pipeline, and for `copy_between` into SFTP. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
+A bounded amount. The SFTP backend uploads with paramiko's `putfo`, which copies the source in 32 KiB chunks, for `write_stream`, for `write` with a transform pipeline (except `GPG`, which holds the payload itself), and for `copy_between` into SFTP. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
 
 ### Is there a size limit on S3 `copy()`?
 
 No practical one. An S3-family `copy()` uses boto3's managed copy: objects under 4 GiB are copied with one `CopyObject` request, and larger ones with multipart `UploadPartCopy` in 256 MiB parts, keeping the content type and metadata. The 4 GiB threshold sits below every supported provider's single-request copy limit (5 GB on Amazon S3, S3 Express and Backblaze B2; 5 GiB less 5 MiB on Cloudflare R2). The copy stays server side; no bytes pass through your process. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
-
-### Why is an S3 listing with `max_results` slow on a large prefix?
-
-On the S3 family, `max_results` is applied after every page of the listing has been fetched, so the number of requests depends on the size of the prefix, not on the limit. The SFTP backend stops as soon as it has enough entries. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
 
 ## Extending and internals
 

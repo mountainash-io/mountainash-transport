@@ -298,9 +298,10 @@ def test_sftp_caller_input_failure_is_unchanged() -> None:
     class Input(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
             raise original
-    backend, _ = _make_backend()
+    backend, client = _make_backend()
+    client.putfo.side_effect = lambda fl, path: fl.read(32768)  # paramiko reads the source in chunks
     with Input(b"x") as source, pytest.raises(EOFError) as caught:
-        backend.write_from_stream("/destination", source)
+        backend.write_from_stream("/destination", source, create_parents=False)
     assert caught.value is original
 
 

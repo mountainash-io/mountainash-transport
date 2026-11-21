@@ -63,6 +63,14 @@ S3_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="MULTIPART_THRESHOLD", type=t.Optional[int], default=None, tier="advanced",
+                      description="Stream uploads at or above this size in bytes use multipart upload. "
+                                  "None keeps boto3's default (8 MiB)."),
+        ParameterSpec(name="MULTIPART_CHUNKSIZE", type=t.Optional[int], default=None, tier="advanced",
+                      description="Multipart upload part size in bytes (S3 minimum 5 MiB). "
+                                  "None keeps boto3's default (8 MiB)."),
+        ParameterSpec(name="MAX_CONCURRENCY", type=t.Optional[int], default=None, tier="advanced",
+                      description="Parallel part uploads for one stream upload. None keeps boto3's default (10)."),
         ParameterSpec(
             name="FLAVOR",
             type=str,
@@ -274,6 +282,9 @@ class S3StorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        MULTIPART_THRESHOLD: int | None
+        MULTIPART_CHUNKSIZE: int | None
+        MAX_CONCURRENCY: int | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         FLAVOR: str
         REGION: str

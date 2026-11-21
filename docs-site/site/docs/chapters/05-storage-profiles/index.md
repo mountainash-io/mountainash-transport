@@ -133,7 +133,7 @@ One profile class, `S3StorageProfile`, covers AWS S3, S3 Express One Zone, Cloud
 | `minio` | `ENDPOINT_URL`, required | `REGION` | `ADDRESSING_STYLE` |
 | `b2` | `https://s3.{REGION}.backblazeb2.com`, or `ENDPOINT_URL` | `REGION` | `ADDRESSING_STYLE` |
 
-An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
+An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). `MULTIPART_THRESHOLD`, `MULTIPART_CHUNKSIZE` (bytes) and `MAX_CONCURRENCY` tune uploads from `write`, `write_stream` and `copy_between`; unset, boto3's defaults apply (8 MiB, 8 MiB, 10 threads). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
 
 ```python
 from mountainash_transport.settings.storage.profiles import S3StorageProfile
