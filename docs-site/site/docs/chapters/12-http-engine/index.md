@@ -14,7 +14,7 @@ The engine and its policy, response and error types are exported from `mountaina
 
 Construct the engine around a client you own: `HttpRequestEngine(client, policy=None, auth_strategy=None, *, location_check=None)`. The engine never closes the client. It offers two calls:
 
-- `request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None)` sends a request and returns a fully buffered `HttpResponse`. A `stream=` body is read into bytes before sending.
+- `request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None)` sends a request and returns a fully buffered `HttpResponse`. A `stream=` body is sent in chunks as it is read, never read into memory first: a seekable stream is sent from its current position with a `Content-Length`, a non-seekable one with chunked transfer encoding.
 - `stream(method, url, *, headers=None, content=None, params=None, policy=None)` is a context manager that yields an `HttpStreamResponse` without loading the body. Its body must be `bytes`.
 
 `url` may be relative when the client has a `base_url`. Every call can pass its own `RequestPolicy` through `policy=`, which replaces the engine's default for that call only. Caller `headers` override auth headers with the same name.
@@ -132,7 +132,9 @@ These classes do not subclass `StorageError`. When you read through `StorageFaca
 | `retry_unsafe_methods` | `False` | Also retry methods outside `IDEMPOTENT_METHODS`, such as POST and PATCH. |
 | `max_retry_after` | `120.0` | Longest `Retry-After` wait honoured, in seconds. |
 
-Statuses other than 429 and transport errors are retried only for methods in `IDEMPOTENT_METHODS` (GET, HEAD, OPTIONS, TRACE, PUT, DELETE) and only when the body can be sent again: no body, a `bytes` body, or a seekable stream. A 429 is retried for any method; the engine waits for the server's `Retry-After` value (seconds or an HTTP date), capped at `max_retry_after`, or uses the backoff when there is none. A `401` followed by a successful credential refresh is not counted as an attempt (see [Authentication strategies](#authentication-strategies)).
+Statuses other than 429 and transport errors are retried only for methods in `IDEMPOTENT_METHODS` (GET, HEAD, OPTIONS, TRACE, PUT, DELETE). A 429 is retried for any method; the engine waits for the server's `Retry-After` value (seconds or an HTTP date), capped at `max_retry_after`, or uses the backoff when there is none. A `401` followed by a successful credential refresh is not counted as an attempt (see [Authentication strategies](#authentication-strategies)).
+
+Every re-send follows one rule about the request body. No body, a `bytes` body or a seekable stream can be sent again: retries for 429, other retryable statuses and transport errors, the 401 refresh, and redirects or authentication challenges all re-send it from the position it started at. A non-seekable stream (a pipe, a socket, a transform's output) is sent once. None of those re-sends happen, and a redirect or challenge that would need one raises `HttpRequestError`. To make a non-seekable body retryable, pass `materialize(stream)`, which copies it into a seekable buffer.
 
 The example turns backoff off so that it runs instantly. The server answers `/flaky` with 503 on the first request, `/limited` with 429 and `Retry-After: 0` on the first request, and every POST with 503.
 

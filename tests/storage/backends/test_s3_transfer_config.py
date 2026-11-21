@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import typing as t
 
 import pytest
 
@@ -13,7 +14,7 @@ MIB = 1024 * 1024
 PAYLOAD = b"z" * (6 * MIB)  # below boto3's default 8 MiB threshold
 
 
-def _backend(profile: S3StorageProfile, calls: list[str]) -> tuple[S3StorageBackend, object]:
+def _backend(profile: S3StorageProfile, calls: list[str]) -> tuple[S3StorageBackend, t.Any]:
     """A real boto3 client with stubbed responses, so the transfer manager decides the requests."""
     import boto3
     from botocore.stub import Stubber

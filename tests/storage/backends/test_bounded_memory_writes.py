@@ -160,8 +160,8 @@ def test_write_stream_reads_in_bounded_chunks(
         assert digests == [hashlib.sha256(PAYLOAD).hexdigest()]
         bound = DEFAULT_CHUNK_SIZE
     else:
-        backend, stub, received = _s3_backend()
-        backend.write_from_stream("s3://b/k", t.cast(t.BinaryIO, source))
+        s3_backend, stub, received = _s3_backend()
+        s3_backend.write_from_stream("s3://b/k", t.cast(t.BinaryIO, source))
         stub.assert_no_pending_responses()
         assert received == [PAYLOAD]
         bound = S3_PART

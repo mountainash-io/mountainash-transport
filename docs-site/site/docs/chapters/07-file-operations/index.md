@@ -112,11 +112,10 @@ How much of the payload each backend holds in memory differs:
 |---|---|---|
 | Local | Native file handle, seekable | Copied to the file in 64 KiB chunks |
 | S3 family | Forward-only, fetched on demand | boto3 managed upload; large uploads become multipart |
-| SFTP | Forward-only, no unbounded prefetch | Whole source read into memory, then written |
+| SFTP | Forward-only, no unbounded prefetch | Uploaded with paramiko's `putfo` in 32 KiB chunks |
 | HTTP | Forward-only, fetched on demand | Streamed as the body of a `PUT` |
 
-!!! warning "SFTP buffers stream writes"
-    On SFTP, `write_stream()` reads the entire source stream into memory and then writes it in one call. Memory use grows with the payload size, and this also applies when `copy_between()` copies into SFTP. Writing a multi-gigabyte stream to SFTP needs that much free memory. See the [support matrix and known limits](../../reference/support-matrix.md).
+`write_stream()` reads the source in chunks on every backend, so memory use does not grow with the payload. This also holds when `copy_between()` copies into any of them. A `GPG` transform is the exception: python-gnupg holds the whole payload while it encrypts or decrypts.
 
 `write_stream()` never closes the stream you pass it: after a single-request or a multipart S3 upload, a local write or an HTTP `PUT`, the source is still open and yours to close.
 
@@ -158,7 +157,7 @@ Output:
 The S3 prefix ends with `/` so that it selects the folder's keys only. HTTP stores cannot list. For a plain directory listing with directory entries rather than prefix groups, local and SFTP also offer `list_dir()` ([Directory operations](#directory-operations)).
 
 !!! note "S3 listings with a limit"
-    On the S3 family, `max_results` is applied after every page of the listing has been fetched, so a small limit on a large prefix still lists the whole prefix. See the [support matrix and known limits](../../reference/support-matrix.md).
+    On the S3 family, a listing with `max_results` asks for pages of at most that many keys and stops fetching once it has enough entries, so a small limit on a large prefix costs one request. `max_results=0` makes no request.
 
 <!-- concept:151 -->
 

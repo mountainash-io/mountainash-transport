@@ -218,8 +218,8 @@ The facade returns two kinds of remote read stream. Sequential reads use forward
 <!-- concept:217 -->
 The protocols fix method names and error types. Some behaviour is left to the store, and the backends keep the store's semantics rather than emulating one another.
 
-!!! warning "SFTP write buffering"
-    The SFTP backend's `write_from_stream` reads the whole source stream into memory and then writes it as bytes. This applies to `write_stream`, to `write` with a transform pipeline, and to `copy_between` with an SFTP destination. Memory use grows with the payload. See the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "SFTP stream writes"
+    The SFTP backend's `write_from_stream` uploads with paramiko's `putfo`, which copies the source in 32 KiB chunks, so `write_stream`, `write` with a transform pipeline and `copy_between` into SFTP use bounded memory. As on every backend, the caller's stream is left open.
 
 !!! note "S3 copy switches to multipart above 4 GiB"
     `copy()` on the S3 backend uses boto3's managed copy with a 4 GiB multipart threshold and 256 MiB parts. Below the threshold it is one `CopyObject` request; above it, `CreateMultipartUpload`, one `UploadPartCopy` per part and `CompleteMultipartUpload`, preserving the source's content type and metadata. Every copy first issues a `HeadObject` on the source to learn its size. The threshold is below each provider's single-request limit: 5 GB for [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html) and [S3 Express](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-copy.html), 5 GB for [Backblaze B2](https://www.backblaze.com/docs/cloud-storage-large-files) standard files, 5 GiB less 5 MiB for [Cloudflare R2](https://developers.cloudflare.com/r2/platform/limits/); [MinIO](https://docs.min.io/aistor/reference/aistor-server/thresholds/) documents none. A multipart copy's ETag has a `-<parts>` suffix, unlike a single-request copy.
