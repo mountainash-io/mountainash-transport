@@ -133,7 +133,7 @@ One profile class, `S3StorageProfile`, covers AWS S3, S3 Express One Zone, Cloud
 | `minio` | `ENDPOINT_URL`, required | `REGION` | `ADDRESSING_STYLE` |
 | `b2` | `https://s3.{REGION}.backblazeb2.com`, or `ENDPOINT_URL` | `REGION` | `ADDRESSING_STYLE` |
 
-An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). `MULTIPART_THRESHOLD`, `MULTIPART_CHUNKSIZE` (bytes) and `MAX_CONCURRENCY` tune uploads from `write`, `write_stream` and `copy_between`; unset, boto3's defaults apply (8 MiB, 8 MiB, 10 threads). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
+An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). `MULTIPART_THRESHOLD`, `MULTIPART_CHUNKSIZE` (bytes) and `MAX_CONCURRENCY` tune uploads from `write`, `write_stream` and `copy_between`; unset, boto3's defaults apply (8 MiB, 8 MiB, 10 threads). `RETRY_MAX_ATTEMPTS` sets botocore's total attempts per request in standard retry mode; unset, botocore's own settings apply ([Retries](../14-backends/index.md#retries)). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
 
 ```python
 from mountainash_transport.settings.storage.profiles import S3StorageProfile
@@ -175,7 +175,7 @@ The same rules apply whichever S3-family scheme a path uses: `s3://`, `r2://`, `
 
 ### SFTP profile
 
-`SFTPStorageProfile` describes an SSH server used through its SFTP subsystem. `HOST` and `USERNAME` are required; `PORT` defaults to 22. The remaining fields map to paramiko's `SSHClient.connect`: `TIMEOUT`, `BANNER_TIMEOUT`, `AUTH_TIMEOUT`, `ALLOW_AGENT`, `LOOK_FOR_KEYS` and `COMPRESS`. Host-key checking is set by `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY`, which defaults to `reject` (refuse hosts whose key is not known). `warn` and `auto_add` connect to unknown hosts and allow a man-in-the-middle on first contact.
+`SFTPStorageProfile` describes an SSH server used through its SFTP subsystem. `HOST` and `USERNAME` are required; `PORT` defaults to 22. The remaining fields map to paramiko's `SSHClient.connect`: `TIMEOUT`, `BANNER_TIMEOUT`, `AUTH_TIMEOUT`, `ALLOW_AGENT`, `LOOK_FOR_KEYS` and `COMPRESS`. Host-key checking is set by `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY`, which defaults to `reject` (refuse hosts whose key is not known). `warn` and `auto_add` connect to unknown hosts and allow a man-in-the-middle on first contact. `RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE` and `RETRY_BACKOFF_MAX` control how an operation that loses its session reconnects and retries ([Retries](../14-backends/index.md#retries)).
 
 ```python
 from mountainash_transport.settings.storage.profiles import HTTPStorageProfile, SFTPStorageProfile
@@ -197,7 +197,7 @@ The host-key settings travel in a separate envelope because paramiko applies the
 
 ### HTTP profile
 
-`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on), `CA_BUNDLE` and `HEADERS`, plus the `RANGE_*` fields. The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
+`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on), `CA_BUNDLE` and `HEADERS`, plus the `RANGE_*` fields and the `RETRY_*` fields (`RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE`, `RETRY_BACKOFF_MAX`). The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
 
 ```python
 web = HTTPStorageProfile(HEADERS={"User-Agent": "reports-sync"}, FOLLOW_REDIRECTS=False)
@@ -222,7 +222,7 @@ An S3-compatible endpoint (MinIO, an on-premises gateway, a target reached throu
 
 Without `CA_BUNDLE`, S3 follows botocore's own resolution, so `AWS_CA_BUNDLE` and `ca_bundle` in `~/.aws/config` apply as they do for plain boto3.
 
-Authorization headers are added from the auth profile and merged with `HEADERS`. Request behaviour beyond the client settings, such as retries, is configured on the [HTTP request engine](../12-http-engine/index.md#making-requests).
+Authorization headers are added from the auth profile and merged with `HEADERS`. The `RETRY_*` fields become the [HTTP request engine](../12-http-engine/index.md#retries)'s `RetryPolicy`; status codes, `Retry-After` and method rules stay the engine's.
 
 ## Specs, the registry and settings-only providers
 

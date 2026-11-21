@@ -676,11 +676,11 @@ Explained in [What transport owns](chapters/01-what-transport-does/index.md#what
 
 ## `RetryPolicy`
 
-The policy that decides which HTTP failures the engine retries: `max_attempts` including the first, exponential backoff with optional jitter, retried status codes, connection and timeout errors, and a cap on honoured `Retry-After` waits. Only idempotent methods are retried unless `retry_unsafe_methods` is set, except that a 429 is retried for any method.
+The policy that decides how often a failed operation is tried again: `max_attempts` including the first, and exponential backoff with optional jitter. The HTTP engine also reads its retried status codes, the cap on honoured `Retry-After` waits and `retry_unsafe_methods`; SFTP storage uses it with reconnects. Storage profiles set it through their `RETRY_*` fields.
 
 Related: [`RequestPolicy`](#requestpolicy), [`HttpRequestEngine`](#httprequestengine).
 
-Explained in [Retries](chapters/12-http-engine/index.md#retries).
+Explained in [Retries](chapters/12-http-engine/index.md#retries) and [Retries across backends](chapters/14-backends/index.md#retries).
 
 ## Root confinement
 
@@ -780,7 +780,7 @@ Explained in [SFTPConnection](chapters/11-connections/index.md#sftpconnection).
 
 ## `SFTPStorageBackend`
 
-The backend for SFTP, using a paramiko `SFTPClient`. It implements read, write, enumerate, delete, metadata, directories and ranged read, but not server-side copy. `sftp://` URLs must match the connected profile's host and port, and stream writes are buffered in memory.
+The backend for SFTP, using a paramiko `SFTPClient`. It implements read, write, enumerate, delete, metadata, directories and ranged read, but not server-side copy. `sftp://` URLs must match the connected profile's host and port, stream writes are uploaded in chunks, and an operation that loses its session reconnects and retries.
 
 Related: [`SFTPStorageProfile`](#sftpstorageprofile), [Backend divergence](#backend-divergence).
 

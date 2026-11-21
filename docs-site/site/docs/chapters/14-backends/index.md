@@ -224,10 +224,34 @@ The protocols fix method names and error types. Some behaviour is left to the st
 !!! note "S3 copy switches to multipart above 4 GiB"
     `copy()` on the S3 backend uses boto3's managed copy with a 4 GiB multipart threshold and 256 MiB parts. Below the threshold it is one `CopyObject` request; above it, `CreateMultipartUpload`, one `UploadPartCopy` per part and `CompleteMultipartUpload`, preserving the source's content type and metadata. Every copy first issues a `HeadObject` on the source to learn its size. The threshold is below each provider's single-request limit: 5 GB for [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html) and [S3 Express](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-copy.html), 5 GB for [Backblaze B2](https://www.backblaze.com/docs/cloud-storage-large-files) standard files, 5 GiB less 5 MiB for [Cloudflare R2](https://developers.cloudflare.com/r2/platform/limits/); [MinIO](https://docs.min.io/aistor/reference/aistor-server/thresholds/) documents none. A multipart copy's ETag has a `-<parts>` suffix, unlike a single-request copy.
 
-!!! warning "S3 listing with a limit"
-    `list_objects(..., max_results=n)` on S3 pages through every result under the prefix and then truncates to `n` (objects first, then common prefixes). The number of requests depends on the size of the prefix, not on `n`. The SFTP backend stops as soon as it has `n` entries. See the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "S3 listing with a limit"
+    `list_objects(..., max_results=n)` on S3 asks for pages of at most `n` keys and stops fetching once it has `n` entries (objects first, then common prefixes), so a small limit costs one request. `max_results=0` makes no request.
 
 Other differences follow from the stores themselves. Deleting a missing local or SFTP file raises `PathNotFoundError`; deleting a missing S3 key succeeds. Ranged reads are pinned to an ETag on S3 and HTTP but not on SFTP. The `create_parents` option on writes applies to local and SFTP only.
+
+### Retries
+
+Every remote backend retries transient failures, each in the way its SDK allows, under one `RetryPolicy` (`src/mountainash_transport/_core/retry.py`) configured by the storage profile's `RETRY_*` fields:
+
+| Backend | Who retries | Transient failures | Profile fields | Default |
+|---|---|---|---|---|
+| HTTP | `HttpRequestEngine` | retryable statuses (429, 500, 502, 503, 504), connection and timeout errors | `RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE`, `RETRY_BACKOFF_MAX` | 3 attempts, 1 s doubling to 60 s, jittered |
+| SFTP | `ExecutorRetry`, reconnecting the SSH session before each retry | a lost session (`StorageConnectionError`) or a failed reconnect | same three | same |
+| S3 family | botocore, inside each request | botocore's standard mode: throttling, 5xx, connection errors | `RETRY_MAX_ATTEMPTS` (botocore owns the backoff) | botocore's own settings: `AWS_MAX_ATTEMPTS`, `AWS_RETRY_MODE`, `~/.aws/config`, else 5 attempts |
+| Local | nothing | — | — | — |
+
+`RETRY_MAX_ATTEMPTS=1` turns retry off. Errors that describe the path or the caller, such as `PathNotFoundError`, `PermissionDeniedError` and `AuthenticationError`, are never retried. Which operations retry:
+
+| Operation | Retried |
+|---|---|
+| `read`, `exists`, `get_size`, `metadata`, `list_objects`, `list_dir` | Yes |
+| `read_stream` | Only opening the stream; bytes already returned cannot be taken back. HTTP and S3 random-access reads retry each range; SFTP ones do not, because the file handle dies with the session |
+| `write` (bytes) | Yes |
+| `write_stream`, `copy_between` into the store | Only when the source is seekable, sent again from the position it started at (the [HTTP body rule](../12-http-engine/index.md#retries)) |
+| `delete`, `mkdir`, `rmdir` | Yes |
+| `copy` (S3) | Yes, by botocore |
+
+An SFTP delete whose reply is lost with the session has already removed the file, so its retry raises `PathNotFoundError`. A reconnect that SSH rejects, for a password or host key, is retried like a network failure until the attempts run out, because the connection layer does not keep paramiko's reason.
 
 <!-- concept:219 -->
 ### Backend error mapping

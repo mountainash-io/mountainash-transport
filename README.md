@@ -262,7 +262,8 @@ denied-HEAD fallback to prefix listing; bucket-root checks retain LIST behavior.
 
 Caller input, invalid arguments, transform/decoder failures and cancellation
 are not reclassified as backend failures. A failed write may leave partial
-data; error mapping does not add rollback or retries. Stream cleanup ordering
+data; error mapping adds no rollback. Transient failures are retried per
+backend (see the docs' Retries section). Stream cleanup ordering
 and ownership remain unchanged. boto3 managed uploads may close seekable caller
 inputs. Paramiko suppresses some native final-close failures internally;
 transport translates escaping errors, not failures hidden by the SDK.

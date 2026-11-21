@@ -107,6 +107,10 @@ and native local handles; buffered mode materializes decoded bytes in memory.
 `None` for remote backends and transformed reads.
 See `docs/read-access-modes.md` for migration, error timing and cache-policy tuning.
 
+### Retries
+
+`_core/retry.py` holds `RetryPolicy`, `backoff_delay` and the `RetryStrategy` contract. Profiles set it through `RETRY_*` fields. HTTP: the engine's own loop. SFTP: `ExecutorRetry`, reconnecting before each retry; only the outermost operation retries. S3: `RETRY_MAX_ATTEMPTS` becomes botocore `total_max_attempts`, and unset leaves botocore's settings alone. Non-seekable inputs are never re-sent. Fake SFTP connections in tests pass `RETRY_MAX_ATTEMPTS=1`.
+
 ### Package structure
 
 ```
@@ -118,6 +122,7 @@ src/mountainash_transport/
 │   ├── protocols.py       # ConnectionProtocol[C]
 │   ├── dataclasses/       # FileMetadata
 │   ├── http/              # HTTP engine: policy, response, errors, auth protocol
+│   ├── retry.py           # RetryPolicy, backoff_delay, RetryStrategy, ExecutorRetry
 │   └── transforms/        # Pipeline, Gzip, GPG, materialize
 ├── connections/           # create_connection(), leaf + decorator connections, errors
 ├── settings/              # ProfileProtocol, StorageProfileSpec, utils

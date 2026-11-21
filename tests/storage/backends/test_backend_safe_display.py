@@ -48,7 +48,7 @@ def _sftp_backend(error):
     client = MagicMock()
     client.open.side_effect = error
     client.stat.side_effect = error
-    return SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    return SFTPStorageBackend(SimpleNamespace(RETRY_MAX_ATTEMPTS=1), connection=SimpleNamespace(client=client))
 
 
 def _s3_errors():

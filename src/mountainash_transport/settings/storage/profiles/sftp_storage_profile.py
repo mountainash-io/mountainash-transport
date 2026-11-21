@@ -67,6 +67,13 @@ SFTP_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Total attempts for an operation that loses its session, reconnecting "
+                                  "between attempts; 1 disables retry. None keeps the default (3)."),
+        ParameterSpec(name="RETRY_BACKOFF_BASE", type=t.Optional[float], default=None, tier="advanced",
+                      description="Seconds before the first retry, doubling per retry. None keeps the default (1.0)."),
+        ParameterSpec(name="RETRY_BACKOFF_MAX", type=t.Optional[float], default=None, tier="advanced",
+                      description="Longest wait between retries in seconds. None keeps the default (60.0)."),
         ParameterSpec(
             name="HOST",
             type=str,
@@ -206,6 +213,9 @@ class SFTPStorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        RETRY_MAX_ATTEMPTS: int | None
+        RETRY_BACKOFF_BASE: float | None
+        RETRY_BACKOFF_MAX: float | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         HOST: str
         PORT: int

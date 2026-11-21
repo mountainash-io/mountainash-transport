@@ -71,6 +71,10 @@ S3_SPEC = StorageProfileSpec(
                                   "None keeps boto3's default (8 MiB)."),
         ParameterSpec(name="MAX_CONCURRENCY", type=t.Optional[int], default=None, tier="advanced",
                       description="Parallel part uploads for one stream upload. None keeps boto3's default (10)."),
+        ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Total attempts per request, retried by botocore in standard mode; 1 disables "
+                                  "retry. None leaves retries to botocore's own settings (AWS_MAX_ATTEMPTS, "
+                                  "AWS_RETRY_MODE, ~/.aws/config)."),
         ParameterSpec(
             name="FLAVOR",
             type=str,
@@ -263,6 +267,10 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
             config_kwargs["connect_timeout"] = connect_timeout
         if read_timeout is not None:
             config_kwargs["read_timeout"] = read_timeout
+        max_attempts = getattr(profile, "RETRY_MAX_ATTEMPTS", None)
+        if max_attempts is not None:
+            # botocore retries S3 requests itself; total_max_attempts counts the first request.
+            config_kwargs["retries"] = {"total_max_attempts": max_attempts, "mode": "standard"}
         base["config"] = _botocore_config.Config(**config_kwargs)
 
     return base
@@ -285,6 +293,7 @@ class S3StorageProfile(Profile):
         MULTIPART_THRESHOLD: int | None
         MULTIPART_CHUNKSIZE: int | None
         MAX_CONCURRENCY: int | None
+        RETRY_MAX_ATTEMPTS: int | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         FLAVOR: str
         REGION: str

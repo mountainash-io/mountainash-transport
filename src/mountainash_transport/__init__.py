@@ -80,10 +80,10 @@ if t.TYPE_CHECKING:
         GPG as GPG,
         materialize as materialize,
     )
+    from ._core.retry import RetryPolicy as RetryPolicy
     from ._core.http import (
         HttpRequestEngine as HttpRequestEngine,
         RequestPolicy as RequestPolicy,
-        RetryPolicy as RetryPolicy,
         TimeoutPolicy as TimeoutPolicy,
         RedirectPolicy as RedirectPolicy,
         HttpResponse as HttpResponse,
@@ -166,7 +166,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'materialize': ('._core.transforms', 'materialize'),
     'HttpRequestEngine': ('._core.http', 'HttpRequestEngine'),
     'RequestPolicy': ('._core.http', 'RequestPolicy'),
-    'RetryPolicy': ('._core.http', 'RetryPolicy'),
+    'RetryPolicy': ('._core.retry', 'RetryPolicy'),
     'TimeoutPolicy': ('._core.http', 'TimeoutPolicy'),
     'RedirectPolicy': ('._core.http', 'RedirectPolicy'),
     'HttpResponse': ('._core.http', 'HttpResponse'),
