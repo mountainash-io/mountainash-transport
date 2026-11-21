@@ -287,6 +287,9 @@ datetimes must supply a timezone.
 non-empty directory raises `StorageError` and is left untouched. Pass
 `recursive=True` to remove the tree (symbolic links inside are removed, not
 followed). This does not alter symlink classification in directory listings.
+A file, a link to a directory, or a path below a file raises `StorageError`, not
+`PathNotFoundError`, on both, including on SFTP servers that report the
+condition as “no such file”.
 
 ### Exact-path object enumeration
 

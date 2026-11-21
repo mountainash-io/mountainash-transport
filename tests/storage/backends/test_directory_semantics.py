@@ -221,14 +221,7 @@ def test_rmdir_missing_path_is_not_found(backend: t.Any, tmp_path: Path, recursi
 
 @pytest.mark.parametrize("recursive", [False, True])
 @pytest.mark.parametrize("kind", ["file", "directory-link"])
-def test_rmdir_refuses_non_directories(
-    backend: t.Any, tmp_path: Path, recursive: bool, kind: str, request: pytest.FixtureRequest,
-) -> None:
-    if request.node.callspec.params["backend"] == "sftp_server" and not recursive:
-        request.applymarker(pytest.mark.xfail(strict=True, reason=(
-            "backlog #68: SFTP servers (OpenSSH, paramiko) report rmdir's ENOTDIR as NO_SUCH_FILE, "
-            "so the backend raises PathNotFoundError for a file or directory link"
-        )))
+def test_rmdir_refuses_non_directories(backend: t.Any, tmp_path: Path, recursive: bool, kind: str) -> None:
     real = tmp_path / "real"
     real.mkdir()
     (real / "keep.txt").write_bytes(b"keep")
@@ -241,6 +234,15 @@ def test_rmdir_refuses_non_directories(
         backend.rmdir(str(target), recursive=recursive)
     assert not isinstance(caught.value, PathNotFoundError)
     assert os.path.lexists(target) and (real / "keep.txt").exists()
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+def test_rmdir_below_a_file_is_not_absence(backend: t.Any, tmp_path: Path, recursive: bool) -> None:
+    (tmp_path / "file").write_bytes(b"file")
+    with pytest.raises(StorageError) as caught:
+        backend.rmdir(str(tmp_path / "file" / "child"), recursive=recursive)
+    assert not isinstance(caught.value, PathNotFoundError)
+    assert (tmp_path / "file").read_bytes() == b"file"
 
 
 def test_facade_rmdir_passes_recursive(tmp_path: Path) -> None:
