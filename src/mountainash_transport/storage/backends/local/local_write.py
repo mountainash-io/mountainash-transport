@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 from typing import BinaryIO
 
-from ._helpers import _mapped, _native
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE as _CHUNK_SIZE
 
-_CHUNK_SIZE = 65_536  # 64 KiB
+from ._helpers import _mapped, _native
 
 
 class LocalWriteMixin:
