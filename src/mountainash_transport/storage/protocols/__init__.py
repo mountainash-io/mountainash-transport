@@ -1,3 +1,17 @@
+"""Storage capability protocols.
+
+Retry rule every remote backend follows (configured by the profile's
+``RETRY_*`` fields; see ``_core/retry.py``):
+
+- Read, metadata, enumerate, directory and delete operations are retried on
+  transient failure (lost connection, timeout, retryable status).
+- ``read_to_stream`` and ``open_ranged`` retry only the open; bytes already
+  returned are not re-fetched.
+- ``write_from_bytes`` is retried; ``write_from_stream`` only when the source
+  is seekable, re-sent from the position it started at.
+- Path, permission and authentication errors are never retried. A delete whose
+  reply was lost may raise ``PathNotFoundError`` on its retry.
+"""
 from __future__ import annotations
 
 from mountainash_transport.storage.protocols.prtcl_copy import StorageCopyProtocol
