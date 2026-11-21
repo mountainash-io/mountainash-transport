@@ -191,6 +191,23 @@ def test_join_keeps_host_and_port(path: str, expected: str):
     assert str(StoragePath.join(path, "x.csv")) == expected
 
 
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("https://h/a?x=1", "https://h/a/b.csv?x=1"),
+        ("https://h/a/?sig=abc&exp=2", "https://h/a/b.csv?sig=abc&exp=2"),
+        ("https://h/a#frag", "https://h/a/b.csv#frag"),
+        ("https://h/a?x=1#frag", "https://h/a/b.csv?x=1#frag"),
+        ("sftp://h.example.com/a?x=1", "sftp://h.example.com/a/b.csv?x=1"),
+        ("https://h/a", "https://h/a/b.csv"),
+        ("/tmp/a?b", "/tmp/a?b/b.csv"),
+    ],
+)
+def test_join_inserts_name_before_query_and_fragment(path: str, expected: str):
+    """The name goes into the path component; query and fragment stay after it (#61)."""
+    assert str(StoragePath.join(path, "b.csv")) == expected
+
+
 def test_normalize_resolves_gcs_alias_to_gs():
     result = StoragePath.normalize("gcs://bucket/key")
     assert result is not None
