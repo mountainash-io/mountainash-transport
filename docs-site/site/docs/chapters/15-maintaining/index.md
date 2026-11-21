@@ -46,38 +46,7 @@ Shape and behaviour are tested separately:
 
 `tests/storage/protocols/test_registry_completeness.py` keeps three sources of truth in step. For every storage profile spec, `spec.implemented` must be `True` exactly when a backend is registered for its provider type. For every scheme with a provider, `get_storage_backend()` must either return a backend or raise `BackendNotImplementedError`, never an opaque `ValueError`. The settings-only providers in [Specs, the registry and settings-only providers](../05-storage-profiles/index.md#specs-the-registry-and-settings-only-providers) pass because their specs say `implemented=False`. `tests/storage/registry/` tests registration, override, lookup, scheme detection and the `auth_strategy` guard.
 
-Registry tests mutate process-wide state. `clear_registry()` empties the mapping, and the built-ins do not come back: they register when the backends package is first imported, and later registry calls see that package as already loaded. A test that clears the registry must restore it itself. A snapshot from `get_registered_backends()` can be re-registered with the public decorator:
-
-```python
-from mountainash_transport import BackendNotImplementedError, StorageFacade
-from mountainash_transport.storage.registry import (
-    clear_registry, get_registered_backends, register_storage_backend,
-)
-
-saved = get_registered_backends()                     # a copy
-clear_registry()
-print(get_registered_backends())                      # -> {}
-
-try:
-    StorageFacade.for_local()
-except BackendNotImplementedError as exc:
-    print(exc)
-
-for provider, cls in saved.items():                   # restore from the snapshot
-    register_storage_backend(provider)(cls)
-print(sorted(get_registered_backends()) == sorted(saved))   # -> True
-```
-
-Output:
-
-```text
-{}
-The 'local' storage provider is not yet implemented. Implemented providers: []
-True
-```
-
-!!! warning
-    `clear_registry()` cannot restore the built-in backends in the same process. After it runs, every facade raises `BackendNotImplementedError` until the backends are registered again by hand. Use it only in tests that save and restore the registry.
+Registry tests mutate process-wide state. The built-in backends register once, when the backends package is first imported, so a test that empties or overrides the registry must put it back. `tests/conftest.py` provides two fixtures for this: `isolated_backend_registry` snapshots the registry and restores it after the test, and `empty_backend_registry` also empties it for the test's duration. Use them rather than editing the registry by hand.
 
 <!-- concept:223 -->
 ### Slim install test
@@ -102,7 +71,7 @@ A new backend touches the provider vocabulary, settings, connections, the backen
 3. Connection. Add a leaf connection class implementing `ConnectionProtocol` in `src/mountainash_transport/connections/` and map the provider type to it in the provider-to-connection table in `connections/__init__.py`. Raise `TransportConnectionError` subclasses for connection failures (see [Connection errors](../11-connections/index.md#connection-errors)). Credentials arrive from an auth profile owned by mountainash-auth-client; see [Credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client).
 4. Backend package. Create `src/mountainash_transport/storage/backends/<name>/` with one mixin per protocol the store can honour and a `_helpers.py` that maps the SDK's exceptions to `StorageError` subclasses with `raise ... from`. Give the backend class a `(storage_profile=None, *, connection=None)` constructor, decorate it with `@register_storage_backend(...)`, and import the package from `storage/backends/__init__.py`. Import the SDK inside functions, never at module level.
 5. Facade policy. Add the provider's host check to `_REMOTE_CHECKS` in `src/mountainash_transport/storage/facade/facade.py`. Under an active `LocationPolicy`, a remote provider with no entry is refused with `LocationNotAllowed`, and `test_every_registered_remote_backend_declares_a_location_check` fails for any registered remote backend without one. If the backend reaches locations it derives itself (redirects, followed links), accept a `location_check` keyword and call it on each one; the registry forwards it to constructors that accept it.
-6. Tests and documentation. Add the provider's expected and excluded protocols to the conformance test, write behaviour tests for its calls and error mapping, and update the root README's support matrix, which must match `get_registered_backends()`. A new example under `examples/` needs an index row in `examples/README.md`; `tests/examples/` runs every recipe.
+6. Tests and documentation. Add the provider's expected and excluded protocols to the conformance test, write behaviour tests for its calls and error mapping, and update the root README's support table: the conformance test fails until every registered provider has a row and each mark matches the backend. A new example under `examples/` needs an index row in `examples/README.md`; `tests/examples/` runs every recipe.
 
 A provider type with no entry in `_PROVIDER_CONNECTION_MAP` (`src/mountainash_transport/connections/__init__.py`) makes `create_connection` raise `BackendNotImplementedError`, so a new backend also needs its connection class mapped there.
 

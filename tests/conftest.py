@@ -32,6 +32,27 @@ def local_facade() -> StorageFacade:
     return StorageFacade.for_local()
 
 
+@pytest.fixture
+def isolated_backend_registry():
+    """Snapshot the process-wide backend registry and restore it afterwards."""
+    from mountainash_transport.storage.registry import registry as reg
+
+    reg.ensure_backends_loaded()
+    snapshot = dict(reg._backend_registry)
+    try:
+        yield reg._backend_registry
+    finally:
+        reg._backend_registry.clear()
+        reg._backend_registry.update(snapshot)
+
+
+@pytest.fixture
+def empty_backend_registry(isolated_backend_registry):
+    """An empty backend registry for the test; built-ins are restored afterwards."""
+    isolated_backend_registry.clear()
+    return isolated_backend_registry
+
+
 # Pytest configuration
 def pytest_configure(config):
     """Configure pytest markers."""

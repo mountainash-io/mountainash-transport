@@ -281,10 +281,6 @@ There are three families with no shared base class. `StorageError` covers the fa
 
 `TransportConnectionError` and its subclasses (`ConnectionTimeoutError`, `UnsupportedAuthProfileError`) are separate from the `StorageError` hierarchy. Errors raised while a facade builds and connects its connection reach you as connection errors; later backend I/O failures are translated into storage errors. See [Connection errors](chapters/11-connections/index.md#connection-errors).
 
-### Why do I get `TransportConnectionError` instead of `MissingExtraError` when boto3 is missing?
-
-`MissingExtraError` covers only the `[http]` stack. A missing `boto3` or `paramiko` raises `TransportConnectionError` when the S3 or SSH connection is created, and using `GPG` without `[encryption]` raises a plain `ImportError`. Each message names the extra to install. When probing for optional backends, catch all three. See [MissingExtraError](chapters/03-installation/index.md#missingextraerror).
-
 ### What is the difference between `BackendNotImplementedError` and `ValueError` from `from_path`?
 
 `BackendNotImplementedError` means the scheme is recognised and the provider has a profile but no backend; its message lists the implemented providers. `ValueError` means the scheme is not in transport's scheme table at all. See [From path to backend](chapters/04-paths-and-schemes/index.md#from-path-to-backend).
@@ -305,7 +301,7 @@ Errors show only a safe form of a location: `scheme://host:port/path` for `schem
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing) and [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. One is answered above: [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
@@ -356,10 +352,6 @@ The conformance test checks each backend's expected and excluded protocols. The 
 ### How do I run the test suite?
 
 Clone `mountainash-settings` and `mountainash-auth-client` next to the transport checkout, then use the `hatch.toml` scripts: `hatch run test:test` for the full suite with coverage, `hatch run test:test-quick` without coverage, and `hatch run test:test-target-quick <path>` for one file, directory or test id. `hatch run mypy:check` and `hatch run ruff:check` run type checks and lint. See [Tests that guard the contracts](chapters/15-maintaining/index.md#tests-that-guard-the-contracts).
-
-### What happens if I call `clear_registry()`?
-
-The built-in backends do not come back in the same process, so every facade raises `BackendNotImplementedError` until backends are registered again by hand. Use it only in tests that save a snapshot from `get_registered_backends()` and re-register it afterwards. See [Registry completeness tests](chapters/15-maintaining/index.md#registry-completeness-tests).
 
 ### Does the fsspec version matter?
 

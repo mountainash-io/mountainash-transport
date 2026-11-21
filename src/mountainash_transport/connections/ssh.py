@@ -11,6 +11,7 @@ from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
 )
+from .._core.extras import raise_for_missing_extra
 from .._core.protocols import ConnectionProtocol
 from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
@@ -33,10 +34,7 @@ class SSHConnection(ConnectionProtocol):
         try:
             import paramiko
         except ImportError as exc:
-            raise TransportConnectionError(
-                "paramiko is required for SSH connections — "
-                "install with: pip install mountainash-transport[sftp]"
-            ) from exc
+            raise_for_missing_extra("SSH and SFTP connections", "sftp", exc)
 
         if self._client is not None:
             self.disconnect()

@@ -15,6 +15,7 @@ import io
 from typing import Any, BinaryIO
 
 from mountainash_transport._core.exceptions import TransformError
+from mountainash_transport._core.extras import raise_for_missing_extra
 from .base import StreamTransform
 
 #TERCHDEBT: Need to use GPGHelper here!
@@ -23,10 +24,7 @@ def _import_gnupg() -> Any:
     try:
         import gnupg
     except ImportError as exc:
-        raise ImportError(
-            "The GPG transform requires the [encryption] extra. "
-            "Install with: pip install 'mountainash-transport[encryption]'"
-        ) from exc
+        raise_for_missing_extra("the GPG transform", "encryption", exc)
     return gnupg
 
 

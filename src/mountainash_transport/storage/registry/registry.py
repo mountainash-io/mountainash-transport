@@ -115,8 +115,3 @@ def get_registered_backends() -> dict[CONST_STORAGE_PROVIDER_TYPE, type]:
     """Return a copy of all registered backends."""
     ensure_backends_loaded()
     return dict(_backend_registry)
-
-
-def clear_registry() -> None:
-    """Clear all registered backends. For testing only."""
-    _backend_registry.clear()

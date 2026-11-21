@@ -72,10 +72,10 @@ print([member.value for member in CONST_STORAGE_PROVIDER_TYPE])
 Output:
 
 ```text
-['local', 's3', 's3express', 'azure_blob', 'azure_files', 'gcs', 'sftp', 'ftp', 'smb', 'nfs', 'minio', 'ssh', 'b2', 'github', 'r2', 'http']
+['local', 's3', 's3express', 'azure_blob', 'gcs', 'sftp', 'ftp', 'smb', 'minio', 'ssh', 'b2', 'github', 'r2', 'http']
 ```
 
-The enum lists every provider transport can name, which is more than it can serve. Backends exist for `local`, the five S3 types (`s3`, `s3express`, `r2`, `minio`, `b2`), `sftp` and `http`. `ssh` is a connection type used for SFTP and bastion tunnels, not a storage backend. `nfs` and `azure_files` have no URL scheme and no backend.
+The enum lists every provider transport can name, which is more than it can serve. Backends exist for `local`, the five S3 types (`s3`, `s3express`, `r2`, `minio`, `b2`), `sftp` and `http`. `ssh` is a connection type used for SFTP and bastion tunnels, not a storage backend. Every member is reachable from a URL scheme; `azure_blob` covers both Azure Blob and Azure Files, selected by the profile's `SERVICE_TYPE`.
 
 The provider type you give `StorageFacade` (or that `from_path` derives from the path) decides which backend runs. The profile's own provider type decides which connection class and SDK family `create_connection` uses. For the S3 family these differ on purpose: `S3StorageProfile` always declares `s3`, and its `FLAVOR` field, not the provider type, selects R2, MinIO, B2 or S3 Express behaviour.
 

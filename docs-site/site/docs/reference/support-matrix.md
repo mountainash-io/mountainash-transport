@@ -17,7 +17,7 @@ mountainash-transport has four storage backends: local files, the S3 family, SFT
 
 One `S3StorageBackend` class is registered for all five S3-family provider types. The flavour on the storage profile selects endpoint and region handling. Local files support random access through the native file handle rather than the ranged-read protocol. See [read access modes](../chapters/09-read-access-modes/index.md#choosing-an-access-mode).
 
-The table was produced from `get_registered_backends()` and the protocol classes in `src/mountainash_transport/storage/protocols/`. `tests/storage/protocols/test_backend_conformance.py` asserts the first seven capability columns. Ranged read is satisfied structurally by an `open_ranged` method.
+The table was produced from `get_registered_backends()` and the protocol classes in `src/mountainash_transport/storage/protocols/`. `tests/storage/protocols/test_backend_conformance.py` asserts every capability column, including ranged read, for each registered provider, and checks the root README's support table against the same backends. Ranged read is satisfied structurally by an `open_ranged` method.
 
 ## Settings-only providers
 
@@ -33,5 +33,4 @@ These behaviours are current and affect correct use. Each one is also noted wher
 | HTTP retries | A 429 is retried for any method and any body. Transport errors and other retryable statuses are not retried when the body was passed as a non-seekable stream. | [Retries](../chapters/12-http-engine/index.md#retries) |
 | SFTP writes | `write_stream` to SFTP reads the whole source stream into memory before uploading, including during `copy_between` into SFTP. | [Where backends differ](../chapters/14-backends/index.md#where-backends-differ) |
 | S3 listing | Enumeration with a result limit lists every page before truncating. | [Where backends differ](../chapters/14-backends/index.md#where-backends-differ) |
-| Missing extras | `MissingExtraError` names the missing extra only for the `[http]` stack. A missing boto3, paramiko or python-gnupg surfaces as a plain import or connection error. | [Errors](../chapters/03-installation/index.md#errors) |
 | Native copy | `copy_between` uses a backend's native copy only when both facades share the same profile object; equal but separate profiles download and re-upload. | [Copying between backends](../chapters/10-stream-transforms/index.md#copying-between-backends) |

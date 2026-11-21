@@ -97,12 +97,12 @@ There are four leaf connections:
 
 | Connection | Created for | `client` | SDK import |
 |---|---|---|---|
-| `HTTPConnection` | `http`, and unmapped providers | `httpx.Client` | `[http]` extra |
+| `HTTPConnection` | `http`, and profiles with no provider type | `httpx.Client` | `[http]` extra |
 | `S3Connection` | the S3 family | boto3 S3 client | lazy, `[s3]` extra |
 | `SSHConnection` | the SSH side of SFTP, and bastions | `paramiko.SSHClient` | lazy, `[sftp]` extra |
 | `NullConnection` | `local` | `None` | none |
 
-S3 and SSH import their SDK inside `connect()`, so importing the connection classes works on an install without boto3 or paramiko; the missing SDK is reported only when you connect.
+S3 and SSH import their SDK inside `connect()`, so importing the connection classes works on an install without boto3 or paramiko; the missing SDK is reported only when you connect, as `MissingExtraError` naming `[s3]` or `[sftp]`.
 
 Leaf connections never own other connections, which is what lets decorators (next section) compose them. A facade uses the same objects: `StorageFacade` calls `create_connection`, connects the result, and hands the client to its backend; closing the facade disconnects it ([Opening and closing](../06-storage-facade/index.md#opening-and-closing)).
 
@@ -158,8 +158,6 @@ S3Connection ap-southeast-2
 ['sales.csv']
 False
 ```
-
-A missing boto3 raises `TransportConnectionError` naming the `[s3]` extra, not `MissingExtraError` (see the [support matrix and known limits](../../reference/support-matrix.md#known-limits)).
 
 <!-- concept:186 -->
 
@@ -374,11 +372,10 @@ Connection failures raise `TransportConnectionError` (exported from `mountainash
 
 | Exception | Raised when |
 |---|---|
-| `TransportConnectionError` | Client construction, socket, DNS, SSH authentication or host-key failure; missing boto3 or paramiko; tunnel cleanup failure |
+| `TransportConnectionError` | Client construction, socket, DNS, SSH authentication or host-key failure; tunnel cleanup failure |
 | `ConnectionTimeoutError` | A connect timed out, or tunnel workers did not stop within one second |
 | `TunnelEndpointError` | A tunnelled target would reach the network outside the tunnel: its SDK would resolve its own endpoint (S3 `aws`/`express` without `ENDPOINT_URL`), or an S3 target assumes a role and would call AWS STS directly |
 | `UnsupportedAuthProfileError` | The auth mode is not in the profile's `supported_auth` (raised by `create_connection` and by named-profile resolution) |
-| `TokenExchangeError`, `TokenRefreshError`, `AuthorizationRequired` | Defined for OAuth token failures; transport's own connection code does not raise them, since OAuth flows belong to `mountainash-auth-client` |
 
 `TransportConnectionError` is separate from the `StorageError` hierarchy ([Errors](../03-installation/index.md#errors)): handlers for storage errors do not catch it.
 
