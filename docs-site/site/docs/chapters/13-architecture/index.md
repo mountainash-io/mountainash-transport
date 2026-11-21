@@ -65,6 +65,7 @@ Each protocol covers one capability. A backend implements as many as its store c
 | `StorageDeleteProtocol` | `delete_file` | `delete` |
 | `StorageMetadataProtocol` | `get_metadata`, `path_exists`, `get_size` | `metadata`, `exists`, `get_size` |
 | `StorageCopyProtocol` | `copy` | `copy` |
+| `StorageMoveProtocol` | `move` | `move` |
 | `StorageDirectoryProtocol` | `list_dir`, `mkdir`, `rmdir` | `list_dir`, `mkdir`, `rmdir` |
 | `RangedReadProtocol` | `open_ranged` | `read_stream(access="random")` on remote backends |
 
@@ -99,6 +100,10 @@ All of them share one error rule: a backend translates its native I/O failures i
 ### Copy
 
 `StorageCopyProtocol.copy(source, destination)` copies within one backend using the store's own mechanism: `shutil.copy2` on local disk, a server-side `CopyObject` on S3. Copies between different stores go through `copy_between` instead, described in [Copying between backends](../10-stream-transforms/index.md#copying-between-backends).
+
+### Move
+
+`StorageMoveProtocol.move(source, destination, *, create_parents=True)` renames with the store's native rename and replaces an existing destination: `os.replace` on local disk, the OpenSSH `posix-rename@openssh.com` extension on SFTP. Stores without a rename (S3, HTTP) do not implement it, so a move is never a silent copy and delete.
 
 <!-- concept:204 -->
 ### Directory

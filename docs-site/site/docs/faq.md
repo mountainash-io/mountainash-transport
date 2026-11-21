@@ -79,7 +79,7 @@ Not for storage operations. These are settings-only providers: their profile cla
 
 ### How do I check whether a store supports an operation?
 
-Call `facade.supports(protocol)` with one of the eight protocol classes exported from the package root, such as `StorageDirectoryProtocol` or `StorageCopyProtocol`. Calling an operation the backend lacks raises `UnsupportedOperationError` before any I/O. HTTP cannot list, delete, copy or manage directories; the S3 family has no directories; SFTP has no `copy()`. See [Checking before you call](chapters/06-storage-facade/index.md#checking-before-you-call).
+Call `facade.supports(protocol)` with one of the nine protocol classes exported from the package root, such as `StorageDirectoryProtocol` or `StorageCopyProtocol`. Calling an operation the backend lacks raises `UnsupportedOperationError` before any I/O. HTTP cannot list, delete, copy, move or manage directories; the S3 family has no directories and no `move()`; SFTP has no `copy()`. See [Checking before you call](chapters/06-storage-facade/index.md#checking-before-you-call).
 
 ### Why can't I create directories on S3?
 
@@ -201,7 +201,11 @@ Use `copy_between(source_path, destination_path, source_facade, destination_faca
 
 ### Why did `copy_between` download and re-upload instead of copying server side?
 
-The native copy is used only when no pipeline is given, both facades use the same backend class and equal location policies, they share the identical storage profile object (compared with `is`), and the backend supports copy. Two facades built from separate but equal profiles stream the bytes through your process. See [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
+The native copy is used only when no pipeline is given, the backend supports copy, and `source_facade.same_store(destination_facade)` is true: same provider type and equal storage profiles, auth profiles and location policies. Profiles compare by value, so separately built but equal profiles copy natively; different credentials or a different bucket, root or policy stream the bytes through your process. See [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
+
+### How do I move or rename a file?
+
+Call `facade.move(source, destination)` on Local or SFTP. It uses the store's native rename (`os.replace`, or OpenSSH's `posix-rename` extension), replaces an existing destination and creates missing parents unless `create_parents=False`. A local move across filesystems raises `StorageError`. The S3 family and HTTP have no rename and raise `UnsupportedOperationError`; copy and then delete if a non-atomic move is acceptable. See [Moving](chapters/07-file-operations/index.md#moving).
 
 ### Does `write_stream()` close my source stream?
 

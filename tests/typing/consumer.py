@@ -72,6 +72,8 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), None)
     assert_type(storage.same_store(storage), bool)
     storage.same_store("/tmp")  # type: ignore[arg-type]
+    assert_type(storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents=False), None)
+    storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents="no")  # type: ignore[arg-type]
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 
     storage.read(123)  # type: ignore[arg-type]
