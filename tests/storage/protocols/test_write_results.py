@@ -15,12 +15,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
-from mountainash_auth_client import PasswordAuthProfile
 
 from mountainash_transport import StorageEntry, StorageFacade, copy_between
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as P
 from mountainash_transport._core.transforms import Gzip
-from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+
 
 # (backend, operation) -> fields that are always filled. Optional fields
 # (etag/version_id where the store reports them) are asserted per backend.
@@ -49,29 +48,6 @@ def assert_result(entry: StorageEntry, backend: str, op: str, metadata: StorageE
     if "last_modified" in WRITE_RESULT_FIELDS[(backend, op)]:
         assert entry.last_modified is not None and metadata.last_modified is not None
         assert abs((entry.last_modified - metadata.last_modified).total_seconds()) < 1
-
-
-@pytest.fixture(params=["local", "sftp"])
-def store(request: pytest.FixtureRequest, tmp_path: Path) -> t.Iterator[tuple[str, StorageFacade, Path, str]]:
-    """Backend name, a facade, the real directory behind it, and the facade's path prefix for it."""
-    root = tmp_path / "root"
-    root.mkdir()
-    if request.param == "local":
-        with StorageFacade.for_local() as facade:
-            yield "local", facade, root, str(root)
-        return
-    from connections.tunnel_rig import DirectorySFTPTarget
-
-    server = DirectorySFTPTarget(root)
-    known = tmp_path / "known_hosts"
-    known.write_text(server.known_hosts_line("127.0.0.1"))
-    profile = SFTPStorageProfile(HOST="127.0.0.1", PORT=server.port, USERNAME="u", KNOWN_HOSTS_FILE=str(known),
-                                 LOOK_FOR_KEYS=False, ALLOW_AGENT=False)
-    try:
-        with StorageFacade(P.SFTP, profile, auth_profile=PasswordAuthProfile(USERNAME="u", PASSWORD="p")) as facade:
-            yield "sftp", facade, root, ""
-    finally:
-        server.close()
 
 
 def test_write_returns_the_written_file(store: tuple[str, StorageFacade, Path, str]) -> None:

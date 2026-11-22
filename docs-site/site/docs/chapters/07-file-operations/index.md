@@ -286,6 +286,36 @@ sales.csv exists after delete: False
 
 The first pair of lines is the local store and the second is S3.
 
+### Deleting many paths
+
+`delete_many(paths)` deletes every path in an iterable and attempts all of them, even after a failure. Unlike `delete()`, a path that is already gone counts as deleted on every store, so the same cleanup code behaves the same on local disk, SFTP and S3.
+
+- On S3 the paths are grouped by bucket and deleted with `DeleteObjects`, one request per 1,000 keys. A key repeated in the input is sent once.
+- Local and SFTP have no batch delete, so they delete one path at a time; SFTP retries each delete as it would a single `delete()`.
+- Every path is checked against the location policy before anything is deleted. A path outside the allowed root raises at once, and nothing is removed.
+
+If any path cannot be deleted, `delete_many` raises one `BulkDeleteError` at the end. Its `failures` attribute lists, in input order, each path that remains with the storage error it raised (for example `PermissionDeniedError`); every other path is gone. A directory is not a file, so a directory path fails here as it does with `delete()`.
+
+```python
+from mountainash_transport import BulkDeleteError
+
+for name in ("a.csv", "b.csv"):
+    local.write(f"{root}/old/{name}", b"x")
+local.mkdir(f"{root}/old/keep")
+try:
+    local.delete_many(f"{root}/old/{name}" for name in ("a.csv", "missing.csv", "keep", "b.csv"))
+except BulkDeleteError as error:
+    print(error.failures[0][0].rsplit("/", 1)[-1], type(error.failures[0][1]).__name__)
+print(sorted(entry.name for entry in local.list_dir(f"{root}/old")))
+```
+
+Output:
+
+```text
+keep StorageError
+['keep']
+```
+
 <!-- concept:154 -->
 
 ### Directory operations

@@ -74,6 +74,14 @@ Related: [Read access mode](#read-access-mode), [`materialize`](#materialize).
 
 Explained in [Buffered access](chapters/09-read-access-modes/index.md#buffered-access).
 
+## `BulkDeleteError`
+
+The `StorageError` raised once at the end of `delete_many` when some paths could not be deleted. Its `failures` attribute lists, in input order, each remaining path with the storage error it raised; every other path was deleted, and missing paths are never listed.
+
+Related: [`StorageDeleteProtocol`](#storagedeleteprotocol).
+
+Explained in [Deleting many paths](chapters/07-file-operations/index.md#deleting-many-paths).
+
 ## Byte storage endpoint
 
 Any place that holds named sequences of bytes and lets a program fetch or store them by name: a local directory, an S3 bucket, a directory on an SFTP server or a web server that answers `GET` requests. Transport puts the same `StorageFacade` methods in front of each.
@@ -852,7 +860,7 @@ Explained in [Copy](chapters/13-architecture/index.md#copy).
 
 ## `StorageDeleteProtocol`
 
-The storage protocol for removing one file or object through `delete_file(path)`. The result for a missing path follows the store: local storage raises `PathNotFoundError` and S3 succeeds. HTTP does not implement it.
+The storage protocol for removing files or objects: `delete_file(path)` removes one, and the result for a missing path follows the store (local storage raises `PathNotFoundError`, S3 succeeds); `delete_many(paths)` removes many, attempting every path, counting missing ones as deleted on every store, and raising one `BulkDeleteError` for the rest. HTTP does not implement it.
 
 Related: [`delete`](#delete), [Storage protocol](#storage-protocol).
 
