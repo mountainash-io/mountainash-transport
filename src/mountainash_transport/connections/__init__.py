@@ -1,6 +1,7 @@
 """Connection infrastructure — OAuth flows, callback servers, token lifecycle, and factory."""
 from __future__ import annotations
 
+import ssl
 import typing as t
 
 try:
@@ -133,6 +134,18 @@ def _emit_kwargs(
 
     if auth_profile is None or isinstance(auth_profile, NoAuthProfile):
         return base
+
+    if (
+        family is TargetFamily.HTTP
+        and callable(emit)
+        and _auth_kind(auth_profile) is CONST_AUTH_PROFILES.CERTIFICATE
+        and isinstance(base.get("verify"), ssl.SSLContext)
+    ):
+        # Certificate emission loads the client identity into a context of its own
+        # and refuses a caller's prebuilt one, so CA_BUNDLE trust is handed over as
+        # a factory that builds a fresh context. Other auth keeps the plain context.
+        rebuild = emit
+        base = {**base, "verify": lambda: rebuild(TargetFamily.HTTP)["verify"]}
 
     if family is TargetFamily.BOTO:
         role_arn = getattr(auth_profile, "ROLE_ARN", None)

@@ -7,6 +7,7 @@ walks the registry, so a newly declared mode fails here until it is shown to wor
 from __future__ import annotations
 
 import typing as t
+from pathlib import Path
 
 import pytest
 from mountainash_auth_client import (
@@ -45,6 +46,16 @@ AUTH: dict[str, t.Callable[[], t.Any]] = {
 }
 
 
+def _auth(provider: str, mode: str, tmp_path: Path) -> t.Any:
+    """The sample auth profile; HTTP client certificates are loaded when the connection is built, so use real ones."""
+    if (provider, mode) == ("http", "certificate"):
+        from connections.tls_rig import make_tls_files
+
+        files = make_tls_files(tmp_path)
+        return CertificateAuthProfile(CERTIFICATE_PATH=files.client_cert, PRIVATE_KEY_PATH=files.client_key)
+    return AUTH[mode]()
+
+
 def _declared() -> list[tuple[str, str]]:
     pairs = []
     for name in sorted(STORAGE_REGISTRY.specs):
@@ -60,9 +71,9 @@ def test_every_implemented_provider_is_covered() -> None:
 
 
 @pytest.mark.parametrize(("provider", "mode"), _declared())
-def test_declared_mode_builds_a_connection(provider: str, mode: str) -> None:
+def test_declared_mode_builds_a_connection(provider: str, mode: str, tmp_path: Path) -> None:
     assert mode in AUTH, f"{provider} declares {mode!r}: add an auth fixture and prove it here"
-    connection = create_connection(STORAGE[provider](), AUTH[mode]())
+    connection = create_connection(STORAGE[provider](), _auth(provider, mode, tmp_path))
     try:
         assert connection is not None
     finally:

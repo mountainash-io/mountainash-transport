@@ -85,7 +85,7 @@ The provider type you give `StorageFacade` (or that `from_path` derives from the
 
 Credentials live in auth profiles from `mountainash-auth-client`: `IAMAuthProfile` (AWS keys, session token, role or named AWS profile), `PasswordAuthProfile`, `TokenAuthProfile`, `JWTAuthProfile`, `CertificateAuthProfile`, `KerberosAuthProfile`, `OAuth2AuthProfile`, `NoAuthProfile` and others. Transport never defines credential fields of its own; it reads what an auth profile emits (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)).
 
-Each storage provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password` and `oauth2`; local accepts only `none`. `create_connection` checks the pairing before any network I/O, and passing no auth profile counts as mode `none`.
+Each storage provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password`, `oauth2` and `certificate`; local accepts only `none`. `create_connection` checks the pairing before any network I/O, and passing no auth profile counts as mode `none`.
 
 ```python
 from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
@@ -221,6 +221,23 @@ An S3-compatible endpoint (MinIO, an on-premises gateway, a target reached throu
 | `True` (default) | unset | no `verify`: botocore uses `AWS_CA_BUNDLE` or the `ca_bundle` config key, else its default bundle | `verify=True`: httpx's default, which honours `SSL_CERT_FILE` |
 
 Without `CA_BUNDLE`, S3 follows botocore's own resolution, so `AWS_CA_BUNDLE` and `ca_bundle` in `~/.aws/config` apply as they do for plain boto3.
+
+### Client certificates for HTTPS
+
+An HTTPS server that requires a client certificate (mutual TLS) is reached with a `CertificateAuthProfile` from `mountainash-auth-client`. Give it the certificate as `CERTIFICATE_PATH` or as an in-memory `CERTIFICATE`, and the key as `PRIVATE_KEY_PATH` or `PRIVATE_KEY`, or put certificate and key in one PEM; `PASSPHRASE` unlocks an encrypted key. Auth-client loads that identity into the SSL context the HTTP client uses, so the profile's trust settings in the table above still apply: `CA_BUNDLE` trusts a private CA, `VERIFY_SSL=False` skips server verification, and by default `SSL_CERT_FILE` is honoured.
+
+```python
+from mountainash_auth_client import CertificateAuthProfile
+from mountainash_transport import StorageFacade
+from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
+
+url = "https://data.internal.example/exports/sales.csv"
+auth = CertificateAuthProfile(CERTIFICATE_PATH="/etc/pki/client.pem", PRIVATE_KEY_PATH="/etc/pki/client.key")
+with StorageFacade.from_path(url, HTTPStorageProfile(CA_BUNDLE="/etc/pki/internal-ca.pem"), auth_profile=auth) as web:
+    data = web.read(url)
+```
+
+A certificate or key that cannot be loaded, or a certificate that does not match its key, raises `ValueError` when the facade is constructed, before any request.
 
 Authorization headers are added from the auth profile and merged with `HEADERS`. The `RETRY_*` fields become the [HTTP request engine](../12-http-engine/index.md#retries)'s `RetryPolicy`; status codes, `Retry-After` and method rules stay the engine's.
 
