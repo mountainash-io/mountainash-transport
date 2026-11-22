@@ -554,6 +554,14 @@ Related: [`StreamTransform`](#streamtransform), [Transform direction](#transform
 
 Explained in [Pipelines](chapters/10-stream-transforms/index.md#pipelines).
 
+## `presign`
+
+The facade method that returns a time-limited URL letting someone without credentials GET or PUT one object. Only the S3 family signs URLs (Signature Version 4); other stores raise `UnsupportedOperationError`. `content_type` (PUT only) is signed into the URL, and a URL signed with temporary credentials stops working when they expire.
+
+Related: [`StoragePresignProtocol`](#storagepresignprotocol).
+
+Explained in [Presigned URLs](chapters/07-file-operations/index.md#presigned-urls).
+
 ## Profile-granted host
 
 A host or bucket that a storage profile passed to the facade allows without an `allowed_remote` entry: an SFTP profile's `HOST`, or an S3-family profile's `BUCKET`. An S3-family profile without a `BUCKET` allows no bucket; each one must be listed in `allowed_remote`.
@@ -929,6 +937,14 @@ A stateless helper class whose class methods identify, normalise, join and match
 Related: [URL scheme](#url-scheme), [Scheme dispatch](#scheme-dispatch).
 
 Explained in [StoragePath](chapters/04-paths-and-schemes/index.md#storagepath).
+
+## `StoragePresignProtocol`
+
+The storage protocol for presigned URLs through `presign(path, *, method="GET", expires_in=3600, content_type=None)`. The S3 family implements it; local storage, SFTP and HTTP do not.
+
+Related: [`presign`](#presign), [Storage protocol](#storage-protocol).
+
+Explained in [Presigned URLs](chapters/07-file-operations/index.md#presigned-urls).
 
 ## `StorageProfileSpec`
 

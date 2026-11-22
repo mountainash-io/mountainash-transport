@@ -80,6 +80,8 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents="no")  # type: ignore[arg-type]
     assert_type(storage.delete_many(["/tmp/a.csv", "/tmp/b.csv"]), None)
     storage.delete_many("/tmp/a.csv", "/tmp/b.csv")  # type: ignore[call-arg]
+    assert_type(storage.presign("s3://reports/sales.csv", method="PUT", expires_in=600, content_type="text/csv"), str)
+    storage.presign("s3://reports/sales.csv", method="DELETE")  # type: ignore[arg-type]
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 
     storage.read(123)  # type: ignore[arg-type]

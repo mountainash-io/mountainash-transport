@@ -435,3 +435,26 @@ False b'region,total\n'
 ```
 
 The S3 family and HTTP have no rename and raise `UnsupportedOperationError`; on S3, copy and then delete if a non-atomic move is acceptable. A local move to another filesystem raises `StorageError` and leaves the source in place. SFTP servers without the OpenSSH extension raise `StorageError` as well, because plain SFTP rename refuses an existing destination.
+
+## Presigned URLs
+
+`presign(path, *, method="GET", expires_in=3600, content_type=None)` returns a URL that lets anyone who has it read (`GET`) or upload (`PUT`) one object for a limited time, without credentials, for example a browser or another service. Only the S3 family signs URLs; local, SFTP and HTTP stores raise `UnsupportedOperationError`. The path is checked against the location policy like any other.
+
+```python
+url = s3.presign("s3://reports/2026/sales.csv", expires_in=900)
+upload = s3.presign("s3://reports/incoming/sales.csv", method="PUT", content_type="text/csv")
+```
+
+- **Signing.** URLs are signed with AWS Signature Version 4 against the client's own endpoint, so R2, MinIO, B2 and S3 Express URLs point at their own hosts. Signing happens locally, without a request, except on S3 Express (below).
+- **`content_type`.** Allowed only with `PUT`. It is signed into the URL, so the uploader must send exactly that `Content-Type` header or the store rejects the upload. An empty string is a value to sign, not "no content type".
+- **Credential lifetime.** The URL is only as long-lived as the credentials that signed it. With temporary credentials (assume-role, SSO, session tokens) it stops working when they expire, whatever `expires_in` says.
+- **S3 Express.** Directory buckets sign with a session from `CreateSession`. That may be a request, needs the `s3express:CreateSession` permission, and limits the URL to the session's lifetime, which is minutes. A denied session raises `PermissionDeniedError`.
+
+These calls raise `ValueError` before anything is signed:
+
+| Call | Reason |
+|---|---|
+| `presign(path, method="DELETE")` | Only `GET` and `PUT` are supported |
+| `presign(path, expires_in=0)` or `expires_in=604801` | The range is 1 second to 604,800 seconds (7 days), the Signature Version 4 maximum |
+| `presign(path, content_type="text/csv")` | `content_type` applies to `PUT` only |
+| `presign(path, method="PUT", content_type="application/x-www-form-urlencoded; charset=utf-8")` | botocore leaves exactly this value out of the signature, so the URL could not enforce it |

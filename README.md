@@ -28,16 +28,17 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 Operations follow the backend's capability protocols; unsupported calls raise
 `UnsupportedOperationError`.
 
-| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Move | Directories | Object enumeration | Ranged reads |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
-| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ |
-| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ |
-| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | | | ✓ |
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Move | Directories | Object enumeration | Ranged reads | Presigned URLs |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
+| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | |
+| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | | | ✓ | |
 
 Ranged reads back `read_stream(access="random")` on remote stores; local files
-support random access through their native file handle instead. A test checks
-this table against the registered backends.
+support random access through their native file handle instead. Presigned URLs
+(`presign()`) let someone without credentials GET or PUT one object for a limited
+time. A test checks this table against the registered backends.
 
 Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and
 recognised schemes but no backend yet: constructing a facade for them raises

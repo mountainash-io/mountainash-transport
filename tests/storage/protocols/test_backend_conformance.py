@@ -8,7 +8,7 @@ from mountainash_transport.storage.protocols import (
     RangedReadProtocol,
     StorageReadProtocol, StorageWriteProtocol,
     StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
-    StorageCopyProtocol, StorageDirectoryProtocol, StorageMoveProtocol,
+    StorageCopyProtocol, StorageDirectoryProtocol, StorageMoveProtocol, StoragePresignProtocol,
 )
 from mountainash_transport.storage.registry import get_registered_backends
 import mountainash_transport.storage.backends  # noqa: F401
@@ -17,7 +17,7 @@ _S3_FAMILY = (P.S3, P.S3EXPRESS, P.R2, P.MINIO, P.B2)
 _S3_PROTOCOLS = {
     StorageReadProtocol, StorageWriteProtocol,
     StorageEnumerateProtocol, StorageDeleteProtocol, StorageMetadataProtocol,
-    StorageCopyProtocol, RangedReadProtocol,
+    StorageCopyProtocol, RangedReadProtocol, StoragePresignProtocol,
 }
 
 EXPECTED_PROTOCOLS = {
@@ -42,12 +42,13 @@ EXPECTED_PROTOCOLS = {
 
 # Local random access uses the native file handle, not the ranged-read protocol.
 EXCLUDED_PROTOCOLS = {
-    P.LOCAL: {RangedReadProtocol},
+    P.LOCAL: {RangedReadProtocol, StoragePresignProtocol},
     **{provider: {StorageDirectoryProtocol, StorageMoveProtocol} for provider in _S3_FAMILY},
-    P.SFTP: {StorageCopyProtocol},
+    P.SFTP: {StorageCopyProtocol, StoragePresignProtocol},
     P.HTTP: {
         StorageEnumerateProtocol,
         StorageDeleteProtocol, StorageCopyProtocol, StorageDirectoryProtocol, StorageMoveProtocol,
+        StoragePresignProtocol,
     },
 }
 
@@ -74,6 +75,7 @@ _README_COLUMNS = {
     "Directories": StorageDirectoryProtocol,
     "Object enumeration": StorageEnumerateProtocol,
     "Ranged reads": RangedReadProtocol,
+    "Presigned URLs": StoragePresignProtocol,
 }
 
 

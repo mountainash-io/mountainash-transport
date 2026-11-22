@@ -8,12 +8,12 @@ mountainash-transport has four storage backends: local files, the S3 family, SFT
 
 ## Backends and capabilities
 
-| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Directory | Ranged read |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Local | `local` | none (base install) | yes | yes | yes | yes | yes | yes | yes | no |
-| S3 family | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | yes |
-| SFTP | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes |
-| HTTP(S) | `http` | `[http]` | yes | yes | no | no | yes | no | no | yes |
+| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Move | Directory | Ranged read | Presign |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Local | `local` | none (base install) | yes | yes | yes | yes | yes | yes | yes | yes | no | no |
+| S3 family | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | no | yes | yes |
+| SFTP | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes | yes | no |
+| HTTP(S) | `http` | `[http]` | yes | yes | no | no | yes | no | no | no | yes | no |
 
 One `S3StorageBackend` class is registered for all five S3-family provider types. The flavour on the storage profile selects endpoint and region handling. Local files support random access through the native file handle rather than the ranged-read protocol. See [read access modes](../chapters/09-read-access-modes/index.md#choosing-an-access-mode).
 
