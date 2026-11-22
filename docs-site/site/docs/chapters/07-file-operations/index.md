@@ -32,7 +32,7 @@ s3 = StorageFacade.from_path("s3://reports/", profile, auth_profile=auth)
 | Method | Returns | Keyword arguments |
 |---|---|---|
 | `read(path)` | `bytes` | `pipeline`, `infer`, `gpg`, `gzip` |
-| `write(path, data)` | `None` | `pipeline`, `create_parents=True` |
+| `write(path, data)` | `StorageEntry` | `pipeline`, `create_parents=True` |
 
 The keywords work the same way on every backend:
 
@@ -175,6 +175,44 @@ Listings and metadata queries describe each resource with a `StorageEntry`, a fr
 | `etag`, `content_type`, `storage_class` | `str` | Object-store and HTTP details; empty when unknown |
 | `version_id`, `checksum`, `checksum_algorithm` | `str` | S3 version and checksum; empty when unknown |
 | `source` | `str` | Backend that produced the entry: `local`, `s3`, `sftp` or `http` |
+
+### What a write returns
+
+`write`, `write_stream`, `copy`, `move` and `copy_between` return the `StorageEntry` of what they created. The type is the same on every backend; what differs is which fields the store reports. An empty field (`""` or `None`) means the store did not report it. A write never spends an extra request to fill one in, so a result can say less than a later `metadata()` call on the same path.
+
+`size` is the number of bytes stored. With a pipeline that is the encoded size, for example the compressed length, not the length of the data you passed.
+
+| Backend | Operation | Always filled | Also filled when the store reports it |
+|---|---|---|---|
+| local | write | path, name, size, last_modified | — |
+| local | copy | path, name, size, last_modified | — |
+| local | move | path, name, size, last_modified | — |
+| sftp | write | path, name, size, last_modified | — |
+| sftp | move | path, name, size, last_modified | — |
+| s3 | write | path, name, size, etag | version_id (versioned buckets), checksum |
+| s3 | copy | path, name, etag | last_modified, version_id (versioned buckets), checksum |
+| http | write | path, name, size | etag, last_modified, content_type, checksum |
+
+Where a result reports less than `metadata()`:
+
+- An S3 write reports no `last_modified`, because S3's upload responses do not carry it.
+- An S3 copy reports no `size`, because S3's copy responses do not carry it.
+- An HTTP write reports only the validators the server sends back with the `PUT` response.
+
+On S3 the ETag and version come from the upload's or copy's own response, never from a later lookup, so on a versioned bucket they identify the version this call wrote even if another writer replaces the object straight afterwards. A large upload or copy runs as several requests on boto3's worker threads; the package captures the final response from the client. If another write to the same key runs through the same facade at the same moment, the two responses cannot be told apart, and `etag`, `version_id` and `checksum` are left empty rather than risk describing the other write.
+
+SFTP results come from the size check paramiko already makes after an upload and, for `move`, one `lstat` after the rename. A moved symbolic link is described as the link itself.
+
+```python
+entry = s3.write("s3://reports/2026/sales.csv", b"region,total\nnorth,120\n")
+print(entry.size, entry.etag != "", entry.last_modified)
+```
+
+Output:
+
+```text
+23 True None
+```
 
 <!-- concept:152 -->
 
@@ -325,7 +363,7 @@ s3: True
 
 <!-- concept:156 -->
 
-`copy(source, destination)` copies one file to another path in the same store. Both paths go through the same facade.
+`copy(source, destination)` copies one file to another path in the same store and returns the copy's `StorageEntry` ([What a write returns](#what-a-write-returns)). Both paths go through the same facade.
 
 - Local stores copy with `shutil.copy2`, which keeps the modification time, and create the destination's parent directories.
 - S3-family stores ask the service to copy the object server side, so no data is downloaded. Source and destination may be in different buckets reachable with the same credentials.
@@ -351,7 +389,7 @@ To copy between two different stores, for example from SFTP to S3, or to copy wi
 
 ## Moving
 
-`move(source, destination, *, create_parents=True)` renames a file in the same store with the store's own rename, so it is atomic where the store's rename is: `os.replace` on local disk (within one filesystem) and the OpenSSH `posix-rename@openssh.com` extension on SFTP. An existing destination is replaced. Missing parent directories are created unless `create_parents=False`, in which case the missing parent raises `PathNotFoundError`. A missing source raises `PathNotFoundError`, and both paths are checked against the location policy.
+`move(source, destination, *, create_parents=True)` renames a file in the same store with the store's own rename, so it is atomic where the store's rename is: `os.replace` on local disk (within one filesystem) and the OpenSSH `posix-rename@openssh.com` extension on SFTP. An existing destination is replaced. Missing parent directories are created unless `create_parents=False`, in which case the missing parent raises `PathNotFoundError`. A missing source raises `PathNotFoundError`, and both paths are checked against the location policy. It returns the moved entry's `StorageEntry`.
 
 ```python
 for folder in (root, f"{root}/outbox"):
