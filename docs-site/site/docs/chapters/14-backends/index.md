@@ -21,6 +21,7 @@ protocols = [
     mt.StorageReadProtocol, mt.StorageWriteProtocol, mt.StorageEnumerateProtocol,
     mt.StorageDeleteProtocol, mt.StorageMetadataProtocol, mt.StorageCopyProtocol,
     mt.StorageMoveProtocol, mt.StorageDirectoryProtocol, mt.RangedReadProtocol,
+    mt.StoragePresignProtocol,
 ]
 for provider, cls in sorted(get_registered_backends().items()):
     have = [p.__name__.removeprefix("Storage").removesuffix("Protocol")
@@ -31,26 +32,26 @@ for provider, cls in sorted(get_registered_backends().items()):
 Output:
 
 ```text
-b2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
+b2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
 http       HTTPStorageBackend     Read Write Metadata RangedRead
 local      LocalStorageBackend    Read Write Enumerate Delete Metadata Copy Move Directory
-minio      S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-r2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-s3         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-s3express  S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
+minio      S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+r2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+s3         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+s3express  S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
 sftp       SFTPStorageBackend     Read Write Enumerate Delete Metadata Move Directory RangedRead
 ```
 
-| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Move | Directory | RangedRead |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| `LocalStorageBackend` | `local` | none | yes | yes | yes | yes | yes | yes | yes | yes | no (native handle) |
-| `S3StorageBackend` | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | no | yes |
-| `SFTPStorageBackend` | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes | yes |
-| `HTTPStorageBackend` | `http` (also serves `https://`) | `[http]` | yes | yes | no | no | yes | no | no | no | yes |
+| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Move | Directory | RangedRead | Presign |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `LocalStorageBackend` | `local` | none | yes | yes | yes | yes | yes | yes | yes | yes | no (native handle) | no |
+| `S3StorageBackend` | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | no | yes | yes |
+| `SFTPStorageBackend` | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes | yes | no |
+| `HTTPStorageBackend` | `http` (also serves `https://`) | `[http]` | yes | yes | no | no | yes | no | no | no | yes | no |
 
 The RangedRead column is satisfied structurally. No backend class inherits from `RangedReadProtocol`; the S3, SFTP and HTTP read mixins define `open_ranged`, and that method alone makes `issubclass()` true. Local has no `open_ranged`, and its random access comes from the native file handle instead (see [Local](#local)).
 
-`tests/storage/protocols/test_backend_conformance.py` asserts the same result for the first eight columns. Its expected sets agree with the output above for `local`, `s3`, `r2`, `s3express`, `minio`, `sftp` and `http`. The test has no RangedRead column and no `b2` row; B2 is registered to the same `S3StorageBackend` class as the other S3 flavours, so it has the same capabilities.
+`tests/storage/protocols/test_backend_conformance.py` asserts the same result for every column, for every registered provider type including `b2`, and checks the README's support table against it.
 
 At runtime, `StorageFacade.supports(protocol)` answers the same question for one facade, as shown in [Capabilities and supports()](../06-storage-facade/index.md#capabilities-and-supports). The provider types with profiles but no backend (GCS, Azure, FTP, SMB, GitHub) do not appear here; a facade for one raises `BackendNotImplementedError`. The [support matrix and known limits](../../reference/support-matrix.md) reference page collects this table with the documented limits.
 
