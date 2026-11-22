@@ -224,6 +224,8 @@ Without `CA_BUNDLE`, S3 follows botocore's own resolution, so `AWS_CA_BUNDLE` an
 
 Authorization headers are added from the auth profile and merged with `HEADERS`. The `RETRY_*` fields become the [HTTP request engine](../12-http-engine/index.md#retries)'s `RetryPolicy`; status codes, `Retry-After` and method rules stay the engine's.
 
+Every implemented profile (Local, S3, SFTP and HTTP) also has `BUFFER_MEMORY_LIMIT`: how many bytes `read_stream(access="buffered")` keeps in memory before spilling to a temporary file. Unset, it is 64 MiB, and a `buffer_memory_limit` argument on the call overrides it ([Buffered access](../09-read-access-modes/index.md#buffered-access)).
+
 ## Specs, the registry and settings-only providers
 
 <!-- concept:132 -->

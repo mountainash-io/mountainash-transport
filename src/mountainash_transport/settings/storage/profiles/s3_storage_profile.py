@@ -63,6 +63,9 @@ S3_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
         ParameterSpec(name="MULTIPART_THRESHOLD", type=t.Optional[int], default=None, tier="advanced",
                       description="Stream uploads at or above this size in bytes use multipart upload. "
                                   "None keeps boto3's default (8 MiB)."),
@@ -290,6 +293,7 @@ class S3StorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        BUFFER_MEMORY_LIMIT: int | None
         MULTIPART_THRESHOLD: int | None
         MULTIPART_CHUNKSIZE: int | None
         MAX_CONCURRENCY: int | None

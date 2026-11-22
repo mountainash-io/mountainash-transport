@@ -107,7 +107,14 @@ A large `read(n)` allocates `n` bytes whatever the cache settings, and `read()` 
 
 ### Buffered access
 
-`access="buffered"` reads the whole object, decodes it through any transforms, and returns a seekable in-memory buffer of the decoded bytes. The source stream and every transform layer are closed before `read_stream()` returns, so the buffer owns its data and stays usable after the facade closes. All transfer and decoding errors are raised inside the `read_stream()` call. Memory use equals the decoded size, so buffered access suits small and medium objects, and libraries that require a seekable file of decoded content. To spill large objects to disk instead of memory, use [`materialize`](#materialize) on a sequential stream.
+`access="buffered"` reads the whole object, decodes it through any transforms, and returns a seekable buffer of the decoded bytes. The source stream and every transform layer are closed before `read_stream()` returns, so the buffer owns its data and stays usable after the facade closes. All transfer and decoding errors are raised inside the `read_stream()` call.
+
+The buffer is a `tempfile.SpooledTemporaryFile`. It stays in memory up to a limit and moves to an unnamed temporary file beyond it, so a large object does not exhaust memory. The OS removes the file when the buffer is closed, including after an exception. The limit is chosen in this order: `read_stream(..., buffer_memory_limit=...)`, then the storage profile's `BUFFER_MEMORY_LIMIT` field, then 64 MiB. A limit must be positive, and passing `buffer_memory_limit` with any mode other than `"buffered"` raises `ValueError`.
+
+```python
+with s3.read_stream(path, access="buffered", buffer_memory_limit=16 * 1024 * 1024) as data:
+    data.seek(-8, 2)               # seekable; spilled to disk beyond 16 MiB
+```
 
 ## Range tuning
 

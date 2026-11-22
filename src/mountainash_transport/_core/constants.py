@@ -6,6 +6,9 @@ import typing as t
 DEFAULT_CHUNK_SIZE = 64 * 1024
 """Bytes read or sent per chunk when transport moves a stream (local writes, uploads, codecs)."""
 
+DEFAULT_BUFFER_MEMORY_LIMIT = 64 * 1024 * 1024
+"""Bytes a spooled buffer keeps in memory before rolling to a temp file (``materialize``, buffered reads)."""
+
 
 class _FindMemberMixin(StrEnum):
     """Shared ``find_member`` classmethod for storage enums.

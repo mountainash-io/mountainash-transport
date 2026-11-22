@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `"sequential"` (default) | Demand-driven streaming; no whole-object buffer | Remote handles are forward-only; local handles remain natively seekable | Supported; gzip over forward-only input is forward-only |
 | `"random"` | Fetch byte ranges, with configurable caching | Seekable; `seek` itself performs no I/O | Rejected if the resolved pipeline is non-empty |
-| `"buffered"` | Read and decode the entire object into memory before returning | Seekable in decoded bytes | Supported |
+| `"buffered"` | Read and decode the entire object into a spooled buffer before returning: memory up to `buffer_memory_limit` (call, then profile `BUFFER_MEMORY_LIMIT`, then 64 MiB), a temp file beyond it | Seekable in decoded bytes | Supported |
 
 `read()` still returns fully consumed bytes. Cross-backend copies use sequential reads. GPG currently buffers internally, independent of the access mode.
 
@@ -108,4 +108,4 @@ except gzip.BadGzipFile:
     assert handle.closed
 ```
 
-Consumer exceptions also close handles. To spool explicitly, use `materialize(stream, to="tempfile")` (`from mountainash_transport import materialize`); a facade spooling option remains deferred (backlog #25).
+Consumer exceptions also close handles. Buffered mode spools to a temp file above its memory limit; to spool a sequential stream yourself, use `materialize(stream, to="tempfile")` (`from mountainash_transport import materialize`).

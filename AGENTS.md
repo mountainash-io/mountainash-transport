@@ -101,7 +101,8 @@ Package-local map. The *why* behind each layer lives in the central principles.
 
 `read_stream(access="sequential" | "random" | "buffered")` defaults to native
 forward-only remote streams. Random mode uses `RangedReadProtocol` on HTTP/S3/SFTP
-and native local handles; buffered mode materializes decoded bytes in memory.
+and native local handles; buffered mode spools decoded bytes (memory up to call
+`buffer_memory_limit` → profile `BUFFER_MEMORY_LIMIT` → 64 MiB, then a temp file).
 `RangePolicy` precedence is call → profile `RANGE_*` fields → readahead/1 MiB.
 `facade.local_path(path)` returns the resolved local file for native readers, or
 `None` for remote backends and transformed reads.

@@ -55,6 +55,8 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.local_path("/tmp/sales.csv"), str | None)
     assert_type(storage.read_stream("s3://reports/file", access="random",
                                   range_policy=RangePolicy("none")), BinaryIO)
+    assert_type(storage.read_stream("s3://reports/file", access="buffered", buffer_memory_limit=1024), BinaryIO)
+    storage.read_stream("/tmp/file", access="buffered", buffer_memory_limit="1MB")  # type: ignore[arg-type]
     assert_type(materialize(storage.read_stream("/tmp/sales.csv"), to="tempfile"), tuple[BinaryIO, int])
     storage.read_stream("/tmp/file", access="mmap")  # type: ignore[arg-type]
     RangePolicy(cache="invalid")  # type: ignore[arg-type]

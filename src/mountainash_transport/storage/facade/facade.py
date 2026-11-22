@@ -15,7 +15,7 @@ if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
     from mountainash_settings.secrets import ClearableSecretStore
 
-from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE, DEFAULT_BUFFER_MEMORY_LIMIT
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport._core.exceptions import (
     RandomAccessUnavailableError, StorageConnectionError, UnsupportedOperationError,
@@ -377,6 +377,7 @@ class StorageFacade:
         gzip: Gzip | None = None,
         access: t.Literal["sequential", "random", "buffered"] = "sequential",
         range_policy: RangePolicy | None = None,
+        buffer_memory_limit: int | None = None,
     ) -> BinaryIO:
         """Read file contents and return as a binary stream, optionally through *pipeline*.
 
@@ -410,7 +411,10 @@ class StorageFacade:
 
         ``access="sequential"`` streams without whole-object buffering; remote
         handles are forward-only. ``"random"`` fetches stored byte ranges and
-        rejects transforms. ``"buffered"`` materializes decoded bytes in memory.
+        rejects transforms. ``"buffered"`` copies the decoded bytes into a seekable
+        spooled buffer: in memory up to *buffer_memory_limit* bytes, then in an
+        unnamed temp file the OS removes when the stream closes. The limit comes
+        from the call, then the profile's ``BUFFER_MEMORY_LIMIT``, then 64 MiB.
         Local sequential/random handles retain native seekability. Random
         reads use call policy, then profile RANGE_* settings, then library defaults.
         See ``docs/read-access-modes.md`` for migration and format tuning.
@@ -420,6 +424,11 @@ class StorageFacade:
             raise ValueError(f"Unknown access mode: {access!r}")
         if range_policy is not None and access != "random":
             raise ValueError("range_policy requires access='random'")
+        if buffer_memory_limit is not None:
+            if access != "buffered":
+                raise ValueError("buffer_memory_limit requires access='buffered'")
+            if buffer_memory_limit <= 0:
+                raise ValueError("buffer_memory_limit must be positive")
         checked = self._check(path)
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
@@ -454,8 +463,13 @@ class StorageFacade:
                 pass
             raise
         if access == "buffered":
+            limit = (
+                buffer_memory_limit
+                or getattr(self._storage_profile, "BUFFER_MEMORY_LIMIT", None)
+                or DEFAULT_BUFFER_MEMORY_LIMIT
+            )
             with owned:
-                result, _ = materialize(t.cast(BinaryIO, owned))
+                result, _ = materialize(t.cast(BinaryIO, owned), to="tempfile", memory_cutoff=limit)
                 return result
         return t.cast(BinaryIO, owned)
 
