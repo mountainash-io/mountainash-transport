@@ -135,9 +135,9 @@ _ONE_EXTRA_MISSING = textwrap.dedent('''
 
 
 @pytest.mark.parametrize("extra,blocked,call", [
-    ("s3", {"boto3", "botocore", "s3transfer", "aiobotocore", "s3fs", "minio"},
+    ("s3", {"boto3", "botocore", "s3transfer"},
      "__import__('mountainash_transport.connections', fromlist=['S3Connection']).S3Connection({}).connect()"),
-    ("sftp", {"paramiko", "smart_open"},
+    ("sftp", {"paramiko"},
      "__import__('mountainash_transport.connections', fromlist=['SSHConnection']).SSHConnection({}).connect()"),
     ("encryption", {"gnupg"},
      "__import__('mountainash_transport').GPG(passphrase='x').unwrap(__import__('io').BytesIO(b''))"),

@@ -54,8 +54,8 @@ The base install is a tested contract. `tests/test_slim_install.py` runs local o
 | Extra | Adds | Enables |
 |---|---|---|
 | `[http]` | `mountainash-settings`, `mountainash-auth-client`, `pydantic`, `universal_pathlib`, `httpx`, `fsspec` | HTTP and HTTPS storage, storage profiles, `resolve_storage`, connections, `StoragePath`, the HTTP request engine |
-| `[s3]` | `[http]` plus `boto3`, `s3fs`, `aiobotocore`, `minio` | The S3 backend: AWS S3, S3 Express, R2, MinIO, B2 |
-| `[sftp]` | `[http]` plus `paramiko`, `smart-open[ssh]` | The SFTP backend, SSH connections and SSH tunnels |
+| `[s3]` | `[http]` plus `boto3` | The S3 backend: AWS S3, S3 Express, R2, MinIO, B2 |
+| `[sftp]` | `[http]` plus `paramiko` | The SFTP backend, SSH connections and SSH tunnels |
 | `[encryption]` | `python-gnupg` | The `GPG` transform |
 | `[oauth1]` | `[http]` plus `authlib` | OAuth 1.0a request signing |
 | `[gcs]`, `[azure]` | `[http]` plus the Google Cloud Storage or Azure SDKs | SDKs only; transport has no GCS or Azure backend yet |

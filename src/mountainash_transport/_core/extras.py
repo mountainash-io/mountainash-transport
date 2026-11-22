@@ -13,8 +13,8 @@ HTTP_STACK: frozenset[str] = frozenset({
 # (pyproject.toml: [s3], [sftp] and [oauth1] include [http]; [encryption] does not).
 EXTRA_MODULES: dict[str, frozenset[str]] = {
     "http": HTTP_STACK,
-    "s3": HTTP_STACK | {"boto3", "botocore", "s3transfer", "aiobotocore", "s3fs", "minio"},
-    "sftp": HTTP_STACK | {"paramiko", "smart_open"},
+    "s3": HTTP_STACK | {"boto3", "botocore", "s3transfer"},
+    "sftp": HTTP_STACK | {"paramiko"},
     "encryption": frozenset({"gnupg"}),
     "oauth1": HTTP_STACK | {"authlib"},
 }

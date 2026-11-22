@@ -16,7 +16,6 @@ def _missing(name: str) -> ModuleNotFoundError:
     ("http", "pydantic"),
     ("s3", "boto3"),
     ("s3", "botocore.session"),
-    ("s3", "aiobotocore"),
     ("s3", "httpx"),            # [s3] includes [http]
     ("sftp", "paramiko"),
     ("sftp", "pydantic"),       # [sftp] includes [http]

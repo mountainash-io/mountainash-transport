@@ -62,8 +62,8 @@ python -m pip install -e ".[s3]"
 | Extra | Adds |
 |---|---|
 | `[http]` | mountainash-settings, mountainash-auth-client, pydantic, universal_pathlib, httpx, fsspec — HTTP/HTTPS, storage profiles, connections |
-| `[s3]` | `[http]` + boto3, s3fs, minio |
-| `[sftp]` | `[http]` + paramiko, smart-open[ssh] |
+| `[s3]` | `[http]` + boto3 |
+| `[sftp]` | `[http]` + paramiko |
 | `[encryption]` | python-gnupg (for `GPG`) |
 | `[oauth1]` | `[http]` + authlib |
 | `[gcs]`, `[azure]` | `[http]` + SDKs for the pending GCS and Azure backends |
