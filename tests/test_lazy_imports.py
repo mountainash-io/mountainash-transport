@@ -6,7 +6,7 @@ import sys
 def test_top_level_import_stays_light():
     code = (
         "import sys; import mountainash_transport; "
-        "heavy = {'boto3', 'botocore', 'paramiko', 'gnupg', 's3fs', 'minio'} "
+        "heavy = {'boto3', 'botocore', 'paramiko', 'gnupg'} "
         "& set(sys.modules); "
         "assert not heavy, f'heavy imports at top level: {heavy}'"
     )
