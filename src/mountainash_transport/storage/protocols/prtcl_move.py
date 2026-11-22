@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
+
 
 @runtime_checkable
 class StorageMoveProtocol(Protocol):
@@ -12,6 +14,6 @@ class StorageMoveProtocol(Protocol):
     implement it, so a move there is never a silent copy and delete.
     """
 
-    def move(self, source: str, destination: str, *, create_parents: bool = True) -> None:
-        """Rename *source* to *destination*; backend I/O failures raise typed StorageError subclasses."""
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> StorageEntry:
+        """Rename *source* to *destination* and return its entry; I/O failures raise typed StorageError subclasses."""
         ...

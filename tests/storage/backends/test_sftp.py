@@ -260,7 +260,7 @@ def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
 @pytest.mark.parametrize(
     ("operation", "native", "extra"),
     [("read_to_bytes", "open", ()), ("read_to_stream", "open", ()),
-     ("write_from_bytes", "open", (b"x",)), ("list_dir", "listdir_attr", ()),
+     ("write_from_bytes", "putfo", (b"x",)), ("list_dir", "listdir_attr", ()),
      ("rmdir", "rmdir", ()), ("delete_file", "remove", ())],
 )
 def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.Any, ...]) -> None:

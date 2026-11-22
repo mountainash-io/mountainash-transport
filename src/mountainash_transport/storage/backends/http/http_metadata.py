@@ -29,6 +29,29 @@ def _size(headers: t.Mapping[str, str], path: str) -> int | None:
         raise_safe(StorageError(f"{safe_location(path)}: invalid Content-Length"), exc)
 
 
+def entry_from_headers(path: str, headers: t.Mapping[str, str], size: int | None) -> StorageEntry:
+    """The StorageEntry for *path* from response headers already in hand; *size* is supplied by the caller."""
+    content_md5 = headers.get("content-md5", "")
+    last_modified = None
+    lm_header = headers.get("last-modified")
+    if lm_header:
+        try:
+            last_modified = parsedate_to_datetime(lm_header)
+        except (ValueError, TypeError):
+            pass
+    return StorageEntry(
+        path=url_without_userinfo(path),
+        name=_filename_from_url(path),
+        size=size,
+        last_modified=last_modified,
+        etag=headers.get("etag", ""),
+        content_type=headers.get("content-type", ""),
+        source="http",
+        checksum=content_md5,
+        checksum_algorithm="MD5" if content_md5 else "",
+    )
+
+
 class HTTPMetadataMixin(StorageMetadataProtocol):
     """Metadata mixin for HTTP/HTTPS storage."""
 
@@ -62,31 +85,7 @@ class HTTPMetadataMixin(StorageMetadataProtocol):
         with _mapped(path):
             response = engine.request("HEAD", path)
 
-        headers = response.headers
-        size = _size(headers, path)
-        etag = headers.get("etag", "")
-        content_type = headers.get("content-type", "")
-        content_md5 = headers.get("content-md5", "")
-
-        last_modified = None
-        lm_header = headers.get("last-modified")
-        if lm_header:
-            try:
-                last_modified = parsedate_to_datetime(lm_header)
-            except (ValueError, TypeError):
-                pass
-
-        return StorageEntry(
-            path=url_without_userinfo(path),
-            name=_filename_from_url(path),
-            size=size,
-            last_modified=last_modified,
-            etag=etag,
-            content_type=content_type,
-            source="http",
-            checksum=content_md5,
-            checksum_algorithm="MD5" if content_md5 else "",
-        )
+        return entry_from_headers(path, response.headers, _size(response.headers, path))
 
     def get_size(self, path: str) -> int | None:
         """Return the content-length of a resource via HTTP HEAD.

@@ -484,22 +484,24 @@ class StorageFacade:
         *,
         pipeline: Pipeline | StreamTransform | None = None,
         create_parents: bool = True,
-    ) -> None:
+    ) -> StorageEntry:
         """Write bytes, optionally transformed, creating directory parents by default.
 
         With ``create_parents=False``, Local/SFTP open the destination without
         creating or pre-checking parents; a missing parent raises PathNotFoundError.
         S3 and HTTP ignore this option. This does not make file writes atomic.
+
+        Returns the written object's entry (see "What a write returns" in the
+        file-operations guide); with a pipeline, ``size`` is the stored size.
         """
         self._require(StorageWriteProtocol, "write")
         path = self._check(path)
         if pipeline is None:
-            self._backend.write_from_bytes(path, data, create_parents=create_parents)
-            return
+            return self._backend.write_from_bytes(path, data, create_parents=create_parents)
         with io.BytesIO(data) as source, contextlib.closing(
             self._coerce_pipeline(pipeline).apply_write(source)
         ) as encoded:
-            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     def write_stream(
         self,
@@ -508,16 +510,15 @@ class StorageFacade:
         *,
         pipeline: Pipeline | StreamTransform | None = None,
         create_parents: bool = True,
-    ) -> None:
-        """Write a stream with the same parent-creation policy as :meth:`write`."""
+    ) -> StorageEntry:
+        """Write a stream with the same parent-creation policy and result as :meth:`write`."""
         self._require(StorageWriteProtocol, "write_stream")
         path = self._check(path)
         encoded = self._coerce_pipeline(pipeline).apply_write(stream)
         if encoded is stream:  # no layers: the caller's stream is not ours to close
-            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
-            return
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
         with contextlib.closing(encoded):  # closes only the layers built here
-            self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Enumerate operations (StorageEnumerateProtocol)
@@ -604,8 +605,8 @@ class StorageFacade:
     # Copy operations (StorageCopyProtocol)
     # ------------------------------------------------------------------
 
-    def copy(self, source: str, destination: str) -> None:
-        """Copy file from *source* to *destination* within the same backend."""
+    def copy(self, source: str, destination: str) -> StorageEntry:
+        """Copy file from *source* to *destination* within the same backend; returns the copy's entry."""
         self._require(StorageCopyProtocol, "copy")
         src = self._check(source)
         dst = self._check(destination)
@@ -617,23 +618,23 @@ class StorageFacade:
             if os.path.isdir(final):
                 raise LocationNotAllowed(destination, "copy destination is a directory")
             dst = final
-        self._backend.copy(src, dst)
+        return self._backend.copy(src, dst)
 
     # ------------------------------------------------------------------
     # Move operations (StorageMoveProtocol)
     # ------------------------------------------------------------------
 
-    def move(self, source: str, destination: str, *, create_parents: bool = True) -> None:
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> StorageEntry:
         """Rename *source* to *destination* with the store's native rename, replacing an existing destination.
 
         Local and SFTP only; stores without a rename (S3, HTTP) raise
         ``UnsupportedOperationError`` rather than copying and deleting.
-        Both paths are checked against the location policy.
+        Both paths are checked against the location policy. Returns the moved entry.
         """
         self._require(StorageMoveProtocol, "move")
         src = self._check(source)
         dst = self._check(destination)
-        self._backend.move(src, dst, create_parents=create_parents)
+        return self._backend.move(src, dst, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)

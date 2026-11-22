@@ -4,6 +4,7 @@ from __future__ import annotations
 import ssl
 import typing as t
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -117,7 +118,7 @@ def test_s3_connection_passes_verify_only_when_emitted(monkeypatch, fields, expe
 
         def client(self, service, **kwargs):
             client_calls.append(kwargs)
-            return object()
+            return MagicMock()  # stands in for an S3 client; the connection installs its hooks on it
 
     class _Fetcher:
         def __init__(self, client_creator, **kwargs):

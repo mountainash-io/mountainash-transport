@@ -4,6 +4,23 @@ from __future__ import annotations
 import typing as t
 from types import TracebackType
 
+_READS = frozenset({"read", "read1"})
+_READS_INTO = frozenset({"readinto", "readinto1"})
+
+
+def seekable_extent(stream: t.BinaryIO) -> int | None:
+    """Bytes from a seekable stream's position to its end, position unchanged; None if not seekable.
+
+    Writers report this as the stored size of a seekable source: SDKs may read
+    such a body more than once (checksums, retries), so a read count would overstate it.
+    """
+    if not stream.seekable():
+        return None
+    start = stream.tell()
+    end = stream.seek(0, 2)
+    stream.seek(start)
+    return end - start
+
 
 class _CallerInput:
     """Delegate input capabilities; retain errors only for this transfer.
@@ -11,11 +28,14 @@ class _CallerInput:
     ``close()`` is a no-op: the caller owns the stream, and an SDK that closes
     what it is given (boto3 does after a single-request upload) must not close
     the caller's stream. ``closed`` still reports the source's state.
+    ``bytes_read`` counts what was read through it: the stored size of a
+    non-seekable source, which an SDK can read only once.
     """
 
     def __init__(self, source: t.BinaryIO) -> None:
         self._source = source
         self._errors: list[tuple[BaseException, TracebackType | None]] = []
+        self.bytes_read = 0
 
     def close(self) -> None:
         """Leave the borrowed source open."""
@@ -31,10 +51,15 @@ class _CallerInput:
 
         def invoke(*args: t.Any, **kwargs: t.Any) -> t.Any:
             try:
-                return value(*args, **kwargs)
+                result = value(*args, **kwargs)
             except BaseException as exc:
                 self._errors.append((exc, exc.__traceback__))
                 raise
+            if name in _READS and result:
+                self.bytes_read += len(result)
+            elif name in _READS_INTO and result:
+                self.bytes_read += result
+            return result
         return invoke
 
     def original_in(self, error: BaseException) -> tuple[BaseException, TracebackType | None] | None:

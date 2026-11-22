@@ -10,6 +10,7 @@ from mountainash_transport.connections.errors import TransportConnectionError
 
 from .._core.extras import raise_for_missing_extra
 from .._core.protocols import ConnectionProtocol
+from .._core.s3_capture import install_client_hooks
 from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
@@ -40,6 +41,7 @@ class S3Connection(ConnectionProtocol):
                 kwargs = dict(self._connect_kwargs)
                 kwargs.pop("service_name", None)
                 self._client = boto3.client("s3", **kwargs)
+            install_client_hooks(self._client)  # before the client is shared
         except TransportConnectionError:
             raise
         except Exception as exc:
