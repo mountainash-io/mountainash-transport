@@ -135,7 +135,7 @@ Use `read_stream(path)`, which returns a binary stream you read in chunks and cl
 
 ### Why can't I seek on a stream from S3, SFTP or HTTP?
 
-The default access mode is sequential, and remote sequential streams are forward-only. Ask for `access="random"` to get a seekable handle that fetches byte ranges, or `access="buffered"` to get a seekable in-memory buffer of the whole decoded object. Remote streams used to be downloaded before `read_stream()` returned; they no longer are, so code that seeks must request one of these modes. See [Choosing an access mode](chapters/09-read-access-modes/index.md#choosing-an-access-mode).
+The default access mode is sequential, and remote sequential streams are forward-only. Ask for `access="random"` to get a seekable handle that fetches byte ranges, or `access="buffered"` to get a seekable buffer of the whole decoded object, which spills to a temporary file beyond 64 MiB (configurable). Remote streams used to be downloaded before `read_stream()` returned; they no longer are, so code that seeks must request one of these modes. See [Choosing an access mode](chapters/09-read-access-modes/index.md#choosing-an-access-mode).
 
 ### Which access mode should I use for Parquet and other footer-first formats?
 

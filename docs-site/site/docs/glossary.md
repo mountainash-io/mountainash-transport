@@ -68,7 +68,7 @@ Explained in [Bytes and streams](chapters/01-what-transport-does/index.md#bytes-
 
 ## Buffered access
 
-The read access mode, selected with `access="buffered"`, that reads and decodes the whole object before `read_stream()` returns a seekable in-memory buffer. Every transfer and decoding error surfaces in that call, and the buffer stays usable after the facade closes.
+The read access mode, selected with `access="buffered"`, that reads and decodes the whole object before `read_stream()` returns a seekable buffer: in memory up to a limit (64 MiB by default, set by `buffer_memory_limit` or the profile's `BUFFER_MEMORY_LIMIT`), in a temporary file beyond it. Every transfer and decoding error surfaces in that call, and the buffer stays usable after the facade closes.
 
 Related: [Read access mode](#read-access-mode), [`materialize`](#materialize).
 

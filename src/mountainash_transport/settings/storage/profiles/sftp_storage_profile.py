@@ -67,6 +67,9 @@ SFTP_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
         ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
                       description="Total attempts for an operation that loses its session, reconnecting "
                                   "between attempts; 1 disables retry. None keeps the default (3)."),
@@ -213,6 +216,7 @@ class SFTPStorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        BUFFER_MEMORY_LIMIT: int | None
         RETRY_MAX_ATTEMPTS: int | None
         RETRY_BACKOFF_BASE: float | None
         RETRY_BACKOFF_MAX: float | None
