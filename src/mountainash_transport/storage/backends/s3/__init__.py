@@ -23,6 +23,7 @@ from .s3_copy import S3CopyMixin
 from .s3_delete import S3DeleteMixin
 from .s3_enumerate import S3EnumerateMixin
 from .s3_metadata import S3MetadataMixin
+from .s3_presign import S3PresignMixin
 from .s3_read import S3ReadMixin
 from .s3_write import S3WriteMixin
 
@@ -39,6 +40,7 @@ class S3StorageBackend(
     S3DeleteMixin,
     S3MetadataMixin,
     S3CopyMixin,
+    S3PresignMixin,
 ):
     """Unified S3-family storage backend.
 

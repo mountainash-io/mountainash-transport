@@ -29,6 +29,7 @@ from mountainash_transport.storage.protocols import (
     StorageEnumerateProtocol,
     StorageMetadataProtocol,
     StorageMoveProtocol,
+    StoragePresignProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
 )
@@ -648,6 +649,27 @@ class StorageFacade:
         src = self._check(source)
         dst = self._check(destination)
         return self._backend.move(src, dst, create_parents=create_parents)
+
+    # ------------------------------------------------------------------
+    # Presign operations (StoragePresignProtocol)
+    # ------------------------------------------------------------------
+
+    def presign(
+        self, path: str, *, method: t.Literal["GET", "PUT"] = "GET",
+        expires_in: int = 3600, content_type: str | None = None,
+    ) -> str:
+        """Return a URL that allows *method* on *path* for *expires_in* seconds, without credentials.
+
+        S3 family only; other stores raise ``UnsupportedOperationError``. The
+        path is checked against the location policy. ``content_type`` (PUT only)
+        is signed, so the uploader must send exactly that ``Content-Type``.
+        Invalid arguments raise ``ValueError`` before anything is signed. A URL
+        signed with temporary credentials (assume-role, SSO, S3 Express
+        sessions) stops working when they expire.
+        """
+        self._require(StoragePresignProtocol, "presign")
+        path = self._check(path)
+        return self._backend.presign(path, method=method, expires_in=expires_in, content_type=content_type)
 
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)
