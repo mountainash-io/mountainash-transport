@@ -2,6 +2,12 @@
 
 """Custom exception hierarchy for mountainash-transport storage operations."""
 
+from __future__ import annotations
+
+from mountainash_transport._core.safe_display import safe_location
+
+_SHOWN_FAILURES = 5
+
 
 class StorageError(Exception):
     """Base exception for all storage-related errors."""
@@ -27,6 +33,21 @@ class RandomAccessUnavailableError(StorageError, ValueError):
 
 class UnsupportedOperationError(StorageError):
     """Raised when a storage backend does not support a requested operation."""
+
+
+class BulkDeleteError(StorageError):
+    """Raised once at the end of ``delete_many`` when any path could not be deleted.
+
+    Every path was attempted; those listed in ``failures`` (input order, with
+    the error each raised) remain, and every other path is gone. Missing paths
+    count as deleted and are never listed.
+    """
+
+    def __init__(self, failures: tuple[tuple[str, StorageError], ...]) -> None:
+        self.failures = failures
+        shown = ", ".join(safe_location(path) for path, _ in failures[:_SHOWN_FAILURES])
+        more = f" (+{len(failures) - _SHOWN_FAILURES} more)" if len(failures) > _SHOWN_FAILURES else ""
+        super().__init__(f"{len(failures)} path(s) could not be deleted: {shown}{more}")
 
 
 class StorageConnectionError(StorageError):

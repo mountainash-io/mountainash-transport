@@ -550,6 +550,19 @@ class StorageFacade:
         path = self._check(path)
         self._backend.delete_file(path)
 
+    def delete_many(self, paths: t.Iterable[str]) -> None:
+        """Delete every path, attempting all of them; a missing path counts as deleted.
+
+        Every path is checked against the location policy before anything is
+        deleted, so a disallowed path raises with nothing removed. S3 deletes in
+        batches of 1,000 keys; Local and SFTP delete one path at a time. Raises
+        ``BulkDeleteError`` once at the end, listing (in input order) every path
+        that could not be deleted with the error it raised.
+        """
+        self._require(StorageDeleteProtocol, "delete_many")
+        checked = [self._check(path) for path in paths]
+        self._backend.delete_many(checked)
+
     def local_path(
         self,
         path: str,

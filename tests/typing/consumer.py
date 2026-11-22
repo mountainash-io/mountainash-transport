@@ -12,6 +12,7 @@ from mountainash_auth_client import AuthProfile, IAMAuthProfile
 
 from mountainash_transport import (
     AuthenticationError,
+    BulkDeleteError,
     PermissionDeniedError,
     ConnectionProtocol,
     EnumerateResult,
@@ -77,6 +78,8 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     storage.same_store("/tmp")  # type: ignore[arg-type]
     assert_type(storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents=False), StorageEntry)
     storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents="no")  # type: ignore[arg-type]
+    assert_type(storage.delete_many(["/tmp/a.csv", "/tmp/b.csv"]), None)
+    storage.delete_many("/tmp/a.csv", "/tmp/b.csv")  # type: ignore[call-arg]
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 
     storage.read(123)  # type: ignore[arg-type]
@@ -93,6 +96,7 @@ def filesystem_enumeration_contracts(local: LocalStorageBackend, sftp: SFTPStora
 
 def error_contracts() -> None:
     assert issubclass(PathNotFoundError, StorageError)
+    failures: tuple[tuple[str, StorageError], ...] = BulkDeleteError(()).failures
     assert issubclass(HttpNotFoundError, HttpTransportError)
     permission: AuthenticationError = PermissionDeniedError("access denied")
     storage_error: StorageError = permission

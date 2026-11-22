@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import typing as t
 
+from .._delete_many import delete_each
 from ._helpers import _mapped, _native
 
 
@@ -19,3 +21,7 @@ class LocalDeleteMixin:
         path = _native(path)
         with _mapped(path):
             os.remove(path)
+
+    def delete_many(self, paths: t.Iterable[str]) -> None:
+        """Delete every path, one ``os.remove`` each; missing paths count as deleted."""
+        delete_each(self.delete_file, paths)
