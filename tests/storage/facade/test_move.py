@@ -3,11 +3,10 @@ from __future__ import annotations
 
 import os
 import tempfile
-import typing as t
 from pathlib import Path
 
 import pytest
-from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
+from mountainash_auth_client import IAMAuthProfile
 
 from mountainash_transport import (
     PathNotFoundError,
@@ -17,42 +16,21 @@ from mountainash_transport import (
 )
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as P
 from mountainash_transport.location import LocationNotAllowed, LocationPolicy
-from mountainash_transport.settings.storage.profiles import S3StorageProfile, SFTPStorageProfile
+from mountainash_transport.settings.storage.profiles import S3StorageProfile
+
+Store = tuple[str, StorageFacade, Path, str]  # the shared `store` fixture (tests/storage/conftest.py)
 
 
-@pytest.fixture(params=["local", "sftp"])
-def store(request: pytest.FixtureRequest, tmp_path: Path) -> t.Iterator[tuple[StorageFacade, Path, str]]:
-    """A facade, the real directory behind it, and the path prefix the facade uses for it."""
-    root = tmp_path / "root"
-    root.mkdir()
-    if request.param == "local":
-        with StorageFacade.for_local() as facade:
-            yield facade, root, str(root)
-        return
-    from connections.tunnel_rig import DirectorySFTPTarget
-
-    server = DirectorySFTPTarget(root)
-    known = tmp_path / "known_hosts"
-    known.write_text(server.known_hosts_line("127.0.0.1"))
-    profile = SFTPStorageProfile(HOST="127.0.0.1", PORT=server.port, USERNAME="u", KNOWN_HOSTS_FILE=str(known),
-                                 LOOK_FOR_KEYS=False, ALLOW_AGENT=False)
-    try:
-        with StorageFacade(P.SFTP, profile, auth_profile=PasswordAuthProfile(USERNAME="u", PASSWORD="p")) as facade:
-            yield facade, root, ""
-    finally:
-        server.close()
-
-
-def test_move_renames(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, root, prefix = store
+def test_move_renames(store: Store) -> None:
+    _backend, facade, root, prefix = store
     (root / "a.csv").write_bytes(b"region,total\n")
     facade.move(f"{prefix}/a.csv", f"{prefix}/b.csv")
     assert not (root / "a.csv").exists()
     assert (root / "b.csv").read_bytes() == b"region,total\n"
 
 
-def test_move_overwrites_the_destination(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, root, prefix = store
+def test_move_overwrites_the_destination(store: Store) -> None:
+    _backend, facade, root, prefix = store
     (root / "a.csv").write_bytes(b"new")
     (root / "b.csv").write_bytes(b"old")
     facade.move(f"{prefix}/a.csv", f"{prefix}/b.csv")
@@ -60,14 +38,14 @@ def test_move_overwrites_the_destination(store: tuple[StorageFacade, Path, str])
     assert not (root / "a.csv").exists()
 
 
-def test_move_of_a_missing_source_is_absence(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, root, prefix = store
+def test_move_of_a_missing_source_is_absence(store: Store) -> None:
+    _backend, facade, root, prefix = store
     with pytest.raises(PathNotFoundError):
         facade.move(f"{prefix}/missing.csv", f"{prefix}/b.csv")
 
 
-def test_move_creates_destination_parents_unless_told_not_to(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, root, prefix = store
+def test_move_creates_destination_parents_unless_told_not_to(store: Store) -> None:
+    _backend, facade, root, prefix = store
     (root / "a.csv").write_bytes(b"x")
     with pytest.raises(PathNotFoundError):
         facade.move(f"{prefix}/a.csv", f"{prefix}/new/b.csv", create_parents=False)

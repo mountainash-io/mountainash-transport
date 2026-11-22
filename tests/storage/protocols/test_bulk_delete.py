@@ -5,41 +5,16 @@ import typing as t
 from pathlib import Path
 
 import pytest
-from mountainash_auth_client import PasswordAuthProfile
 
 from mountainash_transport import BulkDeleteError, StorageError, StorageFacade
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE as P
 from mountainash_transport.location import LocationNotAllowed, LocationPolicy
-from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+
+Store = tuple[str, StorageFacade, Path, str]  # the shared `store` fixture (tests/storage/conftest.py)
 
 
-@pytest.fixture(params=["local", "sftp"])
-def store(request: pytest.FixtureRequest, tmp_path: Path) -> t.Iterator[tuple[StorageFacade, Path, str]]:
-    """A facade, the real directory behind it, and the facade's path prefix for it."""
-    root = tmp_path / "root"
-    root.mkdir()
-    if request.param == "local":
-        with StorageFacade.for_local() as facade:
-            yield facade, root, str(root)
-        return
-    from connections.tunnel_rig import DirectorySFTPTarget
-
-    server = DirectorySFTPTarget(root)
-    known = tmp_path / "known_hosts"
-    known.write_text(server.known_hosts_line("127.0.0.1"))
-    profile = SFTPStorageProfile(HOST="127.0.0.1", PORT=server.port, USERNAME="u", KNOWN_HOSTS_FILE=str(known),
-                                 LOOK_FOR_KEYS=False, ALLOW_AGENT=False)
-    try:
-        with StorageFacade(P.SFTP, profile, auth_profile=PasswordAuthProfile(USERNAME="u", PASSWORD="p")) as facade:
-            yield facade, root, ""
-    finally:
-        server.close()
-
-
-def test_every_path_is_attempted_and_failures_are_listed_in_input_order(
-    store: tuple[StorageFacade, Path, str],
-) -> None:
-    facade, root, prefix = store
+def test_every_path_is_attempted_and_failures_are_listed_in_input_order(store: Store) -> None:
+    _backend, facade, root, prefix = store
     for name in ("ok1", "ok2", "ok3"):
         (root / name).write_bytes(b"x")
     (root / "bad1").mkdir()  # a directory is not deleted by a file delete
@@ -53,15 +28,15 @@ def test_every_path_is_attempted_and_failures_are_listed_in_input_order(
     assert sorted(p.name for p in root.iterdir()) == ["bad1", "bad2"]
 
 
-def test_missing_paths_and_missing_parents_count_as_deleted(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, root, prefix = store
+def test_missing_paths_and_missing_parents_count_as_deleted(store: Store) -> None:
+    _backend, facade, root, prefix = store
     (root / "a").write_bytes(b"x")
     facade.delete_many([f"{prefix}/a", f"{prefix}/a", f"{prefix}/missing", f"{prefix}/no-such-dir/file"])
     assert list(root.iterdir()) == []
 
 
-def test_empty_input_does_nothing(store: tuple[StorageFacade, Path, str]) -> None:
-    facade, _root, _prefix = store
+def test_empty_input_does_nothing(store: Store) -> None:
+    _backend, facade, _root, _prefix = store
     facade.delete_many([])
 
 
