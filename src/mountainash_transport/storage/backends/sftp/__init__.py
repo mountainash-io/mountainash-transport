@@ -87,20 +87,20 @@ class SFTPStorageBackend(
     def open_ranged(self, path: str) -> RangedSource:
         return self._retry.call(lambda: super(SFTPStorageBackend, self).open_ranged(path))
 
-    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
-        self._retry.call(lambda: super(SFTPStorageBackend, self).write_from_bytes(
+    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> StorageEntry:
+        return self._retry.call(lambda: super(SFTPStorageBackend, self).write_from_bytes(
             path, data, create_parents=create_parents))
 
-    def write_from_stream(self, path: str, stream: t.BinaryIO, *, create_parents: bool = True) -> None:
+    def write_from_stream(self, path: str, stream: t.BinaryIO, *, create_parents: bool = True) -> StorageEntry:
         seekable = stream.seekable()
         start = stream.tell() if seekable else 0
 
-        def upload() -> None:
+        def upload() -> StorageEntry:
             if seekable:
                 stream.seek(start)
-            super(SFTPStorageBackend, self).write_from_stream(path, stream, create_parents=create_parents)
+            return super(SFTPStorageBackend, self).write_from_stream(path, stream, create_parents=create_parents)
 
-        self._retry.call(upload, replayable=seekable)
+        return self._retry.call(upload, replayable=seekable)
 
     def delete_file(self, path: str) -> None:
         self._retry.call(lambda: super(SFTPStorageBackend, self).delete_file(path))
@@ -129,8 +129,8 @@ class SFTPStorageBackend(
         return self._retry.call(lambda: super(SFTPStorageBackend, self).list_objects(
             prefix, delimiter=delimiter, max_results=max_results))
 
-    def move(self, source: str, destination: str, *, create_parents: bool = True) -> None:
-        self._retry.call(lambda: super(SFTPStorageBackend, self).move(
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> StorageEntry:
+        return self._retry.call(lambda: super(SFTPStorageBackend, self).move(
             source, destination, create_parents=create_parents))
 
 

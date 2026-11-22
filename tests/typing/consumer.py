@@ -66,15 +66,16 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     storage.list_objects("/tmp", max_results="one")  # type: ignore[arg-type]
     assert_type(storage.get_size("/tmp/sales.csv"), int | None)
     assert_type(storage.supports(StorageReadProtocol), bool)
-    assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), None)
-    assert_type(storage.write("/tmp/sales.csv", data, create_parents=False), None)
+    assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), StorageEntry)
+    assert_type(storage.write("/tmp/sales.csv", data, create_parents=False), StorageEntry)
     with storage.read_stream("/tmp/source") as source:
-        assert_type(storage.write_stream("/tmp/destination", source, create_parents=False), None)
+        assert_type(storage.write_stream("/tmp/destination", source, create_parents=False), StorageEntry)
     storage.write("/tmp/sales.csv", data, create_parents="false")  # type: ignore[arg-type]
-    assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), None)
+    assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), StorageEntry)
+    assert_type(storage.copy("/tmp/a.csv", "/tmp/b.csv"), StorageEntry)
     assert_type(storage.same_store(storage), bool)
     storage.same_store("/tmp")  # type: ignore[arg-type]
-    assert_type(storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents=False), None)
+    assert_type(storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents=False), StorageEntry)
     storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents="no")  # type: ignore[arg-type]
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 

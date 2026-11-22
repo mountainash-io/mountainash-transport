@@ -460,7 +460,7 @@ def test_s3_wrapped_input_failure_restores_caller_cause() -> None:
     class Input(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
             raise original from cause
-    def upload(source: t.BinaryIO, bucket: str, key: str) -> None:
+    def upload(source: t.BinaryIO, bucket: str, key: str, **_: t.Any) -> None:
         try:
             source.read()
         except OSError as exc:
@@ -482,7 +482,7 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
     with closing(boto3.client("s3", region_name="us-east-1", aws_access_key_id="dummy",
                               aws_secret_access_key="dummy")) as client:
         native_upload = client.upload_fileobj
-        def upload(source: t.BinaryIO, bucket: str, key: str) -> None:
+        def upload(source: t.BinaryIO, bucket: str, key: str, **_: t.Any) -> None:
             native_upload(source, bucket, key,
                           Config=TransferConfig(multipart_threshold=1, max_concurrency=1))
         backend = _make_backend()

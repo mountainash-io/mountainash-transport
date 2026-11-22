@@ -111,8 +111,9 @@ def test_seekable_upload_is_resent_whole_after_a_dropped_session(rig: t.Any) -> 
     server.drop_sessions()
     source = io.BytesIO(b"skip" + PAYLOAD)
     source.seek(4)
-    sftp.write_from_stream("/up/b.csv", source)
+    entry = sftp.write_from_stream("/up/b.csv", source)
     assert (root / "up" / "b.csv").read_bytes() == PAYLOAD
+    assert entry.size == len(PAYLOAD)  # the resent upload's result, not the dropped attempt's
 
 
 def test_non_seekable_upload_is_attempted_once(rig: t.Any) -> None:

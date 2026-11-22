@@ -868,9 +868,9 @@ Explained in [Directory](chapters/13-architecture/index.md#directory).
 
 ## `StorageEntry`
 
-The frozen dataclass that describes one resource in listings and metadata queries: `path`, `name`, `size`, `last_modified`, `entry_type` (`FILE`, `DIRECTORY` or `PREFIX`) and object-store details such as `etag`. Backends fill the fields they know.
+The frozen dataclass that describes one resource in listings, metadata queries and write results: `path`, `name`, `size`, `last_modified`, `entry_type` (`FILE`, `DIRECTORY` or `PREFIX`) and object-store details such as `etag`. Backends fill the fields they know; `write`, `write_stream`, `copy`, `move` and `copy_between` return one for what they created, without spending a request on fields the store did not report.
 
-Related: [`list_objects`](#list_objects), [Metadata queries](#metadata-queries).
+Related: [`list_objects`](#list_objects), [Metadata queries](#metadata-queries), [What a write returns](chapters/07-file-operations/index.md#what-a-write-returns).
 
 Explained in [StorageEntry](chapters/07-file-operations/index.md#storageentry).
 

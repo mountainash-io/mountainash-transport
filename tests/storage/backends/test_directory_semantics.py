@@ -56,10 +56,11 @@ class _FilesystemSFTP:
     def remove(self, path: str) -> None:
         os.remove(path)
 
-    def putfo(self, fl: t.BinaryIO, path: str) -> None:
+    def putfo(self, fl: t.BinaryIO, path: str) -> SFTPAttributes:
         with open(path, "wb") as target:
             while chunk := fl.read(32768):  # paramiko's transfer chunk
                 target.write(chunk)
+        return SFTPAttributes.from_stat(os.stat(path))  # paramiko's confirming stat
 
 
 @pytest.fixture(scope="module")
