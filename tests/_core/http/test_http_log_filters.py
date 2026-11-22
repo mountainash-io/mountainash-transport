@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -77,13 +78,23 @@ def _assert_clean(records):
             assert sentinel not in text, f"{record.name}: {text}"
 
 
+def _assert_request_line(records, url, status):
+    """Exactly one request line: method, safe URL and status, with or without httpx's reason phrase.
+
+    The reason phrase is not part of the safety contract, and other packages'
+    filters on the httpx logger (mountainash-auth-client's OAuth filter) drop it.
+    """
+    lines = [m for m in _messages(records) if m.startswith("HTTP Request:")]
+    assert len(lines) == 1, lines
+    assert re.fullmatch(rf'HTTP Request: GET {re.escape(url)} (?:"HTTP/1\.1 {status} [^"]*"|{status})', lines[0]), lines
+
+
 def test_mock_transport_request_line_is_rewritten_not_dropped(records):
     url = "https://SENTU:SENTP@example.com/data/file.bin?sig=SENTQ#SENTF"
     engine = HttpRequestEngine(httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=b"x"))))
     engine.request("GET", url)
     _assert_clean(records)
-    lines = [m for m in _messages(records) if m.startswith("HTTP Request:")]
-    assert lines == ['HTTP Request: GET https://example.com/data/file.bin "HTTP/1.1 200 OK"']
+    _assert_request_line(records, "https://example.com/data/file.bin", 200)
 
 
 @pytest.mark.parametrize("mode", ["buffered", "stream"])
@@ -99,8 +110,7 @@ def test_real_socket_records_carry_no_sentinel(records, server, mode):
                     pass
     _assert_clean(records)
     assert any(r.name.startswith("httpcore.") for r in records), "httpcore never emitted"
-    request_lines = [m for m in _messages(records) if m.startswith("HTTP Request:")]
-    assert request_lines == [f'HTTP Request: GET http://127.0.0.1:{server}/x.csv "HTTP/1.1 404 Not Found"']
+    _assert_request_line(records, f"http://127.0.0.1:{server}/x.csv", 404)
 
 
 def test_every_emitting_httpcore_logger_is_filtered(records, server):
