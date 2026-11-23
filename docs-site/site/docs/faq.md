@@ -101,11 +101,11 @@ A storage profile describes a store: endpoint, region, bucket or host, timeouts,
 
 ### Where do my S3 keys or SFTP password go?
 
-In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, and `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP. Do not put credentials in URLs or path templates: errors show path segments. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
+In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP, and `CertificateAuthProfile` for an HTTPS server that requires a client certificate ([Client certificates for HTTPS](chapters/05-storage-profiles/index.md#client-certificates-for-https)). Do not put credentials in URLs or path templates: errors show path segments. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ### Why is my auth profile rejected with `UnsupportedAuthProfileError`?
 
-Each provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password` and `oauth2`; local accepts only `none`. Passing no auth profile counts as `none`. The check runs in `create_connection` before any network I/O. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles).
+Each provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password`, `oauth2` and `certificate`; local accepts only `none`. Passing no auth profile counts as `none`. The check runs in `create_connection` before any network I/O. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles).
 
 ### Can I assume an IAM role for R2, MinIO or B2?
 
