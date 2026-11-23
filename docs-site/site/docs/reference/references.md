@@ -37,7 +37,7 @@ The [Mountainash packages](../chapters/02-mountainash-ecosystem/index.md#the-mou
 
 ### boto3
 
-- [S3 client reference](https://docs.aws.amazon.com/boto3/latest/reference/services/s3.html): the S3 client that `S3Connection` creates for every S3 flavour, including `copy_object` for `copy()` and `upload_fileobj` for streamed writes. See [S3Connection](../chapters/11-connections/index.md#s3connection) and [S3 family](../chapters/14-backends/index.md#s3-family).
+- [S3 client reference](https://docs.aws.amazon.com/boto3/latest/reference/services/s3.html): the S3 client that `S3Connection` creates for every S3 flavour, including the managed `copy` for `copy()` and `upload_fileobj` for streamed writes. See [S3Connection](../chapters/11-connections/index.md#s3connection) and [S3 family](../chapters/14-backends/index.md#s3-family).
 - [Error handling](https://docs.aws.amazon.com/boto3/latest/guide/error-handling.html): botocore's `ClientError` and its error codes, which the S3 backend maps to transport errors. See [Backend error mapping](../chapters/14-backends/index.md#backend-error-mapping).
 
 ### paramiko
@@ -63,7 +63,7 @@ The [Mountainash packages](../chapters/02-mountainash-ecosystem/index.md#the-mou
 
 ## Storage provider documentation
 
-- [Amazon S3 CopyObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html): documents the 5 GB limit for a single-request copy, which bounds the S3 backend's `copy()`. See [Copying](../chapters/07-file-operations/index.md#copying) and [S3 family](../chapters/14-backends/index.md#s3-family).
+- [Amazon S3 CopyObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html): documents the 5 GB limit for a single-request copy, above which the S3 backend's `copy()` uses multipart `UploadPartCopy`. See [Copying](../chapters/07-file-operations/index.md#copying) and [S3 family](../chapters/14-backends/index.md#s3-family). Provider limits for R2, B2 and MinIO are linked from [Where backends differ](../chapters/14-backends/index.md#where-backends-differ).
 - [AWS STS AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html): the temporary credentials behind a `ROLE_ARN` on an IAM auth profile. See [S3Connection](../chapters/11-connections/index.md#s3connection) and [How profiles become SDK arguments](../chapters/05-storage-profiles/index.md#how-profiles-become-sdk-arguments).
 - [Amazon S3 Express One Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-bucket-high-performance.html): directory buckets and Zonal endpoints, served by the `express` flavour. See [S3 flavours](../chapters/05-storage-profiles/index.md#s3-flavours).
 - [Cloudflare R2 S3 API compatibility](https://developers.cloudflare.com/r2/api/s3/api/): the `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` endpoint and the `auto` region used by the `r2` flavour. See [S3 flavours](../chapters/05-storage-profiles/index.md#s3-flavours).

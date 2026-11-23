@@ -171,7 +171,7 @@
     "Read access modes guide built from docs/read-access-modes.md, plus materialize().",
     "Transforms guide: Pipeline ordering on read vs write, suffix inference, GPG buffering caveat.",
     "Location policy guide, including the empty allow-list semantics.",
-    "Connections and tunnels recipe, including the HTTPS-through-tunnel limitation.",
+    "Connections and tunnels recipe: real URLs and host keys through the bastion; requests to other destinations refused.",
     "Error reference: TransportError hierarchy, MissingExtraError, BackendNotImplementedError."
   ],
   "open_questions": [

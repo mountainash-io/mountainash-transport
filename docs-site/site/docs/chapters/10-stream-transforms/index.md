@@ -207,7 +207,7 @@ b'region,total\nnorth,120\n'
 import tempfile
 from pathlib import Path
 
-from mountainash_transport import Gzip, StorageFacade, TransformError
+from mountainash_transport import Gzip, RandomAccessUnavailableError, StorageFacade, TransformError
 
 with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage:
     path = str(Path(root) / "events.log.gz")
@@ -215,7 +215,7 @@ with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage
 
     try:
         storage.read_stream(path, infer=True, access="random")
-    except ValueError as exc:
+    except RandomAccessUnavailableError as exc:
         print("random:", exc)
 
     try:
@@ -237,9 +237,7 @@ The second call shows the gzip decompression bound: the payload decodes to 60,00
 
 ### Who closes what
 
-The read path follows the ownership rules in [Errors and ownership](../09-read-access-modes/index.md#errors-and-ownership): the stream returned by `read_stream` owns every transform layer the facade built plus the backend stream, and closing it closes them in reverse construction order. If you call `Pipeline.apply_read(source)` or `unwrap()` yourself, the stream you supplied stays yours: transforms leave borrowed inputs open, and you close the source separately.
-
-The gzip write path does not follow that rule. The compressing reader returned by `Gzip.wrap()` closes its source when it is closed or garbage-collected, so after `write_stream(..., pipeline=Gzip())` returns, the stream you passed in is closed:
+Both directions follow the ownership rules in [Errors and ownership](../09-read-access-modes/index.md#errors-and-ownership). On the read path, the stream returned by `read_stream` owns every transform layer the facade built plus the backend stream, and closing it closes them in reverse construction order. On the write path, the facade closes the layers it built once the backend has consumed them, and leaves the stream you passed to `write_stream` open. If you call `Pipeline.apply_read(source)`, `Pipeline.apply_write(source)`, `unwrap()` or `wrap()` yourself, the stream you supplied stays yours: transforms leave borrowed inputs open, the stream returned by `apply_*` owns only the layers it built, and you close the source separately.
 
 ```python
 import io
@@ -269,13 +267,12 @@ with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as storage
 Output:
 
 ```text
-gzip write, caller stream closed: True
+gzip write, caller stream closed: False
 plain write, caller stream closed: False
 unwrap, caller stream closed: False
 ```
 
-!!! warning "Gzip writes close the caller's stream"
-    Writing through a `Gzip` layer (`write_stream`, `copy_between` with a gzip `destination_pipeline`, or `Gzip.wrap()` directly) closes the source stream you supplied. Do not reuse that stream afterwards; if you need it, pass a separate handle. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+Backends do not close it either: the stream an SDK receives is a guard that leaves yours open, including after a single-request S3 upload, where boto3 closes what it is given.
 
 ## Copying between backends
 
@@ -283,7 +280,7 @@ unwrap, caller stream closed: False
 
 `copy_between(source_path, destination_path, source_facade, destination_facade, *, source_pipeline=None, destination_pipeline=None)` copies one file between two open facades, which may use different backends. `source_pipeline` decodes what is read; `destination_pipeline` encodes what is written. Use them to recompress, encrypt or decrypt during the copy. Both facades are borrowed: they must already be open, and `copy_between` never closes them.
 
-The function streams the source's `read_stream` into the destination's `write_stream`. It uses the backend's native copy instead ([Copying](../07-file-operations/index.md#copying)) only when no pipeline is given, both facades use the same backend class and equal location policies, they share the *identical* storage profile object (compared with `is`, not equality), and the backend supports copy. Two facades built from separate but equal profiles therefore stream the bytes through your process.
+The function streams the source's `read_stream` into the destination's `write_stream`. It uses the backend's native copy instead ([Copying](../07-file-operations/index.md#copying)) when no pipeline is given, the backend supports copy, and `source_facade.same_store(destination_facade)` is true: both facades are open, have the same provider type, and have equal storage profiles, auth profiles and location policies. Profiles compare by value, so two facades built from separate but equal profiles and credentials copy natively. Different credentials for the same endpoint stream through your process, because a native copy would run with only the source's rights.
 
 This example copies a local file to an S3 bucket, compressing on the way. It ran against an in-process S3 endpoint; the endpoint setup is not shown. The `IAMAuthProfile` comes from `mountainash-auth-client` (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)).
 
@@ -324,8 +321,8 @@ True
 
 A failure part-way through can leave a partial destination object; `copy_between` does no cleanup or atomic rename. The destination backend decides how the stream is written.
 
-!!! note "SFTP destinations buffer the payload"
-    An SFTP backend reads the whole incoming stream into memory before writing it, so a streamed copy to SFTP holds the full payload in memory. See [Where backends differ](../14-backends/index.md#where-backends-differ) and the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+!!! note "Memory use"
+    Every backend reads the incoming stream in chunks, so a streamed copy uses bounded memory; a `GPG` pipeline is the exception. See [Where backends differ](../14-backends/index.md#where-backends-differ).
 
 The function is defined in `src/mountainash_transport/storage/facade/cross_backend.py`.
 

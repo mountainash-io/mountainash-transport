@@ -72,10 +72,10 @@ print([member.value for member in CONST_STORAGE_PROVIDER_TYPE])
 Output:
 
 ```text
-['local', 's3', 's3express', 'azure_blob', 'azure_files', 'gcs', 'sftp', 'ftp', 'smb', 'nfs', 'minio', 'ssh', 'b2', 'github', 'r2', 'http']
+['local', 's3', 's3express', 'azure_blob', 'gcs', 'sftp', 'ftp', 'smb', 'minio', 'ssh', 'b2', 'github', 'r2', 'http']
 ```
 
-The enum lists every provider transport can name, which is more than it can serve. Backends exist for `local`, the five S3 types (`s3`, `s3express`, `r2`, `minio`, `b2`), `sftp` and `http`. `ssh` is a connection type used for SFTP and bastion tunnels, not a storage backend. `nfs` and `azure_files` have no URL scheme and no backend.
+The enum lists every provider transport can name, which is more than it can serve. Backends exist for `local`, the five S3 types (`s3`, `s3express`, `r2`, `minio`, `b2`), `sftp` and `http`. `ssh` is a connection type used for SFTP and bastion tunnels, not a storage backend. Every member is reachable from a URL scheme; `azure_blob` covers both Azure Blob and Azure Files, selected by the profile's `SERVICE_TYPE`.
 
 The provider type you give `StorageFacade` (or that `from_path` derives from the path) decides which backend runs. The profile's own provider type decides which connection class and SDK family `create_connection` uses. For the S3 family these differ on purpose: `S3StorageProfile` always declares `s3`, and its `FLAVOR` field, not the provider type, selects R2, MinIO, B2 or S3 Express behaviour.
 
@@ -85,7 +85,7 @@ The provider type you give `StorageFacade` (or that `from_path` derives from the
 
 Credentials live in auth profiles from `mountainash-auth-client`: `IAMAuthProfile` (AWS keys, session token, role or named AWS profile), `PasswordAuthProfile`, `TokenAuthProfile`, `JWTAuthProfile`, `CertificateAuthProfile`, `KerberosAuthProfile`, `OAuth2AuthProfile`, `NoAuthProfile` and others. Transport never defines credential fields of its own; it reads what an auth profile emits (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)).
 
-Each storage provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password` and `oauth2`; local accepts only `none`. `create_connection` checks the pairing before any network I/O, and passing no auth profile counts as mode `none`.
+Each storage provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password`, `oauth2` and `certificate`; local accepts only `none`. `create_connection` checks the pairing before any network I/O, and passing no auth profile counts as mode `none`.
 
 ```python
 from mountainash_auth_client import IAMAuthProfile, PasswordAuthProfile
@@ -133,7 +133,7 @@ One profile class, `S3StorageProfile`, covers AWS S3, S3 Express One Zone, Cloud
 | `minio` | `ENDPOINT_URL`, required | `REGION` | `ADDRESSING_STYLE` |
 | `b2` | `https://s3.{REGION}.backblazeb2.com`, or `ENDPOINT_URL` | `REGION` | `ADDRESSING_STYLE` |
 
-An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)).
+An explicit `ENDPOINT_URL` wins for every flavour. Other fields are `USE_SSL`, `VERIFY_SSL`, `CA_BUNDLE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, and the AWS-only `ACCELERATE_ENDPOINT` and `DUALSTACK_ENDPOINT`. The `RANGE_CACHE`, `RANGE_BLOCK_SIZE` and `RANGE_MAX_BLOCKS` fields tune random-access reads (see [range tuning](../09-read-access-modes/index.md#range-tuning)). `MULTIPART_THRESHOLD`, `MULTIPART_CHUNKSIZE` (bytes) and `MAX_CONCURRENCY` tune uploads from `write`, `write_stream` and `copy_between`; unset, boto3's defaults apply (8 MiB, 8 MiB, 10 threads). `RETRY_MAX_ATTEMPTS` sets botocore's total attempts per request in standard retry mode; unset, botocore's own settings apply ([Retries](../14-backends/index.md#retries)). For an endpoint signed by a private CA, see [trusting a private CA](#trusting-a-private-ca).
 
 ```python
 from mountainash_transport.settings.storage.profiles import S3StorageProfile
@@ -175,7 +175,7 @@ The same rules apply whichever S3-family scheme a path uses: `s3://`, `r2://`, `
 
 ### SFTP profile
 
-`SFTPStorageProfile` describes an SSH server used through its SFTP subsystem. `HOST` and `USERNAME` are required; `PORT` defaults to 22. The remaining fields map to paramiko's `SSHClient.connect`: `TIMEOUT`, `BANNER_TIMEOUT`, `AUTH_TIMEOUT`, `ALLOW_AGENT`, `LOOK_FOR_KEYS` and `COMPRESS`. Host-key checking is set by `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY`, which defaults to `reject` (refuse hosts whose key is not known). `warn` and `auto_add` connect to unknown hosts and allow a man-in-the-middle on first contact.
+`SFTPStorageProfile` describes an SSH server used through its SFTP subsystem. `HOST` and `USERNAME` are required; `PORT` defaults to 22. The remaining fields map to paramiko's `SSHClient.connect`: `TIMEOUT`, `BANNER_TIMEOUT`, `AUTH_TIMEOUT`, `ALLOW_AGENT`, `LOOK_FOR_KEYS` and `COMPRESS`. Host-key checking is set by `KNOWN_HOSTS_FILE` and `HOST_KEY_POLICY`, which defaults to `reject` (refuse hosts whose key is not known). `warn` and `auto_add` connect to unknown hosts and allow a man-in-the-middle on first contact. `RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE` and `RETRY_BACKOFF_MAX` control how an operation that loses its session reconnects and retries ([Retries](../14-backends/index.md#retries)).
 
 ```python
 from mountainash_transport.settings.storage.profiles import HTTPStorageProfile, SFTPStorageProfile
@@ -197,7 +197,7 @@ The host-key settings travel in a separate envelope because paramiko applies the
 
 ### HTTP profile
 
-`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on) and `HEADERS`, plus the `RANGE_*` fields. The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
+`HTTPStorageProfile` describes an httpx client, not a server: `TIMEOUT_CONNECT` (10 s), `TIMEOUT_READ` (30 s), `TIMEOUT_WRITE` (60 s), `FOLLOW_REDIRECTS` (on), `MAX_REDIRECTS` (10), `VERIFY_SSL` (on), `CA_BUNDLE` and `HEADERS`, plus the `RANGE_*` fields and the `RETRY_*` fields (`RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE`, `RETRY_BACKOFF_MAX`). The URL comes from each path. When you open an HTTP facade without a profile, transport uses a default `HTTPStorageProfile`.
 
 ```python
 web = HTTPStorageProfile(HEADERS={"User-Agent": "reports-sync"}, FOLLOW_REDIRECTS=False)
@@ -210,7 +210,38 @@ Output:
 {'timeout': Timeout(connect=10.0, read=30.0, write=60.0, pool=5.0), 'follow_redirects': False, 'max_redirects': 10, 'verify': True, 'headers': {'User-Agent': 'reports-sync'}}
 ```
 
-Authorization headers are added from the auth profile and merged with `HEADERS`. Request behaviour beyond the client settings, such as retries, is configured on the [HTTP request engine](../12-http-engine/index.md#making-requests).
+### Trusting a private CA
+
+An S3-compatible endpoint (MinIO, an on-premises gateway, a target reached through a tunnel) or an HTTPS server may present a certificate signed by your own CA. Point the profile's `CA_BUNDLE` at that CA's PEM file; the HTTP profile also accepts a directory of hashed certificates. `VERIFY_SSL=False` turns verification off and wins over `CA_BUNDLE` without an error.
+
+| `VERIFY_SSL` | `CA_BUNDLE` | S3 client | HTTP client |
+|---|---|---|---|
+| `False` | any | `verify=False` | `verify=False` |
+| `True` | path | `verify=<path>` | an SSL context loaded from the path |
+| `True` (default) | unset | no `verify`: botocore uses `AWS_CA_BUNDLE` or the `ca_bundle` config key, else its default bundle | `verify=True`: httpx's default, which honours `SSL_CERT_FILE` |
+
+Without `CA_BUNDLE`, S3 follows botocore's own resolution, so `AWS_CA_BUNDLE` and `ca_bundle` in `~/.aws/config` apply as they do for plain boto3.
+
+### Client certificates for HTTPS
+
+An HTTPS server that requires a client certificate (mutual TLS) is reached with a `CertificateAuthProfile` from `mountainash-auth-client`. Give it the certificate as `CERTIFICATE_PATH` or as an in-memory `CERTIFICATE`, and the key as `PRIVATE_KEY_PATH` or `PRIVATE_KEY`, or put certificate and key in one PEM; `PASSPHRASE` unlocks an encrypted key. Auth-client loads that identity into the SSL context the HTTP client uses, so the profile's trust settings in the table above still apply: `CA_BUNDLE` trusts a private CA, `VERIFY_SSL=False` skips server verification, and by default `SSL_CERT_FILE` is honoured.
+
+```python
+from mountainash_auth_client import CertificateAuthProfile
+from mountainash_transport import StorageFacade
+from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
+
+url = "https://data.internal.example/exports/sales.csv"
+auth = CertificateAuthProfile(CERTIFICATE_PATH="/etc/pki/client.pem", PRIVATE_KEY_PATH="/etc/pki/client.key")
+with StorageFacade.from_path(url, HTTPStorageProfile(CA_BUNDLE="/etc/pki/internal-ca.pem"), auth_profile=auth) as web:
+    data = web.read(url)
+```
+
+A certificate or key that cannot be loaded, or a certificate that does not match its key, raises `ValueError` when the facade is constructed, before any request.
+
+Authorization headers are added from the auth profile and merged with `HEADERS`. The `RETRY_*` fields become the [HTTP request engine](../12-http-engine/index.md#retries)'s `RetryPolicy`; status codes, `Retry-After` and method rules stay the engine's.
+
+Every implemented profile (Local, S3, SFTP and HTTP) also has `BUFFER_MEMORY_LIMIT`: how many bytes `read_stream(access="buffered")` keeps in memory before spilling to a temporary file. Unset, it is 64 MiB, and a `buffer_memory_limit` argument on the call overrides it ([Buffered access](../09-read-access-modes/index.md#buffered-access)).
 
 ## Specs, the registry and settings-only providers
 
@@ -308,25 +339,7 @@ https://storage.googleapis.com/reports
 BackendNotImplementedError: The 'gcs' storage provider is not yet implemented. Implemented providers: ['b2', 'http', 'local', 'minio', 'r2', 's3', 's3express', 'sftp']
 ```
 
-!!! warning "A settings-only profile on the facade fails during connection setup"
-    When you pass a settings-only profile to `StorageFacade`, the facade creates a connection before it looks up the backend. `create_connection` has no connection class for these providers and falls back to an HTTP connection, which rejects the profile's arguments. The error is therefore `TransportConnectionError`, not `BackendNotImplementedError`:
-
-    ```python
-    from mountainash_transport import CONST_STORAGE_PROVIDER_TYPE, StorageFacade, TransportConnectionError
-    from mountainash_transport.settings.storage.profiles import GCSStorageProfile
-
-    gcs = GCSStorageProfile(PROJECT="reports-project", BUCKET_NAME="reports")
-    try:
-        StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS, gcs)
-    except TransportConnectionError as exc:
-        print(f"{type(exc).__name__}: {exc}")
-    ```
-
-    ```text
-    TransportConnectionError: Failed to create HTTP client: Client.__init__() got an unexpected keyword argument 'project'
-    ```
-
-    The same happens for the Azure, FTP, SMB and GitHub profiles. Check `get_spec(name).implemented` before opening storage when the provider comes from configuration. See the [support matrix](../../reference/support-matrix.md) and [create_connection](../11-connections/index.md#create_connection).
+A facade built with a settings-only profile, such as `StorageFacade(CONST_STORAGE_PROVIDER_TYPE.GCS, gcs)`, also raises `BackendNotImplementedError`. It comes from connection setup, which runs before the backend lookup, so its message says the provider has no connection implementation. The same holds for the Azure, FTP, SMB and GitHub profiles. When the provider comes from configuration, `get_spec(name).implemented` tells you in advance. See [create_connection](../11-connections/index.md#create_connection).
 
 <!-- concept:135 -->
 
@@ -459,8 +472,8 @@ except UnsupportedAuthProfileError as exc:
 Output:
 
 ```text
-['config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl', 'verify']
-['aws_access_key_id', 'aws_secret_access_key', 'config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl', 'verify']
+['config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl']
+['aws_access_key_id', 'aws_secret_access_key', 'config', 'endpoint_url', 'region_name', 'service_name', 'use_ssl']
 {'Authorization': 'Bearer example-token'}
 UnsupportedAuthProfileError: PasswordAuthProfile is not supported: mode 'password' not in supported_auth ['iam', 'none']
 ```

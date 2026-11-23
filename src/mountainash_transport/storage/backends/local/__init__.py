@@ -12,6 +12,7 @@ from .local_directory import LocalDirectoryMixin
 from .local_enumerate import LocalEnumerateMixin
 from .local_list import LocalListMixin
 from .local_metadata import LocalMetadataMixin
+from .local_move import LocalMoveMixin
 from .local_read import LocalReadMixin
 from .local_write import LocalWriteMixin
 
@@ -26,6 +27,7 @@ class LocalStorageBackend(
     LocalMetadataMixin,
     LocalCopyMixin,
     LocalDirectoryMixin,
+    LocalMoveMixin,
 ):
     """Unified local filesystem storage backend composed from mixins."""
 
@@ -49,6 +51,7 @@ __all__ = [
     "LocalReadMixin",
     "LocalWriteMixin",
     "LocalListMixin",
+    "LocalEnumerateMixin",
     "LocalDeleteMixin",
     "LocalMetadataMixin",
     "LocalCopyMixin",

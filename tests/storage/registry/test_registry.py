@@ -5,7 +5,6 @@ import pytest
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.exceptions import BackendNotImplementedError
 from mountainash_transport.storage.registry import (
-    clear_registry,
     detect_provider_from_path,
     get_registered_backends,
     get_storage_backend,
@@ -82,20 +81,9 @@ class TestDetectProviderFromPath:
 # register_storage_backend / get_storage_backend
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("empty_backend_registry")
 class TestRegisterAndGetBackend:
     """Tests for the decorator registry."""
-
-    def setup_method(self):
-        """Save registry state before each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        self._saved_registry = dict(_backend_registry)
-        _backend_registry.clear()
-
-    def teardown_method(self):
-        """Restore registry state after each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        _backend_registry.clear()
-        _backend_registry.update(self._saved_registry)
 
     def test_decorator_registers_class(self):
         @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
@@ -162,20 +150,9 @@ class TestRegisterAndGetBackend:
 # get_registered_backends
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("empty_backend_registry")
 class TestGetRegisteredBackends:
     """Tests for get_registered_backends."""
-
-    def setup_method(self):
-        """Save registry state before each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        self._saved_registry = dict(_backend_registry)
-        _backend_registry.clear()
-
-    def teardown_method(self):
-        """Restore registry state after each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        _backend_registry.clear()
-        _backend_registry.update(self._saved_registry)
 
     def test_returns_empty_dict_after_clear(self):
         assert get_registered_backends() == {}
@@ -190,46 +167,3 @@ class TestGetRegisteredBackends:
 
         # Original registry must be unaffected
         assert CONST_STORAGE_PROVIDER_TYPE.S3 not in get_registered_backends()
-
-
-# ---------------------------------------------------------------------------
-# clear_registry
-# ---------------------------------------------------------------------------
-
-class TestClearRegistry:
-    """Tests for clear_registry."""
-
-    def setup_method(self):
-        """Save registry state before each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        self._saved_registry = dict(_backend_registry)
-        _backend_registry.clear()
-
-    def teardown_method(self):
-        """Restore registry state after each test."""
-        from mountainash_transport.storage.registry.registry import _backend_registry
-        _backend_registry.clear()
-        _backend_registry.update(self._saved_registry)
-
-    def test_clear_removes_all_backends(self):
-        @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.LOCAL)
-        class LocalBackend(_FakeBackend):
-            pass
-
-        assert get_registered_backends()  # non-empty
-        clear_registry()
-        assert get_registered_backends() == {}
-
-    def test_clear_then_register_works(self):
-        @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS)
-        class GCSBackend(_FakeBackend):
-            pass
-
-        clear_registry()
-
-        @register_storage_backend(CONST_STORAGE_PROVIDER_TYPE.GCS)
-        class GCSBackend2(_FakeBackend):
-            pass
-
-        backends = get_registered_backends()
-        assert backends[CONST_STORAGE_PROVIDER_TYPE.GCS] is GCSBackend2

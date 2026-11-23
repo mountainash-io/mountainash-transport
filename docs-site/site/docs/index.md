@@ -40,7 +40,7 @@ mountainash-transport gives that code one set of calls. You open storage from a 
 
     ---
 
-    Confine what a piece of code may touch with a location policy: a local root it cannot leave, and an allow list of remote hosts and buckets. Reach a plain-HTTP service on a private network through an SSH bastion; HTTPS targets do not work through a tunnel.
+    Confine what a piece of code may touch with a location policy: a local root it cannot leave, and an allow list of remote hosts and buckets. Reach an HTTPS, S3 or SFTP service on a private network through an SSH bastion, with TLS and host keys checked against the real service.
 
     [Set a location policy](chapters/08-location-policy/index.md)
 

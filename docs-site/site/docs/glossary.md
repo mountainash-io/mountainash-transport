@@ -12,7 +12,7 @@ Explained in [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles
 
 ## Backend divergence
 
-A behaviour that differs between backends because each keeps its store's own semantics instead of emulating the others. Documented cases include `rmdir` removing a non-empty local directory but failing on SFTP, SFTP buffering stream writes in memory, single-request S3 copy and S3 listing with a limit.
+A behaviour that differs between backends because each keeps its store's own semantics instead of emulating the others. Documented cases include SFTP buffering stream writes in memory, single-request S3 copy and S3 listing with a limit.
 
 Related: [Support matrix](#support-matrix).
 
@@ -20,7 +20,7 @@ Explained in [Where backends differ](chapters/14-backends/index.md#where-backend
 
 ## Backend error mapping
 
-The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses raised from the original, so the native exception stays available as `__cause__`.
+The translation each backend applies around its native SDK calls, turning exceptions such as `FileNotFoundError`, botocore `NoSuchKey` or a paramiko `ENOENT` into `StorageError` subclasses. The native exception is not chained; only a fresh `[Errno N] strerror` copy of an `OSError`, or transport's own HTTP error (for example `HttpNotFoundError` behind `PathNotFoundError`), can appear as `__cause__`.
 
 Related: [Error families](#error-families), [`StorageError`](#storageerror).
 
@@ -36,7 +36,7 @@ Explained in [The backend registry](chapters/13-architecture/index.md#the-backen
 
 ## `BackendNotImplementedError`
 
-The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile fails earlier with `TransportConnectionError`, because `create_connection` falls back to an HTTP connection; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
+The `StorageError` subclass raised when a recognised provider type has no registered backend, as for the settings-only providers. `StorageFacade.from_path` without a storage profile raises it before any connection is made, `get_storage_backend` raises it too, and its message lists the implemented provider types. A facade constructed with a settings-only provider's storage profile raises it from `create_connection`, which has no connection class for those providers; see [Settings-only providers](reference/support-matrix.md#settings-only-providers).
 
 Related: [Settings-only provider](#settings-only-provider), [Backend registry](#backend-registry).
 
@@ -68,11 +68,19 @@ Explained in [Bytes and streams](chapters/01-what-transport-does/index.md#bytes-
 
 ## Buffered access
 
-The read access mode, selected with `access="buffered"`, that reads and decodes the whole object before `read_stream()` returns a seekable in-memory buffer. Every transfer and decoding error surfaces in that call, and the buffer stays usable after the facade closes.
+The read access mode, selected with `access="buffered"`, that reads and decodes the whole object before `read_stream()` returns a seekable buffer: in memory up to a limit (64 MiB by default, set by `buffer_memory_limit` or the profile's `BUFFER_MEMORY_LIMIT`), in a temporary file beyond it. Every transfer and decoding error surfaces in that call, and the buffer stays usable after the facade closes.
 
 Related: [Read access mode](#read-access-mode), [`materialize`](#materialize).
 
 Explained in [Buffered access](chapters/09-read-access-modes/index.md#buffered-access).
+
+## `BulkDeleteError`
+
+The `StorageError` raised once at the end of `delete_many` when some paths could not be deleted. Its `failures` attribute lists, in input order, each remaining path with the storage error it raised; every other path was deleted, and missing paths are never listed.
+
+Related: [`StorageDeleteProtocol`](#storagedeleteprotocol).
+
+Explained in [Deleting many paths](chapters/07-file-operations/index.md#deleting-many-paths).
 
 ## Byte storage endpoint
 
@@ -124,7 +132,7 @@ Explained in [Copying](chapters/07-file-operations/index.md#copying).
 
 ## `copy_between`
 
-The function that copies one file between two open facades, possibly on different backends, by streaming the source's `read_stream` into the destination's `write_stream`. Optional source and destination pipelines decode and encode during the copy, and both facades stay open afterwards.
+The function that copies one file between two open facades, possibly on different backends, by streaming the source's `read_stream` into the destination's `write_stream`. With no pipeline it uses the store's native copy when the facades are the [same store](#same_store). Optional source and destination pipelines decode and encode during the copy, and both facades stay open afterwards.
 
 Related: [`copy`](#copy), [`Pipeline`](#pipeline).
 
@@ -146,21 +154,21 @@ Related: [Auth profile](#auth-profile), [Emission](#emission), [`mountainash-aut
 
 Explained in [How transport delegates credentials](chapters/02-mountainash-ecosystem/index.md#how-transport-delegates-credentials).
 
-## Credential redaction (HTTP engine)
+## Safe location display (HTTP engine)
 
-The HTTP request engine's replacement of URL userinfo with `***` in every `HttpTransportError` message and in the `url` attribute of responses and response errors. When userinfo is present, the engine also drops the displayed cause, so a traceback does not print the native httpx exception.
+The HTTP request engine's rule that errors show a URL as `scheme://host:port/path` only, in every `HttpTransportError` message and in `HttpResponseError.url`; `HttpResponseError.headers` keeps only an allowlist of non-credential headers, and native httpx exceptions are never chained. Successful responses' `url` and the HTTP `stat` entry's `path` have userinfo removed but keep query and fragment. The engine attaches filters to the `httpx` and `httpcore` loggers so their records show only the display form of a URL, at any log level.
 
-Related: [`HttpTransportError`](#httptransporterror), [Credential redaction (location policy)](#credential-redaction-location-policy).
+Related: [`HttpTransportError`](#httptransporterror), [Safe location display (location policy)](#safe-location-display-location-policy).
 
-Explained in [Error redaction](chapters/12-http-engine/index.md#error-redaction).
+Explained in [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show).
 
-## Credential redaction (location policy)
+## Safe location display (location policy)
 
-The removal of user name and password from a URL before `LocationNotAllowed` stores it in `location` or its message. A URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception. Errors raised without an active policy may still quote the path as given.
+The rule that `LocationNotAllowed` and other location errors show `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment never shown), `***` for any other string starting with a scheme, and local paths unchanged. Scheme detection, `StoragePath`, S3 path parsing and suffix inference follow the same rule with or without an active policy. Path segments are shown, so credentials belong in auth profiles.
 
-Related: [`LocationNotAllowed`](#locationnotallowed), [Credential redaction (HTTP engine)](#credential-redaction-http-engine).
+Related: [`LocationNotAllowed`](#locationnotallowed), [Safe location display (HTTP engine)](#safe-location-display-http-engine).
 
-Explained in [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+Explained in [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ## Decorator connection
 
@@ -252,7 +260,7 @@ Explained in [Format-agnostic storage](chapters/02-mountainash-ecosystem/index.m
 
 ## Forward-only stream
 
-The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It is wrapped in `io.BufferedReader`, so it requests data only as the caller reads and reads at most one buffer (8 KiB by default) ahead of the caller, and it translates errors raised partway through into `StorageError` subclasses with the native exception as cause.
+The non-seekable stream a sequential read returns from S3, SFTP or HTTP. It is wrapped in `io.BufferedReader`, so it requests data only as the caller reads and reads at most one buffer (8 KiB by default) ahead of the caller, and it translates errors raised partway through into `StorageError` subclasses without chaining the native exception.
 
 Related: [Sequential access](#sequential-access), [Deferred read error](#deferred-read-error).
 
@@ -334,7 +342,7 @@ Explained in [HTTP profile](chapters/05-storage-profiles/index.md#http-profile).
 
 The root of the HTTP request engine's exception family. Responses other than 2xx raise `HttpResponseError` subclasses such as `HttpNotFoundError`, and failures to complete a request raise classes such as `HttpConnectionError` and `HttpTimeoutError`. Through a facade, these become storage errors.
 
-Related: [Error families](#error-families), [Credential redaction (HTTP engine)](#credential-redaction-http-engine).
+Related: [Error families](#error-families), [Safe location display (HTTP engine)](#safe-location-display-http-engine).
 
 Explained in [Responses and errors](chapters/12-http-engine/index.md#responses-and-errors).
 
@@ -390,7 +398,7 @@ Explained in [The local profile](chapters/08-location-policy/index.md#the-local-
 
 The `StorageError` subclass raised when a location policy refuses a path, before the backend is called. It is imported from `mountainash_transport.location` and carries `location`, with credentials removed, and `reason`, a short code such as `outside root` or `remote not allowed`.
 
-Related: [`LocationPolicy`](#locationpolicy), [Credential redaction (location policy)](#credential-redaction-location-policy).
+Related: [`LocationPolicy`](#locationpolicy), [Safe location display (location policy)](#safe-location-display-location-policy).
 
 Explained in [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
 
@@ -404,7 +412,7 @@ Explained in [LocationPolicy](chapters/08-location-policy/index.md#locationpolic
 
 ## `materialize`
 
-A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is imported from `mountainash_transport._core.transforms.util`, not the package root.
+A helper that drains a stream into a seekable buffer and returns the buffer with its length, held either in memory or in a spooled temporary file that moves to disk beyond `memory_cutoff`. It is exported from the package root.
 
 Related: [Buffered access](#buffered-access).
 
@@ -465,6 +473,14 @@ The Mountainash package that loads configuration from environment variables, fil
 Related: [Storage profile](#storage-profile), [`STORAGE_REGISTRY`](#storage_registry), [Named profile](#named-profile).
 
 Explained in [Configuration comes from settings](chapters/02-mountainash-ecosystem/index.md#configuration-comes-from-settings).
+
+## `move`
+
+The facade method that renames a file in the same store with the store's native rename, replacing an existing destination: `os.replace` on local disk and OpenSSH's `posix-rename` on SFTP. The S3 family and HTTP have no rename and raise `UnsupportedOperationError`.
+
+Related: [`StorageMoveProtocol`](#storagemoveprotocol), [`copy`](#copy).
+
+Explained in [Moving](chapters/07-file-operations/index.md#moving).
 
 ## Named profile
 
@@ -538,9 +554,17 @@ Related: [`StreamTransform`](#streamtransform), [Transform direction](#transform
 
 Explained in [Pipelines](chapters/10-stream-transforms/index.md#pipelines).
 
+## `presign`
+
+The facade method that returns a time-limited URL letting someone without credentials GET or PUT one object. Only the S3 family signs URLs (Signature Version 4); other stores raise `UnsupportedOperationError`. `content_type` (PUT only) is signed into the URL, and a URL signed with temporary credentials stops working when they expire.
+
+Related: [`StoragePresignProtocol`](#storagepresignprotocol).
+
+Explained in [Presigned URLs](chapters/07-file-operations/index.md#presigned-urls).
+
 ## Profile-granted host
 
-A host or bucket that a storage profile passed to the facade allows without an `allowed_remote` entry: an SFTP profile's `HOST`, or an S3-family profile's `BUCKET`. An S3-family profile without a `BUCKET` allows every bucket at its endpoint.
+A host or bucket that a storage profile passed to the facade allows without an `allowed_remote` entry: an SFTP profile's `HOST`, or an S3-family profile's `BUCKET`. An S3-family profile without a `BUCKET` allows no bucket; each one must be listed in `allowed_remote`.
 
 Related: [Remote allow-list](#remote-allow-list), [`LocationPolicy`](#locationpolicy).
 
@@ -644,7 +668,7 @@ Explained in [Registry completeness tests](chapters/15-maintaining/index.md#regi
 
 ## Remote allow-list
 
-The `allowed_remote` field of a `LocationPolicy`: a mapping from canonical URL scheme to the host names, or S3 bucket names, a facade may reach. Hosts are compared lowercased and IDNA-encoded, ignoring ports, and for HTTP the check also runs on every redirect.
+The `allowed_remote` field of a `LocationPolicy`: a mapping from canonical URL scheme to the host names, or S3 bucket names, a facade may reach. A scheme that is absent or mapped to an empty set reaches no host; the entry `"*"` allows every host for that scheme. Hosts are compared lowercased and IDNA-encoded, ignoring ports, and for HTTP the check also runs on every redirect.
 
 Related: [`LocationPolicy`](#locationpolicy), [Profile-granted host](#profile-granted-host).
 
@@ -676,11 +700,11 @@ Explained in [What transport owns](chapters/01-what-transport-does/index.md#what
 
 ## `RetryPolicy`
 
-The policy that decides which HTTP failures the engine retries: `max_attempts` including the first, exponential backoff with optional jitter, retried status codes, connection and timeout errors, and a cap on honoured `Retry-After` waits. Only idempotent methods are retried unless `retry_unsafe_methods` is set, except that a 429 is retried for any method.
+The policy that decides how often a failed operation is tried again: `max_attempts` including the first, and exponential backoff with optional jitter. The HTTP engine also reads its retried status codes, the cap on honoured `Retry-After` waits and `retry_unsafe_methods`; SFTP storage uses it with reconnects. Storage profiles set it through their `RETRY_*` fields.
 
 Related: [`RequestPolicy`](#requestpolicy), [`HttpRequestEngine`](#httprequestengine).
 
-Explained in [Retries](chapters/12-http-engine/index.md#retries).
+Explained in [Retries](chapters/12-http-engine/index.md#retries) and [Retries across backends](chapters/14-backends/index.md#retries).
 
 ## Root confinement
 
@@ -738,6 +762,14 @@ Related: [S3 family](#s3-family), [Support matrix](#support-matrix).
 
 Explained in [S3 family](chapters/14-backends/index.md#s3-family).
 
+## `same_store`
+
+The facade method that reports whether another facade addresses the same store with the same credentials: both open, the same provider type, and equal storage profiles, auth profiles and location policies, compared by value. `copy_between` uses it to choose the native copy.
+
+Related: [`copy_between`](#copy_between).
+
+Explained in [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
+
 ## Scheme dispatch
 
 The chain that turns a path into a backend: identify the canonical URL scheme, take the provider type from its `SchemeSpec`, then look up the backend registered for that provider type. `StorageFacade.from_path` runs it, and `detect_provider_from_path` exposes the first two steps.
@@ -780,7 +812,7 @@ Explained in [SFTPConnection](chapters/11-connections/index.md#sftpconnection).
 
 ## `SFTPStorageBackend`
 
-The backend for SFTP, using a paramiko `SFTPClient`. It implements read, write, enumerate, delete, metadata, directories and ranged read, but not server-side copy. `sftp://` URLs must match the connected profile's host and port, and stream writes are buffered in memory.
+The backend for SFTP, using a paramiko `SFTPClient`. It implements read, write, enumerate, delete, metadata, directories and ranged read, but not server-side copy. `sftp://` URLs must match the connected profile's host and port, stream writes are uploaded in chunks, and an operation that loses its session reconnects and retries.
 
 Related: [`SFTPStorageProfile`](#sftpstorageprofile), [Backend divergence](#backend-divergence).
 
@@ -810,14 +842,6 @@ Related: [Leaf connection](#leaf-connection), [`SFTPConnection`](#sftpconnection
 
 Explained in [SSHConnection](chapters/11-connections/index.md#sshconnection).
 
-## `storage()`
-
-A package-root function that constructs a `StorageFacade` from a provider type, defaulting to local, with an optional storage profile and auth profile. It accepts no location policy or OAuth arguments.
-
-Related: [`StorageFacade`](#storagefacade), [`from_path`](#from_path).
-
-Explained in [The storage() factory](chapters/06-storage-facade/index.md#the-storage-factory).
-
 ## Storage profile
 
 An instance of a provider's profile class, built on the `mountainash-settings` `Profile`, that describes a store, such as its endpoint, region, bucket, host and timeouts, but holds no credentials. Its uppercase fields are validated on construction and can come from arguments, environment or configuration.
@@ -844,7 +868,7 @@ Explained in [Copy](chapters/13-architecture/index.md#copy).
 
 ## `StorageDeleteProtocol`
 
-The storage protocol for removing one file or object through `delete_file(path)`. The result for a missing path follows the store: local storage raises `PathNotFoundError` and S3 succeeds. HTTP does not implement it.
+The storage protocol for removing files or objects: `delete_file(path)` removes one, and the result for a missing path follows the store (local storage raises `PathNotFoundError`, S3 succeeds); `delete_many(paths)` removes many, attempting every path, counting missing ones as deleted on every store, and raising one `BulkDeleteError` for the rest. HTTP does not implement it.
 
 Related: [`delete`](#delete), [Storage protocol](#storage-protocol).
 
@@ -852,7 +876,7 @@ Explained in [Delete](chapters/13-architecture/index.md#delete).
 
 ## `StorageDirectoryProtocol`
 
-The storage protocol for directories, with `list_dir`, `mkdir` and `rmdir`. Local storage and SFTP implement it; object stores and HTTP do not. The handling of non-empty and missing directories by `rmdir` is left to each backend.
+The storage protocol for directories, with `list_dir`, `mkdir` and `rmdir`. Local storage and SFTP implement it; object stores and HTTP do not. `rmdir` removes only an empty directory unless `recursive=True` is passed.
 
 Related: [Directory operations](#directory-operations), [Backend divergence](#backend-divergence).
 
@@ -860,9 +884,9 @@ Explained in [Directory](chapters/13-architecture/index.md#directory).
 
 ## `StorageEntry`
 
-The frozen dataclass that describes one resource in listings and metadata queries: `path`, `name`, `size`, `last_modified`, `entry_type` (`FILE`, `DIRECTORY` or `PREFIX`) and object-store details such as `etag`. Backends fill the fields they know.
+The frozen dataclass that describes one resource in listings, metadata queries and write results: `path`, `name`, `size`, `last_modified`, `entry_type` (`FILE`, `DIRECTORY` or `PREFIX`) and object-store details such as `etag`. Backends fill the fields they know; `write`, `write_stream`, `copy`, `move` and `copy_between` return one for what they created, without spending a request on fields the store did not report.
 
-Related: [`list_objects`](#list_objects), [Metadata queries](#metadata-queries).
+Related: [`list_objects`](#list_objects), [Metadata queries](#metadata-queries), [What a write returns](chapters/07-file-operations/index.md#what-a-write-returns).
 
 Explained in [StorageEntry](chapters/07-file-operations/index.md#storageentry).
 
@@ -898,6 +922,14 @@ Related: [Metadata queries](#metadata-queries), [Storage protocol](#storage-prot
 
 Explained in [Metadata](chapters/13-architecture/index.md#metadata).
 
+## `StorageMoveProtocol`
+
+The storage protocol for renaming within one backend through `move(source, destination, *, create_parents=True)`, using the store's native rename. Local storage and SFTP implement it; the S3 family and HTTP do not.
+
+Related: [`move`](#move), [Storage protocol](#storage-protocol).
+
+Explained in [Move](chapters/13-architecture/index.md#move).
+
 ## `StoragePath`
 
 A stateless helper class whose class methods identify, normalise, join and match path strings without backend dispatch or I/O. `identify_scheme` returns the canonical scheme, and `normalize` canonicalises the scheme and rejects malformed input. It needs the `[http]` extra.
@@ -905,6 +937,14 @@ A stateless helper class whose class methods identify, normalise, join and match
 Related: [URL scheme](#url-scheme), [Scheme dispatch](#scheme-dispatch).
 
 Explained in [StoragePath](chapters/04-paths-and-schemes/index.md#storagepath).
+
+## `StoragePresignProtocol`
+
+The storage protocol for presigned URLs through `presign(path, *, method="GET", expires_in=3600, content_type=None)`. The S3 family implements it; local storage, SFTP and HTTP do not.
+
+Related: [`presign`](#presign), [Storage protocol](#storage-protocol).
+
+Explained in [Presigned URLs](chapters/07-file-operations/index.md#presigned-urls).
 
 ## `StorageProfileSpec`
 

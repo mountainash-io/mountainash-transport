@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `"sequential"` (default) | Demand-driven streaming; no whole-object buffer | Remote handles are forward-only; local handles remain natively seekable | Supported; gzip over forward-only input is forward-only |
 | `"random"` | Fetch byte ranges, with configurable caching | Seekable; `seek` itself performs no I/O | Rejected if the resolved pipeline is non-empty |
-| `"buffered"` | Read and decode the entire object into memory before returning | Seekable in decoded bytes | Supported |
+| `"buffered"` | Read and decode the entire object into a spooled buffer before returning: memory up to `buffer_memory_limit` (call, then profile `BUFFER_MEMORY_LIMIT`, then 64 MiB), a temp file beyond it | Seekable in decoded bytes | Supported |
 
 `read()` still returns fully consumed bytes. Cross-backend copies use sequential reads. GPG currently buffers internally, independent of the access mode.
 
@@ -41,29 +41,25 @@ Library defaults are `RangePolicy(cache="readahead", block_size=1024*1024, max_b
 
 `block_size` must be positive; `max_blocks` must be positive for `blockcache` and is ignored for other caches. A large caller `read(n)` can allocate `n` bytes; `read()` explicitly consumes the remainder. Cache settings do not cap the caller's requested result size. Handles are not safe for concurrent seek/read operations.
 
-## Format-aware upstream tuning
+## Choosing a cache policy
 
-Transport does **not** infer cache settings from extensions. Format-aware callers, including mountainash-files, may override them per operation.
+Transport does **not** infer cache settings from extensions. Format-aware callers, including mountainash-files, choose a policy per operation; library-specific usage belongs in their documentation.
 
-| Workload | Suggested policy | Evidence / tradeoff |
+| Access pattern | Suggested policy | Evidence / tradeoff |
 |---|---|---|
-| General use, small forward reads | Default `readahead`, 1 MiB | Disposable loopback spike: 2048 × 4 KiB reads needed 9 requests versus 122 with 64 KiB read-ahead |
-| PyArrow `ParquetFile` schema / projected reads | `RangePolicy("readahead", block_size=64*1024)` | PyArrow requests large column chunks itself; smaller read-ahead avoids unnecessary adjacent bytes |
-| PyArrow reads where exact transfer matters most | `RangePolicy("none")` | Avoid speculative acquisition; repeated ranges may incur extra requests |
-| Scattered small reads with revisits | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retain blocks; smaller blocks reduce overfetch but increase request count |
+| Small forward reads | Default `readahead`, 1 MiB | Disposable loopback spike: 2048 × 4 KiB reads needed 9 requests versus 122 with 64 KiB read-ahead |
+| A reader that already requests large chunks itself | `RangePolicy("readahead", block_size=64*1024)` or `RangePolicy("none")` | A large window fetches neighbouring bytes the reader never asks for; `"none"` fetches exactly the requested intervals, so repeated ranges cost extra requests |
+| Scattered small reads with revisits | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retains blocks; smaller blocks reduce overfetch but increase request count |
 
-The disposable 363 MB Parquet spike fetched 18.8 MB for one of twenty columns with 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with 1 MiB read-ahead and 57.3 MB with 4 MiB block caching. These are workload-specific, not performance guarantees. ORC, ZIP and Arrow IPC readers were not measured: benchmark their access patterns before selecting overrides.
+One consumer measurement, reading one of twenty columns of a 363 MB file whose reader requests large chunks: 18.8 MB fetched with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. These are workload-specific, not guarantees; measure your reader's access pattern before choosing.
 
-PyArrow is not a transport runtime dependency:
+## Handle lifetime and threads
 
-```python
-import pyarrow.parquet as pq
-from mountainash_transport import RangePolicy
+A handle returned by `read_stream` is a Python file object owned by the caller. It is not safe for concurrent `seek`/`read` from several threads, and it must not outlive its use: close it (or leave its `with` block) before the facade closes and before the interpreter exits.
 
-with facade.read_stream(path, access="random",
-                        range_policy=RangePolicy("readahead", block_size=64*1024)) as handle:
-    schema = pq.ParquetFile(handle).schema_arrow
-```
+Libraries that read on native worker threads need particular care. If a worker thread holds the last reference to a handle when the interpreter shuts down, releasing it there can abort the process. Give such libraries a handle only for the duration of the call, make sure their threads have released it before you close it, or let them read from a copy they own (for example an in-memory buffer from `access="buffered"` or `materialize`). How a particular library achieves this is documented by the consumer that uses it.
+
+For local files there is a third option: `facade.local_path(path)` returns the absolute path of the file, resolved and checked exactly as `read_stream` would (missing files raise `PathNotFoundError`; the location policy applies), so a native reader can open the file itself and no Python handle is involved. It returns `None` for remote backends, without any I/O, and when a transform pipeline is passed or inferred, because an encoded file is not a plain file; fall back to `read_stream` then.
 
 ## Errors, consistency and ownership
 
@@ -71,7 +67,8 @@ with facade.read_stream(path, access="random",
 - Backend without ranged capability: `UnsupportedOperationError`.
 - Strong ETags are sent as `If-Match`; a failed precondition becomes `ObjectChangedError`. Weak or missing ETags do not prevent opening, but provide no consistency guarantee. SFTP/local handles have no ETag pinning.
 - Wrong range interval/total, short or oversized bodies: `StorageError`.
-- `range_policy` outside random mode, unknown access modes, or random mode with transforms: `ValueError`.
+- Random mode with transforms, passed or inferred: `RandomAccessUnavailableError` (exported from the package root; subclasses `ValueError`). Catch it to fall back to `access="buffered"`.
+- `range_policy` outside random mode or an unknown access mode: plain `ValueError`.
 
 Random opens can fail during the probe/HEAD/stat, and subsequent reads can fail during range fetches. Sequential errors may occur during consumption. Buffered mode consumes everything before returning, so decode/transfer errors occur within `read_stream`. HTTP retry and OAuth refresh apply before a response is yielded; no body is replayed after consumption starts.
 
@@ -91,11 +88,13 @@ handle is still marked closed, and closing it again is a no-op. Cleanup errors
 propagate (the last one wins); construction failures
 retain their original exception even if cleanup fails.
 
-For direct `Pipeline.apply_read(source)` callers, the returned stream owns the
-distinct layers it constructed, **not** the supplied source. Close the source
-separately. Empty or identity-only pipelines return the source unchanged.
-Transforms should leave borrowed inputs open; layers already closed by a
-cascading transform are not explicitly closed again.
+For direct `Pipeline.apply_read(source)` and `Pipeline.apply_write(source)`
+callers, the returned stream owns the distinct layers it constructed, **not** the
+supplied source. Close the source separately. Empty or identity-only pipelines
+return the source unchanged. Transforms leave borrowed inputs open (on both the
+read and write paths); layers already closed by a cascading transform are not
+explicitly closed again. `StorageFacade.write`/`write_stream` close the layers
+they build after the backend consumes them and never close the caller's stream.
 
 Entering a context does not validate the entire payload:
 
@@ -109,4 +108,4 @@ except gzip.BadGzipFile:
     assert handle.closed
 ```
 
-Consumer exceptions also close handles. To spool explicitly, the existing `materialize(stream, to="tempfile")` utility is available; a facade spooling option remains deferred (backlog #25).
+Consumer exceptions also close handles. Buffered mode spools to a temp file above its memory limit; to spool a sequential stream yourself, use `materialize(stream, to="tempfile")` (`from mountainash_transport import materialize`).

@@ -33,6 +33,11 @@ def _reader(data: bytes = DATA, *, cache: str = "readahead", block: int = 4096, 
 
 @pytest.mark.parametrize("cache", ["readahead", "blockcache", "bytes", "none"])
 def test_tail_and_interior_reads_return_exact_bytes_with_bounded_fetch(cache: str) -> None:
+    """Guards RangedReader's use of fsspec's private ``cache._fetch`` (#45).
+
+    A failure here after an fsspec upgrade means that release changed it:
+    pin fsspec below the release in pyproject.toml first, then fix ranged_io.py.
+    """
     r, fetch = _reader(cache=cache)
     assert r.seek(-8, io.SEEK_END) == len(DATA) - 8
     assert r.read(8) == DATA[-8:]

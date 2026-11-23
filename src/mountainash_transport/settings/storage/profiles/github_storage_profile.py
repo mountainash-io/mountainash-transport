@@ -1,21 +1,10 @@
-"""GitHub repository settings (scope-cut, read-only).
+"""GitHub repository profile (read-only).
 
-Descriptor-driven GitHub settings scoped to **repository mode only**.
-The legacy ``GitHubStorageAuthSettings`` sprawled across three distinct
-concerns (repository contents, releases, Packages), most of which are
-API-call-site arguments rather than connection-level config. This
-migration reduces the settings surface to what
-:class:`fsspec.implementations.github.GithubFileSystem` actually needs:
-``org`` / ``repo`` / ``sha`` / auth.
-
-``read_only=True`` is set on the descriptor — fsspec's GithubFileSystem
-only exposes a read surface; writes go through a separate API path
-(PyGithub or raw REST) and would belong on a future ``GitHubAPISettings``
-class if ever needed.
-
-Adapter
-(:func:`mountainash_transport.settings.adapters.github.build_handler_kwargs`)
-produces :class:`fsspec.implementations.github.GithubFileSystem` kwargs.
+Covers repository contents only: the fields
+:class:`fsspec.implementations.github.GithubFileSystem` needs (``org``,
+``repo``, ``sha``) plus auth. ``read_only=True`` is set on the spec because
+that filesystem exposes reads only. :meth:`GitHubRepoStorageProfile.to_handler_kwargs`
+returns ``GithubFileSystem`` kwargs. Transport has no GitHub backend yet.
 """
 
 from __future__ import annotations

@@ -17,7 +17,7 @@ The policy lives in `mountainash_transport.location`, a standard-library-only mo
 | Field | Default | Meaning |
 |---|---|---|
 | `root` | `None` | A directory that local paths must stay inside. Relative paths resolve beneath it. |
-| `allowed_remote` | `{}` | A mapping from canonical URL scheme (`"http"`, `"https"`, `"s3"`, `"sftp"` and so on) to a `frozenset` of host names or S3 bucket names that scheme may reach. |
+| `allowed_remote` | `{}` | A mapping from canonical URL scheme (`"http"`, `"https"`, `"s3"`, `"sftp"` and so on) to a `frozenset` of host names or S3 bucket names that scheme may reach. An empty set allows no host; the entry `"*"` allows every host for that scheme. |
 | `allow_unconfined` | `False` | An explicit opt-out. When `True`, the policy is inactive and checks nothing. |
 
 You pass a policy as `policy=` to `StorageFacade(...)`, `StorageFacade.from_path(...)` or `StorageFacade.for_local(...)`. A facade with no policy behaves as if confinement did not exist: no path is checked. A facade with an active policy checks every path, and refuses any URL whose scheme is not in transport's scheme registry (see [how a path picks a backend](../04-paths-and-schemes/index.md#how-a-path-picks-a-backend)).
@@ -38,7 +38,7 @@ flowchart TD
     IN -->|no| X
     B -->|"S3 family, SFTP, HTTP"| PH{"host or bucket matches<br/>caller's profile?"}
     PH -->|yes| OK
-    PH -->|no| AL{"listed in<br/>allowed_remote[scheme]?"}
+    PH -->|no| AL{"listed in<br/>allowed_remote[scheme],<br/>or '*' listed?"}
     AL -->|yes| OK
     AL -->|no| X
 ```
@@ -176,6 +176,7 @@ redirected = f"http://127.0.0.1:{port}/moved.csv"
 
 policies = {
     "listed host": LocationPolicy(allowed_remote={"http": frozenset({"127.0.0.1"})}),
+    "any host": LocationPolicy(allowed_remote={"http": frozenset({"*"})}),
     "empty set": LocationPolicy(allowed_remote={"http": frozenset()}),
     "https only": LocationPolicy(allowed_remote={"https": frozenset({"127.0.0.1"})}),
     "no entries": LocationPolicy(),
@@ -198,9 +199,12 @@ Output:
 listed host  127.0.0.1 sales.csv  read 23 bytes
 listed host  localhost sales.csv  refused (remote not allowed)
 listed host  127.0.0.1 moved.csv  refused (remote not allowed)
-empty set    127.0.0.1 sales.csv  read 23 bytes
-empty set    localhost sales.csv  read 23 bytes
-empty set    127.0.0.1 moved.csv  read 23 bytes
+any host     127.0.0.1 sales.csv  read 23 bytes
+any host     localhost sales.csv  read 23 bytes
+any host     127.0.0.1 moved.csv  read 23 bytes
+empty set    127.0.0.1 sales.csv  refused (remote not allowed)
+empty set    localhost sales.csv  refused (remote not allowed)
+empty set    127.0.0.1 moved.csv  refused (remote not allowed)
 https only   127.0.0.1 sales.csv  refused (remote not allowed)
 https only   localhost sales.csv  refused (remote not allowed)
 https only   127.0.0.1 moved.csv  refused (remote not allowed)
@@ -209,10 +213,7 @@ no entries   localhost sales.csv  refused (remote not allowed)
 no entries   127.0.0.1 moved.csv  refused (remote not allowed)
 ```
 
-With `127.0.0.1` listed, the same server is refused under the name `localhost`, and the redirect to `localhost` is refused before it is followed. A scheme with no entry refuses every host, which is why the `https`-only policy blocks plain `http`.
-
-!!! warning "An empty set allows every host"
-    `allowed_remote={"http": frozenset()}` does not block `http`; it allows any host for that scheme, as the "empty set" rows above show. This is the current behaviour of `allow_remote` in `src/mountainash_transport/location.py`: a scheme that is absent from the mapping is refused, while a scheme mapped to an empty set is unrestricted. To block a scheme, leave it out of `allowed_remote`. Do not build an allow-list from configuration in a way that can produce an empty set when you mean "nothing allowed". See the [support matrix and known limits](../../reference/support-matrix.md).
+With `127.0.0.1` listed, the same server is refused under the name `localhost`, and the redirect to `localhost` is refused before it is followed. `"*"` allows every host for its scheme, redirects included. An empty set allows nothing, exactly like a scheme with no entry, which is also why the `https`-only policy blocks plain `http`. So an allow-list built from configuration that comes out empty fails closed. `"*"` is only special as a whole entry: `"*.example.com"` is compared as a literal host name and matches nothing.
 
 !!! note "DNS resolution and token endpoints after the host check"
     The check compares host names, so it does not defend against DNS rebinding, where an allowed name resolves to an unexpected address. Token endpoints used by managed OAuth2 are not checked by the policy.
@@ -221,7 +222,7 @@ With `127.0.0.1` listed, the same server is refused under the name `localhost`, 
 
 ### Hosts granted by a profile
 
-A storage profile you pass to the facade grants its own host without an `allowed_remote` entry. An SFTP profile grants its `HOST`: an `sftp://` URL for another host is refused with `profile host mismatch`, while plain paths go to the profile's host and need no host check. An S3-family profile with a `BUCKET` grants that bucket only. An S3-family profile without a `BUCKET` grants every bucket at its endpoint, and the facade does not check bucket names at all. `allowed_remote` can add hosts beyond the profile's own, but a profile never grants anything other than its own host or bucket.
+A storage profile you pass to the facade grants its own host without an `allowed_remote` entry. An SFTP profile grants its `HOST`: an `sftp://` URL for another host is refused with `profile host mismatch`, while plain paths go to the profile's host and need no host check. An S3-family profile with a `BUCKET` grants that bucket only. An S3-family profile without a `BUCKET` grants nothing: every bucket it reaches must be listed in `allowed_remote` under the flavour's scheme. `allowed_remote` can add hosts beyond the profile's own, but a profile never grants anything other than its own host or bucket.
 
 The example below runs against an in-process S3 service with buckets `reports`, `archive` and `payroll`, each holding `sales.csv`. The bootstrap line that starts it is omitted.
 
@@ -239,6 +240,10 @@ cases = {
         LocationPolicy(allowed_remote={"s3": frozenset({"archive"})}),
     ),
     "no BUCKET": (S3StorageProfile(), LocationPolicy()),
+    "no BUCKET, archive listed": (
+        S3StorageProfile(),
+        LocationPolicy(allowed_remote={"s3": frozenset({"archive"})}),
+    ),
 }
 
 for label, (profile, policy) in cases.items():
@@ -259,7 +264,8 @@ Output:
 ```text
 BUCKET=reports: reports=ok, archive: profile host mismatch, payroll: profile host mismatch
 BUCKET=reports, archive listed: reports=ok, archive=ok, payroll: profile host mismatch
-no BUCKET: reports=ok, archive=ok, payroll=ok
+no BUCKET: reports: remote not allowed, archive: remote not allowed, payroll: remote not allowed
+no BUCKET, archive listed: reports: remote not allowed, archive=ok, payroll: remote not allowed
 ```
 
 Set `BUCKET` on S3 profiles whenever a facade should be held to one bucket. The SFTP rules are exercised in `tests/test_location.py`.
@@ -274,9 +280,11 @@ The facade applies the policy in one place: every operation that takes a path ch
 
 <!-- concept:128 -->
 
-### Credential redaction
+### What errors show of a location
 
-URLs sometimes carry credentials in their user-info part, as in `https://user:password@host/path`. `LocationNotAllowed` strips that part before storing `location` or building its message, and a URL that cannot be parsed is reported as `invalid location` without chaining the parser's exception, which could quote the input. The redaction applies to policy errors. Without an active policy, other errors may still quote the path as given:
+Errors never echo a location as you typed it. `LocationNotAllowed` and the other location errors show `scheme://host:port/path` for locations that start with `scheme://` or `//`; user information, query and fragment are never shown. Any other string that starts with a scheme, such as `nfs:admin:hunter2@files/share`, is shown as `***`. Local paths are shown unchanged. Scheme detection, `StoragePath`, S3 path parsing and suffix inference follow the same rule, with or without a policy. Native exceptions that could quote the input are not chained: a backend error carries at most a fresh `[Errno N] strerror` copy of an `OSError`, or otherwise only the class name of the native exception.
+
+Path segments are shown, so a secret placed in a path (`https://host/token-abc/data.csv`) appears in errors. Keep credentials in auth profiles, not in URLs or path templates:
 
 ```python
 from mountainash_transport import StorageFacade
@@ -308,7 +316,7 @@ Output:
 location not allowed: nfs://files.example.com/share (unknown scheme)
 nfs://files.example.com/share
 location not allowed: https://files.example.com (remote not allowed)
-ValueError: Unrecognised scheme in path 'nfs://admin:hunter2@files.example.com/share'
+ValueError: Unrecognised scheme in path 'nfs://files.example.com/share'
 ```
 
-The last call had no policy, and the `ValueError` from scheme detection quotes the path, password included. Keep credentials in auth profiles rather than URLs (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)). HTTP errors have their own redaction, described in [error redaction](../12-http-engine/index.md#error-redaction).
+The last call had no policy, and its `ValueError` still omits the password. See [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client). Traceback frame locals, such as the string you passed in, can still hold what you typed. HTTP errors follow the same display rule and are described in [what HTTP errors show](../12-http-engine/index.md#what-http-errors-show).

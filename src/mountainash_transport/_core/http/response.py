@@ -13,11 +13,19 @@ import json
 import typing as t
 from dataclasses import dataclass
 
-from mountainash_transport._core.http.redact import _safe_cause, redact_userinfo
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE
 from mountainash_transport._core.http.errors import HttpDecodeError
+from mountainash_transport._core.safe_display import raise_safe
 
 if t.TYPE_CHECKING:
     import httpx
+
+
+def url_without_userinfo(url: str | httpx.URL) -> str:
+    """A successful result's URL: userinfo removed structurally; query and fragment kept."""
+    import httpx
+
+    return str(httpx.URL(url).copy_with(userinfo=b""))
 
 
 @dataclass(frozen=True)
@@ -65,9 +73,7 @@ class HttpResponse:
         try:
             return json.loads(self.content)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise HttpDecodeError(
-                f"Failed to decode response body as JSON: {exc}"
-            ) from _safe_cause(exc)
+            raise_safe(HttpDecodeError(f"Failed to decode response body as JSON ({type(exc).__name__})"), exc)
 
 
 class HttpStreamResponse:
@@ -104,7 +110,7 @@ class HttpStreamResponse:
     @property
     def url(self) -> str:
         """Final request URL as a string."""
-        return redact_userinfo(str(self._response.url))
+        return url_without_userinfo(self._response.url)
 
     @property
     def method(self) -> str:
@@ -115,7 +121,7 @@ class HttpStreamResponse:
     # Body consumption
     # ------------------------------------------------------------------
 
-    def iter_bytes(self, chunk_size: int = 65536) -> t.Iterator[bytes]:
+    def iter_bytes(self, chunk_size: int = DEFAULT_CHUNK_SIZE) -> t.Iterator[bytes]:
         """Iterate over the response body in raw byte chunks.
 
         Parameters
@@ -125,7 +131,7 @@ class HttpStreamResponse:
         """
         return self._response.iter_bytes(chunk_size=chunk_size)
 
-    def iter_text(self, chunk_size: int = 65536) -> t.Iterator[str]:
+    def iter_text(self, chunk_size: int = DEFAULT_CHUNK_SIZE) -> t.Iterator[str]:
         """Iterate over the response body decoded as text chunks.
 
         Parameters

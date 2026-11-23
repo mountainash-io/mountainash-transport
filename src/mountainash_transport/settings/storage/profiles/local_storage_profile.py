@@ -5,9 +5,8 @@ confines every path the facade handles to that directory; ``CREATE_PATH``
 creates ``ROOT_PATH`` if missing. Network filesystems must be mounted by the
 operating system; the library never issues mount commands.
 
-Adapter
-(:func:`mountainash_transport.settings.adapters.local.build_handler_kwargs`)
-emits ``{"root_path": ..., "create_path": ...}``.
+:meth:`LocalStorageProfile.to_handler_kwargs` returns
+``{"root_path": ..., "create_path": ...}``.
 """
 
 from __future__ import annotations
@@ -35,6 +34,9 @@ LOCAL_SPEC = StorageProfileSpec(
     supports_multipart=False,
     read_only=False,
     parameters=[
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
         ParameterSpec(
             name="ROOT_PATH",
             type=t.Optional[str],
@@ -77,6 +79,7 @@ class LocalStorageProfile(Profile):
     """
 
     if t.TYPE_CHECKING:
+        BUFFER_MEMORY_LIMIT: int | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         ROOT_PATH: str | None
         CREATE_PATH: bool

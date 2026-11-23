@@ -155,17 +155,57 @@ def test_normalize_upath_input():
     [
         ("s3://bucket/object", "s3://bucket/object"),
         ("s3://bucket/object/", "s3://bucket/object"),
-        ("s3://bucket", "s3://bucket"),
+        ("s3://bucket", "s3://bucket/"),  # UPath's canonical root form
         ("sftp://user@host/p", "sftp://user@host/p"),
+        ("sftp://files.example.com/reports/sales.csv", "sftp://files.example.com/reports/sales.csv"),
+        ("sftp://h.example.com:2222/a/b/", "sftp://h.example.com:2222/a/b"),
+        ("sftp://h/", "sftp://h/"),
+        ("sftp://h", "sftp://h"),
+        ("ftp://h.example.com/a/b", "ftp://h.example.com/a/b"),
+        ("ftp://h:21/a/b", "ftp://h:21/a/b"),
+        ("smb://srv/share/a", "smb://srv/share/a"),
         ("ssh://user@host/p", "ssh://user@host/p"),
         ("github://owner/repo/p", "github://owner/repo/p"),
+        ("https://h:8443/a/b?x=1", "https://h:8443/a/b?x=1"),
         ("file:///tmp/x", "file:///tmp/x"),
     ],
 )
 def test_normalize_schemed_canonical(path: str, expected: str):
     result = StoragePath.normalize(path)
     assert result is not None
-    assert str(result) == str(UPath(expected))
+    assert str(result) == expected
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("sftp://files.example.com/reports", "sftp://files.example.com/reports/x.csv"),
+        ("sftp://h.example.com:2222/a/", "sftp://h.example.com:2222/a/x.csv"),
+        ("sftp://h", "sftp://h/x.csv"),
+        ("ftp://h.example.com/a", "ftp://h.example.com/a/x.csv"),
+        ("ftp://h:21/a", "ftp://h:21/a/x.csv"),
+        ("s3://bucket/dir", "s3://bucket/dir/x.csv"),
+    ],
+)
+def test_join_keeps_host_and_port(path: str, expected: str):
+    assert str(StoragePath.join(path, "x.csv")) == expected
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    [
+        ("https://h/a?x=1", "https://h/a/b.csv?x=1"),
+        ("https://h/a/?sig=abc&exp=2", "https://h/a/b.csv?sig=abc&exp=2"),
+        ("https://h/a#frag", "https://h/a/b.csv#frag"),
+        ("https://h/a?x=1#frag", "https://h/a/b.csv?x=1#frag"),
+        ("sftp://h.example.com/a?x=1", "sftp://h.example.com/a/b.csv?x=1"),
+        ("https://h/a", "https://h/a/b.csv"),
+        ("/tmp/a?b", "/tmp/a?b/b.csv"),
+    ],
+)
+def test_join_inserts_name_before_query_and_fragment(path: str, expected: str):
+    """The name goes into the path component; query and fragment stay after it (#61)."""
+    assert str(StoragePath.join(path, "b.csv")) == expected
 
 
 def test_normalize_resolves_gcs_alias_to_gs():

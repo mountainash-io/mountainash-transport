@@ -4,6 +4,8 @@ from __future__ import annotations
 import io
 import typing as t
 
+from mountainash_transport._core.safe_display import raise_safe
+
 MapError = t.Callable[[Exception], Exception | None]
 
 
@@ -30,7 +32,7 @@ class ForwardOnlyReader(io.RawIOBase):
         except Exception as exc:
             mapped = self._map_error(exc) if self._map_error else None
             if mapped is not None and mapped is not exc:
-                raise mapped from exc
+                raise_safe(mapped, exc)
             raise
         b[:len(data)] = data
         return len(data)
@@ -42,7 +44,7 @@ class ForwardOnlyReader(io.RawIOBase):
             except Exception as exc:
                 mapped = self._map_error(exc) if self._map_error else None
                 if mapped is not None and mapped is not exc:
-                    raise mapped from exc
+                    raise_safe(mapped, exc)
                 raise
             finally:
                 super().close()

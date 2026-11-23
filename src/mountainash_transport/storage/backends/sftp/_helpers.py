@@ -12,6 +12,7 @@ from mountainash_transport._core.exceptions import (
     AuthenticationError, PathNotFoundError, PermissionDeniedError,
     StorageConnectionError, StorageError,
 )
+from mountainash_transport._core.safe_display import raise_safe, safe_detail, safe_location
 
 
 def _is_not_found(exc: BaseException) -> bool:
@@ -50,20 +51,21 @@ def _remote_path(profile: t.Any, path: str) -> str:
 def _wrap_sftp_error(exc: BaseException, path: str) -> StorageError | None:
     if isinstance(exc, (StorageError, io.UnsupportedOperation)):
         return None
+    shown = safe_location(path)
     if _is_not_found(exc):
-        return PathNotFoundError(path)
+        return PathNotFoundError(shown)
     if isinstance(exc, PermissionError) or (
         isinstance(exc, OSError) and exc.errno in (errno.EACCES, errno.EPERM)
     ):
-        return PermissionDeniedError(path)
+        return PermissionDeniedError(shown)
     from paramiko import AuthenticationException, SFTPError, SSHException
     from paramiko.ssh_exception import NoValidConnectionsError
     if isinstance(exc, AuthenticationException):
-        return AuthenticationError(path)
+        return AuthenticationError(shown)
     if isinstance(exc, (ConnectionError, TimeoutError, EOFError, SSHException, NoValidConnectionsError)):
-        return StorageConnectionError(f"{path}: {exc}")
+        return StorageConnectionError(f"{shown}: connection failed ({safe_detail(exc)})")
     if isinstance(exc, (OSError, SFTPError)):
-        return StorageError(f"{path}: {exc}")
+        return StorageError(f"{shown}: storage error ({safe_detail(exc)})")
     return None
 
 
@@ -75,14 +77,14 @@ def _mapped(path: str) -> t.Iterator[None]:
         mapped = _wrap_sftp_error(exc, path)
         if mapped is None or mapped is exc:
             raise
-        raise mapped from exc
+        raise_safe(mapped, exc)
 
 
 def _require_file_type(mode: int | None, path: str) -> int:
     """Keep unavailable type distinct from known special-file types."""
     kind = stat.S_IFMT(mode) if mode is not None else 0
     if not kind:
-        raise StorageError(f"{path}: SFTP server did not supply file type information")
+        raise StorageError(f"{safe_location(path)}: SFTP server did not supply file type information")
     return kind
 
 

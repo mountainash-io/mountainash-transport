@@ -6,7 +6,6 @@ import pytest
 
 from mountainash_auth_client import NoAuthProfile
 
-from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.storage.profiles import (
     AZURE_STORAGE_SPEC,
     AzureStorageProfile,
@@ -14,15 +13,8 @@ from mountainash_transport.settings.storage.profiles import (
 )
 
 
-_PROVIDER_TYPE_BY_SERVICE: dict[str, str] = {
-    "blob": CONST_STORAGE_PROVIDER_TYPE.AZURE_BLOB,
-    "files": CONST_STORAGE_PROVIDER_TYPE.AZURE_FILES,
-}
-
-
 def _make(service_type: str = "blob", *, auth=None, **extra):
     kwargs = {
-        "PROVIDER_TYPE": _PROVIDER_TYPE_BY_SERVICE[service_type],
         "SERVICE_TYPE": service_type,
         "ACCOUNT_NAME": "teststg",
         "auth": auth if auth is not None else NoAuthProfile(),

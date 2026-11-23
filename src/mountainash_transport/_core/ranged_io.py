@@ -103,6 +103,9 @@ class RangedReader(io.RawIOBase):
         end = self._source.size if size < 0 else min(self._pos + size, self._source.size)
         if self._pos >= end:
             return b""
+        # fsspec's caches have no public fetch method; `_fetch` is private, accepted by owner
+        # decision (#45, 2026-11-21). tests/_core/test_ranged_io.py guards it: if those tests
+        # fail after an fsspec upgrade, pin fsspec below that release first, then fix here.
         data = t.cast(bytes, self._cache._fetch(self._pos, end))
         self._pos += len(data)
         return data

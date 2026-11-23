@@ -23,12 +23,14 @@ import mountainash_transport.storage.backends  # noqa: F401
 from mountainash_transport.storage.backends.s3 import S3StorageBackend
 from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
 
+from ._safe_chain import assert_safe_chain
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_backend(mock_client: MagicMock | None = None) -> S3StorageBackend:
+def _make_backend(mock_client: t.Any = None) -> S3StorageBackend:
     """Return an S3StorageBackend with a pre-injected mock boto3 client."""
     backend = S3StorageBackend(None)
     backend._client = mock_client or MagicMock()
@@ -292,41 +294,63 @@ class TestDelete:
 # Copy
 # ---------------------------------------------------------------------------
 
+def _stubbed_copy_backend(size: int):
+    """Real boto3 client with stubbed responses; returns (backend, stub, calls)."""
+    import boto3
+    from botocore.stub import Stubber
+
+    client = boto3.client("s3", region_name="us-east-1", aws_access_key_id="k", aws_secret_access_key="s")
+    calls: list[tuple[str, dict[str, t.Any]]] = []
+    client.meta.events.register(
+        "provide-client-params.s3.*",
+        lambda params, model, **_: calls.append((model.name, dict(params))),
+    )
+    stub = Stubber(client)
+    stub.add_response("head_object", {"ContentLength": size, "ContentType": "text/csv",
+                                      "Metadata": {"owner": "reports"}, "ETag": '"e"'}, None)
+    return _make_backend(client), stub, calls
+
+
 class TestCopy:
-    def test_copy_calls_copy_object(self):
-        mock_client = MagicMock()
-        backend = _make_backend(mock_client)
+    def test_copy_below_limit_is_one_copy_object(self):
+        backend, stub, calls = _stubbed_copy_backend(1024)
+        stub.add_response("copy_object", {}, None)
+        with stub:
+            backend.copy("s3://src-bucket/src/file.txt", "dst-bucket/dst/file.txt")
+        stub.assert_no_pending_responses()
+        copy = [p for name, p in calls if name == "CopyObject"]
+        assert len(copy) == 1
+        assert copy[0]["Bucket"] == "dst-bucket" and copy[0]["Key"] == "dst/file.txt"
+        assert copy[0]["CopySource"] == {"Bucket": "src-bucket", "Key": "src/file.txt"}
 
-        backend.copy("s3://src-bucket/src/file.txt", "s3://dst-bucket/dst/file.txt")
+    def test_copy_above_single_request_limit_uses_multipart_copy(self):
+        size = 5 * 1024**3 + 1  # just over the 5 GiB single-request copy limit
+        backend, stub, calls = _stubbed_copy_backend(size)
+        stub.add_response("create_multipart_upload", {"UploadId": "u"}, None)
+        parts = -(-size // (256 * 1024**2))
+        for _ in range(parts):
+            stub.add_response("upload_part_copy", {"CopyPartResult": {"ETag": '"p"'}}, None)
+        stub.add_response("complete_multipart_upload", {}, None)
+        with stub:
+            backend.copy("s3://src-bucket/big.bin", "s3://dst-bucket/big.bin")
+        stub.assert_no_pending_responses()
+        names = [name for name, _ in calls]
+        assert "CopyObject" not in names
+        ranges = sorted(p["CopySourceRange"] for name, p in calls if name == "UploadPartCopy")
+        assert len(ranges) == parts and f"bytes=0-{256 * 1024**2 - 1}" in ranges
+        create = next(p for name, p in calls if name == "CreateMultipartUpload")
+        assert create["ContentType"] == "text/csv" and create["Metadata"] == {"owner": "reports"}
 
-        mock_client.copy_object.assert_called_once_with(
-            Bucket="dst-bucket",
-            Key="dst/file.txt",
-            CopySource={"Bucket": "src-bucket", "Key": "src/file.txt"},
-        )
+    def test_copy_missing_source_is_not_found(self):
+        from mountainash_transport import PathNotFoundError
+        import boto3
+        from botocore.stub import Stubber
 
-    def test_copy_same_bucket(self):
-        mock_client = MagicMock()
-        backend = _make_backend(mock_client)
-
-        backend.copy("s3://bucket/original.txt", "s3://bucket/copy.txt")
-
-        mock_client.copy_object.assert_called_once_with(
-            Bucket="bucket",
-            Key="copy.txt",
-            CopySource={"Bucket": "bucket", "Key": "original.txt"},
-        )
-
-    def test_copy_without_scheme(self):
-        mock_client = MagicMock()
-        backend = _make_backend(mock_client)
-
-        backend.copy("src-bucket/a.txt", "dst-bucket/b.txt")
-        mock_client.copy_object.assert_called_once_with(
-            Bucket="dst-bucket",
-            Key="b.txt",
-            CopySource={"Bucket": "src-bucket", "Key": "a.txt"},
-        )
+        client = boto3.client("s3", region_name="us-east-1", aws_access_key_id="k", aws_secret_access_key="s")
+        stub = Stubber(client)
+        stub.add_client_error("head_object", service_error_code="404", http_status_code=404)
+        with stub, pytest.raises(PathNotFoundError):
+            _make_backend(client).copy("s3://b/missing", "s3://b/dst")
 
 
 @pytest.mark.parametrize(
@@ -352,7 +376,7 @@ def test_s3_structured_failure_categories(code: str, status: int, category: str)
     with pytest.raises(getattr(transport, category)) as caught:
         _make_backend(client).get_metadata("s3://bucket/key")
     assert type(caught.value) is getattr(transport, category)
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize(
@@ -361,7 +385,7 @@ def test_s3_structured_failure_categories(code: str, status: int, category: str)
      ("get_size", "head_object", ()), ("path_exists", "head_object", ()),
      ("write_from_bytes", "put_object", (b"data",)),
      ("write_from_stream", "upload_fileobj", (io.BytesIO(b"data"),)),
-     ("copy", "copy_object", ("s3://bucket/destination",)),
+     ("copy", "copy", ("s3://bucket/destination",)),
      ("delete_file", "delete_object", ())],
 )
 def test_s3_operation_denial(
@@ -374,7 +398,7 @@ def test_s3_operation_denial(
     client.list_objects_v2.side_effect = AssertionError("denial must not fall back to LIST")
     with pytest.raises(PermissionDeniedError) as caught:
         getattr(_make_backend(client), operation)("s3://bucket/key", *extra)
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 def test_s3_page_failure_does_not_return_partial_listing() -> None:
@@ -387,7 +411,7 @@ def test_s3_page_failure_does_not_return_partial_listing() -> None:
     client.get_paginator.return_value.paginate.return_value = pages()
     with pytest.raises(PermissionDeniedError) as caught:
         _make_backend(client).list_objects("s3://bucket/prefix")
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize("operation", ["read_to_bytes", "read_to_stream"])
@@ -408,7 +432,7 @@ def test_s3_body_failure_is_mapped(operation: str, fault: str) -> None:
                     result.read(1)
             finally:
                 result.close()
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 def test_s3_managed_upload_preserves_colliding_caller_error() -> None:
@@ -436,7 +460,7 @@ def test_s3_wrapped_input_failure_restores_caller_cause() -> None:
     class Input(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
             raise original from cause
-    def upload(source: t.BinaryIO, bucket: str, key: str) -> None:
+    def upload(source: t.BinaryIO, bucket: str, key: str, **_: t.Any) -> None:
         try:
             source.read()
         except OSError as exc:
@@ -458,7 +482,7 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
     with closing(boto3.client("s3", region_name="us-east-1", aws_access_key_id="dummy",
                               aws_secret_access_key="dummy")) as client:
         native_upload = client.upload_fileobj
-        def upload(source: t.BinaryIO, bucket: str, key: str) -> None:
+        def upload(source: t.BinaryIO, bucket: str, key: str, **_: t.Any) -> None:
             native_upload(source, bucket, key,
                           Config=TransferConfig(multipart_threshold=1, max_concurrency=1))
         backend = _make_backend()
@@ -473,7 +497,7 @@ def test_s3_multipart_worker_denial_is_portable() -> None:
                 backend.write_from_stream("s3://bucket/key", source)
             from mountainash_transport import PermissionDeniedError
             assert type(caught.value) is PermissionDeniedError
-            assert isinstance(caught.value.__cause__, ClientError)
+            assert caught.value.__cause__ is None
             stub.assert_no_pending_responses()
 
 

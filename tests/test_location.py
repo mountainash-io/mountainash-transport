@@ -80,7 +80,7 @@ def test_dot_in_missing_remainder_is_harmless(tree):
     assert confine_local("new/.", P(root)) == os.path.join(os.path.realpath(root), "new")
 
 def test_allow_remote_rules():
-    pol = LocationPolicy(allowed_remote={"https": frozenset({"data.example.com"}), "s3": frozenset()})
+    pol = LocationPolicy(allowed_remote={"https": frozenset({"data.example.com"}), "s3": frozenset({"*"})})
     allow_remote("https", "data.example.com", pol)
     allow_remote("s3", "any-bucket", pol)
     with pytest.raises(LocationNotAllowed) as e: allow_remote("https", "evil.example", pol)
@@ -88,6 +88,28 @@ def test_allow_remote_rules():
     allow_remote("sftp", "host-a", LocationPolicy(), profile_host="HOST-A")
     with pytest.raises(LocationNotAllowed) as e: allow_remote("sftp", "host-b", LocationPolicy(), profile_host="host-a")
     assert e.value.reason == "profile host mismatch"
+
+
+@pytest.mark.parametrize("entries", [frozenset(), set(), (), []])
+def test_empty_allow_list_refuses_every_host(entries):
+    pol = LocationPolicy(allowed_remote={"https": entries})
+    with pytest.raises(LocationNotAllowed) as e: allow_remote("https", "data.example.com", pol)
+    assert e.value.reason == "remote not allowed"
+    # A profile still grants its own host; the empty list adds nothing.
+    allow_remote("https", "own.example", pol, profile_host="own.example")
+    with pytest.raises(LocationNotAllowed): allow_remote("https", "other.example", pol, profile_host="own.example")
+
+
+def test_star_allows_any_host_for_its_scheme_only():
+    pol = LocationPolicy(allowed_remote={"https": frozenset({"*"}), "http": frozenset({"*", "ignored.example"})})
+    for host in ("data.example.com", "bücher.example", "127.0.0.1"):
+        allow_remote("https", host, pol)
+        allow_remote("http", host, pol)
+    allow_remote("https", "other.example", pol, profile_host="own.example")
+    with pytest.raises(LocationNotAllowed): allow_remote("sftp", "h", pol)
+    with pytest.raises(LocationNotAllowed):  # only the exact token is special
+        allow_remote("https", "evil.example", LocationPolicy(allowed_remote={"https": frozenset({"*.example"})}))
+
 
 def test_url_host_parsing():
     assert url_host("http://allowed@evil.example/x") == "evil.example"

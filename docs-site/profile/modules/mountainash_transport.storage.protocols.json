@@ -47,7 +47,7 @@
     "StorageDeleteProtocol — delete_file(path) with backend-native idempotence",
     "StorageMetadataProtocol — get_metadata -> StorageEntry, path_exists, get_size -> int | None",
     "StorageCopyProtocol — copy(source, destination) within one backend",
-    "StorageDirectoryProtocol — list_dir -> list[StorageEntry], mkdir(path, *, parents=True), rmdir",
+    "StorageDirectoryProtocol — list_dir -> list[StorageEntry], mkdir(path, *, parents=True), rmdir(path, *, recursive=False) — empty-only unless recursive",
     "RangedReadProtocol — open_ranged(path) -> RangedSource for random-access reads (HTTP, S3, SFTP)"
   ],
   "key_functions": [],

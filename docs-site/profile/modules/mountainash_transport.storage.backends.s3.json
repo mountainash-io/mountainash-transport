@@ -1,7 +1,7 @@
 {
   "id": "mountainash_transport.storage.backends.s3",
   "path": "src/mountainash_transport/storage/backends/s3/",
-  "summary": "S3StorageBackend is one boto3-based class registered for five provider types (S3, S3EXPRESS, R2, MINIO, B2); flavor differences are resolved by S3Connection, not here. It implements StorageReadProtocol (S3ReadMixin), StorageWriteProtocol (S3WriteMixin), StorageEnumerateProtocol (S3EnumerateMixin), StorageDeleteProtocol (S3DeleteMixin), StorageMetadataProtocol (S3MetadataMixin), StorageCopyProtocol (S3CopyMixin, server-side copy_object) and, structurally via S3ReadMixin.open_ranged, RangedReadProtocol. StorageDirectoryProtocol is intentionally not implemented. botocore errors are mapped to typed StorageError subclasses.",
+  "summary": "S3StorageBackend is one boto3-based class registered for five provider types (S3, S3EXPRESS, R2, MINIO, B2); flavor differences are resolved by S3Connection, not here. It implements StorageReadProtocol (S3ReadMixin), StorageWriteProtocol (S3WriteMixin), StorageEnumerateProtocol (S3EnumerateMixin), StorageDeleteProtocol (S3DeleteMixin), StorageMetadataProtocol (S3MetadataMixin), StorageCopyProtocol (S3CopyMixin, server-side managed copy, multipart above 4 GiB) and, structurally via S3ReadMixin.open_ranged, RangedReadProtocol. StorageDirectoryProtocol is intentionally not implemented. botocore errors are mapped to typed StorageError subclasses.",
   "role": "backend",
   "visibility": "semi-public",
   "stability": "evolving",
@@ -33,7 +33,7 @@
     "S3EnumerateMixin — StorageEnumerateProtocol: list_objects_v2 paginator, literal key prefixes, optional delimiter, CommonPrefixes as PREFIX entries",
     "S3DeleteMixin — StorageDeleteProtocol: delete_object",
     "S3MetadataMixin — StorageMetadataProtocol: head_object metadata with checksum preference SHA256 > CRC32C > CRC32 > SHA1; bucket-root existence via list_objects_v2",
-    "S3CopyMixin — StorageCopyProtocol: server-side copy_object within the same client",
+    "S3CopyMixin — StorageCopyProtocol: server-side managed copy (CopyObject below 4 GiB, multipart UploadPartCopy above)",
     "R2StorageBackend / S3ExpressStorageBackend / MinIOStorageBackend / B2StorageBackend — backwards-compatible aliases of S3StorageBackend"
   ],
   "key_functions": [
@@ -92,7 +92,7 @@
   ],
   "risks": [
     "S3EnumerateMixin.list_objects consumes all pages before applying max_results, so a small limit on a large prefix still lists everything (README.md acknowledges no early pagination termination).",
-    "S3CopyMixin.copy uses a single copy_object call; AWS documents a 5 GB limit for CopyObject, and no multipart copy fallback exists here (limit not verified in this repo).",
+    "Resolved (#42): S3CopyMixin.copy uses boto3's managed copy with a 4 GiB multipart threshold and 256 MiB parts, below every provider's single-request copy limit; every copy issues a HeadObject on the source first.",
     "Native copy only works within one client/credential set; cross-account or cross-flavor copies go through copy_between's stream path.",
     "RangedReadProtocol support is structural (open_ranged on S3ReadMixin) and not mentioned in the S3StorageBackend docstring.",
     "Module docstring and alias comment refer to 'deleted storage_backends.r2' shim modules; no such modules exist under src/, and no test imports the aliases."
@@ -114,7 +114,7 @@
     {
       "kind": "symbol",
       "path": "src/mountainash_transport/storage/backends/s3/s3_copy.py",
-      "detail": "S3CopyMixin(StorageCopyProtocol) calls copy_object once."
+      "detail": "S3CopyMixin(StorageCopyProtocol) calls client.copy with a TransferConfig (4 GiB threshold, 256 MiB parts)."
     },
     {
       "kind": "symbol",

@@ -31,11 +31,16 @@ class S3EnumerateMixin(StorageEnumerateProtocol):
         objects: list[StorageEntry] = []
         common_prefixes: list[StorageEntry] = []
 
+        if max_results == 0:
+            return EnumerateResult(objects=(), common_prefixes=())
         with _mapped(prefix):
             paginator = self._client.get_paginator("list_objects_v2")  # type: ignore[attr-defined]
         paginate_kwargs: dict = {"Bucket": bucket, "Prefix": key_prefix}
         if delimiter is not None:
             paginate_kwargs["Delimiter"] = delimiter
+        if max_results is not None:
+            # Pages never need more keys than the caller will keep (S3's own cap is 1000).
+            paginate_kwargs["PaginationConfig"] = {"PageSize": min(max_results, 1000)}
 
         with _mapped(prefix):
             for page in paginator.paginate(**paginate_kwargs):
@@ -65,6 +70,8 @@ class S3EnumerateMixin(StorageEnumerateProtocol):
                             source="s3",
                         )
                     )
+                if max_results is not None and len(objects) + len(common_prefixes) >= max_results:
+                    break  # enough entries: do not fetch the next page
 
         all_entries = objects + common_prefixes
         if max_results is not None and len(all_entries) > max_results:

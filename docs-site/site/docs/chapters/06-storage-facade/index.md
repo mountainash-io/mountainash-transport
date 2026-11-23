@@ -87,21 +87,19 @@ Two failures can happen before any connection is made. A scheme the package does
 
 `StorageFacade.for_local(*, policy=None)` returns a facade on the local filesystem with no storage profile. Use it when the code only ever touches local paths and you do not want to derive the provider from a path. Without a profile there is no connection to open, so construction cannot fail on the network. Pass a `LocationPolicy` to confine the facade to a directory tree; a local storage profile with a `ROOT_PATH` does the same through the constructor (see [Confining local paths](../08-location-policy/index.md#confining-local-paths)).
 
-<!-- concept:117 -->
+### The constructor with a provider type
 
-### The `storage()` factory
-
-The package root also exports a function, `storage(provider_type=CONST_STORAGE_PROVIDER_TYPE.LOCAL, profile=None, *, auth_profile=None)`. It constructs a `StorageFacade` directly from a provider type, defaulting to local. It does not accept a location policy or the OAuth arguments; use the constructor or `from_path()` when you need those. Calling it imports the facade module on demand, in line with the package's lazy root ([Installation](../03-installation/index.md#base-install-and-extras)).
+`StorageFacade(provider_type, profile=None, *, auth_profile=None)` builds a facade from a provider type directly. Use the constructor or `from_path()` when you also need a location policy or the OAuth arguments.
 
 ```python
 from mountainash_transport import (
-    BackendNotImplementedError, CONST_STORAGE_PROVIDER_TYPE, StorageFacade, storage,
+    BackendNotImplementedError, CONST_STORAGE_PROVIDER_TYPE, StorageFacade,
 )
 
-with StorageFacade.for_local() as local, storage() as same:
-    print(type(local).__name__, type(same).__name__)
+with StorageFacade.for_local() as local:
+    print(type(local).__name__)
 
-with storage(CONST_STORAGE_PROVIDER_TYPE.HTTP) as web:
+with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.HTTP) as web:
     print("http facade ready")
 
 try:
@@ -118,7 +116,7 @@ except ValueError as error:
 Output:
 
 ```text
-StorageFacade StorageFacade
+StorageFacade
 http facade ready
 gs: BackendNotImplementedError
 foo: Unrecognised scheme in path 'foo://reports/sales.csv'
@@ -140,10 +138,11 @@ Not every store can do everything. An object store has no directories, a plain w
 | `StorageDeleteProtocol` | `delete` | yes | yes | yes | no |
 | `StorageMetadataProtocol` | `exists`, `metadata`, `get_size` | yes | yes | yes | yes |
 | `StorageCopyProtocol` | `copy` | yes | yes | no | no |
+| `StorageMoveProtocol` | `move` | yes | no | yes | no |
 | `StorageDirectoryProtocol` | `list_dir`, `mkdir`, `rmdir` | yes | no | yes | no |
 | `RangedReadProtocol` | `read_stream(access="random")` | native handle | yes | yes | yes |
 
-All eight protocols are exported from the package root. They are `typing.Protocol` classes marked `runtime_checkable`, so a backend satisfies one by having the right methods; it does not need to inherit from it. The local backend has no ranged-read method, yet `read_stream(access="random")` still works on local paths because the facade returns the operating system's own seekable file handle instead (see [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode)).
+All nine protocols are exported from the package root. They are `typing.Protocol` classes marked `runtime_checkable`, so a backend satisfies one by having the right methods; it does not need to inherit from it. The local backend has no ranged-read method, yet `read_stream(access="random")` still works on local paths because the facade returns the operating system's own seekable file handle instead (see [Read access modes](../09-read-access-modes/index.md#choosing-an-access-mode)).
 
 Settings-only providers (GCS, Azure, FTP, SMB and GitHub) have no backend, so they support none of these protocols; constructing a facade for them fails before any capability question arises.
 
@@ -159,7 +158,7 @@ The complete matrix, including per-backend behaviour that differs inside a suppo
 from mountainash_transport import (
     RangedReadProtocol, StorageCopyProtocol, StorageDeleteProtocol,
     StorageDirectoryProtocol, StorageEnumerateProtocol, StorageFacade,
-    StorageMetadataProtocol, StorageReadProtocol, StorageWriteProtocol,
+    StorageMetadataProtocol, StorageMoveProtocol, StorageReadProtocol, StorageWriteProtocol,
     UnsupportedOperationError,
 )
 
@@ -167,7 +166,8 @@ PROTOCOLS = {
     "read": StorageReadProtocol, "write": StorageWriteProtocol,
     "enumerate": StorageEnumerateProtocol, "delete": StorageDeleteProtocol,
     "metadata": StorageMetadataProtocol, "copy": StorageCopyProtocol,
-    "directory": StorageDirectoryProtocol, "ranged": RangedReadProtocol,
+    "move": StorageMoveProtocol, "directory": StorageDirectoryProtocol,
+    "ranged": RangedReadProtocol,
 }
 
 with (
@@ -191,12 +191,12 @@ Output:
 
 ```text
 local: missing ranged
-s3: missing directory
-https: missing enumerate, delete, copy, directory
+s3: missing move, directory
+https: missing enumerate, delete, copy, move, directory
 S3StorageBackend does not support 'list_dir'
 ```
 
-`supports()` checks that the methods exist, not how they behave. Two backends that both support an operation can still differ in detail, for example in how `rmdir` treats a non-empty directory; [File operations](../07-file-operations/index.md) notes each difference where it applies. `supports()` keeps working after the facade is closed.
+`supports()` checks that the methods exist, not how they behave. Two backends that both support an operation can still differ in detail, for example a move that replaces an existing destination; [File operations](../07-file-operations/index.md) notes each difference where it applies. `supports()` keeps working after the facade is closed.
 
 ## Opening and closing
 

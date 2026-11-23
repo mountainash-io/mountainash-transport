@@ -7,7 +7,7 @@ to storage errors where needed.
 Hierarchy
 ---------
 HttpTransportError (base)
-├── HttpResponseError        status_code, headers, body_preview, url, method
+├── HttpResponseError        status_code, headers, url, method
 │   ├── HttpClientError      4xx
 │   │   ├── HttpNotFoundError            404
 │   │   ├── HttpAuthenticationError      401
@@ -30,20 +30,114 @@ from __future__ import annotations
 
 import typing as t
 
-from mountainash_transport._core.http.redact import redact_userinfo
+from mountainash_transport._core.safe_display import _SCHEME, safe_location
+
+# Response headers an error may carry. Location-valued ones are shown in display form,
+# WWW-Authenticate as its auth-scheme names only, the rest verbatim (server-defined tokens).
+_SAFE_HEADERS = frozenset({
+    "accept-ranges", "content-encoding", "content-length", "content-location",
+    "content-range", "content-type", "date", "etag", "last-modified", "location",
+    "retry-after", "www-authenticate",
+})
+_URL_HEADERS = frozenset({"location", "content-location"})
+_TOKEN_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~"
+)
+
+
+def _auth_schemes(value: str) -> str:
+    """Auth-scheme names of a WWW-Authenticate value, in order; parameters are dropped.
+
+    One linear pass: a scheme is the first token at the start or after a comma that is
+    not followed by ``=``; quoted strings are skipped whole.
+    """
+    schemes: list[str] = []
+    i, n = 0, len(value)
+    expect_scheme = True
+    while i < n:
+        char = value[i]
+        if char == ",":
+            expect_scheme = True
+            i += 1
+            continue
+        if char in " \t":
+            i += 1
+            continue
+        start = i
+        while i < n and value[i] not in " \t=,\"":
+            i += 1
+        token = value[start:i]
+        while i < n and value[i] in " \t":
+            i += 1
+        if i < n and value[i] == "=":
+            # parameter (or token68 padding): skip '='s, then a quoted or bare value
+            while i < n and value[i] == "=":
+                i += 1
+            while i < n and value[i] in " \t":
+                i += 1
+            if i < n and value[i] == '"':
+                i += 1
+                while i < n and value[i] != '"':
+                    i += 2 if value[i] == "\\" else 1
+                i += 1
+            else:
+                while i < n and value[i] != ",":
+                    i += 1
+            expect_scheme = False
+        elif token:
+            if expect_scheme and all(c in _TOKEN_CHARS for c in token):
+                schemes.append(token)
+            expect_scheme = False
+        elif i < n and value[i] == '"':
+            i += 1
+            while i < n and value[i] != '"':
+                i += 2 if value[i] == "\\" else 1
+            i += 1
+        else:
+            i += 1
+    return ", ".join(schemes)
+
+
+def _location_header(value: str, base: t.Optional[str]) -> str:
+    """Display form of a Location-style value, resolved against *base* when one is known.
+
+    Every returned value comes out of ``safe_location``.
+    """
+    from urllib.parse import urljoin
+
+    shown = safe_location(value)
+    if shown == "***" or shown.startswith("//") or _SCHEME.match(shown):
+        return shown  # absolute or opaque: never resolved
+    # A genuinely relative reference (normalized by safe_location).
+    if base is not None:
+        try:
+            return safe_location(urljoin(base, shown))
+        except ValueError:
+            pass
+    return shown[: min((i for i in (shown.find(c) for c in "?#") if i != -1), default=len(shown))]
+
+
+def _safe_headers(headers: t.Mapping[str, str], base: t.Optional[str] = None) -> dict[str, str]:
+    safe: dict[str, str] = {}
+    for name, value in headers.items():
+        key = name.lower()
+        if key not in _SAFE_HEADERS:
+            continue
+        if key in _URL_HEADERS:
+            safe[key] = _location_header(value, base)
+        elif key == "www-authenticate":
+            safe[key] = _auth_schemes(value)
+        else:
+            safe[key] = value
+    return safe
 
 
 class HttpTransportError(Exception):
     """Base class for all HTTP transport exceptions.
 
-    String arguments are stripped of URL userinfo so credentials embedded in a
-    request URL never reach ``str(exc)``, ``repr(exc)`` or ``exc.args``.
+    Transport builds every message from a location's display form, a fixed
+    category and an exception class name (W8 safe-location display).
     """
-
-    def __init__(self, *args: object) -> None:
-        super().__init__(
-            *(redact_userinfo(a) if isinstance(a, str) else a for a in args)
-        )
 
 
 class HttpResponseError(HttpTransportError):
@@ -56,11 +150,12 @@ class HttpResponseError(HttpTransportError):
     status_code:
         The HTTP status code received.
     headers:
-        Response headers as a mapping.
-    body_preview:
-        A truncated preview of the response body (for logging/debugging).
+        Response headers as a mapping, reduced to an allow-list of safe headers;
+        Location and Content-Location are resolved against ``url`` and shown in display
+        form, WWW-Authenticate keeps only its auth-scheme names. The body is deliberately
+        not carried.
     url:
-        The request URL.
+        The request URL; stored in display form and used to resolve relative Location values.
     method:
         The HTTP method used (GET, POST, etc.).
     """
@@ -71,15 +166,13 @@ class HttpResponseError(HttpTransportError):
         *,
         status_code: t.Optional[int] = None,
         headers: t.Optional[t.Mapping[str, str]] = None,
-        body_preview: t.Optional[str] = None,
         url: t.Optional[str] = None,
         method: t.Optional[str] = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
-        self.headers = headers
-        self.body_preview = body_preview
-        self.url = redact_userinfo(url) if url is not None else None
+        self.headers = _safe_headers(headers, url) if headers is not None else None
+        self.url = safe_location(url) if url is not None else None
         self.method = method
 
 
@@ -114,7 +207,6 @@ class HttpRateLimitError(HttpClientError):
         *,
         status_code: t.Optional[int] = None,
         headers: t.Optional[t.Mapping[str, str]] = None,
-        body_preview: t.Optional[str] = None,
         url: t.Optional[str] = None,
         method: t.Optional[str] = None,
         retry_after: t.Optional[float] = None,
@@ -123,7 +215,6 @@ class HttpRateLimitError(HttpClientError):
             message,
             status_code=status_code,
             headers=headers,
-            body_preview=body_preview,
             url=url,
             method=method,
         )
@@ -223,3 +314,25 @@ def map_status_to_error(status_code: int) -> type[HttpResponseError]:
         f"status_code {status_code!r} is not a 4xx or 5xx error code; "
         "cannot map to an HttpResponseError subclass."
     )
+
+
+TRUSTED_ERRORS: tuple[type[HttpTransportError], ...] = (
+    HttpTransportError,
+    HttpResponseError,
+    HttpClientError,
+    HttpNotFoundError,
+    HttpAuthenticationError,
+    HttpForbiddenError,
+    HttpRateLimitError,
+    HttpConflictError,
+    HttpServerError,
+    HttpBadGatewayError,
+    HttpServiceUnavailableError,
+    HttpGatewayTimeoutError,
+    HttpConnectionError,
+    HttpTimeoutError,
+    HttpRedirectError,
+    HttpProtocolError,
+    HttpRequestError,
+    HttpDecodeError,
+)

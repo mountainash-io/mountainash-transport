@@ -58,7 +58,7 @@ def test_http_mid_body_error_is_storage_error() -> None:
         lambda r: httpx.Response(200, stream=Dropping()),
     )))
     backend = HTTPStorageBackend(None, engine=engine)
-    with pytest.raises(StorageError, match="dropped"):
+    with pytest.raises(StorageError, match="connection failed \\(ReadError\\)"):
         with backend.read_to_stream("https://h/f") as source:
             source.read()
     assert closed

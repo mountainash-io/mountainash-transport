@@ -135,7 +135,6 @@ class TestHttpResponseErrorFields:
         defaults = dict(
             status_code=400,
             headers={"content-type": "text/plain"},
-            body_preview="Bad request",
             url="https://example.com/resource",
             method="GET",
         )
@@ -146,14 +145,9 @@ class TestHttpResponseErrorFields:
         err = self._make(status_code=422)
         assert err.status_code == 422
 
-    def test_headers_stored(self):
-        hdrs = {"x-custom": "value"}
-        err = self._make(headers=hdrs)
-        assert err.headers == hdrs
-
-    def test_body_preview_stored(self):
-        err = self._make(body_preview="preview text")
-        assert err.body_preview == "preview text"
+    def test_headers_stored_keeps_only_safe_headers(self):
+        err = self._make(headers={"x-custom": "value", "ETag": '"v1"', "Content-Type": "text/plain"})
+        assert err.headers == {"etag": '"v1"', "content-type": "text/plain"}
 
     def test_url_stored(self):
         err = self._make(url="https://api.example.com/v1/items")
@@ -168,7 +162,6 @@ class TestHttpResponseErrorFields:
         err = HttpResponseError("bare message")
         assert err.status_code is None
         assert err.headers is None
-        assert err.body_preview is None
         assert err.url is None
         assert err.method is None
 

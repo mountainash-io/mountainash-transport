@@ -83,9 +83,12 @@ Package-local map. The *why* behind each layer lives in the central principles.
 
 ### Storage
 
-- **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Directory/RangedRead, plus `ConnectionProtocol` in `_core`) implemented à la carte. `RangedReadProtocol` is satisfied structurally by an `open_ranged` method; no mixin subclasses it.
-- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata/ranged read), `local` (all but ranged read; random mode uses the native file handle), `s3` (flavor-dispatched; all but directory), `sftp` (all but copy). `tests/storage/protocols/test_backend_conformance.py` asserts the seven core protocols (it has no RangedRead column or B2 row yet). GCS, Azure, FTP, SMB and GitHub profiles have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`. Every backend package must import on a base install: SDKs and `[http]`-stack modules are imported inside functions (`tests/test_slim_install.py` blocks every non-base import).
-- **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `cross_backend` copy.
+- **Protocols** (`storage/protocols/prtcl_*.py`): granular capabilities (Read/Write/Enumerate/Delete/Metadata/Copy/Move/Directory/RangedRead/Presign, plus `ConnectionProtocol` in `_core`) implemented à la carte. `RangedReadProtocol` is satisfied structurally by an `open_ranged` method; no mixin subclasses it. `StorageMoveProtocol` is native rename only (Local `os.replace`, SFTP `posix_rename`).
+- **Backends** (`storage/backends/`): stateless handlers receiving a connected client — `http` (read/write/metadata/ranged read), `local` (all but ranged read and presign; random mode uses the native file handle), `s3` (flavor-dispatched; all but directory and move), `sftp` (all but copy and presign). `tests/storage/protocols/test_backend_conformance.py` asserts every capability protocol, including ranged read and presign, for every registered provider type. GCS, Azure, FTP, SMB and GitHub profiles have no backend yet (`BackendNotImplementedError`). The root README's support matrix must match `get_registered_backends()`. Every backend package must import on a base install: SDKs and `[http]`-stack modules are imported inside functions (`tests/test_slim_install.py` blocks every non-base import).
+- **Facade** (`storage/facade/`): `StorageFacade`, `from_path()` scheme dispatch, `read()`, `move()`, `same_store()` (equal provider, profiles, auth profiles and policy), `cross_backend` copy (native when `same_store`).
+- **Write results**: `write_from_bytes`/`write_from_stream`/`copy`/`move` (and facade `write`/`write_stream`/`copy`/`move`, `copy_between`) return the destination's `StorageEntry` from what the store reported, never an extra request (SFTP: `putfo`'s confirming stat; move: one `lstat`). S3 managed transfers capture their own `PutObject`/`CopyObject`/`CompleteMultipartUpload` response through `_core/s3_capture.py`: hooks installed once per client by `S3Connection.connect()`, per-call collectors keyed by bucket/key; `tests/storage/protocols/test_write_results.py` pins the per-backend field table in chapter 7.
+- **Bulk delete**: `delete_many(paths)` on `StorageDeleteProtocol` attempts every path, counts missing ones as deleted on every backend, and raises one `BulkDeleteError` (`failures` in input order). S3 sends `DeleteObjects` per bucket per 1,000 keys; Local/SFTP loop over `delete_file` (`storage/backends/_delete_many.py`). The facade checks every path against the location policy before deleting any.
+- **Presign**: `StoragePresignProtocol.presign(path, *, method="GET"|"PUT", expires_in=3600, content_type=None)`, S3 family only (`s3_presign.py`). Always SigV4: the `choose-signer.s3` hook in `_core/s3_capture.py` replaces botocore's SigV2 presign default and leaves S3 Express sessions and SigV4a alone. Refusals (`ValueError`) happen before signing.
 - **Registry** (`storage/registry/`): `get_storage_backend`, `get_registered_backends`, `detect_provider_from_path`.
 - **Path helpers** (`storage/path_helpers/`): `StoragePath`, suffixes, S3 paths. The scheme registry (`SchemeSpec`, `SCHEMES`) lives in `_schemes.py`; `location.py` owns confinement.
 
@@ -101,9 +104,16 @@ Package-local map. The *why* behind each layer lives in the central principles.
 
 `read_stream(access="sequential" | "random" | "buffered")` defaults to native
 forward-only remote streams. Random mode uses `RangedReadProtocol` on HTTP/S3/SFTP
-and native local handles; buffered mode materializes decoded bytes in memory.
+and native local handles; buffered mode spools decoded bytes (memory up to call
+`buffer_memory_limit` → profile `BUFFER_MEMORY_LIMIT` → 64 MiB, then a temp file).
 `RangePolicy` precedence is call → profile `RANGE_*` fields → readahead/1 MiB.
-See `docs/read-access-modes.md` for migration, error timing and Parquet tuning.
+`facade.local_path(path)` returns the resolved local file for native readers, or
+`None` for remote backends and transformed reads.
+See `docs/read-access-modes.md` for migration, error timing and cache-policy tuning.
+
+### Retries
+
+`_core/retry.py` holds `RetryPolicy`, `backoff_delay` and the `RetryStrategy` contract. Profiles set it through `RETRY_*` fields. HTTP: the engine's own loop. SFTP: `ExecutorRetry`, reconnecting before each retry; only the outermost operation retries. S3: `RETRY_MAX_ATTEMPTS` becomes botocore `total_max_attempts`, and unset leaves botocore's settings alone. Non-seekable inputs are never re-sent. Fake SFTP connections in tests pass `RETRY_MAX_ATTEMPTS=1`.
 
 ### Package structure
 
@@ -116,6 +126,7 @@ src/mountainash_transport/
 │   ├── protocols.py       # ConnectionProtocol[C]
 │   ├── dataclasses/       # FileMetadata
 │   ├── http/              # HTTP engine: policy, response, errors, auth protocol
+│   ├── retry.py           # RetryPolicy, backoff_delay, RetryStrategy, ExecutorRetry
 │   └── transforms/        # Pipeline, Gzip, GPG, materialize
 ├── connections/           # create_connection(), leaf + decorator connections, errors
 ├── settings/              # ProfileProtocol, StorageProfileSpec, utils

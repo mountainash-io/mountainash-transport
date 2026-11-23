@@ -428,6 +428,25 @@ def test_ordinary_validation_failure_keeps_diagnostics():
     assert "ordinary-invalid-choice" in str(caught.value)
 
 
+def test_ordinary_validation_failure_omits_input_values_and_chain():
+    # pydantic's str(ValidationError) embeds input_value; the summary must not.
+    sentinel = "inline-plaintext-31337"
+    params = SettingsParameters.create(
+        storage_profiles={
+            "invalid": {
+                "provider": "s3",
+                "parameters": {"FLAVOR": "aws", "BUCKET": {"oops": sentinel}},
+            },
+        }
+    )
+    with pytest.raises(ProfileResolutionError) as caught:
+        resolve_storage("invalid", settings_parameters=params)
+    assert "BUCKET" in str(caught.value)
+    assert sentinel not in str(caught.value) and sentinel not in repr(caught.value)
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+
+
 @pytest.mark.parametrize("from_file", [False, True])
 def test_selected_reader_does_not_hide_non_secret_validation(tmp_path, from_file):
     from mountainash_settings.secrets import MemorySecretStore

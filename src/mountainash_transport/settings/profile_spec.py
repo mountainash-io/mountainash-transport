@@ -35,7 +35,7 @@ class StorageProfileSpec(ProfileSpec):
     Extra fields:
         sdk_package: Canonical PyPI name of the SDK this provider uses
             (``"boto3"``, ``"google-cloud-storage"``, ``"paramiko"``, etc.).
-            ``None`` for stdlib-only providers (``LocalSettings``, ``FTPSettings``).
+            ``None`` for stdlib-only providers (``LocalStorageProfile``, ``FTPStorageProfile``).
         handler_module: Dotted module path where the storage backend lives
             (e.g. ``"mountainash_transport.storage.backends.s3"``).
         handler_class: Class name of the backend within handler_module

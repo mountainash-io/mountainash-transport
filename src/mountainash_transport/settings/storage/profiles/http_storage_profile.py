@@ -5,6 +5,8 @@ schemes. Uses httpx under the hood.
 """
 from __future__ import annotations
 
+import os
+import ssl
 import typing as t
 
 import httpx
@@ -17,6 +19,7 @@ from mountainash_settings.profiles import Profile
 
 from ..registry import register
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.safe_display import raise_safe, safe_detail
 
 __all__ = ["HTTP_SPEC", "HTTPStorageProfile"]
 
@@ -37,6 +40,16 @@ HTTP_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
+        ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Total attempts per request (retryable statuses and transport errors); "
+                                  "1 disables retry. None keeps the default (3)."),
+        ParameterSpec(name="RETRY_BACKOFF_BASE", type=t.Optional[float], default=None, tier="advanced",
+                      description="Seconds before the first retry, doubling per retry. None keeps the default (1.0)."),
+        ParameterSpec(name="RETRY_BACKOFF_MAX", type=t.Optional[float], default=None, tier="advanced",
+                      description="Longest wait between retries in seconds. None keeps the default (60.0)."),
         ParameterSpec(
             name="TIMEOUT_CONNECT",
             type=float,
@@ -80,6 +93,17 @@ HTTP_SPEC = StorageProfileSpec(
             description="Whether to verify TLS certificates.",
         ),
         ParameterSpec(
+            name="CA_BUNDLE",
+            type=t.Optional[str],
+            tier="advanced",
+            default=None,
+            description=(
+                "Path to a CA bundle file or directory that signs the server's "
+                "certificate. Unset: httpx defaults (SSL_CERT_FILE honoured). "
+                "Ignored when VERIFY_SSL is False."
+            ),
+        ),
+        ParameterSpec(
             name="HEADERS",
             type=dict,
             tier="advanced",
@@ -92,6 +116,7 @@ HTTP_SPEC = StorageProfileSpec(
         CONST_AUTH_PROFILES.NONE,
         CONST_AUTH_PROFILES.TOKEN,
         CONST_AUTH_PROFILES.PASSWORD,
+        CONST_AUTH_PROFILES.CERTIFICATE,
         CONST_AUTH_PROFILES.OAUTH2,
     }),
 )
@@ -108,11 +133,28 @@ def _http_httpx_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.An
     )
     result["follow_redirects"] = getattr(profile, "FOLLOW_REDIRECTS", True)
     result["max_redirects"] = getattr(profile, "MAX_REDIRECTS", 10)
-    result["verify"] = getattr(profile, "VERIFY_SSL", True)
+    result["verify"] = _verify(profile)
     custom_headers = getattr(profile, "HEADERS", None) or {}
     if custom_headers:
         result["headers"] = dict(custom_headers)
     return result
+
+
+def _verify(profile: Profile) -> bool | ssl.SSLContext:
+    """httpx ``verify``: False, a context loaded from CA_BUNDLE, or True."""
+    if not getattr(profile, "VERIFY_SSL", True):
+        return False
+    ca_bundle = getattr(profile, "CA_BUNDLE", None)
+    if not ca_bundle:
+        return True
+    # httpx 0.28 deprecates verify=<str>; this is the form it recommends.
+    try:
+        if os.path.isdir(ca_bundle):
+            return ssl.create_default_context(capath=ca_bundle)
+        return ssl.create_default_context(cafile=ca_bundle)
+    except (OSError, ValueError) as exc:
+        # W8: the native error may carry the bundle value (e.g. UnicodeEncodeError.object).
+        raise_safe(ValueError(f"CA_BUNDLE could not be loaded ({safe_detail(exc)})"), exc)
 
 
 @register
@@ -123,6 +165,10 @@ class HTTPStorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        BUFFER_MEMORY_LIMIT: int | None
+        RETRY_MAX_ATTEMPTS: int | None
+        RETRY_BACKOFF_BASE: float | None
+        RETRY_BACKOFF_MAX: float | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         TIMEOUT_CONNECT: float
         TIMEOUT_READ: float
@@ -130,6 +176,7 @@ class HTTPStorageProfile(Profile):
         FOLLOW_REDIRECTS: bool
         MAX_REDIRECTS: int
         VERIFY_SSL: bool
+        CA_BUNDLE: str | None
         HEADERS: dict[str, t.Any] | None
 
     __spec__ = HTTP_SPEC
@@ -143,5 +190,5 @@ class HTTPStorageProfile(Profile):
         return "http(s)://<dynamic>"
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.HTTP)."""
+        """Return the httpx kwargs ``emit(TargetFamily.HTTP)`` produces; required by ``ProfileProtocol``."""
         return self.emit(self._sdk_family())

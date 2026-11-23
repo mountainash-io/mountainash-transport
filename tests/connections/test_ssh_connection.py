@@ -258,13 +258,14 @@ class TestSSHConnectionErrorWrapping:
         with pytest.raises(TransportConnectionError, match="SSH connection failed"):
             conn.connect()
 
-    def test_paramiko_none_raises_transport_connection_error(self):
-        from mountainash_transport.connections.errors import TransportConnectionError
+    def test_missing_paramiko_names_sftp_extra(self):
+        from mountainash_transport import MissingExtraError
 
         with patch.dict(sys.modules, {"paramiko": None}):
             conn = SSHConnection(FAKE_SSH_KWARGS)
-            with pytest.raises(TransportConnectionError, match="paramiko is required"):
+            with pytest.raises(MissingExtraError, match=r"mountainash-transport\[sftp\]") as caught:
                 conn.connect()
+        assert caught.value.extra == "sftp"
 
 
 @pytest.mark.parametrize("stage", ["load_system_host_keys", "load_host_keys", "connect"])
@@ -277,7 +278,7 @@ def test_partial_startup_releases_allocated_client(mock_paramiko, stage) -> None
     conn = SSHConnection({**FAKE_SSH_KWARGS, "_post_connect": {"known_hosts_file": "known-hosts"}})
     with pytest.raises((OSError, TransportConnectionError)) as caught:
         conn.connect()
-    assert caught.value is original or caught.value.__cause__ is original
+    assert caught.value is original or str(caught.value) == "SSH connection failed (OSError)"
     client.close.assert_called_once()
     assert conn.client is None
 

@@ -12,10 +12,6 @@ import typing as t
 from .__version__ import __version__
 from ._core.constants import CONST_STORAGE_PROVIDER_TYPE
 
-# Docstring-only subpackage; imported eagerly *before* the ``storage`` factory is
-# defined so the factory (not the subpackage) is the final ``storage`` binding.
-from . import storage as _storage_pkg  # noqa: F401
-
 if t.TYPE_CHECKING:
     # Static view of the lazy exports below; runtime stays lazy (PEP 562).
     from .storage.facade import (
@@ -25,11 +21,13 @@ if t.TYPE_CHECKING:
     from ._core.ranged_io import RangePolicy as RangePolicy
     from ._core.exceptions import (
         RangeNotSupportedError as RangeNotSupportedError,
+        RandomAccessUnavailableError as RandomAccessUnavailableError,
         ObjectChangedError as ObjectChangedError,
         StorageError as StorageError,
         UnsupportedOperationError as UnsupportedOperationError,
         StorageConnectionError as StorageConnectionError,
         PathNotFoundError as PathNotFoundError,
+        BulkDeleteError as BulkDeleteError,
         AuthenticationError as AuthenticationError,
         PermissionDeniedError as PermissionDeniedError,
         TransformError as TransformError,
@@ -51,6 +49,8 @@ if t.TYPE_CHECKING:
         StorageMetadataProtocol as StorageMetadataProtocol,
         StorageCopyProtocol as StorageCopyProtocol,
         StorageDirectoryProtocol as StorageDirectoryProtocol,
+        StorageMoveProtocol as StorageMoveProtocol,
+        StoragePresignProtocol as StoragePresignProtocol,
     )
     from ._core.protocols import ConnectionProtocol as ConnectionProtocol
     from .settings.profile_protocol import (
@@ -81,11 +81,12 @@ if t.TYPE_CHECKING:
         StreamTransform as StreamTransform,
         Gzip as Gzip,
         GPG as GPG,
+        materialize as materialize,
     )
+    from ._core.retry import RetryPolicy as RetryPolicy
     from ._core.http import (
         HttpRequestEngine as HttpRequestEngine,
         RequestPolicy as RequestPolicy,
-        RetryPolicy as RetryPolicy,
         TimeoutPolicy as TimeoutPolicy,
         RedirectPolicy as RedirectPolicy,
         HttpResponse as HttpResponse,
@@ -117,19 +118,12 @@ if t.TYPE_CHECKING:
     )
 
 
-def storage(provider_type: CONST_STORAGE_PROVIDER_TYPE = CONST_STORAGE_PROVIDER_TYPE.LOCAL,
-            profile=None, *, auth_profile=None) -> "StorageFacade":
-    """Convenience factory for creating a StorageFacade."""
-    from .storage.facade import StorageFacade
-
-    return StorageFacade(provider_type, profile, auth_profile=auth_profile)
-
-
 _LAZY: dict[str, tuple[str, str]] = {
     'StorageFacade': ('.storage.facade', 'StorageFacade'),
     'copy_between': ('.storage.facade', 'copy_between'),
     'RangePolicy': ('._core.ranged_io', 'RangePolicy'),
     'RangeNotSupportedError': ('._core.exceptions', 'RangeNotSupportedError'),
+    'RandomAccessUnavailableError': ('._core.exceptions', 'RandomAccessUnavailableError'),
     'ObjectChangedError': ('._core.exceptions', 'ObjectChangedError'),
     'RangedReadProtocol': ('.storage.protocols.prtcl_ranged_read', 'RangedReadProtocol'),
     'get_storage_backend': ('.storage.registry', 'get_storage_backend'),
@@ -141,6 +135,8 @@ _LAZY: dict[str, tuple[str, str]] = {
     'StorageMetadataProtocol': ('.storage.protocols', 'StorageMetadataProtocol'),
     'StorageCopyProtocol': ('.storage.protocols', 'StorageCopyProtocol'),
     'StorageDirectoryProtocol': ('.storage.protocols', 'StorageDirectoryProtocol'),
+    'StorageMoveProtocol': ('.storage.protocols', 'StorageMoveProtocol'),
+    'StoragePresignProtocol': ('.storage.protocols', 'StoragePresignProtocol'),
     'ConnectionProtocol': ('._core.protocols', 'ConnectionProtocol'),
     'ProfileProtocol': ('.settings.profile_protocol', 'ProfileProtocol'),
     'StorageProfileProtocol': ('.settings.profile_protocol', 'StorageProfileProtocol'),
@@ -161,6 +157,7 @@ _LAZY: dict[str, tuple[str, str]] = {
     'UnsupportedOperationError': ('._core.exceptions', 'UnsupportedOperationError'),
     'StorageConnectionError': ('._core.exceptions', 'StorageConnectionError'),
     'PathNotFoundError': ('._core.exceptions', 'PathNotFoundError'),
+    'BulkDeleteError': ('._core.exceptions', 'BulkDeleteError'),
     'AuthenticationError': ('._core.exceptions', 'AuthenticationError'),
     'PermissionDeniedError': ('._core.exceptions', 'PermissionDeniedError'),
     'TransformError': ('._core.exceptions', 'TransformError'),
@@ -172,9 +169,10 @@ _LAZY: dict[str, tuple[str, str]] = {
     'StreamTransform': ('._core.transforms', 'StreamTransform'),
     'Gzip': ('._core.transforms', 'Gzip'),
     'GPG': ('._core.transforms', 'GPG'),
+    'materialize': ('._core.transforms', 'materialize'),
     'HttpRequestEngine': ('._core.http', 'HttpRequestEngine'),
     'RequestPolicy': ('._core.http', 'RequestPolicy'),
-    'RetryPolicy': ('._core.http', 'RetryPolicy'),
+    'RetryPolicy': ('._core.retry', 'RetryPolicy'),
     'TimeoutPolicy': ('._core.http', 'TimeoutPolicy'),
     'RedirectPolicy': ('._core.http', 'RedirectPolicy'),
     'HttpResponse': ('._core.http', 'HttpResponse'),
@@ -215,26 +213,27 @@ def __getattr__(name: str) -> t.Any:
 
 
 __all__ = [
-    "RangePolicy", "RangeNotSupportedError", "ObjectChangedError", "RangedReadProtocol",
+    "RangePolicy", "RangeNotSupportedError", "RandomAccessUnavailableError",
+    "ObjectChangedError", "RangedReadProtocol",
     "__version__",
-    "StorageFacade", "copy_between", "storage",
+    "StorageFacade", "copy_between",
     "get_storage_backend", "detect_provider_from_path",
     "ConnectionProtocol", "TransportConnectionError",
     "SSHConnection", "SFTPConnection", "TunnelledConnection",
     "create_connection", "create_tunnelled_connection",
     "StorageReadProtocol", "StorageWriteProtocol",
     "StorageEnumerateProtocol", "StorageDeleteProtocol", "StorageMetadataProtocol",
-    "StorageCopyProtocol", "StorageDirectoryProtocol",
+    "StorageCopyProtocol", "StorageDirectoryProtocol", "StorageMoveProtocol", "StoragePresignProtocol",
     "ProfileProtocol", "StorageProfileProtocol",
     "resolve_storage", "StorageProfilesSettings", "StorageProfileBlock", "AuthBlock",
     "CONST_STORAGE_PROVIDER_TYPE", "StorageEntry", "EntryType", "EnumerateResult",
     "StorageError", "UnsupportedOperationError", "StorageConnectionError",
     "PathNotFoundError", "AuthenticationError", "TransformError", "BackendNotImplementedError",
-    "MissingExtraError",
+    "MissingExtraError", "BulkDeleteError",
     "PermissionDeniedError",
     "ProfileResolutionError", "ProfileNotFoundError",
     "StoragePath", "infer_pipeline",
-    "Pipeline", "StreamTransform", "Gzip", "GPG",
+    "Pipeline", "StreamTransform", "Gzip", "GPG", "materialize",
     # HTTP transport foundation
     "HttpRequestEngine",
     "RequestPolicy", "RetryPolicy", "TimeoutPolicy", "RedirectPolicy",

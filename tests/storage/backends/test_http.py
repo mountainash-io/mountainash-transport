@@ -16,6 +16,7 @@ from mountainash_transport._core.exceptions import (
     StorageError,
 )
 from mountainash_transport._core.http.engine import HttpRequestEngine
+from mountainash_transport._core.http.errors import HttpTransportError
 from mountainash_transport._core.http.policy import RequestPolicy, RetryPolicy
 
 
@@ -293,7 +294,7 @@ def test_http_native_connection_failure(original: Exception) -> None:
         with pytest.raises(StorageConnectionError) as caught:
             backend.get_size("https://example.invalid/file")
         cause = caught.value.__cause__
-        assert cause is not None and cause.__cause__ is original
+        assert isinstance(cause, HttpTransportError) and cause.__cause__ is None
 
 
 @pytest.mark.parametrize("fault", ["read", "close"])
@@ -322,7 +323,7 @@ def test_http_deferred_network_failure(fault: str) -> None:
             finally:
                 stream.close()
         cause = caught.value.__cause__
-        assert cause is not None and (cause is original or cause.__cause__ is original)
+        assert cause is None or (isinstance(cause, HttpTransportError) and cause.__cause__ is None)
         assert closed == [True] and stream.closed
 
 
@@ -353,4 +354,5 @@ def test_http_bad_size_is_backend_metadata_failure(operation: str) -> None:
         backend = HTTPStorageBackend(None, engine=HttpRequestEngine(client))
         with pytest.raises(StorageError) as caught:
             getattr(backend, operation)("https://example.invalid/file")
-        assert isinstance(caught.value.__cause__, ValueError)
+        assert caught.value.__cause__ is None
+        assert str(caught.value) == "https://example.invalid/file: invalid Content-Length"

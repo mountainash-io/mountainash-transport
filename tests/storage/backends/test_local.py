@@ -22,6 +22,8 @@ from mountainash_transport.storage.registry import get_registered_backends
 import mountainash_transport.storage.backends  # noqa: F401
 from mountainash_transport.storage.backends.local import LocalStorageBackend
 
+from ._safe_chain import assert_safe_chain
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -261,13 +263,6 @@ class TestDirectory:
         backend.mkdir(deep, parents=True)
         assert os.path.isdir(deep)
 
-    def test_rmdir_removes_directory_and_contents(self, backend, tmp_dir):
-        target = os.path.join(tmp_dir, "to_remove")
-        os.makedirs(target)
-        backend.write_from_bytes(os.path.join(target, "file.txt"), b"data")
-        backend.rmdir(target)
-        assert not os.path.exists(target)
-
 
 @pytest.mark.parametrize("operation", ["read_to_bytes", "read_to_stream", "get_metadata", "get_size"])
 def test_missing_operations_preserve_native_cause(
@@ -294,7 +289,7 @@ def test_denied_stat_is_not_absence(
         getattr(backend, operation)("/transport-denied")
     from mountainash_transport import PermissionDeniedError
     assert type(caught.value) is PermissionDeniedError
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize(
@@ -305,7 +300,7 @@ def test_denied_stat_is_not_absence(
         ("copy", "shutil.copy2", ("source", "destination")),
         ("delete_file", "os.remove", ("file",)),
         ("mkdir", "os.mkdir", ("directory",)),
-        ("rmdir", "shutil.rmtree", ("directory",)),
+        ("rmdir", "os.rmdir", ("directory",)),
         ("list_dir", "os.scandir", (".",)),
     ],
 )
@@ -321,7 +316,7 @@ def test_native_operation_failures_are_portable(
         monkeypatch.setattr(os.path, "exists", lambda path: True)
     with pytest.raises(StorageError) as caught:
         getattr(backend, operation)(*args)
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize("operation", [
@@ -350,7 +345,7 @@ def test_native_reader_deferred_failure(
         args = (bytearray(2),) if operation.startswith("readinto") else ()
         with pytest.raises(StorageError) as caught:
             getattr(stream, operation)(*args)
-        assert caught.value.__cause__ is original
+        assert_safe_chain(caught.value, original)
         if operation == "close":
             assert stream.closed
             stream.close()
@@ -415,7 +410,7 @@ def test_local_destination_failure_after_open(
             getattr(backend, operation)(
                 str(tmp_path / "destination"), b"payload" if operation == "write_from_bytes" else source,
             )
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
     assert destination.closed
 
 

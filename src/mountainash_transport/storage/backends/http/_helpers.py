@@ -8,7 +8,7 @@ from mountainash_transport._core.exceptions import (
     AuthenticationError, ObjectChangedError, PathNotFoundError,
     PermissionDeniedError, StorageConnectionError, StorageError,
 )
-from mountainash_transport._core.http.redact import _safe_cause, redact_userinfo
+from mountainash_transport._core.safe_display import raise_safe, safe_detail, safe_location
 from mountainash_transport._core.http.errors import (
     HttpAuthenticationError, HttpClientError, HttpConnectionError,
     HttpForbiddenError, HttpNotFoundError, HttpRequestError,
@@ -19,21 +19,23 @@ from mountainash_transport._core.http.errors import (
 def _map_error(exc: Exception, path: str) -> StorageError | None:
     import httpx
 
-    path = redact_userinfo(path)
+    shown = safe_location(path)
     if isinstance(exc, (StorageError, HttpRequestError, httpx.InvalidURL,
                         httpx.UnsupportedProtocol, httpx.LocalProtocolError)):
         return None
     if isinstance(exc, HttpNotFoundError):
-        return PathNotFoundError(path)
+        return PathNotFoundError(shown)
     if isinstance(exc, HttpAuthenticationError):
-        return AuthenticationError(path)
+        return AuthenticationError(shown)
     if isinstance(exc, HttpForbiddenError):
-        return PermissionDeniedError(path)
+        return PermissionDeniedError(shown)
     if isinstance(exc, HttpClientError) and exc.status_code == 412:
-        return ObjectChangedError(path)
+        return ObjectChangedError(shown)
     if not isinstance(exc, (HttpTransportError, httpx.HTTPError, OSError)):
         return None
-    # Suppressed engine causes still carry classification in hidden context.
+    # Classification follows the displayed cause chain; suppressed chains carry
+    # none (raise_safe drops them), and the engine already maps socket
+    # failures to HttpConnectionError.
     current: BaseException | None = exc
     seen: set[int] = set()
     while current is not None and id(current) not in seen:
@@ -41,13 +43,9 @@ def _map_error(exc: Exception, path: str) -> StorageError | None:
         if isinstance(current, (HttpConnectionError, HttpTimeoutError,
                                 httpx.NetworkError, httpx.TimeoutException,
                                 httpx.ProxyError, ConnectionError, TimeoutError)):
-            return StorageConnectionError(f"{path}: {redact_userinfo(str(exc))}")
-        current = current.__cause__ or (
-            current.__context__
-            if isinstance(current, HttpTransportError) and current.__suppress_context__
-            else None
-        )
-    return StorageError(f"{path}: {redact_userinfo(str(exc))}")
+            return StorageConnectionError(f"{shown}: connection failed ({safe_detail(exc)})")
+        current = current.__cause__
+    return StorageError(f"{shown}: storage error ({safe_detail(exc)})")
 
 
 @contextlib.contextmanager
@@ -58,4 +56,4 @@ def _mapped(path: str) -> t.Iterator[None]:
         mapped = _map_error(exc, path)
         if mapped is None or mapped is exc:
             raise
-        raise mapped from _safe_cause(exc)
+        raise_safe(mapped, exc)

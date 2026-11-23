@@ -93,6 +93,26 @@ class TestCreateConnection:
         conn = create_connection(FakeLocalProfile())
         assert isinstance(conn, NullConnection)
 
+    @pytest.mark.parametrize("provider", [P.AZURE_BLOB, P.FTP, P.GCS, P.GITHUB, P.SMB])
+    def test_settings_only_provider_raises_backend_not_implemented(self, provider):
+        """No silent HTTPConnection fallback for providers without a connection (#40)."""
+        from mountainash_transport import BackendNotImplementedError
+
+        class _Profile(FakeHTTPProfile):
+            class __spec__:
+                provider_type = provider
+
+        with pytest.raises(BackendNotImplementedError, match=provider.value):
+            create_connection(_Profile())
+
+    def test_real_gcs_profile_raises_backend_not_implemented(self):
+        """The #40 evidence case: previously a TransportConnectionError about httpx kwargs."""
+        from mountainash_transport import BackendNotImplementedError
+        from mountainash_transport.settings.storage.profiles.gcs_storage_profile import GCSStorageProfile
+
+        with pytest.raises(BackendNotImplementedError, match="gcs"):
+            create_connection(GCSStorageProfile(PROJECT="my-project-123", BUCKET_NAME="my-bucket"))
+
     def test_no_auth_defaults_to_no_auth_strategy(self):
         conn = create_connection(FakeHTTPProfile())
         assert isinstance(conn, HTTPConnection)

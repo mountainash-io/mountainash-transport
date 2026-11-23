@@ -12,6 +12,7 @@ from mountainash_auth_client import AuthProfile, IAMAuthProfile
 
 from mountainash_transport import (
     AuthenticationError,
+    BulkDeleteError,
     PermissionDeniedError,
     ConnectionProtocol,
     EnumerateResult,
@@ -23,6 +24,7 @@ from mountainash_transport import (
     MissingExtraError,
     PathNotFoundError,
     Pipeline,
+    RandomAccessUnavailableError,
     RangePolicy,
     StorageEntry,
     StorageError,
@@ -32,6 +34,7 @@ from mountainash_transport import (
     copy_between,
     create_connection,
     infer_pipeline,
+    materialize,
     resolve_storage,
 )
 from mountainash_transport.settings.storage.profiles.local_storage_profile import LocalStorageProfile
@@ -50,8 +53,12 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     assert_type(storage.read("/tmp/sales.csv"), bytes)
     assert_type(storage.read("/tmp/sales.csv.gz", infer=True, gzip=Gzip()), bytes)
     assert_type(storage.read_stream("/tmp/sales.csv"), BinaryIO)
+    assert_type(storage.local_path("/tmp/sales.csv"), str | None)
     assert_type(storage.read_stream("s3://reports/file", access="random",
                                   range_policy=RangePolicy("none")), BinaryIO)
+    assert_type(storage.read_stream("s3://reports/file", access="buffered", buffer_memory_limit=1024), BinaryIO)
+    storage.read_stream("/tmp/file", access="buffered", buffer_memory_limit="1MB")  # type: ignore[arg-type]
+    assert_type(materialize(storage.read_stream("/tmp/sales.csv"), to="tempfile"), tuple[BinaryIO, int])
     storage.read_stream("/tmp/file", access="mmap")  # type: ignore[arg-type]
     RangePolicy(cache="invalid")  # type: ignore[arg-type]
     assert_type(storage.metadata("/tmp/sales.csv"), StorageEntry)
@@ -60,12 +67,21 @@ def facade_contracts(storage: StorageFacade, data: bytes) -> None:
     storage.list_objects("/tmp", max_results="one")  # type: ignore[arg-type]
     assert_type(storage.get_size("/tmp/sales.csv"), int | None)
     assert_type(storage.supports(StorageReadProtocol), bool)
-    assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), None)
-    assert_type(storage.write("/tmp/sales.csv", data, create_parents=False), None)
+    assert_type(storage.write("/tmp/sales.csv", data, pipeline=Pipeline(Gzip())), StorageEntry)
+    assert_type(storage.write("/tmp/sales.csv", data, create_parents=False), StorageEntry)
     with storage.read_stream("/tmp/source") as source:
-        assert_type(storage.write_stream("/tmp/destination", source, create_parents=False), None)
+        assert_type(storage.write_stream("/tmp/destination", source, create_parents=False), StorageEntry)
     storage.write("/tmp/sales.csv", data, create_parents="false")  # type: ignore[arg-type]
-    assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), None)
+    assert_type(copy_between("/a", "/b", storage, storage, destination_pipeline=Gzip()), StorageEntry)
+    assert_type(storage.copy("/tmp/a.csv", "/tmp/b.csv"), StorageEntry)
+    assert_type(storage.same_store(storage), bool)
+    storage.same_store("/tmp")  # type: ignore[arg-type]
+    assert_type(storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents=False), StorageEntry)
+    storage.move("/tmp/a.csv", "/tmp/b.csv", create_parents="no")  # type: ignore[arg-type]
+    assert_type(storage.delete_many(["/tmp/a.csv", "/tmp/b.csv"]), None)
+    storage.delete_many("/tmp/a.csv", "/tmp/b.csv")  # type: ignore[call-arg]
+    assert_type(storage.presign("s3://reports/sales.csv", method="PUT", expires_in=600, content_type="text/csv"), str)
+    storage.presign("s3://reports/sales.csv", method="DELETE")  # type: ignore[arg-type]
     assert_type(infer_pipeline("sales.csv.gz"), tuple[Pipeline | None, str])
 
     storage.read(123)  # type: ignore[arg-type]
@@ -82,9 +98,12 @@ def filesystem_enumeration_contracts(local: LocalStorageBackend, sftp: SFTPStora
 
 def error_contracts() -> None:
     assert issubclass(PathNotFoundError, StorageError)
+    failures: tuple[tuple[str, StorageError], ...] = BulkDeleteError(()).failures
     assert issubclass(HttpNotFoundError, HttpTransportError)
     permission: AuthenticationError = PermissionDeniedError("access denied")
     storage_error: StorageError = permission
+    refusal: ValueError = RandomAccessUnavailableError("random access unavailable")
+    typed_refusal: StorageError = RandomAccessUnavailableError("random access unavailable")
 
 
 def profile_contracts() -> None:

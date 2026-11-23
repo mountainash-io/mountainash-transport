@@ -65,10 +65,11 @@ Each protocol covers one capability. A backend implements as many as its store c
 | `StorageDeleteProtocol` | `delete_file` | `delete` |
 | `StorageMetadataProtocol` | `get_metadata`, `path_exists`, `get_size` | `metadata`, `exists`, `get_size` |
 | `StorageCopyProtocol` | `copy` | `copy` |
+| `StorageMoveProtocol` | `move` | `move` |
 | `StorageDirectoryProtocol` | `list_dir`, `mkdir`, `rmdir` | `list_dir`, `mkdir`, `rmdir` |
 | `RangedReadProtocol` | `open_ranged` | `read_stream(access="random")` on remote backends |
 
-All of them share one error rule: a backend translates its native I/O failures into `StorageError` subclasses and keeps the native exception as `__cause__`. Errors that come from the caller's own arguments, streams or transforms keep their original type. [Where backends differ](../14-backends/index.md#where-backends-differ) shows the translation for each backend.
+All of them share one error rule: a backend translates its native I/O failures into `StorageError` subclasses and does not chain the native exception, whose text can quote a location or credentials; the only chained cause is a fresh `[Errno N] strerror` copy of an `OSError` or transport's own HTTP error (for example `PathNotFoundError` chained from `HttpNotFoundError`). Errors that come from the caller's own arguments, streams or transforms keep their original type. [Where backends differ](../14-backends/index.md#where-backends-differ) shows the translation for each backend.
 
 <!-- concept:198 -->
 ### Read
@@ -100,10 +101,14 @@ All of them share one error rule: a backend translates its native I/O failures i
 
 `StorageCopyProtocol.copy(source, destination)` copies within one backend using the store's own mechanism: `shutil.copy2` on local disk, a server-side `CopyObject` on S3. Copies between different stores go through `copy_between` instead, described in [Copying between backends](../10-stream-transforms/index.md#copying-between-backends).
 
+### Move
+
+`StorageMoveProtocol.move(source, destination, *, create_parents=True)` renames with the store's native rename and replaces an existing destination: `os.replace` on local disk, the OpenSSH `posix-rename@openssh.com` extension on SFTP. Stores without a rename (S3, HTTP) do not implement it, so a move is never a silent copy and delete.
+
 <!-- concept:204 -->
 ### Directory
 
-`StorageDirectoryProtocol` has `list_dir(path)`, `mkdir(path, *, parents=True)` and `rmdir(path)`. With `parents=True`, `mkdir` creates missing ancestors and accepts an existing directory; with `parents=False` it creates only the final directory and fails if the parent is missing or the target exists. The protocol leaves `rmdir`'s handling of non-empty and missing directories to the backend, and local and SFTP differ (see [Where backends differ](../14-backends/index.md#where-backends-differ)). Object stores have no directories and do not implement this protocol.
+`StorageDirectoryProtocol` has `list_dir(path)`, `mkdir(path, *, parents=True)` and `rmdir(path, *, recursive=False)`. With `parents=True`, `mkdir` creates missing ancestors and accepts an existing directory; with `parents=False` it creates only the final directory and fails if the parent is missing or the target exists. `rmdir` removes only an empty directory unless `recursive=True`, which removes the tree without following symbolic links; a missing path raises `PathNotFoundError` and a non-directory is refused. Local and SFTP implement the same contract. Object stores have no directories and do not implement this protocol.
 
 <!-- concept:205 -->
 ### Ranged read
@@ -148,7 +153,9 @@ Provider types that have a storage profile but no entry here (GCS, Azure, FTP, S
 
 `register_storage_backend(provider_type)` is a class decorator. It stores the decorated class under `provider_type` and returns the class unchanged. A later registration for the same provider type replaces the earlier one, and because the built-ins load first, a caller's registration always wins over a built-in.
 
-The registry calls the class as `cls(storage_profile, connection=connection)`, adding `auth_strategy=` and `location_check=` keywords only when the facade has them. A backend's constructor therefore needs a positional profile parameter and a `connection` keyword. Before forwarding an `auth_strategy`, the registry checks that the constructor accepts that keyword (or `**kwargs`) and raises `BackendNotImplementedError` if it does not; today only the HTTP backend takes one.
+The registry calls the class as `cls(storage_profile, connection=connection)`, adding `auth_strategy=` and `location_check=` keywords only when the facade has them. A backend's constructor therefore needs a positional profile parameter and a `connection` keyword. The facade supplies `location_check` whenever a policy is active; the registry forwards it only to constructors that name a `location_check` parameter, so a subclass that passes `**kwargs` through to a built-in backend is unaffected. Before forwarding an `auth_strategy`, the registry checks that the constructor accepts that keyword (or `**kwargs`) and raises `BackendNotImplementedError` if it does not; today only the HTTP backend takes one.
+
+Under an active location policy, the facade refuses every path for a remote provider that has no built-in host check, which today means GCS, Azure, FTP, SMB and GitHub. A backend you register for one of those providers works without a policy, but with a policy every call raises `LocationNotAllowed` (`no location check for provider ...`).
 
 The example registers a small in-memory backend for the GCS provider type, which has no built-in backend. The class is composed from two mixins, so it implements read and write and nothing else:
 

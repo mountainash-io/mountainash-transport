@@ -27,7 +27,7 @@
     "SFTPReadMixin — StorageReadProtocol: read_to_bytes, forward-only read_to_stream without prefetch, plus open_ranged (seek/read on a native handle, no version pinning)",
     "SFTPWriteMixin — StorageWriteProtocol: writes via sftp.open('wb'), creating parents through SFTPDirectoryMixin.mkdir when create_parents=True",
     "SFTPEnumerateMixin — StorageEnumerateProtocol: exact-path enumeration that does not follow discovered directory links (not in sftp __all__)",
-    "SFTPDirectoryMixin — StorageDirectoryProtocol: list_dir, race-tolerant mkdir with parents, empty-only rmdir",
+    "SFTPDirectoryMixin — StorageDirectoryProtocol: list_dir, race-tolerant mkdir with parents, rmdir empty-only unless recursive=True (depth-first, links removed not followed)",
     "SFTPDeleteMixin — StorageDeleteProtocol: sftp.remove",
     "SFTPMetadataMixin — StorageMetadataProtocol: stat-based metadata, path_exists, get_size"
   ],
@@ -63,7 +63,7 @@
   "documentation_hooks": [
     "Support matrix row: SFTP = Read, Write, Enumerate, Delete, Metadata, Directory, RangedRead; no Copy (copy_between streams through).",
     "sftp:// URL handling and host/port confinement against the profile (security note).",
-    "Directory semantics: mkdir parent creation across SFTP v3 ambiguities; rmdir empty-only.",
+    "Directory semantics: mkdir parent creation across SFTP v3 ambiguities; rmdir follows the shared contract (empty-only, recursive=True opt-in).",
     "Enumeration and symlink handling on SFTP; UTC-aware timestamps.",
     "Tunnelled SFTP via create_tunnelled_connection."
   ],

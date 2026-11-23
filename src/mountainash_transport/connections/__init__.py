@@ -1,6 +1,7 @@
 """Connection infrastructure — OAuth flows, callback servers, token lifecycle, and factory."""
 from __future__ import annotations
 
+import ssl
 import typing as t
 
 try:
@@ -13,10 +14,8 @@ except ImportError as _exc:
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport.settings.profile_protocol import ProfileProtocol
 
-# --- Legacy/existing public API (kept for backward compat) -------------------
 from .errors import (
-    ConnectionError, TokenExchangeError, TokenRefreshError, AuthorizationRequired,
-    TransportConnectionError, ConnectionTimeoutError,
+    TransportConnectionError, ConnectionTimeoutError, TunnelEndpointError,
 )
 from mountainash_auth_client.oauth.oauth2.flow import OAuthFlow
 from mountainash_auth_client.oauth.oauth1.flow import OAuth1Flow
@@ -78,11 +77,22 @@ _PROVIDER_CONNECTION_MAP: dict[str, type] = {
 
 
 def _connection_for_provider(provider_type: CONST_STORAGE_PROVIDER_TYPE | None) -> type:
-    """Map provider_type to a leaf connection class."""
+    """Map provider_type to a leaf connection class.
+
+    A profile without a provider type gets ``HTTPConnection``. A provider type
+    with no connection class raises instead of falling back to HTTP.
+    """
     if provider_type is None:
         return HTTPConnection
     provider_str = str(provider_type.value) if hasattr(provider_type, "value") else str(provider_type)
-    return _PROVIDER_CONNECTION_MAP.get(provider_str, HTTPConnection)
+    try:
+        return _PROVIDER_CONNECTION_MAP[provider_str]
+    except KeyError:
+        from mountainash_transport._core.exceptions import BackendNotImplementedError
+        raise BackendNotImplementedError(
+            f"The '{provider_str}' storage provider has no connection implementation. "
+            f"Implemented providers: {sorted(_PROVIDER_CONNECTION_MAP)}"
+        ) from None
 
 
 # --- Provider → SDK target family map ----------------------------------------
@@ -125,6 +135,18 @@ def _emit_kwargs(
     if auth_profile is None or isinstance(auth_profile, NoAuthProfile):
         return base
 
+    if (
+        family is TargetFamily.HTTP
+        and callable(emit)
+        and _auth_kind(auth_profile) is CONST_AUTH_PROFILES.CERTIFICATE
+        and isinstance(base.get("verify"), ssl.SSLContext)
+    ):
+        # Certificate emission loads the client identity into a context of its own
+        # and refuses a caller's prebuilt one, so CA_BUNDLE trust is handed over as
+        # a factory that builds a fresh context. Other auth keeps the plain context.
+        rebuild = emit
+        base = {**base, "verify": lambda: rebuild(TargetFamily.HTTP)["verify"]}
+
     if family is TargetFamily.BOTO:
         role_arn = getattr(auth_profile, "ROLE_ARN", None)
         profile_name = getattr(auth_profile, "PROFILE_NAME", None)
@@ -153,8 +175,6 @@ def _emit_kwargs(
 def create_connection(
     profile: ProfileProtocol,
     auth_profile: AuthProfile | None = None,
-    *,
-    auto_authorize: bool = False,
 ) -> ConnectionProtocol:
     """Create the right connection for a profile + auth combination."""
     spec = getattr(profile, "__spec__", None)
@@ -183,6 +203,29 @@ def create_connection(
     return leaf_cls(_emit_kwargs(profile, auth_profile, family))
 
 
+def _tunnel_inner_factory(
+    target_profile: ProfileProtocol, target_auth: AuthProfile | None,
+) -> t.Callable[[int], ConnectionProtocol]:
+    """Build the target connection for a tunnel's local port, refusing bypasses.
+
+    Routing through the listener (and #54's refusal) live in ``_PatchedEndpointProfile``.
+    An assume-role S3 target is refused here: botocore would call AWS STS
+    directly, outside the bastion.
+    """
+    def inner_factory(local_port: int) -> ConnectionProtocol:
+        patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)
+        connection = create_connection(patched, target_auth)
+        if isinstance(connection, S3Connection) and connection._assumes_role():
+            raise TunnelEndpointError(
+                "Tunnel cannot redirect this S3 target's assume-role call: botocore "
+                "would call AWS STS directly and bypass the bastion. Use static or "
+                "session credentials for tunnelled targets."
+            )
+        return connection
+
+    return inner_factory
+
+
 def create_tunnelled_connection(
     bastion_profile: ProfileProtocol,
     bastion_auth: AuthProfile | None,
@@ -194,17 +237,15 @@ def create_tunnelled_connection(
     """Create a tunnelled connection through an SSH bastion host."""
     bastion_family = _family_for_provider(CONST_STORAGE_PROVIDER_TYPE.SSH)
     ssh_conn = SSHConnection(_emit_kwargs(bastion_profile, bastion_auth, bastion_family))
-
-    def inner_factory(local_port: int) -> ConnectionProtocol:
-        patched = _PatchedEndpointProfile(target_profile, "127.0.0.1", local_port)
-        return create_connection(patched, target_auth)
-
-    return TunnelledConnection(ssh_conn, inner_factory, remote_host, remote_port)
+    family = _family_for_provider(_provider_type_from_profile(target_profile))
+    return TunnelledConnection(
+        ssh_conn, _tunnel_inner_factory(target_profile, target_auth), remote_host, remote_port,
+        proxy=family is not TargetFamily.PARAMIKO,
+    )
 
 
 __all__ = [
     # Legacy
-    "ConnectionError", "TokenExchangeError", "TokenRefreshError", "AuthorizationRequired",
     "TransportConnectionError", "ConnectionTimeoutError",
     "OAuthFlow",
     "OAuth1Flow",
