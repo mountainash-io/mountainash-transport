@@ -75,7 +75,7 @@ How each backend serves ranges:
 - SFTP: a native remote file handle without prefetch, and no ETag pinning.
 - Local: a reader that wraps the native file object from `open(path, "rb")` and forwards its attributes, with no ranged reader or extra buffer. Local has no ranged-read capability and needs none, so `supports(RangedReadProtocol)` is `False` even though random mode works. `readinto`, `seek`, `tell` and `fileno` behave as on any file.
 
-Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `ValueError`; decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
+Random mode reads stored bytes, so it cannot be combined with transforms. A pipeline, or `infer=True` on a path whose suffixes imply one, raises `RandomAccessUnavailableError` (a `ValueError` subclass); decompress with sequential or buffered mode instead ([Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership)).
 
 ```python
 from mountainash_transport import ObjectChangedError, RangePolicy
@@ -107,7 +107,14 @@ A large `read(n)` allocates `n` bytes whatever the cache settings, and `read()` 
 
 ### Buffered access
 
-`access="buffered"` reads the whole object, decodes it through any transforms, and returns a seekable in-memory buffer of the decoded bytes. The source stream and every transform layer are closed before `read_stream()` returns, so the buffer owns its data and stays usable after the facade closes. All transfer and decoding errors are raised inside the `read_stream()` call. Memory use equals the decoded size, so buffered access suits small and medium objects, and libraries that require a seekable file of decoded content. To spill large objects to disk instead of memory, use [`materialize`](#materialize) on a sequential stream.
+`access="buffered"` reads the whole object, decodes it through any transforms, and returns a seekable buffer of the decoded bytes. The source stream and every transform layer are closed before `read_stream()` returns, so the buffer owns its data and stays usable after the facade closes. All transfer and decoding errors are raised inside the `read_stream()` call.
+
+The buffer is a `tempfile.SpooledTemporaryFile`. It stays in memory up to a limit and moves to an unnamed temporary file beyond it, so a large object does not exhaust memory. The OS removes the file when the buffer is closed, including after an exception. The limit is chosen in this order: `read_stream(..., buffer_memory_limit=...)`, then the storage profile's `BUFFER_MEMORY_LIMIT` field, then 64 MiB. A limit must be positive, and passing `buffer_memory_limit` with any mode other than `"buffered"` raises `ValueError`.
+
+```python
+with s3.read_stream(path, access="buffered", buffer_memory_limit=16 * 1024 * 1024) as data:
+    data.seek(-8, 2)               # seekable; spilled to disk beyond 16 MiB
+```
 
 ## Range tuning
 
@@ -155,32 +162,15 @@ Unknown range cache: 'lru'
 b'@ABC' 200004
 ```
 
-The default suits small forward reads. Format-aware callers, such as `mountainash-files`, are expected to override it per read. Measurements on one local test setup give a starting point, not a guarantee:
+The default suits small forward reads. Format-aware callers, such as `mountainash-files`, are expected to override it per read; how a particular file-format library should be driven belongs in that consumer's documentation. Measurements on one local test setup give a starting point, not a guarantee:
 
-| Workload | Suggested policy | Observed tradeoff |
+| Access pattern | Suggested policy | Observed tradeoff |
 |---|---|---|
-| General small forward reads | Default `readahead`, 1 MiB | 2048 reads of 4 KiB took 9 requests, against 122 with a 64 KiB window |
-| PyArrow `ParquetFile` schema and projected column reads | `RangePolicy("readahead", block_size=64 * 1024)` | PyArrow requests large column chunks itself; a small window avoids fetching neighbouring bytes |
-| PyArrow reads where transferred bytes matter most | `RangePolicy("none")` | No speculative fetching; repeated ranges may cost extra requests |
+| Small forward reads | Default `readahead`, 1 MiB | 2048 reads of 4 KiB took 9 requests, against 122 with a 64 KiB window |
+| A reader that already requests large chunks itself | `RangePolicy("readahead", block_size=64 * 1024)`, or `RangePolicy("none")` | A large window fetches neighbouring bytes the reader never asks for; `"none"` fetches exactly the requested intervals, so repeated ranges cost extra requests |
 | Scattered small reads that revisit regions | `RangePolicy("blockcache", block_size=..., max_blocks=...)` | Retains blocks; smaller blocks fetch less but make more requests |
 
-Reading one of twenty columns from a 363 MB Parquet file fetched 18.8 MB with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. ORC, ZIP and Arrow IPC readers were not measured; benchmark their access patterns before choosing a policy. PyArrow is not a dependency of transport, but a random handle is a seekable binary file, so it can be passed straight to PyArrow. Here `path` names a small Parquet file in the bucket:
-
-```python
-import pyarrow.parquet as pq
-
-with s3.read_stream(path, access="random",
-                    range_policy=RangePolicy("readahead", block_size=64 * 1024)) as handle:
-    schema = pq.ParquetFile(handle).schema_arrow
-print(schema)
-```
-
-Output:
-
-```text
-region: string
-total: int64
-```
+One consumer measured a reader that requests large chunks itself, reading one of twenty columns from a 363 MB file: 18.8 MB fetched with a 64 KiB read-ahead, 18.2 MB with no cache, 26.6 MB with a 1 MiB read-ahead and 57.3 MB with a 4 MiB block cache. Measure your reader's access pattern before choosing a policy. A random handle is a seekable binary file, so any library that reads from file objects can use it.
 
 The random handle and its cache are implemented in `src/mountainash_transport/_core/ranged_io.py` and described for backend authors in [Read plumbing](../14-backends/index.md#read-plumbing).
 
@@ -234,6 +224,8 @@ The stream returned by `read_stream()` belongs to the caller. Closing it, includ
 
 Closing a stream never closes its facade, and the facade must stay open while sequential or random remote streams are in use. A buffered result is independent of both.
 
+A handle is a Python object, and nothing else should keep it past its use. Libraries that read on native worker threads need care: if a worker thread holds the last reference to a handle when the interpreter shuts down, releasing it there can abort the process. Hand such a library the handle only for the duration of the call, make sure its threads have released it before you close the handle, or give it a copy it owns, such as a buffered result. The consumer that drives a particular library documents how it does this.
+
 ```python
 from mountainash_transport import Gzip
 
@@ -256,6 +248,29 @@ b'region,total\n' True True
 b'region,total\nnorth,120\n'
 ```
 
+For local files a native reader can skip the Python handle altogether. `local_path(path)` returns the absolute path of the file after the same resolution and checks as `read_stream`: a missing file raises `PathNotFoundError` and the location policy applies. It returns `None` for remote backends, without any I/O, and when a transform pipeline is passed or inferred, so a consumer branches on the result:
+
+```python
+import tempfile
+from pathlib import Path
+
+from mountainash_transport import Gzip, StorageFacade
+
+with tempfile.TemporaryDirectory() as root, StorageFacade.for_local() as local:
+    local.write(f"{root}/sales.csv", b"region,total\nnorth,120\n")
+    local.write(f"{root}/sales.csv.gz", b"region,total\nnorth,120\n", pipeline=Gzip())
+    for name in ("sales.csv", "sales.csv.gz"):
+        path = local.local_path(f"{root}/{name}", infer=True)
+        print(name, "->", "native" if path else "read_stream", Path(path).name if path else "")
+```
+
+Output:
+
+```text
+sales.csv -> native sales.csv
+sales.csv.gz -> read_stream
+```
+
 If you apply a pipeline yourself with `Pipeline.apply_read(source)` instead of going through the facade, the returned stream owns only the layers it built, not `source`; close the source separately. Transform ownership in both directions is covered in [Limits and ownership](../10-stream-transforms/index.md#limits-and-ownership).
 
 <!-- concept:168 -->
@@ -264,10 +279,10 @@ If you apply a pipeline yourself with `Pipeline.apply_read(source)` instead of g
 
 `materialize(stream, *, to="memory", memory_cutoff=64 * 1024 * 1024)` drains a stream into a seekable buffer and returns `(buffer, length)`, with the buffer positioned at 0. `to="memory"` uses an `io.BytesIO`. `to="tempfile"` uses a `tempfile.SpooledTemporaryFile` that stays in memory up to `memory_cutoff` bytes and moves to disk beyond it, which makes it safe for objects too large for buffered access. The source stream is exhausted afterwards; close it as usual. Use it when you need a known length or a seekable copy and do not want the whole object in memory.
 
-`materialize` is not exported from the package root. Import it from `mountainash_transport._core.transforms.util`:
+Import it from the package root:
 
 ```python
-from mountainash_transport._core.transforms.util import materialize
+from mountainash_transport import materialize
 
 path = "s3://reports/2026/big.bin"
 s3.write(path, bytes(5_000_000))

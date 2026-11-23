@@ -192,11 +192,21 @@ def test_s3_context_preserves_body_error() -> None:
 def test_missing_boto3_names_s3_extra(monkeypatch):
     import sys
 
-    from mountainash_transport.connections.errors import TransportConnectionError
+    from mountainash_transport import MissingExtraError
 
     monkeypatch.setitem(sys.modules, "boto3", None)
-    with pytest.raises(
-        TransportConnectionError,
-        match=r"boto3 is required for S3 connections.*mountainash-transport\[s3\]",
-    ):
+    with pytest.raises(MissingExtraError, match=r"mountainash-transport\[s3\]") as caught:
         S3Connection(FAKE_S3_KWARGS).connect()
+    assert caught.value.extra == "s3"
+
+
+def test_assume_role_probe_without_boto3_names_s3_extra(monkeypatch):
+    import sys
+
+    from mountainash_transport import MissingExtraError
+
+    monkeypatch.setitem(sys.modules, "boto3", None)
+    conn = S3Connection({"client_config": {}, "session": {"profile_name": "analyst"}})
+    with pytest.raises(MissingExtraError) as caught:
+        conn._assumes_role()
+    assert caught.value.extra == "s3"

@@ -1,4 +1,4 @@
-"""HTTP/HTTPS storage backend — read, write, and metadata via HttpRequestEngine."""
+"""HTTP/HTTPS storage backend — read, ranged read, write and metadata via HttpRequestEngine."""
 from __future__ import annotations
 
 import typing as t
@@ -6,6 +6,7 @@ import typing as t
 from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
 from mountainash_transport._core.exceptions import StorageConnectionError
 from mountainash_transport._core.http.policy import RequestPolicy
+from mountainash_transport._core.retry import retry_policy_from
 from mountainash_transport.storage.registry import register_storage_backend
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 
@@ -22,8 +23,9 @@ if t.TYPE_CHECKING:
 class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
     """HTTP/HTTPS storage backend.
 
-    Implements StorageReadProtocol, StorageWriteProtocol,
-    and StorageMetadataProtocol using HttpRequestEngine.
+    Implements StorageReadProtocol (including ``open_ranged`` for
+    RangedReadProtocol), StorageWriteProtocol and StorageMetadataProtocol
+    using HttpRequestEngine.
     """
 
     def __init__(
@@ -58,7 +60,7 @@ class HTTPStorageBackend(HTTPReadMixin, HTTPWriteMixin, HTTPMetadataMixin):
             self._engine = HttpRequestEngine(
                 client=client,
                 auth_strategy=auth_strategy,
-                policy=policy or RequestPolicy(),
+                policy=policy or RequestPolicy(retry=retry_policy_from(storage_profile)),
                 location_check=location_check,
             )
 

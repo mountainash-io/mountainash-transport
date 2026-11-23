@@ -28,7 +28,7 @@
     "LocalWriteMixin — StorageWriteProtocol: bytes and 64 KiB-chunked stream writes, optional parent creation",
     "LocalEnumerateMixin — StorageEnumerateProtocol: exact-path list_objects, recursive or '/'-grouped, skips directory symlinks/junctions when recursing (not in local __all__)",
     "LocalListMixin — list_dir half of StorageDirectoryProtocol; resolves symlinks, skips broken ones",
-    "LocalDirectoryMixin — mkdir/rmdir half of StorageDirectoryProtocol; rmdir removes the whole tree (shutil.rmtree)",
+    "LocalDirectoryMixin — mkdir/rmdir half of StorageDirectoryProtocol; rmdir is empty-only (os.rmdir) unless recursive=True (shutil.rmtree, links not followed)",
     "LocalDeleteMixin — StorageDeleteProtocol: os.remove; missing path raises PathNotFoundError",
     "LocalMetadataMixin — StorageMetadataProtocol: os.stat-based get_metadata, path_exists, get_size",
     "LocalCopyMixin — StorageCopyProtocol: shutil.copy2 with destination parent creation",
@@ -60,7 +60,7 @@
   ],
   "documentation_hooks": [
     "Support matrix row: Local = Read, Write, Enumerate, Delete, Metadata, Copy, Directory; random access via native seekable handle rather than RangedReadProtocol.",
-    "Directory semantics divergence: local rmdir is recursive, SFTP rmdir requires an empty directory.",
+    "Directory semantics: rmdir follows the shared protocol contract (empty-only by default, recursive=True opt-in), the same as SFTP (#41).",
     "Exact-path enumeration rules (no sibling prefix match, '/' grouping, symlink handling, missing path -> empty result).",
     "Local error mapping and the list_dir migration note (file -> not-directory error, missing -> PathNotFoundError)."
   ],
@@ -82,7 +82,7 @@
     "tests/storage/facade/test_read_access_modes.py"
   ],
   "risks": [
-    "LocalDirectoryMixin.rmdir uses shutil.rmtree and deletes non-empty trees, unlike SFTP's empty-only rmdir; the protocol leaves this backend-specific (README.md documents it).",
+    "Resolved (#41): local and SFTP rmdir share one contract; previously local rmdir deleted whole trees.",
     "LocalDirectoryMixin.mkdir declares `parents` as positional-or-keyword while StorageDirectoryProtocol declares it keyword-only; runtime_checkable isinstance does not detect signature drift.",
     "local __all__ omits LocalEnumerateMixin even though LocalStorageBackend composes it, so star-imports and docs driven by __all__ miss enumeration.",
     "StorageDirectoryProtocol support is split across two mixins (LocalListMixin.list_dir and LocalDirectoryMixin.mkdir/rmdir); neither alone satisfies the protocol.",
@@ -104,7 +104,7 @@
     {
       "kind": "symbol",
       "path": "src/mountainash_transport/storage/backends/local/local_directory.py",
-      "detail": "rmdir -> shutil.rmtree; mkdir(path, parents=True) positional."
+      "detail": "rmdir -> os.rmdir, or shutil.rmtree with recursive=True; mkdir(path, parents=True) positional."
     },
     {
       "kind": "symbol",

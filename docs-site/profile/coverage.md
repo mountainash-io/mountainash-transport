@@ -31,7 +31,6 @@ The 25 `mountainash_utils_files.*` records were retired; their source no longer 
 
 No low-confidence records. Medium confidence:
 
-- `mountainash_transport.connections.tunnel` — Is the forced http:// scheme for tunnelled base_url/endpoint_url intentional, and how should HTTPS targets be tunnelled?
 - `mountainash_transport.settings.storage.registry` — Is this module part of the documented public surface? It is not exported from the package root, but the user-facing storage_profiles example imports get_spec/get_settings_class from it directly.
 
 ## Audience coverage
@@ -47,7 +46,7 @@ No low-confidence records. Medium confidence:
 - README support table lacks a RangedRead column; HTTP, S3 and SFTP implement `open_ranged` (protocol satisfied by method shape, no explicit subclassing).
 - Settings-only providers (no backend, `implemented=False`): GCS, Azure, FTP, SMB, GitHub. Docs must not imply backends exist.
 - `location`: an empty `frozenset()` allow-list means 'allow any host' for that scheme — undocumented; no runnable example for `LocationPolicy`.
-- `connections.tunnel`: endpoint rewrite to `http://127.0.0.1:<port>` (connections/tunnel.py:201) drops scheme, host and path prefix — HTTPS targets through a tunnel are effectively unsupported; no tunnel example.
+- `connections.tunnel`: HTTPS, S3 and SFTP targets keep their real identity through the tunnel (#38: proxy handshake for HTTP/S3, real host name for SSH host keys); the executable `examples/` recipe is #50.
 - `MissingExtraError` only translates `[http]`-stack imports; missing boto3/paramiko/gnupg surface as plain ImportError/TransportConnectionError.
 - `create_connection` silently falls back to `HTTPConnection` for unknown provider types and ignores `auto_authorize`.
 - Backend divergences: local `rmdir` is recursive, SFTP `rmdir` empty-only; SFTP `write_from_stream` buffers the whole payload; S3 copy is a single `copy_object` call (no multipart fallback); S3 enumerate lists all pages before applying `max_results`.

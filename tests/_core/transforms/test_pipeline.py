@@ -153,3 +153,44 @@ def test_owned_reader_readinto_handles_short_read_eof_and_closed_stream() -> Non
             assert buffer == b"data--"
         with pytest.raises(ValueError, match="closed"):
             raw.readinto(buffer)
+
+
+def test_apply_write_closes_its_layers_not_the_caller_stream():
+    import gzip
+
+    from mountainash_transport._core.transforms import Gzip
+
+    source = io.BytesIO(b"payload" * 100)
+    encoded = Pipeline(Gzip(), Gzip()).apply_write(source)
+    data = encoded.read()
+    encoded.close()
+    assert encoded.closed
+    assert not source.closed, "the caller's stream is borrowed"
+    assert gzip.decompress(gzip.decompress(data)) == b"payload" * 100
+
+
+def test_apply_write_closes_every_created_layer():
+    from mountainash_transport._core.transforms import Gzip
+
+    created: list[BinaryIO] = []
+
+    class Recording:
+        def wrap(self, stream: BinaryIO) -> BinaryIO:
+            out = t.cast(BinaryIO, io.BytesIO(stream.read()))
+            created.append(out)
+            return out
+
+        def unwrap(self, stream: BinaryIO) -> BinaryIO:  # pragma: no cover - write-only test
+            return stream
+
+    source = io.BytesIO(b"x")
+    encoded = Pipeline(Gzip(), Recording()).apply_write(source)
+    encoded.read()
+    encoded.close()
+    assert created and all(layer.closed for layer in created)
+    assert not source.closed
+
+
+def test_empty_pipeline_write_returns_source_unchanged():
+    source = io.BytesIO(b"x")
+    assert Pipeline().apply_write(source) is source

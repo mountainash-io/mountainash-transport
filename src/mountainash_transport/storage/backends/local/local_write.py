@@ -5,27 +5,32 @@ from __future__ import annotations
 import os
 from typing import BinaryIO
 
-from ._helpers import _mapped
+from mountainash_transport._core.constants import DEFAULT_CHUNK_SIZE as _CHUNK_SIZE
+from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 
-_CHUNK_SIZE = 65_536  # 64 KiB
+from ._helpers import _mapped, _native
+from .local_metadata import entry_from_stat
 
 
 class LocalWriteMixin:
     """Write mixin for local filesystem."""
 
-    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> None:
+    def write_from_bytes(self, path: str, data: bytes, *, create_parents: bool = True) -> StorageEntry:
         """Write bytes to a local file, optionally creating parent directories."""
+        path = _native(path)
         with _mapped(path):
             if create_parents:
                 os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
             with open(path, "wb") as fh:
                 fh.write(data)
+            return entry_from_stat(path, os.stat(path))
 
-    def write_from_stream(self, path: str, stream: BinaryIO, *, create_parents: bool = True) -> None:
+    def write_from_stream(self, path: str, stream: BinaryIO, *, create_parents: bool = True) -> StorageEntry:
         """Write data from a binary stream to a local file in chunks.
 
         Parent directories are created only when create_parents is True.
         """
+        path = _native(path)
         with _mapped(path):
             if create_parents:
                 os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
@@ -40,3 +45,5 @@ class LocalWriteMixin:
         finally:
             with _mapped(path):
                 fh.close()
+        with _mapped(path):
+            return entry_from_stat(path, os.stat(path))

@@ -15,16 +15,21 @@ if t.TYPE_CHECKING:
     from mountainash_auth_client import AuthProfile
     from mountainash_settings.secrets import ClearableSecretStore
 
-from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE
+from mountainash_transport._core.constants import CONST_STORAGE_PROVIDER_TYPE, DEFAULT_BUFFER_MEMORY_LIMIT
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
-from mountainash_transport._core.exceptions import StorageConnectionError, UnsupportedOperationError
+from mountainash_transport._core.exceptions import (
+    RandomAccessUnavailableError, StorageConnectionError, UnsupportedOperationError,
+)
 from mountainash_transport._core.protocols import ConnectionProtocol
+from mountainash_transport._core.safe_display import add_cleanup_note
 from mountainash_transport.storage.protocols import (
     StorageCopyProtocol,
     StorageDeleteProtocol,
     StorageDirectoryProtocol,
     StorageEnumerateProtocol,
     StorageMetadataProtocol,
+    StorageMoveProtocol,
+    StoragePresignProtocol,
     StorageReadProtocol,
     StorageWriteProtocol,
 )
@@ -41,7 +46,7 @@ from mountainash_transport.storage.protocols.prtcl_ranged_read import RangedRead
 
 from mountainash_transport.settings.profile_protocol import StorageProfileProtocol
 from mountainash_transport.location import (
-    LocationNotAllowed, LocationPolicy, allow_remote, confine_local, identify_scheme,
+    LocationNotAllowed, LocationPolicy, allow_remote, confine_local,
     require_known_scheme, url_host,
 )
 from mountainash_transport._schemes import SCHEMES
@@ -53,6 +58,35 @@ _S3_FAMILY = frozenset({
 })
 
 _PROVIDER_SCHEME = {s.provider: s.scheme for s in SCHEMES.values() if s.provider in _S3_FAMILY}
+
+
+def _check_s3(facade: "StorageFacade", path: str, scheme: str) -> None:
+    from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
+    try:
+        bucket, _ = parse_s3_path(path)
+    except ValueError:
+        raise LocationNotAllowed(path, "invalid location") from None
+    allow_remote(_PROVIDER_SCHEME[facade._provider_type], bucket.lower(), facade._policy,
+                 profile_host=facade._profile_host)
+
+
+def _check_sftp(facade: "StorageFacade", path: str, scheme: str) -> None:
+    # A bare remote path addresses the profile's own HOST.
+    if scheme == "sftp":
+        allow_remote("sftp", url_host(path), facade._policy, profile_host=facade._profile_host)
+
+
+def _check_http(facade: "StorageFacade", path: str, scheme: str) -> None:
+    allow_remote(scheme, url_host(path), facade._policy)
+
+
+# Remote host check per provider. Under an active policy a remote provider
+# missing here is refused (fail closed); a new backend must add its entry.
+_REMOTE_CHECKS: dict[CONST_STORAGE_PROVIDER_TYPE, t.Callable[["StorageFacade", str, str], None]] = {
+    **{p: _check_s3 for p in _S3_FAMILY},
+    CONST_STORAGE_PROVIDER_TYPE.SFTP: _check_sftp,
+    CONST_STORAGE_PROVIDER_TYPE.HTTP: _check_http,
+}
 
 
 def _has_static_token(auth_profile: t.Any) -> bool:
@@ -81,6 +115,7 @@ class StorageFacade:
     ) -> None:
         self._provider_type = provider_type
         self._storage_profile = storage_profile
+        self._auth_profile = auth_profile  # kept only for same_store(); never displayed
 
         declared = None
         if provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL and storage_profile is not None:
@@ -99,17 +134,13 @@ class StorageFacade:
                     os.makedirs(target, exist_ok=True)
 
         # Profile permission comes only from a caller-supplied profile.
+        # A bucket-less S3 profile grants nothing; its buckets need allowed_remote.
         self._profile_host: str | None = None
-        self._profile_any = False
         if storage_profile is not None:
             if provider_type == CONST_STORAGE_PROVIDER_TYPE.SFTP:
                 self._profile_host = getattr(storage_profile, "HOST", None)
             elif provider_type in _S3_FAMILY:
-                bucket = getattr(storage_profile, "BUCKET", None)
-                if bucket:
-                    self._profile_host = bucket
-                else:
-                    self._profile_any = True
+                self._profile_host = getattr(storage_profile, "BUCKET", None) or None
 
         if storage_profile is None and provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP:
             from mountainash_transport.settings.storage.profiles import HTTPStorageProfile
@@ -142,7 +173,7 @@ class StorageFacade:
                 self._connection.connect()
 
             backend_kwargs: dict[str, t.Any] = {"connection": self._connection}
-            if provider_type == CONST_STORAGE_PROVIDER_TYPE.HTTP and self._policy is not None and self._policy.active:
+            if self._policy is not None and self._policy.active:
                 backend_kwargs["location_check"] = self._check
             if strategy is not None:
                 backend_kwargs["auth_strategy"] = strategy
@@ -151,9 +182,7 @@ class StorageFacade:
             try:
                 self.close()
             except BaseException as cleanup:
-                primary.add_note(f"Facade cleanup also failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Facade cleanup also failed", cleanup)
             raise
 
     def _check(self, path: str) -> str:
@@ -161,28 +190,35 @@ class StorageFacade:
         if self._policy is None or not self._policy.active:
             return path
         scheme = require_known_scheme(path, self._policy)
-        provider = self._provider_type
-        if provider == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
+        assert scheme is not None  # active policy refuses unknown schemes
+        if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
             return confine_local(path, self._policy)
-        if provider in _S3_FAMILY:
-            if not self._profile_any:
-                from mountainash_transport.storage.backends.s3.s3_path import parse_s3_path
-                try:
-                    bucket, _ = parse_s3_path(path)
-                except ValueError:
-                    raise LocationNotAllowed(path, "invalid location") from None
-                allow_remote(_PROVIDER_SCHEME[provider], bucket.lower(), self._policy,
-                             profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.SFTP:
-            if identify_scheme(path) == "sftp":
-                allow_remote("sftp", url_host(path), self._policy, profile_host=self._profile_host)
-        elif provider == CONST_STORAGE_PROVIDER_TYPE.HTTP and scheme is not None:
-            allow_remote(scheme, url_host(path), self._policy)
+        check = _REMOTE_CHECKS.get(self._provider_type)
+        if check is None:
+            raise LocationNotAllowed(path, f"no location check for provider {self._provider_type}")
+        check(self, path, scheme)
         return path
 
     def _ensure_open(self) -> None:
         if self._closed:
             raise StorageConnectionError("StorageFacade is closed")
+
+    def same_store(self, other: StorageFacade) -> bool:
+        """Whether *other* addresses the same store with the same credentials and location policy.
+
+        True when both facades are open, share a provider type, and their storage
+        profiles, auth profiles and location policies are equal by value. Equal
+        but separately built profiles count as the same store. ``copy_between``
+        uses this to choose the store's native copy.
+        """
+        return (
+            not self._closed
+            and not other._closed
+            and self._provider_type == other._provider_type
+            and self._storage_profile == other._storage_profile
+            and self._auth_profile == other._auth_profile
+            and self._policy == other._policy
+        )
 
     def close(self) -> None:
         """Disconnect the owned connection; further I/O is forbidden.
@@ -211,9 +247,7 @@ class StorageFacade:
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Facade cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Facade cleanup also failed", cleanup)
 
     # ------------------------------------------------------------------
     # Convenience factories
@@ -239,18 +273,21 @@ class StorageFacade:
 
         Args:
             path: Path string, optionally with a URL scheme.
-            profile: Optional storage profile forwarded to the backend.
-            auth: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
-                When provided, overrides any Authorization header set by *profile*.
+            storage_profile: Optional storage profile forwarded to the backend.
+            auth_profile: Optional direct AuthProfile instance (e.g. TokenAuth, PasswordAuth).
+                When provided, overrides any Authorization header set by *storage_profile*.
             oauth_provider: Optional OAuth2 provider profile for the managed token flow.
             token_store: Raw ClearableSecretStore for managed tokens, distinct from
                 the config reader. The caller owns its lifetime.
+            policy: Optional LocationPolicy; when active, the path must be allowed.
 
         Returns:
             A StorageFacade wired to the provider that matches *path*.
 
         Raises:
-            ValueError: If *path*'s scheme is unrecognised or has no backend.
+            ValueError: If *path*'s scheme is unrecognised.
+            BackendNotImplementedError: If the scheme's provider has no backend.
+            LocationNotAllowed: If an active *policy* refuses the path.
         """
         if policy is not None and policy.active:
             require_known_scheme(path, policy)
@@ -341,6 +378,7 @@ class StorageFacade:
         gzip: Gzip | None = None,
         access: t.Literal["sequential", "random", "buffered"] = "sequential",
         range_policy: RangePolicy | None = None,
+        buffer_memory_limit: int | None = None,
     ) -> BinaryIO:
         """Read file contents and return as a binary stream, optionally through *pipeline*.
 
@@ -374,7 +412,10 @@ class StorageFacade:
 
         ``access="sequential"`` streams without whole-object buffering; remote
         handles are forward-only. ``"random"`` fetches stored byte ranges and
-        rejects transforms. ``"buffered"`` materializes decoded bytes in memory.
+        rejects transforms. ``"buffered"`` copies the decoded bytes into a seekable
+        spooled buffer: in memory up to *buffer_memory_limit* bytes, then in an
+        unnamed temp file the OS removes when the stream closes. The limit comes
+        from the call, then the profile's ``BUFFER_MEMORY_LIMIT``, then 64 MiB.
         Local sequential/random handles retain native seekability. Random
         reads use call policy, then profile RANGE_* settings, then library defaults.
         See ``docs/read-access-modes.md`` for migration and format tuning.
@@ -384,6 +425,11 @@ class StorageFacade:
             raise ValueError(f"Unknown access mode: {access!r}")
         if range_policy is not None and access != "random":
             raise ValueError("range_policy requires access='random'")
+        if buffer_memory_limit is not None:
+            if access != "buffered":
+                raise ValueError("buffer_memory_limit requires access='buffered'")
+            if buffer_memory_limit <= 0:
+                raise ValueError("buffer_memory_limit must be positive")
         checked = self._check(path)
         effective = self._resolve_pipeline(
             path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip,
@@ -391,7 +437,7 @@ class StorageFacade:
         path = checked
         if access == "random":
             if not effective.is_empty():
-                raise ValueError("access='random' cannot be combined with transforms")
+                raise RandomAccessUnavailableError("access='random' cannot be combined with transforms")
             if self._provider_type == CONST_STORAGE_PROVIDER_TYPE.LOCAL:
                 return self._backend.read_to_stream(path)
             self._require(RangedReadProtocol, "random reads")
@@ -418,8 +464,13 @@ class StorageFacade:
                 pass
             raise
         if access == "buffered":
+            limit = (
+                buffer_memory_limit
+                or getattr(self._storage_profile, "BUFFER_MEMORY_LIMIT", None)
+                or DEFAULT_BUFFER_MEMORY_LIMIT
+            )
             with owned:
-                result, _ = materialize(t.cast(BinaryIO, owned))
+                result, _ = materialize(t.cast(BinaryIO, owned), to="tempfile", memory_cutoff=limit)
                 return result
         return t.cast(BinaryIO, owned)
 
@@ -434,21 +485,24 @@ class StorageFacade:
         *,
         pipeline: Pipeline | StreamTransform | None = None,
         create_parents: bool = True,
-    ) -> None:
+    ) -> StorageEntry:
         """Write bytes, optionally transformed, creating directory parents by default.
 
         With ``create_parents=False``, Local/SFTP open the destination without
         creating or pre-checking parents; a missing parent raises PathNotFoundError.
         S3 and HTTP ignore this option. This does not make file writes atomic.
+
+        Returns the written object's entry (see "What a write returns" in the
+        file-operations guide); with a pipeline, ``size`` is the stored size.
         """
         self._require(StorageWriteProtocol, "write")
         path = self._check(path)
         if pipeline is None:
-            self._backend.write_from_bytes(path, data, create_parents=create_parents)
-            return
-        source = io.BytesIO(data)
-        encoded = self._coerce_pipeline(pipeline).apply_write(source)
-        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+            return self._backend.write_from_bytes(path, data, create_parents=create_parents)
+        with io.BytesIO(data) as source, contextlib.closing(
+            self._coerce_pipeline(pipeline).apply_write(source)
+        ) as encoded:
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     def write_stream(
         self,
@@ -457,12 +511,15 @@ class StorageFacade:
         *,
         pipeline: Pipeline | StreamTransform | None = None,
         create_parents: bool = True,
-    ) -> None:
-        """Write a stream with the same parent-creation policy as :meth:`write`."""
+    ) -> StorageEntry:
+        """Write a stream with the same parent-creation policy and result as :meth:`write`."""
         self._require(StorageWriteProtocol, "write_stream")
         path = self._check(path)
         encoded = self._coerce_pipeline(pipeline).apply_write(stream)
-        self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+        if encoded is stream:  # no layers: the caller's stream is not ours to close
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
+        with contextlib.closing(encoded):  # closes only the layers built here
+            return self._backend.write_from_stream(path, encoded, create_parents=create_parents)
 
     # ------------------------------------------------------------------
     # Enumerate operations (StorageEnumerateProtocol)
@@ -494,6 +551,45 @@ class StorageFacade:
         path = self._check(path)
         self._backend.delete_file(path)
 
+    def delete_many(self, paths: t.Iterable[str]) -> None:
+        """Delete every path, attempting all of them; a missing path counts as deleted.
+
+        Every path is checked against the location policy before anything is
+        deleted, so a disallowed path raises with nothing removed. S3 deletes in
+        batches of 1,000 keys; Local and SFTP delete one path at a time. Raises
+        ``BulkDeleteError`` once at the end, listing (in input order) every path
+        that could not be deleted with the error it raised.
+        """
+        self._require(StorageDeleteProtocol, "delete_many")
+        checked = [self._check(path) for path in paths]
+        self._backend.delete_many(checked)
+
+    def local_path(
+        self,
+        path: str,
+        *,
+        pipeline: Pipeline | StreamTransform | None = None,
+        infer: bool = False,
+        gpg: GPG | None = None,
+        gzip: Gzip | None = None,
+    ) -> str | None:
+        """Return the absolute local file behind *path*, or ``None`` if there is none.
+
+        For consumers that open local files with their own native readers. The
+        path is resolved and checked exactly as :meth:`read_stream` would, so a
+        missing file raises ``PathNotFoundError`` and the location policy applies.
+        Returns ``None`` for remote backends (without any I/O) and when the
+        resolved pipeline, passed or inferred, has transforms: an encoded file
+        is not a plain file. Opening and reading the path is the caller's concern.
+        """
+        self._require(StorageReadProtocol, "local_path")
+        checked = self._check(path)
+        effective = self._resolve_pipeline(path, pipeline=pipeline, infer=infer, gpg=gpg, gzip=gzip)
+        if self._provider_type != CONST_STORAGE_PROVIDER_TYPE.LOCAL or not effective.is_empty():
+            return None
+        with self._backend.read_to_stream(checked) as handle:  # same checks as read_stream
+            return os.path.abspath(handle.name)
+
     # ------------------------------------------------------------------
     # Metadata operations (StorageMetadataProtocol)
     # ------------------------------------------------------------------
@@ -523,8 +619,8 @@ class StorageFacade:
     # Copy operations (StorageCopyProtocol)
     # ------------------------------------------------------------------
 
-    def copy(self, source: str, destination: str) -> None:
-        """Copy file from *source* to *destination* within the same backend."""
+    def copy(self, source: str, destination: str) -> StorageEntry:
+        """Copy file from *source* to *destination* within the same backend; returns the copy's entry."""
         self._require(StorageCopyProtocol, "copy")
         src = self._check(source)
         dst = self._check(destination)
@@ -536,7 +632,44 @@ class StorageFacade:
             if os.path.isdir(final):
                 raise LocationNotAllowed(destination, "copy destination is a directory")
             dst = final
-        self._backend.copy(src, dst)
+        return self._backend.copy(src, dst)
+
+    # ------------------------------------------------------------------
+    # Move operations (StorageMoveProtocol)
+    # ------------------------------------------------------------------
+
+    def move(self, source: str, destination: str, *, create_parents: bool = True) -> StorageEntry:
+        """Rename *source* to *destination* with the store's native rename, replacing an existing destination.
+
+        Local and SFTP only; stores without a rename (S3, HTTP) raise
+        ``UnsupportedOperationError`` rather than copying and deleting.
+        Both paths are checked against the location policy. Returns the moved entry.
+        """
+        self._require(StorageMoveProtocol, "move")
+        src = self._check(source)
+        dst = self._check(destination)
+        return self._backend.move(src, dst, create_parents=create_parents)
+
+    # ------------------------------------------------------------------
+    # Presign operations (StoragePresignProtocol)
+    # ------------------------------------------------------------------
+
+    def presign(
+        self, path: str, *, method: t.Literal["GET", "PUT"] = "GET",
+        expires_in: int = 3600, content_type: str | None = None,
+    ) -> str:
+        """Return a URL that allows *method* on *path* for *expires_in* seconds, without credentials.
+
+        S3 family only; other stores raise ``UnsupportedOperationError``. The
+        path is checked against the location policy. ``content_type`` (PUT only)
+        is signed, so the uploader must send exactly that ``Content-Type``.
+        Invalid arguments raise ``ValueError`` before anything is signed. A URL
+        signed with temporary credentials (assume-role, SSO, S3 Express
+        sessions) stops working when they expire.
+        """
+        self._require(StoragePresignProtocol, "presign")
+        path = self._check(path)
+        return self._backend.presign(path, method=method, expires_in=expires_in, content_type=content_type)
 
     # ------------------------------------------------------------------
     # Directory operations (StorageDirectoryProtocol)
@@ -554,8 +687,11 @@ class StorageFacade:
         path = self._check(path)
         self._backend.mkdir(path, parents=parents)
 
-    def rmdir(self, path: str) -> None:
-        """Remove the directory at *path*."""
+    def rmdir(self, path: str, *, recursive: bool = False) -> None:
+        """Remove the directory at *path*: empty-only unless ``recursive=True``.
+
+        See :meth:`StorageDirectoryProtocol.rmdir` for the contract.
+        """
         self._require(StorageDirectoryProtocol, "rmdir")
         path = self._check(path)
-        self._backend.rmdir(path)
+        self._backend.rmdir(path, recursive=recursive)

@@ -54,8 +54,8 @@ The base install is a tested contract. `tests/test_slim_install.py` runs local o
 | Extra | Adds | Enables |
 |---|---|---|
 | `[http]` | `mountainash-settings`, `mountainash-auth-client`, `pydantic`, `universal_pathlib`, `httpx`, `fsspec` | HTTP and HTTPS storage, storage profiles, `resolve_storage`, connections, `StoragePath`, the HTTP request engine |
-| `[s3]` | `[http]` plus `boto3`, `s3fs`, `aiobotocore`, `minio` | The S3 backend: AWS S3, S3 Express, R2, MinIO, B2 |
-| `[sftp]` | `[http]` plus `paramiko`, `smart-open[ssh]` | The SFTP backend, SSH connections and SSH tunnels |
+| `[s3]` | `[http]` plus `boto3` | The S3 backend: AWS S3, S3 Express, R2, MinIO, B2 |
+| `[sftp]` | `[http]` plus `paramiko` | The SFTP backend, SSH connections and SSH tunnels |
 | `[encryption]` | `python-gnupg` | The `GPG` transform |
 | `[oauth1]` | `[http]` plus `authlib` | OAuth 1.0a request signing |
 | `[gcs]`, `[azure]` | `[http]` plus the Google Cloud Storage or Azure SDKs | SDKs only; transport has no GCS or Azure backend yet |
@@ -132,15 +132,13 @@ create_connection  needs [http]
 HttpRequestEngine  needs [http]
 ```
 
-The root also binds `storage`, a convenience factory that returns a `StorageFacade` for a provider type (see [Creating a facade](../06-storage-facade/index.md#creating-a-facade)). Because of that binding, `mountainash_transport.storage` is the factory function, not the `storage` subpackage. Import submodules with `from` imports, for example `from mountainash_transport.storage.facade import StorageFacade`, rather than `import mountainash_transport.storage.backends as backends`, which raises `ImportError`. The lazy-export table is in `src/mountainash_transport/__init__.py`.
-
 ## Errors
 
 <!-- concept:218 -->
 
 ### The error families
 
-Transport translates the failures of the libraries it wraps into its own exceptions, so callers catch transport types instead of `OSError`, `botocore`, `paramiko` or `httpx` exceptions. The native exception stays attached as the cause for debugging, except where HTTP credential redaction removes it. There are three families, one per layer, and they do not share a base class:
+Transport translates the failures of the libraries it wraps into its own exceptions, so callers catch transport types instead of `OSError`, `botocore`, `paramiko` or `httpx` exceptions. Native exceptions are not chained, so their text, which can quote a URL or credentials, never reaches you; the exception is at most a fresh `[Errno N] strerror` copy of an `OSError`, or transport's own HTTP error, and messages show locations in display form (`scheme://host:port/path`, see [what errors show of a location](../08-location-policy/index.md#what-errors-show-of-a-location)). There are three families, one per layer, and they do not share a base class:
 
 | Family | Root class | Raised by | Main subclasses |
 |---|---|---|---|
@@ -193,7 +191,7 @@ BackendNotImplementedError: The 'gcs' storage provider is not yet implemented. I
 
 ### MissingExtraError
 
-`MissingExtraError` is raised when a feature needs a package from the `[http]` stack (`mountainash-settings`, `mountainash-auth-client`, `pydantic`, `universal_pathlib`, `httpx` or `fsspec`) that is not installed. It subclasses both `StorageError` and `ImportError`, so existing `except ImportError` handlers still catch it. Its `extra` attribute names the extra to install and `feature` names what needed it. On a base install:
+`MissingExtraError` is raised when a feature needs a package from an extra that is not installed: the `[http]` stack (`mountainash-settings`, `mountainash-auth-client`, `pydantic`, `universal_pathlib`, `httpx` or `fsspec`), boto3 for `[s3]`, paramiko for `[sftp]`, or python-gnupg for `[encryption]`. It subclasses both `StorageError` and `ImportError`, so existing `except ImportError` handlers still catch it. Its `extra` attribute names the extra to install and `feature` names what needed it. On a base install:
 
 ```python
 from mountainash_transport import MissingExtraError, StorageFacade
@@ -214,10 +212,7 @@ The [http] extra is required for storage profiles: pip install 'mountainash-tran
 also an ImportError: True
 ```
 
-!!! warning "`MissingExtraError` covers the `[http]` stack only"
-    A missing backend SDK is not reported as `MissingExtraError`. A missing `boto3` or `paramiko` raises `TransportConnectionError` when the S3 or SSH connection is opened with `connect()`; `create_connection` itself succeeds, and using `GPG` without `[encryption]` raises a plain `ImportError`. Each message names the extra to install. Catch `TransportConnectionError` and `ImportError` as well as `MissingExtraError` when probing for optional backends. See the [support matrix and known limits](../../reference/support-matrix.md).
-
-This code ran in an environment with `[http]` but without `[s3]`:
+A backend SDK is reported the same way, when the connection or transform first needs it: `create_connection` succeeds, and `connect()` raises. This code ran in an environment with `[http]` but without `[s3]`:
 
 ```python
 from mountainash_auth_client import IAMAuthProfile
@@ -229,20 +224,16 @@ profile = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="report
 auth = IAMAuthProfile(ACCESS_KEY_ID="example-access-key", SECRET_ACCESS_KEY="example-secret")
 try:
     StorageFacade.from_path("s3://reports/sales.csv", profile, auth_profile=auth)
-except Exception as error:
-    print(type(error).__name__)
-    print("is MissingExtraError:", isinstance(error, MissingExtraError))
-    print("is ImportError:", isinstance(error, ImportError))
-    print("names the extra:", "mountainash-transport[s3]" in str(error))
+except MissingExtraError as error:
+    print(type(error).__name__, "| extra:", error.extra, "| feature:", error.feature)
+    print(error)
 ```
 
 Output:
 
 ```text
-TransportConnectionError
-is MissingExtraError: False
-is ImportError: False
-names the extra: True
+MissingExtraError | extra: s3 | feature: S3 connections
+The [s3] extra is required for S3 connections: pip install 'mountainash-transport[s3]'
 ```
 
-The translation is implemented in `src/mountainash_transport/_core/extras.py`. Only a `ModuleNotFoundError` for a top-level `[http]`-stack module is converted; any other import failure is re-raised unchanged.
+The translation is implemented in `src/mountainash_transport/_core/extras.py`, which lists the top-level modules each extra installs, including the `[http]` stack that `[s3]`, `[sftp]` and `[oauth1]` pull in. Only a `ModuleNotFoundError` for one of the named extra's modules is converted; any other import failure is re-raised unchanged.

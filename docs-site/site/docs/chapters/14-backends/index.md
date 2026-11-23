@@ -20,7 +20,8 @@ from mountainash_transport.storage.registry import get_registered_backends
 protocols = [
     mt.StorageReadProtocol, mt.StorageWriteProtocol, mt.StorageEnumerateProtocol,
     mt.StorageDeleteProtocol, mt.StorageMetadataProtocol, mt.StorageCopyProtocol,
-    mt.StorageDirectoryProtocol, mt.RangedReadProtocol,
+    mt.StorageMoveProtocol, mt.StorageDirectoryProtocol, mt.RangedReadProtocol,
+    mt.StoragePresignProtocol,
 ]
 for provider, cls in sorted(get_registered_backends().items()):
     have = [p.__name__.removeprefix("Storage").removesuffix("Protocol")
@@ -31,33 +32,33 @@ for provider, cls in sorted(get_registered_backends().items()):
 Output:
 
 ```text
-b2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
+b2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
 http       HTTPStorageBackend     Read Write Metadata RangedRead
-local      LocalStorageBackend    Read Write Enumerate Delete Metadata Copy Directory
-minio      S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-r2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-s3         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-s3express  S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead
-sftp       SFTPStorageBackend     Read Write Enumerate Delete Metadata Directory RangedRead
+local      LocalStorageBackend    Read Write Enumerate Delete Metadata Copy Move Directory
+minio      S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+r2         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+s3         S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+s3express  S3StorageBackend       Read Write Enumerate Delete Metadata Copy RangedRead Presign
+sftp       SFTPStorageBackend     Read Write Enumerate Delete Metadata Move Directory RangedRead
 ```
 
-| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Directory | RangedRead |
-|---|---|---|---|---|---|---|---|---|---|---|
-| `LocalStorageBackend` | `local` | none | yes | yes | yes | yes | yes | yes | yes | no (native handle) |
-| `S3StorageBackend` | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | yes |
-| `SFTPStorageBackend` | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes |
-| `HTTPStorageBackend` | `http` (also serves `https://`) | `[http]` | yes | yes | no | no | yes | no | no | yes |
+| Backend | Provider types | Extra | Read | Write | Enumerate | Delete | Metadata | Copy | Move | Directory | RangedRead | Presign |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `LocalStorageBackend` | `local` | none | yes | yes | yes | yes | yes | yes | yes | yes | no (native handle) | no |
+| `S3StorageBackend` | `s3`, `s3express`, `r2`, `minio`, `b2` | `[s3]` | yes | yes | yes | yes | yes | yes | no | no | yes | yes |
+| `SFTPStorageBackend` | `sftp` | `[sftp]` | yes | yes | yes | yes | yes | no | yes | yes | yes | no |
+| `HTTPStorageBackend` | `http` (also serves `https://`) | `[http]` | yes | yes | no | no | yes | no | no | no | yes | no |
 
 The RangedRead column is satisfied structurally. No backend class inherits from `RangedReadProtocol`; the S3, SFTP and HTTP read mixins define `open_ranged`, and that method alone makes `issubclass()` true. Local has no `open_ranged`, and its random access comes from the native file handle instead (see [Local](#local)).
 
-`tests/storage/protocols/test_backend_conformance.py` asserts the same result for the first seven columns. Its expected sets agree with the output above for `local`, `s3`, `r2`, `s3express`, `minio`, `sftp` and `http`. The test has no RangedRead column and no `b2` row; B2 is registered to the same `S3StorageBackend` class as the other S3 flavours, so it has the same capabilities.
+`tests/storage/protocols/test_backend_conformance.py` asserts the same result for every column, for every registered provider type including `b2`, and checks the README's support table against it.
 
 At runtime, `StorageFacade.supports(protocol)` answers the same question for one facade, as shown in [Capabilities and supports()](../06-storage-facade/index.md#capabilities-and-supports). The provider types with profiles but no backend (GCS, Azure, FTP, SMB, GitHub) do not appear here; a facade for one raises `BackendNotImplementedError`. The [support matrix and known limits](../../reference/support-matrix.md) reference page collects this table with the documented limits.
 
 ## Local
 
 <!-- concept:212 -->
-`LocalStorageBackend` (`src/mountainash_transport/storage/backends/local/`) works on the local filesystem with the standard library only, so it is the one backend available on a base install. It implements every protocol except `RangedReadProtocol`. It needs no connection: a facade built with a local storage profile gets a `NullConnection`, one built without a profile gets none, and the backend's `connect()` and `disconnect()` do nothing. Paths are plain filesystem paths or `file://` URLs. A local storage profile's `ROOT_PATH` becomes the declared root for the location policy, as described in [Confining local paths](../08-location-policy/index.md#confining-local-paths). Native `OSError`s are translated at each call: `FileNotFoundError` to `PathNotFoundError`, `PermissionError` to `PermissionDeniedError`, other `OSError`s to `StorageError`.
+`LocalStorageBackend` (`src/mountainash_transport/storage/backends/local/`) works on the local filesystem with the standard library only, so it is the one backend available on a base install. It implements every protocol except `RangedReadProtocol`. It needs no connection: a facade built with a local storage profile gets a `NullConnection`, one built without a profile gets none, and the backend's `connect()` and `disconnect()` do nothing. Paths are plain filesystem paths or `file://` URLs. The backend decodes a `file://` URL on every operation, with or without a location policy; the URL must have an empty or `localhost` host, an absolute path and no user information, query or fragment, otherwise the call raises `LocationNotAllowed` with credentials removed from the message. A local storage profile's `ROOT_PATH` becomes the declared root for the location policy, as described in [Confining local paths](../08-location-policy/index.md#confining-local-paths). Native `OSError`s are translated at each call: `FileNotFoundError` to `PathNotFoundError`, `PermissionError` to `PermissionDeniedError`, other `OSError`s to `StorageError`.
 
 <!-- concept:169 -->
 ### Native local handles
@@ -79,7 +80,7 @@ with StorageFacade.for_local() as local:
         fh.seek(-3, os.SEEK_END)
         print(fh.read())                              # -> b'789'
 
-    local.rmdir(os.path.join(root, "data"))           # removes the file too
+    local.rmdir(os.path.join(root, "data"), recursive=True)  # removes the file too
     print(os.path.exists(path))                       # -> False
 
     try:
@@ -135,7 +136,7 @@ with StorageFacade.from_path("s3://reports/", profile, auth_profile=auth) as s3:
     try:
         s3.read("s3://reports/missing.csv")
     except PathNotFoundError as exc:
-        print(type(exc).__name__, exc, "<-", type(exc.__cause__).__name__)
+        print(type(exc).__name__, exc, "<- cause:", exc.__cause__)
 ```
 
 Output:
@@ -145,7 +146,7 @@ True
 b'789'
 ['a.csv', 'b.csv']
 True
-PathNotFoundError s3://reports/missing.csv <- NoSuchKey
+PathNotFoundError s3://reports/missing.csv <- cause: None
 ```
 
 The credentials come from an `IAMAuthProfile` owned by mountainash-auth-client, not from the storage profile; see [Credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client).
@@ -165,7 +166,7 @@ Sequential reads pull from the remote file on demand without prefetching. Ranged
 ## HTTP
 
 <!-- concept:216 -->
-`HTTPStorageBackend` (`src/mountainash_transport/storage/backends/http/`) sends every request through the `HttpRequestEngine` described in [Making requests](../12-http-engine/index.md#making-requests), so the engine's retry, timeout, redirect and redaction policy and its auth strategy apply to storage calls too. It implements read (`GET`), write (`PUT`), metadata (`HEAD`) and ranged read. It is the only backend that accepts an `auth_strategy`, which carries the managed OAuth2 token flow, and the only one that receives the facade's location check per request, so redirects are checked against the policy as well.
+`HTTPStorageBackend` (`src/mountainash_transport/storage/backends/http/`) sends every request through the `HttpRequestEngine` described in [Making requests](../12-http-engine/index.md#making-requests), so the engine's retry, timeout, redirect and safe-display policy and its auth strategy apply to storage calls too. Errors show the URL as `scheme://host:port/path` only, and the HTTP `stat` entry's `path` has userinfo removed but keeps query and fragment (see [what HTTP errors show](../12-http-engine/index.md#what-http-errors-show)). It implements read (`GET`), write (`PUT`), metadata (`HEAD`) and ranged read. It is the only backend that accepts an `auth_strategy`, which carries the managed OAuth2 token flow, and the only one that receives the facade's location check per request, so redirects are checked against the policy as well.
 
 Ranged reads probe the server with `Range: bytes=0-0` instead of relying on `HEAD` or `Accept-Ranges`. A server that answers `200` instead of `206`, or returns an encoded (for example gzip) representation, raises `RangeNotSupportedError`. Python's built-in `http.server` does not honour `Range`, which makes the refusal easy to see. The server bootstrapping lines are omitted; `base` is its URL.
 
@@ -218,24 +219,45 @@ The facade returns two kinds of remote read stream. Sequential reads use forward
 <!-- concept:217 -->
 The protocols fix method names and error types. Some behaviour is left to the store, and the backends keep the store's semantics rather than emulating one another.
 
-!!! warning "Directory removal"
-    `rmdir` on local storage calls `shutil.rmtree`, so it removes the directory and everything in it. On SFTP it calls the server's `rmdir`, which removes only an empty directory and fails on a non-empty one. S3 and HTTP have no `rmdir`. Code that must behave the same on both should empty the directory first. See [Deleting, directories and parent creation](../07-file-operations/index.md#deleting-directories-and-parent-creation) and the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "SFTP stream writes"
+    The SFTP backend's `write_from_stream` uploads with paramiko's `putfo`, which copies the source in 32 KiB chunks, so `write_stream`, `write` with a transform pipeline and `copy_between` into SFTP use bounded memory. As on every backend, the caller's stream is left open.
 
-!!! warning "SFTP write buffering"
-    The SFTP backend's `write_from_stream` reads the whole source stream into memory and then writes it as bytes. This applies to `write_stream`, to `write` with a transform pipeline, and to `copy_between` with an SFTP destination. Memory use grows with the payload. See the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "S3 copy switches to multipart above 4 GiB"
+    `copy()` on the S3 backend uses boto3's managed copy with a 4 GiB multipart threshold and 256 MiB parts. Below the threshold it is one `CopyObject` request; above it, `CreateMultipartUpload`, one `UploadPartCopy` per part and `CompleteMultipartUpload`, preserving the source's content type and metadata. Every copy first issues a `HeadObject` on the source to learn its size. The threshold is below each provider's single-request limit: 5 GB for [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html) and [S3 Express](https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-copy.html), 5 GB for [Backblaze B2](https://www.backblaze.com/docs/cloud-storage-large-files) standard files, 5 GiB less 5 MiB for [Cloudflare R2](https://developers.cloudflare.com/r2/platform/limits/); [MinIO](https://docs.min.io/aistor/reference/aistor-server/thresholds/) documents none. A multipart copy's ETag has a `-<parts>` suffix, unlike a single-request copy.
 
-!!! warning "S3 copy is one request"
-    `copy()` on the S3 backend makes a single `copy_object` call with no multipart fallback. It is bounded by the provider's single-request copy limit (AWS [documents 5 GB](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html) for `CopyObject`), and larger objects fail. To copy such an object, stream it: `read_stream` followed by `write_stream` uploads through boto3's multipart-capable `upload_fileobj`. `copy_between` streams the same way unless both facades share one profile object, in which case it calls `copy()`. See the [support matrix and known limits](../../reference/support-matrix.md).
-
-!!! warning "S3 listing with a limit"
-    `list_objects(..., max_results=n)` on S3 pages through every result under the prefix and then truncates to `n` (objects first, then common prefixes). The number of requests depends on the size of the prefix, not on `n`. The SFTP backend stops as soon as it has `n` entries. See the [support matrix and known limits](../../reference/support-matrix.md).
+!!! note "S3 listing with a limit"
+    `list_objects(..., max_results=n)` on S3 asks for pages of at most `n` keys and stops fetching once it has `n` entries (objects first, then common prefixes), so a small limit costs one request. `max_results=0` makes no request.
 
 Other differences follow from the stores themselves. Deleting a missing local or SFTP file raises `PathNotFoundError`; deleting a missing S3 key succeeds. Ranged reads are pinned to an ETag on S3 and HTTP but not on SFTP. The `create_parents` option on writes applies to local and SFTP only.
+
+### Retries
+
+Every remote backend retries transient failures, each in the way its SDK allows, under one `RetryPolicy` (`src/mountainash_transport/_core/retry.py`) configured by the storage profile's `RETRY_*` fields:
+
+| Backend | Who retries | Transient failures | Profile fields | Default |
+|---|---|---|---|---|
+| HTTP | `HttpRequestEngine` | retryable statuses (429, 500, 502, 503, 504), connection and timeout errors | `RETRY_MAX_ATTEMPTS`, `RETRY_BACKOFF_BASE`, `RETRY_BACKOFF_MAX` | 3 attempts, 1 s doubling to 60 s, jittered |
+| SFTP | `ExecutorRetry`, reconnecting the SSH session before each retry | a lost session (`StorageConnectionError`) or a failed reconnect | same three | same |
+| S3 family | botocore, inside each request | botocore's standard mode: throttling, 5xx, connection errors | `RETRY_MAX_ATTEMPTS` (botocore owns the backoff) | botocore's own settings: `AWS_MAX_ATTEMPTS`, `AWS_RETRY_MODE`, `~/.aws/config`, else 5 attempts |
+| Local | nothing | — | — | — |
+
+`RETRY_MAX_ATTEMPTS=1` turns retry off. Errors that describe the path or the caller, such as `PathNotFoundError`, `PermissionDeniedError` and `AuthenticationError`, are never retried. Which operations retry:
+
+| Operation | Retried |
+|---|---|
+| `read`, `exists`, `get_size`, `metadata`, `list_objects`, `list_dir` | Yes |
+| `read_stream` | Only opening the stream; bytes already returned cannot be taken back. HTTP and S3 random-access reads retry each range; SFTP ones do not, because the file handle dies with the session |
+| `write` (bytes) | Yes |
+| `write_stream`, `copy_between` into the store | Only when the source is seekable, sent again from the position it started at (the [HTTP body rule](../12-http-engine/index.md#retries)) |
+| `delete`, `mkdir`, `rmdir`, `move` | Yes |
+| `copy` (S3) | Yes, by botocore |
+
+An SFTP delete or move whose reply is lost with the session has already happened, so its retry finds the source gone and raises `PathNotFoundError`. A reconnect that SSH rejects, for a password or host key, is retried like a network failure until the attempts run out, because the connection layer does not keep paramiko's reason.
 
 <!-- concept:219 -->
 ### Backend error mapping
 
-Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass and raises it `from` the original, so the native error stays available as `__cause__`. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
+Each backend package has a private `_helpers.py` with a `_mapped(path)` context manager that its mixins place around every native call. It turns the SDK's exception into a `StorageError` subclass whose message is the display location alone for not-found, authentication and permission errors, and `{display location}: {category} ({detail})` for the others. The detail is `[Errno N] strerror` when the native exception has an errno, and its class name otherwise. The native exception is not chained, so its text cannot leak a credential. The examples above show `FileNotFoundError` becoming `PathNotFoundError` on local storage and botocore's `NoSuchKey` doing the same on S3.
 
 | Native condition | Local | S3 (botocore) | SFTP (paramiko) | HTTP (engine) |
 |---|---|---|---|---|
@@ -245,4 +267,4 @@ Each backend package has a private `_helpers.py` with a `_mapped(path)` context 
 | Network or timeout | `ConnectionError`, `TimeoutError` | botocore connection errors, `RequestTimeout` | SSH and socket errors | connection and timeout errors |
 | Object changed | n/a | `PreconditionFailed`, 412 | n/a | 412 |
 
-These map to `PathNotFoundError`, `AuthenticationError`, `PermissionDeniedError`, `StorageConnectionError` and `ObjectChangedError` in that row order; anything else from the SDK becomes a plain `StorageError`. Errors that describe the caller's input (botocore parameter validation, invalid URLs, the caller's own stream failing) are not translated. The HTTP mapping also removes user information from URLs in messages. The exception hierarchy itself is described in [Errors](../03-installation/index.md#errors).
+These map to `PathNotFoundError`, `AuthenticationError`, `PermissionDeniedError`, `StorageConnectionError` and `ObjectChangedError` in that row order; anything else from the SDK becomes a plain `StorageError`. Errors that describe the caller's input (botocore parameter validation, invalid URLs, the caller's own stream failing) are not translated. The HTTP mapping shows URLs as `scheme://host:port/path`. The exception hierarchy itself is described in [Errors](../03-installation/index.md#errors).

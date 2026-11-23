@@ -472,7 +472,7 @@ def test_mapped_source_close_remains_last_cleanup_failure(monkeypatch: pytest.Mo
         assert stream.read() == b"payload"
         with pytest.raises(StorageError) as caught:
             stream.close()
-        assert caught.value.__cause__ is original
+        assert caught.value.__cause__ is None  # OSError without an errno is not chained (W8)
         assert events == ["inner", "outer", "source"]
         assert body.closed and stream.closed
         stream.close()

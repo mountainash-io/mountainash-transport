@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
+from mountainash_transport._core.retry import RetryPolicy
+
 # ---------------------------------------------------------------------------
 # Method sets
 # ---------------------------------------------------------------------------
@@ -35,41 +37,6 @@ IDEMPOTENT_METHODS: frozenset[str] = SAFE_METHODS | frozenset({"PUT", "DELETE"})
 # ---------------------------------------------------------------------------
 # Policy dataclasses
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class RetryPolicy:
-    """Controls retry behaviour for HTTP requests.
-
-    Attributes
-    ----------
-    max_attempts:
-        Maximum number of total attempts (initial + retries).
-    backoff_base:
-        Base delay in seconds for exponential backoff.
-    backoff_max:
-        Maximum backoff delay in seconds.
-    backoff_jitter:
-        Whether to add random jitter to the backoff delay.
-    retry_on_status:
-        HTTP status codes that should trigger a retry.
-    retry_on_transport:
-        Whether to retry on transport-level errors (connection failures, timeouts).
-    retry_unsafe_methods:
-        Whether to retry non-idempotent methods (POST, PATCH).
-    max_retry_after:
-        Maximum number of seconds to honour a ``Retry-After`` header value.
-        Requests with a ``Retry-After`` exceeding this value will not be retried.
-    """
-
-    max_attempts: int = 3
-    backoff_base: float = 1.0
-    backoff_max: float = 60.0
-    backoff_jitter: bool = True
-    retry_on_status: tuple[int, ...] = (429, 500, 502, 503, 504)
-    retry_on_transport: bool = True
-    retry_unsafe_methods: bool = False
-    max_retry_after: float = 120.0
 
 
 @dataclass(frozen=True)

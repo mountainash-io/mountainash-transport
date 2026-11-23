@@ -26,9 +26,12 @@ Each script prints a small result and checks it with assertions. Run without
 Python's `-O` flag. To reproduce the documented output, unset
 `MOUNTAINASH_PROFILES_CONFIG`.
 
-No recipe contacts a network service. File recipes work in temporary
+No recipe contacts a network service on its own. File recipes work in temporary
 directories that they remove. The HTTP recipe answers requests in-process with
-`httpx.MockTransport`.
+`httpx.MockTransport`, and the random-access recipe starts a small web server on
+the loopback interface. The SFTP and SSH-tunnel recipes need an SSH server you
+name with environment variables, and the `[sftp]` extra; the test suite
+provides in-process servers for them.
 
 ## Shared example data
 
@@ -60,12 +63,14 @@ synthetic and never printed.
 | [Suffix inference](suffix_inference/) | How do I let the file name choose the decoding? |
 | [Streaming](streaming/) | How do I process a file without holding it in memory? |
 | [Cross-backend copy](cross_backend_copy/) | How do I copy between two storages and re-encode on the way? |
+| [Random access](random_access/) | How do I seek within a large file without reading all of it? |
 
 ## Paths
 
 | Recipe | Question |
 |---|---|
 | [Path dispatch](path_dispatch/) | Which backend does a path select, and how are paths normalised? |
+| [Location policy](location_policy/) | How do I keep a facade inside one directory, or limit which buckets it may reach? |
 
 ## Profiles and authentication
 
@@ -81,11 +86,18 @@ synthetic and never printed.
 |---|---|
 | [HTTP engine](http_engine/) | How do HTTP retries and typed errors behave? |
 
+## Over SSH
+
+| Recipe | Question |
+|---|---|
+| [SFTP storage](sftp_storage/) | How do I read and write files on an SFTP server, with the server's host key checked? |
+| [SSH tunnel](ssh_tunnel/) | How do I reach a service that only a bastion host can see? |
+
 ## Not covered offline
 
-S3, SFTP and authenticated HTTP operations need a live service, and GPG needs a
-GnuPG keyring. They use the same facade calls shown above, with a storage
-profile and auth profile; see [named profiles](named_profiles/) and the root
+S3 and authenticated HTTP operations need a live service, and GPG needs a GnuPG
+keyring. They use the same facade calls shown above, with a storage profile and
+auth profile; see [named profiles](named_profiles/) and the root
 [README](../README.md#connecting-to-remote-stores).
 
 ## Verification

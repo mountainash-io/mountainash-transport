@@ -6,10 +6,21 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from urllib.parse import SplitResult, unquote, urlsplit
 from mountainash_transport._core.exceptions import StorageError
+from mountainash_transport._core.safe_display import safe_location
 from mountainash_transport._schemes import SCHEMES, _ALIAS_TO_CANONICAL
+
+_ANY_HOST = "*"  # an allowed_remote entry that allows every host for its scheme
 
 @dataclass(frozen=True)
 class LocationPolicy:
+    """Where a facade may reach.
+
+    ``root`` confines local paths. ``allowed_remote`` maps a canonical scheme to the
+    hosts (S3 buckets for the S3 family) it may reach: a scheme that is absent, or
+    mapped to an empty set, allows no host; the entry ``"*"`` allows every host for
+    that scheme. A caller-supplied storage profile also grants its own host or
+    bucket. ``allow_unconfined=True`` disables every check.
+    """
     root: str | os.PathLike[str] | None = None
     allowed_remote: Mapping[str, frozenset[str]] = field(default_factory=dict)
     allow_unconfined: bool = False
@@ -21,31 +32,17 @@ class LocationPolicy:
 
 class LocationNotAllowed(StorageError):
     def __init__(self, location: str, reason: str) -> None:
-        self.location = _redact(location)
+        self.location = safe_location(location)
         self.reason = reason
         super().__init__(f"location not allowed: {self.location} ({reason})")
 
-_C0_OR_SPACE = "".join(chr(c) for c in range(0x21)) 
-
-def _redact(location: str) -> str:
-    """Strip userinfo without urllib, mirroring what urllib sees; never raises."""
-    text = location.strip(_C0_OR_SPACE)
-    for ch in "\t\r\n":
-        text = text.replace(ch, "")
-    start = text.find("//")
-    if start < 0:
-        return text
-    start += 2
-    end = len(text)
-    for ch in "/?#":
-        i = text.find(ch, start)
-        if i != -1:
-            end = min(end, i)
-    at = text.rfind("@", start, end)
-    return text if at < 0 else text[:start] + text[at + 1:]
-
 def _split(location: str) -> SplitResult:
-    return urlsplit(location)  # ValueError propagates; enforcement boundaries sanitize it
+    try:
+        return urlsplit(location)
+    except ValueError:
+        pass
+    # Raised outside the handler: urllib's text names the whole netloc.
+    raise ValueError(f"{safe_location(location)}: invalid location (ValueError)")
 
 def _sanitized(fn, location: str):
     """Run *fn* for an active-policy boundary, mapping parse ValueError to a sanitized error."""
@@ -150,7 +147,8 @@ def allow_remote(scheme: str, host: str, policy: LocationPolicy | None, *, profi
     want = _norm_host(host)
     prof = _norm_host(profile_host) if profile_host is not None else None
     allowed = policy.allowed_remote.get(scheme)
-    entries = None if allowed is None else {_norm_host(h) for h in allowed}
+    any_host = allowed is not None and _ANY_HOST in allowed
+    entries = None if allowed is None else {_norm_host(h) for h in allowed if h != _ANY_HOST}
     if want is None or (profile_host is not None and prof is None) or (entries is not None and None in entries):
         raise LocationNotAllowed(f"{scheme}://{host}", "invalid location")
     if profile_host is not None:
@@ -159,6 +157,6 @@ def allow_remote(scheme: str, host: str, policy: LocationPolicy | None, *, profi
         reason = "profile host mismatch"
     else:
         reason = "remote not allowed"
-    if entries is not None and (not entries or want in entries):
+    if any_host or (entries is not None and want in entries):
         return
     raise LocationNotAllowed(f"{scheme}://{host}", reason)

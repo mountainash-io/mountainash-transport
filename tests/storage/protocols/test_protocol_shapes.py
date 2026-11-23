@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import BinaryIO
+from typing import BinaryIO, Iterable
 
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, StorageEntry
 from mountainash_transport.storage.protocols import (
@@ -114,10 +114,15 @@ class TestStorageEnumerateProtocol:
 
 class GoodDelete:
     def delete_file(self, path: str) -> None: ...
+    def delete_many(self, paths: Iterable[str]) -> None: ...
 
 
 class BadDelete:
     def remove(self, path: str) -> None: ...  # wrong method name
+
+
+class SingleDeleteOnly:
+    def delete_file(self, path: str) -> None: ...  # no delete_many
 
 
 class TestStorageDeleteProtocol:
@@ -126,6 +131,9 @@ class TestStorageDeleteProtocol:
 
     def test_negative_conformance_wrong_method(self) -> None:
         assert not isinstance(BadDelete(), StorageDeleteProtocol)
+
+    def test_single_delete_without_bulk_delete_does_not_conform(self) -> None:
+        assert not isinstance(SingleDeleteOnly(), StorageDeleteProtocol)
 
     def test_empty_class_does_not_conform(self) -> None:
         assert not isinstance(object(), StorageDeleteProtocol)
@@ -230,6 +238,7 @@ class FullBackend:
         return _make_enumerate_result()
     # delete
     def delete_file(self, path: str) -> None: ...
+    def delete_many(self, paths: Iterable[str]) -> None: ...
     # metadata
     def get_metadata(self, path: str) -> StorageEntry: return _make_entry(path)
     def path_exists(self, path: str) -> bool: return False

@@ -51,13 +51,9 @@ Packages built on transport pass their extras through: `mountainash-files[s3]` i
 
 The package root resolves its public names on first use (PEP 562). `import mountainash_transport` loads almost nothing, and local-only code never imports `httpx` or the cloud SDKs. A name that needs a missing extra fails when you first access it, for example `StoragePath` raises `MissingExtraError` on a base install. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
 
-### Why does `import mountainash_transport.storage.backends as backends` raise `ImportError`?
-
-The package root binds `storage` to a factory function, so `mountainash_transport.storage` is that function and not the subpackage. Use `from` imports for submodules, for example `from mountainash_transport.storage.facade import StorageFacade`. See [The lazy package root](chapters/03-installation/index.md#the-lazy-package-root).
-
 ### What is the quickest way to open storage?
 
-`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. The root `storage(provider_type, profile, auth_profile=...)` function builds a facade from a provider type and defaults to local, but it does not accept a location policy or the OAuth arguments. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
+`StorageFacade.from_path(path, profile, auth_profile=...)` picks the backend from the path's scheme. `StorageFacade.for_local()` opens the local filesystem with no profile. `StorageFacade(provider_type, profile, auth_profile=...)` builds a facade from a provider type. Use a facade as a context manager so its connection is released. See [Creating a facade](chapters/06-storage-facade/index.md#creating-a-facade).
 
 ### What does transport leave to other packages?
 
@@ -81,13 +77,9 @@ A path never carries an endpoint. In an S3-family path the host position is the 
 
 Not for storage operations. These are settings-only providers: their profile classes validate fields, appear in the registry and load by name with `resolve_storage`, but no backend exists. `StorageFacade.from_path("gs://...")` raises `BackendNotImplementedError`. Installing `[gcs]` or `[azure]` adds the vendor SDK and no backend. See [Settings-only providers](chapters/05-storage-profiles/index.md#settings-only-providers).
 
-### Why does a GCS or FTP profile raise `TransportConnectionError` instead of `BackendNotImplementedError`?
-
-When you pass a settings-only profile to `StorageFacade`, the facade builds the connection before it looks up the backend. `create_connection` has no connection class for these providers and falls back to an HTTP connection, which rejects the profile's arguments. When the provider comes from configuration, check `get_spec(name).implemented` before opening storage. See [BackendNotImplementedError](chapters/05-storage-profiles/index.md#backendnotimplementederror) and [create_connection](chapters/11-connections/index.md#create_connection).
-
 ### How do I check whether a store supports an operation?
 
-Call `facade.supports(protocol)` with one of the eight protocol classes exported from the package root, such as `StorageDirectoryProtocol` or `StorageCopyProtocol`. Calling an operation the backend lacks raises `UnsupportedOperationError` before any I/O. HTTP cannot list, delete, copy or manage directories; the S3 family has no directories; SFTP has no `copy()`. See [Checking before you call](chapters/06-storage-facade/index.md#checking-before-you-call).
+Call `facade.supports(protocol)` with one of the nine protocol classes exported from the package root, such as `StorageDirectoryProtocol` or `StorageCopyProtocol`. Calling an operation the backend lacks raises `UnsupportedOperationError` before any I/O. HTTP cannot list, delete, copy, move or manage directories; the S3 family has no directories and no `move()`; SFTP has no `copy()`. See [Checking before you call](chapters/06-storage-facade/index.md#checking-before-you-call).
 
 ### Why can't I create directories on S3?
 
@@ -109,11 +101,11 @@ A storage profile describes a store: endpoint, region, bucket or host, timeouts,
 
 ### Where do my S3 keys or SFTP password go?
 
-In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, and `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP. Do not put credentials in URLs: some errors quote the path as given. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+In an auth profile passed as `auth_profile=`. Use `IAMAuthProfile` for AWS keys, a session token, a role or a named AWS profile, `PasswordAuthProfile` (or a certificate or Kerberos profile) for SFTP, and `CertificateAuthProfile` for an HTTPS server that requires a client certificate ([Client certificates for HTTPS](chapters/05-storage-profiles/index.md#client-certificates-for-https)). Do not put credentials in URLs or path templates: errors show path segments. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ### Why is my auth profile rejected with `UnsupportedAuthProfileError`?
 
-Each provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password` and `oauth2`; local accepts only `none`. Passing no auth profile counts as `none`. The check runs in `create_connection` before any network I/O. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles).
+Each provider declares the auth modes it accepts. S3 accepts `iam` and `none`; SFTP accepts `password`, `certificate`, `kerberos` and `none`; HTTP accepts `none`, `token`, `password`, `oauth2` and `certificate`; local accepts only `none`. Passing no auth profile counts as `none`. The check runs in `create_connection` before any network I/O. See [Auth profiles](chapters/05-storage-profiles/index.md#auth-profiles).
 
 ### Can I assume an IAM role for R2, MinIO or B2?
 
@@ -143,15 +135,15 @@ Use `read_stream(path)`, which returns a binary stream you read in chunks and cl
 
 ### Why can't I seek on a stream from S3, SFTP or HTTP?
 
-The default access mode is sequential, and remote sequential streams are forward-only. Ask for `access="random"` to get a seekable handle that fetches byte ranges, or `access="buffered"` to get a seekable in-memory buffer of the whole decoded object. Remote streams used to be downloaded before `read_stream()` returned; they no longer are, so code that seeks must request one of these modes. See [Choosing an access mode](chapters/09-read-access-modes/index.md#choosing-an-access-mode).
+The default access mode is sequential, and remote sequential streams are forward-only. Ask for `access="random"` to get a seekable handle that fetches byte ranges, or `access="buffered"` to get a seekable buffer of the whole decoded object, which spills to a temporary file beyond 64 MiB (configurable). Remote streams used to be downloaded before `read_stream()` returned; they no longer are, so code that seeks must request one of these modes. See [Choosing an access mode](chapters/09-read-access-modes/index.md#choosing-an-access-mode).
 
 ### Which access mode should I use for Parquet and other footer-first formats?
 
-`access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For PyArrow's Parquet reader, a 64 KiB read-ahead (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in the measured setup. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
+`access="random"`, which fetches only the byte ranges the reader asks for. Transport does not choose the mode from the file extension; the consumer does. For a reader that requests large chunks itself, a small read-ahead window (`RangePolicy("readahead", block_size=64 * 1024)`) fetched far fewer bytes than the 1 MiB default in one consumer's measurement. See [Range tuning](chapters/09-read-access-modes/index.md#range-tuning).
 
-### Why does `access="random"` raise `ValueError` on a `.gz` file?
+### Why does `access="random"` raise `RandomAccessUnavailableError` on a `.gz` file?
 
-Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is a plain `ValueError`. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
+Random access reads byte ranges of the stored object, and a compressed or encrypted object has no meaningful plaintext offsets, so the facade refuses any transform, explicit or inferred from the suffix. The refusal is `RandomAccessUnavailableError`, a `ValueError` subclass, so a consumer can catch it and fall back to buffered access. Use sequential access to decode while streaming, or buffered access to seek in the decoded bytes. A consumer can also check with `infer_pipeline(path)` before choosing the mode. See [Transforms and random access](chapters/10-stream-transforms/index.md#transforms-and-random-access).
 
 ### Why did `read_stream()` succeed and reading fail later?
 
@@ -175,7 +167,7 @@ On S3 the prefix is a literal key prefix, so `2026` matches any key that starts 
 
 ### Are writes atomic?
 
-No. A write that fails part-way can leave partial data at the destination, and transport adds no rollback or retry. `create_parents` controls directory creation only. `copy_between` does no cleanup or atomic rename either. See [Reading and writing](chapters/07-file-operations/index.md#reading-and-writing).
+No. A write that fails part-way can leave partial data at the destination, and transport adds no rollback. A write that loses its connection is retried only when its input can be sent again ([Retries](chapters/14-backends/index.md#retries)). `create_parents` controls directory creation only. `copy_between` does no cleanup or atomic rename either. See [Reading and writing](chapters/07-file-operations/index.md#reading-and-writing).
 
 ### Does deleting a missing file raise an error?
 
@@ -209,11 +201,15 @@ Use `copy_between(source_path, destination_path, source_facade, destination_faca
 
 ### Why did `copy_between` download and re-upload instead of copying server side?
 
-The native copy is used only when no pipeline is given, both facades use the same backend class and equal location policies, they share the identical storage profile object (compared with `is`), and the backend supports copy. Two facades built from separate but equal profiles stream the bytes through your process. See [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
+The native copy is used only when no pipeline is given, the backend supports copy, and `source_facade.same_store(destination_facade)` is true: same provider type and equal storage profiles, auth profiles and location policies. Profiles compare by value, so separately built but equal profiles copy natively; different credentials or a different bucket, root or policy stream the bytes through your process. See [Copying between backends](chapters/10-stream-transforms/index.md#copying-between-backends).
 
-### Why is my source stream closed after `write_stream()`?
+### How do I move or rename a file?
 
-Two cases close it. Writing through a `Gzip` layer closes the stream you supplied, including `copy_between` with a gzip `destination_pipeline`. A small single-request upload to an S3-family store also closes it, while a larger multipart upload leaves it open. Do not rely on the source stream's state after the call; pass a separate handle if you need it again. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
+Call `facade.move(source, destination)` on Local or SFTP. It uses the store's native rename (`os.replace`, or OpenSSH's `posix-rename` extension), replaces an existing destination and creates missing parents unless `create_parents=False`. A local move across filesystems raises `StorageError`. The S3 family and HTTP have no rename and raise `UnsupportedOperationError`; copy and then delete if a non-atomic move is acceptable. See [Moving](chapters/07-file-operations/index.md#moving).
+
+### Does `write_stream()` close my source stream?
+
+No. The stream you pass stays open after `write_stream()` and `copy_between()` return, on every backend, for every payload size and with or without a pipeline. Transforms leave it open, the facade closes only the layers it builds, and the stream boto3 or httpx receives is a guard whose `close()` leaves yours open (boto3 closes what it is given after a small single-request S3 upload). Close it yourself when you are done. See [Who closes what](chapters/10-stream-transforms/index.md#who-closes-what) and [Streaming reads and writes](chapters/07-file-operations/index.md#streaming-reads-and-writes).
 
 ### Can I write my own transform?
 
@@ -227,15 +223,15 @@ Pass `policy=LocationPolicy(root=...)` to `StorageFacade.for_local`, `from_path`
 
 ### How do I limit which hosts or buckets a facade can reach?
 
-Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host names, or bucket names for the S3 family. `http` and `https` are separate keys, and ports are not compared. A scheme that is absent from the mapping refuses every host. The storage profile you pass also grants its own host or bucket. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
+Set `allowed_remote` to a mapping from canonical scheme to a `frozenset` of host names, or bucket names for the S3 family. `http` and `https` are separate keys, and ports are not compared. A scheme that is absent from the mapping, or mapped to an empty set, refuses every host. The storage profile you pass also grants its own host or bucket. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
-### Why does `allowed_remote={"https": frozenset()}` allow every host?
+### How do I allow every host for a scheme?
 
-An empty set means no restriction for that scheme. To allow no hosts for a scheme, leave the scheme out of `allowed_remote`. Take care when building the mapping from configuration that an empty list cannot stand in for "nothing allowed". See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
+Use the entry `"*"`: `allowed_remote={"https": frozenset({"*"})}` allows any `https` host, redirects included. Only the whole entry `"*"` is special; `"*.example.com"` is not a pattern. An empty set, `frozenset()`, allows no host, so an allow-list built from configuration that comes out empty fails closed. See [Allowing remote hosts](chapters/08-location-policy/index.md#allowing-remote-hosts).
 
-### Why can my S3 facade reach other buckets?
+### Which buckets can an S3 facade reach under a policy?
 
-An S3-family profile without `BUCKET` grants every bucket at its endpoint, and the facade does not check bucket names. Set `BUCKET` on the profile to hold a facade to one bucket, and list any extra buckets in `allowed_remote["s3"]`. See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
+An S3-family profile with `BUCKET` grants that bucket; one without `BUCKET` grants none. List every other bucket the facade should reach in `allowed_remote` under the flavour's scheme (for example `allowed_remote["s3"]`). See [Hosts granted by a profile](chapters/08-location-policy/index.md#hosts-granted-by-a-profile).
 
 ### Are HTTP redirects checked against the policy?
 
@@ -243,7 +239,7 @@ Yes. For HTTP the facade hands the check to the HTTP request engine, which appli
 
 ### Where do I import `LocationNotAllowed` from?
 
-From `mountainash_transport.location`; it is not re-exported from the package root. It subclasses `StorageError` and has `location` (the refused path, with any user name and password removed) and `reason` attributes. See [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
+From `mountainash_transport.location`; it is not re-exported from the package root. It subclasses `StorageError` and has `location` (the refused path in display form: no user information, query or fragment) and `reason` attributes. See [LocationNotAllowed](chapters/08-location-policy/index.md#locationnotallowed).
 
 ## Connections, tunnels and HTTP
 
@@ -257,11 +253,11 @@ Use `create_tunnelled_connection(bastion_profile, bastion_auth, target_profile, 
 
 ### Can I reach an HTTPS service through a tunnel?
 
-No. A tunnelled connection rewrites `endpoint_url` or `base_url` to `http://127.0.0.1:<port>`, dropping the original scheme, host name and path prefix. The SSH hop to the bastion is encrypted, but an HTTPS-only service receives plain HTTP and the request fails. Tunnel plain-HTTP or SSH targets only. An `HTTPStorageProfile` or `aws` flavour S3 profile is not rewritten at all, so build HTTP URLs from `local_port` yourself. See [How the target endpoint is rewritten](chapters/11-connections/index.md#how-the-target-endpoint-is-rewritten).
+Yes. HTTP and S3 clients keep the target's real URL and use the tunnel's local listener as their HTTP proxy, so TLS runs end to end to the real service and SNI, certificate checks and the `Host` header name it. Request the real URL, with the same host name you passed as `remote_host`; the listener refuses any other destination with `403`. An `aws` or `express` flavour S3 profile without `ENDPOINT_URL`, and an S3 target that assumes a role (`ROLE_ARN`, or a `PROFILE_NAME` whose AWS config sets `role_arn`), still raise `TunnelEndpointError` at `connect()`, because they would reach AWS or AWS STS outside the bastion. See [How the target is routed](chapters/11-connections/index.md#how-the-target-is-routed).
 
-### Why does SFTP through a tunnel fail host-key checking?
+### Does SFTP through a tunnel check the target's host key?
 
-The target's host key is looked up under the rewritten address, `[127.0.0.1]:<local_port>`, and the port changes on every connect, so a known-hosts entry for the real target never matches. The default `reject` policy refuses the connection. Only `HOST_KEY_POLICY="warn"` or `"auto_add"` connect, and neither verifies the target's identity. See [Bastion tunnels](chapters/11-connections/index.md#bastion-tunnels).
+Yes. The SSH session dials the tunnel's listener but keeps the target's real host name and port, so its key is looked up as `[host]:port` (or `host` on port 22) in `known_hosts`, and the default `reject` policy works. See [Bastion tunnels](chapters/11-connections/index.md#bastion-tunnels).
 
 ### Why does my SFTP connection fail with "not found in known_hosts"?
 
@@ -269,11 +265,11 @@ The target's host key is looked up under the rewritten address, `[127.0.0.1]:<lo
 
 ### How do I retry failed HTTP requests?
 
-Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A 429 is retried for any method and any body; transport errors and other retryable statuses are not retried when the body was passed as a non-seekable stream. Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
+Construct `HttpRequestEngine(client, RequestPolicy(retry=RetryPolicy(...)))`, or pass `policy=` per call. The default allows three attempts and retries statuses 429, 500, 502, 503 and 504 and connection and timeout errors. Methods outside `IDEMPOTENT_METHODS` are retried only on 429 unless `retry_unsafe_methods=True`. A body is re-sent only if it is `bytes` or a seekable stream; a non-seekable stream body is never retried (pass `materialize(stream)` to make it retryable). Waits sleep in the calling thread. See [Retries](chapters/12-http-engine/index.md#retries).
 
-### Do the engine's retries apply to HTTP storage reads and writes?
+### Do storage operations retry?
 
-Yes. The HTTP storage backend sends every request through `HttpRequestEngine`, so its retry, timeout, redirect and redaction behaviour and any auth strategy apply to facade calls. See [HTTP](chapters/14-backends/index.md#http).
+Yes, on HTTP, SFTP and the S3 family, configured by the profile's `RETRY_*` fields. HTTP storage sends every request through `HttpRequestEngine`; SFTP reconnects the session and runs the operation again; S3 passes `RETRY_MAX_ATTEMPTS` to botocore. `RETRY_MAX_ATTEMPTS=1` turns retry off. See [Retries](chapters/14-backends/index.md#retries).
 
 ### Why does a random read over HTTP raise `RangeNotSupportedError`?
 
@@ -289,10 +285,6 @@ There are three families with no shared base class. `StorageError` covers the fa
 
 `TransportConnectionError` and its subclasses (`ConnectionTimeoutError`, `UnsupportedAuthProfileError`) are separate from the `StorageError` hierarchy. Errors raised while a facade builds and connects its connection reach you as connection errors; later backend I/O failures are translated into storage errors. See [Connection errors](chapters/11-connections/index.md#connection-errors).
 
-### Why do I get `TransportConnectionError` instead of `MissingExtraError` when boto3 is missing?
-
-`MissingExtraError` covers only the `[http]` stack. A missing `boto3` or `paramiko` raises `TransportConnectionError` when the S3 or SSH connection is created, and using `GPG` without `[encryption]` raises a plain `ImportError`. Each message names the extra to install. When probing for optional backends, catch all three. See [MissingExtraError](chapters/03-installation/index.md#missingextraerror).
-
 ### What is the difference between `BackendNotImplementedError` and `ValueError` from `from_path`?
 
 `BackendNotImplementedError` means the scheme is recognised and the provider has a profile but no backend; its message lists the implemented providers. `ValueError` means the scheme is not in transport's scheme table at all. See [From path to backend](chapters/04-paths-and-schemes/index.md#from-path-to-backend).
@@ -307,29 +299,25 @@ The object was replaced while a random-access read was in progress. On S3 and HT
 
 ### Can error messages expose credentials?
 
-Some can. `LocationNotAllowed` strips user information from URLs, and HTTP engine errors replace it with `***` and drop the native cause when it contained credentials. Tokens in query strings, headers and response bodies (including `body_preview`) are not redacted, and exception context or traceback locals can still hold them. Without an active policy, a `ValueError` from scheme detection quotes the path as given. Keep credentials in auth profiles, not URLs. See [Error redaction](chapters/12-http-engine/index.md#error-redaction) and [Credential redaction](chapters/08-location-policy/index.md#credential-redaction).
+Errors show only a safe form of a location: `scheme://host:port/path` for `scheme://` and `//` locations (userinfo, query and fragment are never shown), `***` for any other string that starts with a scheme, and local paths unchanged. Native exceptions are not chained, HTTP error headers are limited to an allowlist, and at import transport attaches filters to the `httpx` and `httpcore` loggers that show request URLs in display form and reduce httpcore's request and response records, at any log level you set. Path segments are shown and traceback locals can still hold what you typed, so keep credentials in auth profiles, not in URLs or path templates. See [What HTTP errors show](chapters/12-http-engine/index.md#what-http-errors-show) and [What errors show of a location](chapters/08-location-policy/index.md#what-errors-show-of-a-location).
 
 ## Known limits
 
 ### Where are the current limits listed?
 
-The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. Several are answered above: [empty host sets](#why-does-allowed_remotehttps-frozenset-allow-every-host), [HTTPS through tunnels](#can-i-reach-an-https-service-through-a-tunnel), [the scope of `MissingExtraError`](#why-do-i-get-transportconnectionerror-instead-of-missingextraerror-when-boto3-is-missing), [closed source streams](#why-is-my-source-stream-closed-after-write_stream), [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side) and [settings-only profiles](#why-does-a-gcs-or-ftp-profile-raise-transportconnectionerror-instead-of-backendnotimplementederror).
+The [support matrix and known limits](reference/support-matrix.md#known-limits) page collects them, and each one is also noted in the chapter section where it matters. One is answered above: [native copy](#why-did-copy_between-download-and-re-upload-instead-of-copying-server-side).
 
 ### Does `rmdir` behave the same on local storage and SFTP?
 
-No. On local storage `rmdir()` removes the directory and everything inside it. On SFTP it removes only an empty directory and raises for a non-empty one. Code that must behave the same on both should delete the contents first and then remove the empty directory. See [Directory operations](chapters/07-file-operations/index.md#directory-operations).
+Yes. On both, `rmdir()` removes only an empty directory and raises `StorageError` for a non-empty one, leaving it untouched. Pass `recursive=True` to remove the directory and everything inside it; symbolic links inside are removed, not followed. A file, a link to a directory or a path below a file raises `StorageError` rather than `PathNotFoundError`, even on SFTP servers that report it as "no such file". See [Directory operations](chapters/07-file-operations/index.md#directory-operations).
 
 ### How much memory does writing a large stream to SFTP use?
 
-The whole payload. The SFTP backend reads the entire source stream into memory before writing it, for `write_stream`, for `write` with a transform pipeline, and for `copy_between` into SFTP. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
+A bounded amount. The SFTP backend uploads with paramiko's `putfo`, which copies the source in 32 KiB chunks, for `write_stream`, for `write` with a transform pipeline (except `GPG`, which holds the payload itself), and for `copy_between` into SFTP. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
 
 ### Is there a size limit on S3 `copy()`?
 
-Yes. An S3-family `copy()` is one `CopyObject` request with no multipart fallback, so it is bounded by the provider's single-request copy limit (5 GB on Amazon S3). To copy a larger object, stream it with `read_stream` and `write_stream`, which uploads through boto3's multipart-capable upload, or use `copy_between` with facades that do not share one profile object. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
-
-### Why is an S3 listing with `max_results` slow on a large prefix?
-
-On the S3 family, `max_results` is applied after every page of the listing has been fetched, so the number of requests depends on the size of the prefix, not on the limit. The SFTP backend stops as soon as it has enough entries. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
+No practical one. An S3-family `copy()` uses boto3's managed copy: objects under 4 GiB are copied with one `CopyObject` request, and larger ones with multipart `UploadPartCopy` in 256 MiB parts, keeping the content type and metadata. The 4 GiB threshold sits below every supported provider's single-request copy limit (5 GB on Amazon S3, S3 Express and Backblaze B2; 5 GiB less 5 MiB on Cloudflare R2). The copy stays server side; no bytes pass through your process. See [Where backends differ](chapters/14-backends/index.md#where-backends-differ).
 
 ## Extending and internals
 
@@ -339,19 +327,19 @@ Each capability is a `typing.Protocol` marked `runtime_checkable`. A backend con
 
 ### How is a built-in backend put together?
 
-Each backend class inherits one mixin per capability and adds a constructor and connection handling, so adding or dropping a capability means adding or dropping a mixin. Each backend package has a private helper that translates the SDK's exceptions into `StorageError` subclasses, keeping the native exception as `__cause__`. See [Composing backends from mixins](chapters/13-architecture/index.md#composing-backends-from-mixins) and [Backend error mapping](chapters/14-backends/index.md#backend-error-mapping).
+Each backend class inherits one mixin per capability and adds a constructor and connection handling, so adding or dropping a capability means adding or dropping a mixin. Each backend package has a private helper that translates the SDK's exceptions into `StorageError` subclasses without chaining the native exception. See [Composing backends from mixins](chapters/13-architecture/index.md#composing-backends-from-mixins) and [Backend error mapping](chapters/14-backends/index.md#backend-error-mapping).
 
 ### Can I register my own backend without changing the package?
 
-Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
+Yes. Decorate a class with `register_storage_backend(provider_type)` from `mountainash_transport.storage.registry`. The registry calls it as `cls(storage_profile, connection=connection)`, so it needs a positional profile parameter and a `connection` keyword. A later registration for the same provider type replaces the earlier one, so yours wins over a built-in, and registration is process-wide. A backend for a remote store also needs a connection class. Under an active location policy, a backend registered for a provider with no built-in host check (GCS, Azure, FTP, SMB, GitHub) refuses every path. See [register_storage_backend](chapters/13-architecture/index.md#register_storage_backend).
 
 ### How do I add a new backend to the package?
 
-Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host checks to the facade's location policy, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+Add the provider type and URL scheme, a storage profile and spec, a connection class mapped in the connection factory, and a backend package with one mixin per supported protocol and an error-mapping helper. Then add the new provider's host check to the facade's `_REMOTE_CHECKS` table, and add conformance and behaviour tests. The settings-only providers already have the provider type, scheme and profile. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Does a new remote backend get location policy checks automatically?
 
-No. `StorageFacade` applies `allowed_remote` host checks per provider family, and a new remote provider needs its own branch there, or its hosts are not checked against the policy. A missing connection mapping is also silent: `create_connection` falls back to `HTTPConnection`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
+No, but it fails closed. Under an active policy, `StorageFacade` refuses every path for a remote provider that has no entry in its `_REMOTE_CHECKS` table, and a test fails for any registered remote backend without one. A missing connection mapping fails closed too: `create_connection` raises `BackendNotImplementedError`. See [Adding a backend](chapters/15-maintaining/index.md#adding-a-backend).
 
 ### Why must a backend import its SDK inside functions?
 
@@ -364,10 +352,6 @@ The conformance test checks each backend's expected and excluded protocols. The 
 ### How do I run the test suite?
 
 Clone `mountainash-settings` and `mountainash-auth-client` next to the transport checkout, then use the `hatch.toml` scripts: `hatch run test:test` for the full suite with coverage, `hatch run test:test-quick` without coverage, and `hatch run test:test-target-quick <path>` for one file, directory or test id. `hatch run mypy:check` and `hatch run ruff:check` run type checks and lint. See [Tests that guard the contracts](chapters/15-maintaining/index.md#tests-that-guard-the-contracts).
-
-### What happens if I call `clear_registry()`?
-
-The built-in backends do not come back in the same process, so every facade raises `BackendNotImplementedError` until backends are registered again by hand. Use it only in tests that save a snapshot from `get_registered_backends()` and re-register it afterwards. See [Registry completeness tests](chapters/15-maintaining/index.md#registry-completeness-tests).
 
 ### Does the fsspec version matter?
 

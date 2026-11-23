@@ -17,7 +17,7 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 |---|---|---|
 | File operations | `StorageFacade` read/write/stream, metadata, delete, copy and directories; capability checks before calling | [Files](examples/#files) |
 | Stream transforms | Composable `Pipeline` of `Gzip` and `GPG`; opt-in suffix inference on read; transforms applied during cross-backend copy | [Stream transforms](examples/#stream-transforms) |
-| Read access modes | Native sequential streams, cached remote byte ranges, or explicit in-memory buffering; Parquet tuning guidance | [Read access modes and migration](docs/read-access-modes.md) |
+| Read access modes | Native sequential streams, cached remote byte ranges, or explicit in-memory buffering; cache-policy guidance | [Read access modes and migration](docs/read-access-modes.md) |
 | Path dispatch | Scheme-to-provider detection and suffix inference on a base install; aliases, strict normalisation and joining (`StoragePath`) with `[http]` | [Paths](examples/#paths) |
 | Profiles and auth | Per-provider storage profiles emitting SDK kwargs; auth profiles paired and validated at connection time; named profiles from configuration | [Profiles and authentication](examples/#profiles-and-authentication) |
 | HTTP transport | `HttpRequestEngine` with retry, timeout and redirect policies and typed errors | [HTTP](examples/#http) |
@@ -28,12 +28,17 @@ credentials come separately from `mountainash-auth-client` auth profiles.
 Operations follow the backend's capability protocols; unsupported calls raise
 `UnsupportedOperationError`.
 
-| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Directories | Object enumeration |
-|---|---|---|---|---|---|---|---|---|
-| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Yes |
-| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | ✓ |
-| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | Yes |
-| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | |
+| Provider | Path schemes | Read | Write | Metadata | Delete | Copy | Move | Directories | Object enumeration | Ranged reads | Presigned URLs |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Local filesystem | bare paths, `file://` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
+| S3, S3 Express, R2, MinIO, B2 | `s3://`, `r2://`, … | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ |
+| SFTP | `sftp://` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | |
+| HTTP/HTTPS | `http://`, `https://` | ✓ | ✓ | ✓ | | | | | | ✓ | |
+
+Ranged reads back `read_stream(access="random")` on remote stores; local files
+support random access through their native file handle instead. Presigned URLs
+(`presign()`) let someone without credentials GET or PUT one object for a limited
+time. A test checks this table against the registered backends.
 
 Azure Blob/Files, GCS, FTP/FTPS, SMB and GitHub have storage profiles and
 recognised schemes but no backend yet: constructing a facade for them raises
@@ -58,8 +63,8 @@ python -m pip install -e ".[s3]"
 | Extra | Adds |
 |---|---|
 | `[http]` | mountainash-settings, mountainash-auth-client, pydantic, universal_pathlib, httpx, fsspec — HTTP/HTTPS, storage profiles, connections |
-| `[s3]` | `[http]` + boto3, s3fs, minio |
-| `[sftp]` | `[http]` + paramiko, smart-open[ssh] |
+| `[s3]` | `[http]` + boto3 |
+| `[sftp]` | `[http]` + paramiko |
 | `[encryption]` | python-gnupg (for `GPG`) |
 | `[oauth1]` | `[http]` + authlib |
 | `[gcs]`, `[azure]` | `[http]` + SDKs for the pending GCS and Azure backends |
@@ -221,17 +226,19 @@ values. **Migration:** `ignore` previously behaved as `reject`; remove it or set
 ## Storage errors and strict queries
 
 Implemented Local, S3-family, SFTP and HTTP backends translate their own I/O
-failures into public exceptions, retaining native causes except for the HTTP
-credential-redaction case below. The same contract applies when reading,
+failures into public exceptions. The same contract applies when reading,
 fetching ranges or closing an opened stream—not only when opening it.
 
-HTTP translation suppresses native exception chains containing URL userinfo
-(`user:password@`) from standard formatted tracebacks. Clean chains remain
-available for debugging, and public error classification is unchanged.
-This is display redaction, not secret erasure: Python's hidden `__context__`,
-request objects and traceback locals may still retain credentials. Configure
-error reporters accordingly; query tokens and response bodies are not covered
-by URL-userinfo redaction.
+Native exceptions are not chained: the error you receive never has a native
+`__cause__`, and `__context__` is cleared, except for a fresh `[Errno N]
+strerror` copy of an `OSError` or transport's own HTTP error. Messages and
+attributes show a location as `scheme://host:port/path` only (userinfo, query
+and fragment never shown; other scheme-like strings show `***`; local paths
+unchanged), HTTP error headers are limited to an allowlist, and HTTP errors do
+not carry the response body. Successful HTTP values keep the query so presigned
+URLs stay usable. Path segments are shown, so keep credentials in auth
+profiles, not URLs. Traceback frame locals are outside this guarantee;
+configure error reporters that capture locals accordingly.
 
 | Condition | Exception |
 |---|---|
@@ -256,7 +263,8 @@ denied-HEAD fallback to prefix listing; bucket-root checks retain LIST behavior.
 
 Caller input, invalid arguments, transform/decoder failures and cancellation
 are not reclassified as backend failures. A failed write may leave partial
-data; error mapping does not add rollback or retries. Stream cleanup ordering
+data; error mapping adds no rollback. Transient failures are retried per
+backend (see the docs' Retries section). Stream cleanup ordering
 and ownership remain unchanged. boto3 managed uploads may close seekable caller
 inputs. Paramiko suppresses some native final-close failures internally;
 transport translates escaping errors, not failures hidden by the SDK.
@@ -277,9 +285,13 @@ file. SFTP metadata and listing timestamps are now UTC-aware, matching Local;
 missing timestamps remain `None`. Code comparing these timestamps with naive
 datetimes must supply a timezone.
 
-Directory removal remains backend-specific: Local removes a directory tree;
-SFTP removes an empty directory. This change does not alter removal or
-symlink classification in directory listings.
+`rmdir(path)` removes only an empty directory on Local and SFTP alike; a
+non-empty directory raises `StorageError` and is left untouched. Pass
+`recursive=True` to remove the tree (symbolic links inside are removed, not
+followed). This does not alter symlink classification in directory listings.
+A file, a link to a directory, or a path below a file raises `StorageError`, not
+`PathNotFoundError`, on both, including on SFTP servers that report the
+condition as “no such file”.
 
 ### Exact-path object enumeration
 
@@ -363,17 +375,18 @@ facade may touch.
   `MOUNT_SPEC` has been removed. `LocalStorageProfile` is a settings profile
   and needs `[http]`; on a base install use `LocationPolicy(root=...)`.
 - **`allowed_remote`** maps a scheme to the hosts (or S3 buckets) it may reach,
-  e.g. `{"http": frozenset({"api.example.com"})}`. HTTP is refused unless listed;
-  every request is checked, including redirects and auth-flow follow-ups,
-  before it is sent.
+  e.g. `{"http": frozenset({"api.example.com"})}`. A scheme that is absent or
+  mapped to an empty set reaches no host; `frozenset({"*"})` allows any host for
+  that scheme. HTTP is refused unless listed; every request is checked,
+  including redirects and auth-flow follow-ups, before it is sent.
 - **Profile permission.** A caller-supplied SFTP profile permits its own `HOST`;
   an S3-family profile with a `BUCKET` permits only that bucket, and one with no
-  `BUCKET` permits any bucket at its endpoint. A profile never widens
-  `allowed_remote` for other hosts.
+  `BUCKET` permits none (list its buckets in `allowed_remote`). A profile never
+  widens `allowed_remote` for other hosts.
 - **`allow_unconfined=True`** opts out explicitly. With no policy, behaviour is
   unchanged.
-- Unknown URL schemes are refused with a redacted error (credentials are never
-  echoed).
+- Unknown URL schemes are refused with an error that shows only a safe form of
+  the location (credentials are never echoed).
 
 Limits: the check is on the host name, so DNS rebinding is not defended
 against, and managed-OAuth token endpoints are not covered by the policy.

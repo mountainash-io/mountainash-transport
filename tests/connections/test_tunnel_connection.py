@@ -14,7 +14,11 @@ import httpx
 import pytest
 
 from mountainash_transport._core.protocols import ConnectionProtocol
-from mountainash_transport.connections.errors import ConnectionTimeoutError, TransportConnectionError
+from mountainash_transport.connections.errors import (
+    ConnectionTimeoutError,
+    TransportConnectionError,
+    TunnelEndpointError,
+)
 from mountainash_transport.connections.http import HTTPConnection
 from mountainash_transport.connections.tunnel import TunnelledConnection, _PatchedEndpointProfile
 
@@ -417,7 +421,8 @@ def test_stalled_worker_reports_timeout_after_other_cleanup(rig, monkeypatch, wo
         assert finished.wait(2.5), "disconnect blocked on the stalled worker"
         assert len(errors) == 1 and isinstance(errors[0], ConnectionTimeoutError)
         if cleanup_error != "none":
-            assert f"{cleanup_error} cleanup failed" in str(errors[0].__notes__)
+            expected = {"channel": "Tunnel cleanup failed (OSError)", "inner": "Earlier cleanup failed (TransportConnectionError)"}[cleanup_error]
+            assert expected in str(errors[0].__notes__)
         assert not rig.ssh.is_connected
         assert all(server.socket.fileno() == -1 for server in rig.servers)
         assert all(sock.fileno() == -1 for sock in rig.accepted)
@@ -461,7 +466,8 @@ def test_failed_request_socket_cleanup_is_reported(rig, monkeypatch) -> None:
         pass
     with pytest.raises(TransportConnectionError) as caught:
         rig.connection.disconnect()
-    assert isinstance(caught.value.__cause__, OSError)
+    assert str(caught.value) == "Tunnel cleanup failed (OSError)"
+    assert caught.value.__cause__ is None
     rig.assert_released()
 
 
@@ -471,7 +477,7 @@ def test_startup_error_wins_over_inner_cleanup_failure(rig) -> None:
     with pytest.raises(RuntimeError) as caught:
         rig.connection.connect()
     assert caught.value is rig.failure
-    assert "inner cleanup failed" in str(rig.failure.__notes__)
+    assert "Tunnel cleanup failed (TransportConnectionError)" in str(rig.failure.__notes__)
     rig.assert_released()
 
 
@@ -543,33 +549,6 @@ class TestPatchedEndpointProfile:
         inner.some_attr = "value"
         return inner
 
-    def test_patches_hostname_and_port(self):
-        inner = self._make_inner({"hostname": "db.internal", "port": 5432, "user": "admin"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["hostname"] == "127.0.0.1"
-        assert kwargs["port"] == 54321
-        assert kwargs["user"] == "admin"
-
-    def test_patches_base_url(self):
-        inner = self._make_inner({"base_url": "https://s3.amazonaws.com", "region": "us-east-1"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 9000)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["base_url"] == "http://127.0.0.1:9000"
-        assert kwargs["region"] == "us-east-1"
-
-    def test_patches_endpoint_url(self):
-        inner = self._make_inner({"endpoint_url": "https://storage.googleapis.com"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 8080)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs["endpoint_url"] == "http://127.0.0.1:8080"
-
-    def test_unrecognised_kwargs_pass_through(self):
-        inner = self._make_inner({"driver": "postgres", "database": "mydb"})
-        profile = _PatchedEndpointProfile(inner, "127.0.0.1", 5432)
-        kwargs = profile.to_handler_kwargs()
-        assert kwargs == {"driver": "postgres", "database": "mydb"}
-
     def test_delegates_other_attributes(self):
         inner = self._make_inner({})
         inner.some_attr = "delegated"
@@ -588,24 +567,130 @@ class TestPatchedEndpointProfile:
 
 
 class TestPatchedEndpointEmit:
-    def test_emit_patches_hostname_and_port(self):
-        from mountainash_auth_client.targets import TargetFamily
-        from mountainash_transport.settings.storage.profiles.sftp_storage_profile import SFTPStorageProfile
-
-        inner = SFTPStorageProfile(HOST="real-remote", USERNAME="u", PORT=22)
-        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 54321)
-        out = patched.emit(TargetFamily.PARAMIKO)
-        assert out["hostname"] == "127.0.0.1"
-        assert out["port"] == 54321
-
-    def test_emit_patches_endpoint_url(self):
+    @pytest.mark.parametrize("flavor", ["aws", "express"])
+    def test_emit_refuses_s3_flavor_resolved_by_boto(self, flavor):
         from mountainash_auth_client.targets import TargetFamily
         from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
 
-        inner = S3StorageProfile(FLAVOR="minio", ENDPOINT_URL="http://real:9000", REGION="us-east-1")
+        inner = S3StorageProfile(FLAVOR=flavor, REGION="ap-southeast-2", BUCKET="reports")
         patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
-        out = patched.emit(TargetFamily.BOTO)
-        assert out["endpoint_url"] == "http://127.0.0.1:7777"
+        with pytest.raises(TunnelEndpointError):
+            patched.emit(TargetFamily.BOTO)
+
+    def test_emit_refuses_any_boto_target_without_endpoint_url(self):
+        # A custom profile routed to boto3 need not emit service_name; the
+        # refusal keys on the target family, not on S3-adapter field names.
+        from mountainash_auth_client.targets import TargetFamily
+
+        inner = MagicMock()
+        inner.emit.return_value = {"region_name": "ap-southeast-2"}
+        patched = _PatchedEndpointProfile(inner, "127.0.0.1", 7777)
+        with pytest.raises(TunnelEndpointError):
+            patched.emit(TargetFamily.BOTO)
+
+    @pytest.mark.parametrize("flavor,extra", [("r2", {"ACCOUNT_ID": "abc"}), ("b2", {})])
+    def test_emit_keeps_derived_s3_endpoint_and_routes_via_listener(self, flavor, extra):
+        from mountainash_auth_client.targets import TargetFamily
+        from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+        inner = S3StorageProfile(FLAVOR=flavor, BUCKET="reports", **extra)
+        out = _PatchedEndpointProfile(inner, "127.0.0.1", 7777).emit(TargetFamily.BOTO)
+        assert out["endpoint_url"] == inner.emit(TargetFamily.BOTO)["endpoint_url"]
+        assert out["config"].proxies == {"http": "http://127.0.0.1:7777", "https": "http://127.0.0.1:7777"}
+
+
+def test_connect_refuses_aws_s3_target_and_releases_tunnel(rig) -> None:
+    from mountainash_transport.connections import create_connection
+    from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+    target = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports")
+
+    def factory(port):
+        return create_connection(_PatchedEndpointProfile(target, "127.0.0.1", port))
+
+    connection = TunnelledConnection(rig.ssh, factory, "127.0.0.1", rig.peer.server_port)
+    with pytest.raises(TunnelEndpointError):
+        connection.connect()
+    assert rig.servers, "refusal should come after the listener started"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+    assert all(server.socket.fileno() == -1 for server in rig.servers)
+    for worker in rig.threads:
+        worker.join(2)
+        assert not worker.is_alive()
+
+
+@pytest.fixture
+def aws_config(tmp_path, monkeypatch):
+    cfg = tmp_path / "config"
+    cfg.write_text(
+        "[profile plain]\nregion = ap-southeast-2\n"
+        "[profile roley]\nrole_arn = arn:aws:iam::123456789012:role/r\nsource_profile = plain\n"
+    )
+    creds = tmp_path / "credentials"
+    creds.write_text("[plain]\naws_access_key_id = AKIAEXAMPLE\naws_secret_access_key = example\n")
+    monkeypatch.setenv("AWS_CONFIG_FILE", str(cfg))
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(creds))
+
+
+def _tunnelled_s3(rig, auth):
+    from mountainash_transport.connections import _tunnel_inner_factory
+    from mountainash_transport.settings.storage.profiles.s3_storage_profile import S3StorageProfile
+
+    target = S3StorageProfile(FLAVOR="aws", REGION="ap-southeast-2", BUCKET="reports",
+                              ENDPOINT_URL="https://s3.internal.example")
+    return TunnelledConnection(rig.ssh, _tunnel_inner_factory(target, auth), "127.0.0.1", rig.peer.server_port)
+
+
+@pytest.mark.parametrize("auth_kwargs", [
+    {"ACCESS_KEY_ID": "AKIAEXAMPLE", "SECRET_ACCESS_KEY": "example",
+     "ROLE_ARN": "arn:aws:iam::123456789012:role/r"},
+    {"PROFILE_NAME": "plain", "ROLE_ARN": "arn:aws:iam::123456789012:role/r"},
+    {"PROFILE_NAME": "roley"},
+], ids=["role_arn", "profile_and_role_arn", "profile_config_assumes_role"])
+def test_connect_refuses_assume_role_through_tunnel_and_releases(rig, aws_config, auth_kwargs) -> None:
+    from mountainash_auth_client import IAMAuthProfile
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(**auth_kwargs))
+    with pytest.raises(TunnelEndpointError, match="STS"):
+        connection.connect()
+    assert rig.servers, "refusal should come after the listener started"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+    assert all(server.socket.fileno() == -1 for server in rig.servers)
+    for worker in rig.threads:
+        worker.join(2)
+        assert not worker.is_alive()
+
+
+def test_tunnelled_s3_without_botocore_names_s3_extra_and_releases(rig, monkeypatch) -> None:
+    import sys
+
+    from mountainash_auth_client import IAMAuthProfile
+    from mountainash_transport import MissingExtraError
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(ACCESS_KEY_ID="AKIAEXAMPLE", SECRET_ACCESS_KEY="example"))
+    monkeypatch.setitem(sys.modules, "botocore.config", None)
+    with pytest.raises(MissingExtraError) as caught:
+        connection.connect()
+    assert caught.value.extra == "s3"
+    assert not rig.ssh.is_connected
+    assert connection.local_port is None
+
+
+@pytest.mark.parametrize("auth_kwargs", [
+    {"ACCESS_KEY_ID": "AKIAEXAMPLE", "SECRET_ACCESS_KEY": "example"},
+    {"PROFILE_NAME": "plain"},
+], ids=["static_keys", "profile_without_role"])
+def test_connect_allows_non_assume_role_credentials_through_tunnel(rig, aws_config, auth_kwargs) -> None:
+    from mountainash_auth_client import IAMAuthProfile
+
+    connection = _tunnelled_s3(rig, IAMAuthProfile(**auth_kwargs))
+    with connection:
+        connection.connect()
+        proxy = f"http://127.0.0.1:{connection.local_port}"
+        assert connection.client.meta.endpoint_url == "https://s3.internal.example"
+        assert connection.client.meta.config.proxies == {"http": proxy, "https": proxy}
 
 
 @pytest.mark.parametrize("boundary", ["listener", "socket"])
@@ -650,6 +735,6 @@ def test_context_retains_inner_and_ssh_cleanup_failures(rig) -> None:
             rig.inner_close_error = rig.ssh_close_error = True
             raise primary
     assert caught.value is primary
-    assert "inner cleanup failed" in str(primary.__notes__)
-    assert "SSH cleanup failed" in str(primary.__notes__)
+    assert "Tunnel cleanup failed (TransportConnectionError)" in str(primary.__notes__)
+    assert "Further cleanup failed (TransportConnectionError)" in str(primary.__notes__)
     rig.assert_released()

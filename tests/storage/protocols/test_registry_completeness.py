@@ -52,3 +52,8 @@ class TestSchemeConformance:
         else:
             with pytest.raises(BackendNotImplementedError):
                 get_storage_backend(spec.provider, None)
+
+    def test_every_provider_type_is_reachable_from_a_scheme(self):
+        """No provider type exists that no path can select (#51)."""
+        reached = {spec.provider for spec in SCHEMES.values() if spec.provider is not None}
+        assert set(CONST_STORAGE_PROVIDER_TYPE) - reached == set()

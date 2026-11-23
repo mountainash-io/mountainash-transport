@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EnumerateResult, EntryType, StorageEntry
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _native
 
 
 def _entry(path: str, attrs: os.stat_result, kind: EntryType) -> StorageEntry:
@@ -32,6 +32,7 @@ class LocalEnumerateMixin:
             raise ValueError("Local enumeration supports only None or '/' as delimiter")
         if max_results is not None and max_results < 0:
             raise ValueError("max_results must be nonnegative")
+        prefix = _native(prefix)
         objects: list[StorageEntry] = []
         prefixes: list[StorageEntry] = []
 

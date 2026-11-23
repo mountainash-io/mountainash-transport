@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from mountainash_transport._core.dataclasses.storage_entry import EntryType, StorageEntry
 
-from ._helpers import _check_not_directory, _is_not_found, _mapped, _remote_path
+from ._helpers import _check_not_directory, _is_not_found, _mapped, _remote_path, _require_file_type
 
 
 class SFTPDirectoryMixin:
@@ -94,8 +94,49 @@ class SFTPDirectoryMixin:
                     if attrs.st_mode is None or not stat_module.S_ISDIR(attrs.st_mode):
                         raise
 
-    def rmdir(self, path: str) -> None:
+    def rmdir(self, path: str, *, recursive: bool = False) -> None:
+        """Remove a directory: empty-only by default, the whole tree with ``recursive=True``."""
         path = _remote_path(self.storage_profile, path)  # type: ignore[attr-defined]
         sftp = self._get_client()  # type: ignore[attr-defined]
         with _mapped(path):
-            sftp.rmdir(path)
+            try:
+                if not recursive:
+                    sftp.rmdir(path)
+                    return
+                kind = _require_file_type(sftp.lstat(path).st_mode, path)
+            except OSError as error:
+                if _is_not_found(error):
+                    _check_not_absent(sftp, path)
+                raise
+            if kind != stat_module.S_IFDIR:
+                raise NotADirectoryError(errno.ENOTDIR, "Not a directory", path)
+            _remove_tree(sftp, path)
+
+
+def _check_not_absent(sftp: object, path: str) -> None:
+    """Recover ENOTDIR that servers report as NO_SUCH_FILE (OpenSSH, paramiko).
+
+    Raises ``NotADirectoryError`` when *path* exists but is not a directory (a
+    file, or a link, which is not followed) or when an ancestor is not a directory.
+    Returns when *path* is really absent, so the caller re-raises its original error.
+    """
+    try:
+        attrs = sftp.lstat(path)  # type: ignore[attr-defined]
+    except OSError as error:
+        if not _is_not_found(error):
+            raise
+        _check_not_directory(sftp, posixpath.dirname(path.rstrip("/")))
+        return
+    if _require_file_type(attrs.st_mode, path) != stat_module.S_IFDIR:
+        raise NotADirectoryError(errno.ENOTDIR, "Not a directory", path)
+
+
+def _remove_tree(sftp: object, path: str) -> None:
+    """Depth-first removal; listing attributes are not followed, so links are removed."""
+    for attr in sftp.listdir_attr(path):  # type: ignore[attr-defined]
+        child = posixpath.join(path, attr.filename)
+        if _require_file_type(attr.st_mode, child) == stat_module.S_IFDIR:
+            _remove_tree(sftp, child)
+        else:
+            sftp.remove(child)  # type: ignore[attr-defined]
+    sftp.rmdir(path)  # type: ignore[attr-defined]

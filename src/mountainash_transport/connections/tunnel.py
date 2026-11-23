@@ -1,4 +1,10 @@
-"""TunnelledConnection — SSH-tunnelled decorator connection via paramiko direct-tcpip."""
+"""TunnelledConnection — SSH-tunnelled decorator connection via paramiko direct-tcpip.
+
+HTTP and S3 targets keep their real URL: the local listener acts as an HTTP
+proxy limited to the tunnel's one destination, so TLS, SNI and ``Host`` name
+the real service. SSH/SFTP targets connect through the listener with their
+real host name, so host keys are checked against the real target.
+"""
 from __future__ import annotations
 
 import errno
@@ -12,8 +18,62 @@ import typing as t
 
 from typing_extensions import Self
 
-from mountainash_transport.connections.errors import ConnectionTimeoutError, TransportConnectionError
+from mountainash_transport.connections.errors import (
+    ConnectionTimeoutError,
+    TransportConnectionError,
+    TunnelEndpointError,
+)
+from mountainash_transport._core.extras import raise_for_missing_extra
 from mountainash_transport._core.protocols import ConnectionProtocol
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
+
+
+_MAX_PROXY_HEAD = 64 * 1024
+_ESTABLISHED = b"HTTP/1.1 200 Connection established\r\n\r\n"
+
+
+def _refusal(status: str, reason: str) -> bytes:
+    body = reason.encode()
+    return (
+        f"HTTP/1.1 {status}\r\nContent-Type: text/plain\r\nContent-Length: {len(body)}\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode() + body
+
+
+def _authority(authority: str, default_port: int | None) -> tuple[str, int]:
+    """Split ``host[:port]`` (IPv6 bracketed or, as httpcore sends it, bare) into
+    a lower-cased host and port; raise ValueError when malformed."""
+    if "@" in authority:
+        raise ValueError(authority)
+    if authority.startswith("["):
+        host, closed, rest = authority[1:].partition("]")
+        if not closed or (rest and not rest.startswith(":")):
+            raise ValueError(authority)
+        port_text = rest[1:]
+    else:
+        host, colon, port_text = authority.rpartition(":")
+        if not colon:
+            host, port_text = authority, ""
+    if port_text and not port_text.isdigit():
+        raise ValueError(authority)
+    port = int(port_text) if port_text else default_port
+    if not host or port is None or not 0 < port < 65536:
+        raise ValueError(authority)
+    return host.lower(), port
+
+
+_HOP_HEADERS = (b"connection:", b"proxy-connection:", b"keep-alive:")
+
+
+def _close_after_one_request(head: bytes) -> bytes:
+    """Replace the hop-by-hop connection headers with ``Connection: close``.
+
+    A plain-HTTP client may reuse its proxy connection for a request to a
+    different host; closing after each response makes every request open a
+    new connection, which is checked against the tunnel destination.
+    """
+    lines = [line for line in head.split(b"\r\n") if not line.lower().startswith(_HOP_HEADERS)]
+    return b"\r\n".join([*lines, b"Connection: close"])
 
 
 class _ForwardHandler(socketserver.BaseRequestHandler):
@@ -25,6 +85,12 @@ class _ForwardHandler(socketserver.BaseRequestHandler):
         owner = self.owner
         if owner._stop.is_set():
             return
+        forward = b""
+        if owner._proxy:
+            accepted = self._accept_proxy_request()
+            if accepted is None:
+                return
+            forward = accepted
         try:
             channel = owner._transport.open_channel(
                 "direct-tcpip", owner._remote, self.request.getpeername(),
@@ -34,6 +100,11 @@ class _ForwardHandler(socketserver.BaseRequestHandler):
         if channel is None:
             return
         try:
+            if forward.startswith(b"CONNECT "):
+                self.request.sendall(_ESTABLISHED)
+                forward = forward.split(b"\r\n\r\n", 1)[1]
+            if forward:
+                channel.sendall(forward)
             while not owner._stop.is_set():
                 readable, _, _ = select.select([self.request, channel], [], [], 1.0)
                 if self.request in readable:
@@ -53,16 +124,66 @@ class _ForwardHandler(socketserver.BaseRequestHandler):
         finally:
             try:
                 channel.close()
+            except EOFError as exc:
+                # Expected when the bastion session closed first (disconnect
+                # ordering): the channel went with it.
+                if owner._transport.is_active():
+                    owner._record_cleanup_error(exc)
             except BaseException as exc:
                 owner._record_cleanup_error(exc)
+
+    def _accept_proxy_request(self) -> bytes | None:
+        """Read one proxy request head; return the bytes received, or None if refused.
+
+        Accepts ``CONNECT host:port`` and absolute-form ``http://`` requests whose
+        host (case-insensitive) and port are the tunnel's destination.
+        """
+        received = b""
+        while b"\r\n\r\n" not in received and len(received) <= _MAX_PROXY_HEAD:
+            chunk = self.request.recv(4096)
+            if not chunk:
+                return None
+            received += chunk
+        end = received.find(b"\r\n\r\n")
+        if end < 0 or end + 4 > _MAX_PROXY_HEAD:
+            self.request.sendall(_refusal("400 Bad Request", "proxy request head too large"))
+            return None
+        head, rest = received[:end], received[end + 4:]
+        parts = head.split(b"\r\n", 1)[0].decode("latin-1").split(" ")
+        try:
+            method, target, _ = parts
+            if method == "CONNECT":
+                requested = _authority(target, None)
+            elif target[:7].lower() == "http://":
+                authority = target[7:]
+                for stop in "/?#":
+                    authority = authority.split(stop, 1)[0]
+                requested = _authority(authority, 80)
+            else:
+                raise ValueError(target)
+        except ValueError:
+            self.request.sendall(_refusal("400 Bad Request", "malformed proxy request"))
+            return None
+        host, port = self.owner._remote
+        if requested != (host.strip("[]").lower(), port):
+            self.request.sendall(_refusal(
+                "403 Forbidden", f"this tunnel only reaches {host}:{port}; refused {target}",
+            ))
+            return None
+        if method == "CONNECT":
+            return received
+        return _close_after_one_request(head) + b"\r\n\r\n" + rest
 
 
 class _Forwarder:
     """Own the listener, accepted sockets and workers, with a bounded join."""
 
-    def __init__(self, ssh_transport: t.Any, remote_host: str, remote_port: int) -> None:
+    def __init__(
+        self, ssh_transport: t.Any, remote_host: str, remote_port: int, *, proxy: bool = False,
+    ) -> None:
         self._transport = ssh_transport
         self._remote = (remote_host, remote_port)
+        self._proxy = proxy
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self._requests: dict[socket.socket, threading.Thread] = {}
@@ -93,7 +214,7 @@ class _Forwarder:
         except BaseException as primary:
             self.request_stop()
             if self._cleanup_error is not None:
-                primary.add_note(f"Tunnel cleanup failed: {self._cleanup_error!r}")
+                add_cleanup_note(primary, "Tunnel cleanup failed", self._cleanup_error)
             raise
 
     def _record_cleanup_error(self, exc: BaseException) -> None:
@@ -174,45 +295,68 @@ class _Forwarder:
         if remaining:
             timeout = ConnectionTimeoutError(f"Tunnel workers did not stop: {', '.join(remaining)}")
             if error is not None:
-                timeout.add_note(f"Tunnel cleanup failed: {error!r}")
+                timeout.add_note(f"Tunnel cleanup failed ({safe_detail(error)})")
             raise timeout
         if error is not None:
             if not isinstance(error, Exception):
                 raise error
-            raise TransportConnectionError(f"Tunnel cleanup failed: {error}") from error
+            raise_safe(TransportConnectionError(f"Tunnel cleanup failed ({safe_detail(error)})"), error)
 
 
 class _PatchedEndpointProfile:
-    """Wraps a storage profile, replacing endpoint kwargs with the tunnel's local address."""
+    """Wraps a storage profile, routing its SDK client through the tunnel's listener.
 
-    _URL_KEYS = frozenset({"base_url", "endpoint_url"})
+    The profile's own host, port and URLs are kept. HTTP clients get ``proxy=``
+    and boto3 gets ``Config(proxies=...)`` pointing at the listener; paramiko
+    gets ``_post_connect["sock_address"]``, which ``SSHConnection`` dials.
+    """
 
     def __init__(self, inner: t.Any, host: str, port: int) -> None:
         self._inner = inner
         self._host = host
         self._port = port
 
-    def _patch_endpoint(self, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
-        if "hostname" in kwargs:
-            kwargs["hostname"] = self._host
-            kwargs["port"] = self._port
-        for key in self._URL_KEYS:
-            if key in kwargs:
-                kwargs[key] = f"http://{self._host}:{self._port}"
+    def _route(self, family: t.Any, kwargs: dict[str, t.Any]) -> dict[str, t.Any]:
+        from mountainash_auth_client.targets import TargetFamily
+
+        proxy = f"http://{self._host}:{self._port}"
+        if family is TargetFamily.PARAMIKO or (family is None and "hostname" in kwargs):
+            kwargs["_post_connect"] = {
+                **kwargs.get("_post_connect", {}), "sock_address": (self._host, self._port),
+            }
+        elif family is TargetFamily.BOTO:
+            try:
+                from botocore.config import Config
+            except ImportError as exc:
+                raise_for_missing_extra("tunnelled S3 targets", "s3", exc)
+
+            routed = Config(proxies={"http": proxy, "https": proxy})
+            existing = kwargs.get("config")
+            kwargs["config"] = existing.merge(routed) if existing is not None else routed
+        else:
+            kwargs["proxy"] = proxy
         return kwargs
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        return self._patch_endpoint(self._inner.to_handler_kwargs())
+        return self._route(None, self._inner.to_handler_kwargs())
 
-    def emit(self, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        # MUST override (not delegate via __getattr__) so the tunnel's local
-        # endpoint is injected — otherwise the inner profile's emit returns the
-        # real remote host/port and the tunnel is silently bypassed.
-        return self._patch_endpoint(self._inner.emit(*args, **kwargs))
+    def emit(self, family: t.Any, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
+        # MUST override (not delegate via __getattr__) so the tunnel route is
+        # injected — otherwise the client connects straight to the real host.
+        from mountainash_auth_client.targets import TargetFamily
+
+        out = self._inner.emit(family, *args, **kwargs)
+        # Without endpoint_url botocore resolves the public AWS endpoint itself;
+        # refuse rather than connect around the tunnel.
+        if family is TargetFamily.BOTO and "endpoint_url" not in out:
+            raise TunnelEndpointError(
+                "Tunnel cannot redirect this S3 target: it emits no endpoint_url, so "
+                "boto3 would connect directly and bypass the bastion. "
+                "Set ENDPOINT_URL on the target profile."
+            )
+        return self._route(family, out)
 
     def get_connection_url(self) -> str:
-        if hasattr(self._inner, "get_connection_url"):
-            return f"tunnel://{self._host}:{self._port}"
         return f"tunnel://{self._host}:{self._port}"
 
     def __getattr__(self, name: str) -> t.Any:
@@ -222,8 +366,10 @@ class _PatchedEndpointProfile:
 class TunnelledConnection(ConnectionProtocol):
     """Decorator connection that SSH-tunnels to a remote target.
 
-    Starts a local TCP forwarder via paramiko direct-tcpip, then builds and
-    connects an inner connection targeting 127.0.0.1:<ephemeral-port>.
+    Starts a local TCP listener forwarding to the remote target via paramiko
+    direct-tcpip, then builds and connects an inner connection routed through
+    it. With ``proxy=True`` the listener accepts one HTTP proxy request per
+    connection (``CONNECT`` or absolute-form ``http://``) for the remote target only.
     """
 
     def __init__(
@@ -232,11 +378,14 @@ class TunnelledConnection(ConnectionProtocol):
         inner_connection_factory: t.Callable[[int], ConnectionProtocol],
         remote_host: str,
         remote_port: int,
+        *,
+        proxy: bool = False,
     ) -> None:
         self._ssh = ssh_connection
         self._inner_factory = inner_connection_factory
         self._remote_host = remote_host
         self._remote_port = remote_port
+        self._proxy = proxy
         self._inner: ConnectionProtocol | None = None
         self._forwarder: _Forwarder | None = None
         self._local_port: int | None = None
@@ -266,10 +415,10 @@ class TunnelledConnection(ConnectionProtocol):
                 if error is None:
                     error = exc
                 elif isinstance(exc, ConnectionTimeoutError):
-                    exc.add_note(f"Earlier cleanup failed: {error!r}")
+                    exc.add_note(f"Earlier cleanup failed ({safe_detail(error)})")
                     error = exc
                 else:
-                    error.add_note(f"Further cleanup failed: {exc!r}")
+                    error.add_note(f"Further cleanup failed ({safe_detail(exc)})")
         if error is not None:
             raise error
 
@@ -287,10 +436,10 @@ class TunnelledConnection(ConnectionProtocol):
                 raise TransportConnectionError("SSH connection has no client after connect()")
             try:
                 self._forwarder = _Forwarder(
-                    client.get_transport(), self._remote_host, self._remote_port,
+                    client.get_transport(), self._remote_host, self._remote_port, proxy=self._proxy,
                 )
             except OSError as exc:
-                raise TransportConnectionError(f"Failed to bind tunnel listener: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to bind tunnel listener ({safe_detail(exc)})"), exc)
             self._local_port = self._forwarder.local_port
             self._inner = self._inner_factory(self._local_port)
             self._inner.connect()
@@ -298,9 +447,7 @@ class TunnelledConnection(ConnectionProtocol):
             try:
                 self.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-                for note in getattr(cleanup, "__notes__", ()):
-                    primary.add_note(note)
+                add_cleanup_note(primary, "Tunnel cleanup failed", cleanup)
             raise
         return self
 
@@ -333,6 +480,4 @@ class TunnelledConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Tunnel cleanup failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Tunnel cleanup failed", cleanup)

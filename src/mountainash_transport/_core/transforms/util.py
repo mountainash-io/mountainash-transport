@@ -8,6 +8,8 @@ import tempfile
 import typing as t
 from typing import BinaryIO, Literal
 
+from mountainash_transport._core.constants import DEFAULT_BUFFER_MEMORY_LIMIT
+
 if t.TYPE_CHECKING:
     from _typeshed import SupportsWrite
 
@@ -16,7 +18,7 @@ def materialize(
     stream: BinaryIO,
     *,
     to: Literal["memory", "tempfile"] = "memory",
-    memory_cutoff: int = 64 * 1024 * 1024,
+    memory_cutoff: int = DEFAULT_BUFFER_MEMORY_LIMIT,
 ) -> tuple[BinaryIO, int]:
     """Drain *stream* into a seekable buffer; return (buffer, length).
 

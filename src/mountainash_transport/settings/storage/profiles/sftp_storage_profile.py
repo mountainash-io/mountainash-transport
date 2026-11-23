@@ -1,13 +1,8 @@
 """SFTP storage profile.
 
-Provides :class:`SFTPStorageProfile` — settings for the SFTP storage backend
-backed by paramiko. SSH is the connection-layer concern; this profile covers
-the storage provider that performs file operations via the SFTP subsystem.
-
-Mirrors the Phase 4 ``S3Settings`` / ``AzureStorageSettings`` pattern: the
-class is a two-line shell; all parameters live on :data:`SFTP_SPEC`;
-the adapter
-(:func:`mountainash_transport.settings.adapters.sftp.build_handler_kwargs`)
+:class:`SFTPStorageProfile` holds the settings for the SFTP storage backend,
+which uses paramiko's SFTP subsystem over an SSH connection. Parameters live
+on :data:`SFTP_SPEC`; ``emit(TargetFamily.PARAMIKO)`` (``_sftp_paramiko_kwargs``)
 produces kwargs for :meth:`paramiko.SSHClient.connect`.
 """
 
@@ -72,6 +67,16 @@ SFTP_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
+        ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Total attempts for an operation that loses its session, reconnecting "
+                                  "between attempts; 1 disables retry. None keeps the default (3)."),
+        ParameterSpec(name="RETRY_BACKOFF_BASE", type=t.Optional[float], default=None, tier="advanced",
+                      description="Seconds before the first retry, doubling per retry. None keeps the default (1.0)."),
+        ParameterSpec(name="RETRY_BACKOFF_MAX", type=t.Optional[float], default=None, tier="advanced",
+                      description="Longest wait between retries in seconds. None keeps the default (60.0)."),
         ParameterSpec(
             name="HOST",
             type=str,
@@ -197,7 +202,7 @@ class SFTPStorageProfile(Profile):
     Fields are installed from :data:`SFTP_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
-    :func:`~mountainash_transport.settings.adapters.sftp.build_handler_kwargs`.
+    ``_sftp_paramiko_kwargs``.
 
     Auth maps onto paramiko ``SSHClient.connect`` kwargs as follows:
         - :class:`PasswordAuth`    → ``password``
@@ -211,6 +216,10 @@ class SFTPStorageProfile(Profile):
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        BUFFER_MEMORY_LIMIT: int | None
+        RETRY_MAX_ATTEMPTS: int | None
+        RETRY_BACKOFF_BASE: float | None
+        RETRY_BACKOFF_MAX: float | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         HOST: str
         PORT: int
@@ -235,18 +244,11 @@ class SFTPStorageProfile(Profile):
         host = getattr(self, "HOST", "") or ""
         port = getattr(self, "PORT", 22)
         user = getattr(self, "USERNAME", None)
-        root = getattr(self, "ROOT_PATH", None)
         user_part = f"{user}@" if user else ""
-        url = f"sftp://{user_part}{host}:{port}"
-        if root:
-            url = f"{url}{root}"
-        return url
-
-
-
+        return f"sftp://{user_part}{host}:{port}"
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim (Phase 4 D2a) → emit(TargetFamily.PARAMIKO).
+        """Return the paramiko kwargs ``emit(TargetFamily.PARAMIKO)`` produces.
 
         Returns SDK-level config only (hostname, port, timeout, agent/key
         discovery flags, post-connect envelope). Auth credentials (password,

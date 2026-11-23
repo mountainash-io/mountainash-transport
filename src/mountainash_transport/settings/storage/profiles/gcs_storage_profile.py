@@ -1,11 +1,8 @@
-"""Google Cloud Storage settings.
+"""Google Cloud Storage profile.
 
-Descriptor-driven GCS settings class. Mirrors the Phase 3
-``GCPSecretsSettings`` pattern and the Phase 4 ``S3Settings`` pattern:
-the class is a two-line shell; all parameters live on
-:data:`GCS_SPEC`; the adapter
-(:func:`mountainash_transport.settings.adapters.gcs.build_handler_kwargs`)
-produces kwargs for ``google.cloud.storage.Client``.
+Parameters live on :data:`GCS_SPEC`; :meth:`GCSStorageProfile.to_handler_kwargs`
+returns kwargs for ``google.cloud.storage.Client``. Transport has no GCS
+backend yet.
 """
 
 from __future__ import annotations
@@ -145,8 +142,7 @@ class GCSStorageProfile(Profile):
     Fields are installed from :data:`GCS_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union (defaulting to
-    ``ServiceAccountAuth`` for GCS); see
-    :func:`~mountainash_transport.settings.adapters.gcs.build_handler_kwargs`.
+    ``ServiceAccountAuth`` for GCS); see :meth:`to_handler_kwargs`.
     """
 
     if t.TYPE_CHECKING:

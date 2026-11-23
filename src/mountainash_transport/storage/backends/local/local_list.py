@@ -9,7 +9,7 @@ from mountainash_transport._core.dataclasses.storage_entry import (
     StorageEntry,
 )
 
-from ._helpers import _mapped
+from ._helpers import _mapped, _native
 
 
 class LocalListMixin:
@@ -20,6 +20,7 @@ class LocalListMixin:
 
         Symlinks are resolved via stat(). Broken symlinks are skipped.
         """
+        path = _native(path)
         results: list[StorageEntry] = []
         with _mapped(path):
             with os.scandir(path) as entries:

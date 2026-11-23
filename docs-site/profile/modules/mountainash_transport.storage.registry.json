@@ -54,7 +54,7 @@
   ],
   "extension_points": [
     "Register a custom backend class for any CONST_STORAGE_PROVIDER_TYPE with @register_storage_backend; it overrides the built-in",
-    "Backend constructors receive (storage_profile, connection=..., [auth_strategy=...], [location_check=...]); accepting auth_strategy (explicitly or via **kwargs) is required for managed OAuth2",
+    "Backend constructors receive (storage_profile, connection=..., [auth_strategy=...], [location_check=...]); accepting auth_strategy (explicitly or via **kwargs) is required for managed OAuth2; location_check is forwarded (whenever a policy is active) only to constructors that name it explicitly, never via **kwargs",
     "Implement the storage.protocols capability protocols a la carte; the facade checks them with isinstance"
   ],
   "lifecycle_notes": [

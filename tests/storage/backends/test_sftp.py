@@ -5,6 +5,7 @@ import errno
 import io
 import stat
 import typing as t
+from types import SimpleNamespace
 
 import pytest
 from unittest.mock import MagicMock
@@ -16,6 +17,8 @@ from mountainash_transport._core.exceptions import (
     StorageConnectionError,
     StorageError,
 )
+
+from ._safe_chain import assert_safe_chain
 
 
 class _FakeConnection:
@@ -37,7 +40,8 @@ def _make_backend(sftp_client=None):
     import mountainash_transport.storage.backends  # noqa: F401
     from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
     conn = _FakeConnection(sftp_client)
-    return SFTPStorageBackend(None, connection=conn), sftp_client
+    # One attempt: the fake connection cannot reconnect (retry has its own tests).
+    return SFTPStorageBackend(SimpleNamespace(RETRY_MAX_ATTEMPTS=1), connection=conn), sftp_client
 
 
 class TestReadToBytes:
@@ -76,7 +80,7 @@ class TestReadToBytes:
         from mountainash_transport import PermissionDeniedError
         with pytest.raises(PermissionDeniedError) as caught:
             backend.read_to_bytes("/remote/secret.txt")
-        assert caught.value.__cause__ is original
+        assert_safe_chain(caught.value, original)
 
 
 class TestPathExists:
@@ -210,21 +214,6 @@ class TestDeleteFile:
             backend.delete_file("/remote/missing.txt")
 
 
-class TestRmdir:
-    def test_rmdir_calls_sftp_rmdir(self):
-        mock_sftp = MagicMock()
-        backend, _ = _make_backend(mock_sftp)
-        backend.rmdir("/remote/olddir")
-        mock_sftp.rmdir.assert_called_once_with("/remote/olddir")
-
-    def test_rmdir_not_found_raises(self):
-        mock_sftp = MagicMock()
-        mock_sftp.rmdir.side_effect = FileNotFoundError("no such dir")
-        backend, _ = _make_backend(mock_sftp)
-        with pytest.raises(PathNotFoundError):
-            backend.rmdir("/remote/missing")
-
-
 class TestNoConnection:
     def test_raises_storage_connection_error_when_no_connection(self):
         import mountainash_transport.storage.backends  # noqa: F401
@@ -265,13 +254,13 @@ def test_sftp_stat_disconnect_is_not_absence(operation: str) -> None:
     backend, _ = _make_backend(client)
     with pytest.raises(StorageConnectionError) as caught:
         getattr(backend, operation)("/remote/file")
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize(
     ("operation", "native", "extra"),
     [("read_to_bytes", "open", ()), ("read_to_stream", "open", ()),
-     ("write_from_bytes", "open", (b"x",)), ("list_dir", "listdir_attr", ()),
+     ("write_from_bytes", "putfo", (b"x",)), ("list_dir", "listdir_attr", ()),
      ("rmdir", "rmdir", ()), ("delete_file", "remove", ())],
 )
 def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.Any, ...]) -> None:
@@ -283,7 +272,7 @@ def test_sftp_sdk_transport_failure(operation: str, native: str, extra: tuple[t.
     backend, _ = _make_backend(client)
     with pytest.raises(StorageConnectionError) as caught:
         getattr(backend, operation)("/remote/file", *extra)
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 @pytest.mark.parametrize("ranged", [False, True])
@@ -303,7 +292,7 @@ def test_sftp_late_failure_is_portable(ranged: bool, fault: str) -> None:
                 source.fetch(0, 3) if ranged else source.read(3)
         finally:
             source.on_close() if ranged else source.close()
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
 
 
 def test_sftp_caller_input_failure_is_unchanged() -> None:
@@ -311,9 +300,10 @@ def test_sftp_caller_input_failure_is_unchanged() -> None:
     class Input(io.BytesIO):
         def read(self, size: int | None = -1) -> bytes:
             raise original
-    backend, _ = _make_backend()
+    backend, client = _make_backend()
+    client.putfo.side_effect = lambda fl, path: fl.read(32768)  # paramiko reads the source in chunks
     with Input(b"x") as source, pytest.raises(EOFError) as caught:
-        backend.write_from_stream("/destination", source)
+        backend.write_from_stream("/destination", source, create_parents=False)
     assert caught.value is original
 
 

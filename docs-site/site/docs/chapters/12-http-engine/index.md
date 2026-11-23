@@ -14,7 +14,7 @@ The engine and its policy, response and error types are exported from `mountaina
 
 Construct the engine around a client you own: `HttpRequestEngine(client, policy=None, auth_strategy=None, *, location_check=None)`. The engine never closes the client. It offers two calls:
 
-- `request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None)` sends a request and returns a fully buffered `HttpResponse`. A `stream=` body is read into bytes before sending.
+- `request(method, url, *, headers=None, content=None, stream=None, params=None, policy=None)` sends a request and returns a fully buffered `HttpResponse`. A `stream=` body is sent in chunks as it is read, never read into memory first: a seekable stream is sent from its current position with a `Content-Length`, a non-seekable one with chunked transfer encoding.
 - `stream(method, url, *, headers=None, content=None, params=None, policy=None)` is a context manager that yields an `HttpStreamResponse` without loading the body. Its body must be `bytes`.
 
 `url` may be relative when the client has a `base_url`. Every call can pass its own `RequestPolicy` through `policy=`, which replaces the engine's default for that call only. Caller `headers` override auth headers with the same name.
@@ -112,7 +112,7 @@ Only 2xx responses are returned. Anything else raises a subclass of `HttpTranspo
 | `HttpRequestError` | invalid URL or unsupported scheme |
 | `HttpDecodeError` | `json()` could not parse the body |
 
-Status errors share the base `HttpResponseError`, which carries `status_code`, `headers`, `url`, `method` and `body_preview` (the first 500 characters of the body from `request()`; always `None` from `stream()`, which does not drain error bodies). `HttpRateLimitError` adds `retry_after` in seconds when the server sent one.
+Status errors share the base `HttpResponseError`, which carries `status_code`, `headers`, `url` and `method`. It does not carry the response body, which may hold tokens or personal data; read the body from the response yourself when you need it. `HttpRateLimitError` adds `retry_after` in seconds when the server sent one.
 
 These classes do not subclass `StorageError`. When you read through `StorageFacade`, the HTTP backend translates them into the storage errors described in [Errors](../03-installation/index.md#errors); when you use the engine directly, catch the HTTP classes.
 
@@ -120,7 +120,7 @@ These classes do not subclass `StorageError`. When you read through `StorageFaca
 
 <!-- concept:192 -->
 
-`RetryPolicy` decides which failures are tried again. `max_attempts` counts the first attempt, so the default of 3 means up to two retries.
+`RetryPolicy` decides which failures are tried again. `max_attempts` counts the first attempt, so the default of 3 means up to two retries. The same class configures SFTP retries; for storage, set it through the profile's `RETRY_*` fields ([Retries](../14-backends/index.md#retries)). `retry_on_status`, `retry_unsafe_methods` and `max_retry_after` apply to HTTP only.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -132,7 +132,9 @@ These classes do not subclass `StorageError`. When you read through `StorageFaca
 | `retry_unsafe_methods` | `False` | Also retry methods outside `IDEMPOTENT_METHODS`, such as POST and PATCH. |
 | `max_retry_after` | `120.0` | Longest `Retry-After` wait honoured, in seconds. |
 
-Statuses other than 429 and transport errors are retried only for methods in `IDEMPOTENT_METHODS` (GET, HEAD, OPTIONS, TRACE, PUT, DELETE) and only when the body can be sent again: no body, a `bytes` body, or a seekable stream. A 429 is retried for any method; the engine waits for the server's `Retry-After` value (seconds or an HTTP date), capped at `max_retry_after`, or uses the backoff when there is none. A `401` followed by a successful credential refresh is not counted as an attempt (see [Authentication strategies](#authentication-strategies)).
+Statuses other than 429 and transport errors are retried only for methods in `IDEMPOTENT_METHODS` (GET, HEAD, OPTIONS, TRACE, PUT, DELETE). A 429 is retried for any method; the engine waits for the server's `Retry-After` value (seconds or an HTTP date), capped at `max_retry_after`, or uses the backoff when there is none. A `401` followed by a successful credential refresh is not counted as an attempt (see [Authentication strategies](#authentication-strategies)).
+
+Every re-send follows one rule about the request body. No body, a `bytes` body or a seekable stream can be sent again: retries for 429, other retryable statuses and transport errors, the 401 refresh, and redirects or authentication challenges all re-send it from the position it started at. A non-seekable stream (a pipe, a socket, a transform's output) is sent once. None of those re-sends happen, and a redirect or challenge that would need one raises `HttpRequestError`. To make a non-seekable body retryable, pass `materialize(stream)`, which copies it into a seekable buffer.
 
 The example turns backoff off so that it runs instantly. The server answers `/flaky` with 503 on the first request, `/limited` with 429 and `Retry-After: 0` on the first request, and every POST with 503.
 
@@ -153,7 +155,7 @@ with httpx.Client(base_url=base_url) as client:
     try:
         engine.request("POST", "/flaky", content=b"{}")
     except HttpServiceUnavailableError as exc:
-        print(type(exc).__name__, exc.status_code, exc.body_preview)
+        print(type(exc).__name__, exc.status_code)
 
 print(dict(hits))
 ```
@@ -163,13 +165,13 @@ Output (`hits` is the test server's request counter):
 ```text
 ok
 ok
-HttpServiceUnavailableError 503 busy
+HttpServiceUnavailableError 503
 {('GET', '/flaky'): 2, ('GET', '/limited'): 2, ('POST', '/flaky'): 1}
 ```
 
 Both GETs succeeded on their second attempt; the POST was sent once and failed without a retry.
 
-Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay. A `request()` body passed as a non-seekable stream is read into memory first but still counts as not replayable. A 429 response is retried regardless, because that retry ignores the body; transport errors and the other retryable statuses are not retried for such a body. Pass `content=` bytes when you want every retry to apply.
+Waits use `time.sleep` in the calling thread, so large `backoff_max` or `max_retry_after` values block the caller for that long. `stream()` retries only until it yields the response; once you start reading the body, failures propagate without replay.
 
 ## Authentication strategies
 
@@ -230,11 +232,11 @@ secret report after 1 refresh
 
 For OAuth 2.0 you do not write a strategy. `mountainash-auth-client` owns token acquisition, storage and refresh (see [credentials come from auth-client](../02-mountainash-ecosystem/index.md#credentials-come-from-auth-client)); transport adapts its token manager to this protocol as `OAuth2RefreshableAuthStrategy`, built by `create_auth_strategy(auth_profile, oauth_provider=..., token_store=...)` in `mountainash_transport.connections`. `StorageFacade.from_path` does this for you when you pass an OAuth2 auth profile together with `oauth_provider=` and `token_store=`. The token store stays yours to open and close.
 
-## Error redaction
+## What HTTP errors show
 
 <!-- concept:195 -->
 
-URLs sometimes carry credentials as userinfo: `https://user:password@host/path`. The engine keeps that part out of what errors display. Every `HttpTransportError` replaces the userinfo in its message with `***`, as do `HttpResponseError.url`, `HttpResponse.url` and `HttpStreamResponse.url`. When the request URL or the underlying httpx exception contains userinfo, the engine raises its error without a displayed cause, so a standard traceback does not print the native exception either. Without userinfo, the httpx exception remains attached as `__cause__` for debugging.
+URLs sometimes carry credentials as userinfo (`https://user:password@host/path`) or in the query string (`?sig=...`, `?token=...`). HTTP errors show only the display form of the URL: `scheme://host:port/path`, with userinfo, query and fragment never shown. `HttpResponseError.url` holds that display form, and so does every `HttpTransportError` message. `HttpResponseError.headers` keeps only an allowlist: `accept-ranges`, `content-encoding`, `content-length`, `content-location`, `content-range`, `content-type`, `date`, `etag`, `last-modified`, `location`, `retry-after` and `www-authenticate`, with `location` and `content-location` resolved against the request URL (a relative reference becomes absolute) and then shown in display form; without a request URL a relative reference shows only its path. `www-authenticate` keeps only its auth-scheme names, in order and comma-separated (`Bearer realm="api", error_uri="https://u:p@h/x?sig=s"` becomes `Bearer`), with all parameters dropped. The other allowlisted headers keep their value as sent. Every other header, including `Set-Cookie` and `Authorization`, is dropped. Error objects do not carry response bodies, and native httpx exceptions are never chained: an error has no `__cause__`, and `__context__` is cleared. The successful values `HttpResponse.url`, `HttpStreamResponse.url` and the `path` of an HTTP `stat` `StorageEntry` have userinfo removed but keep query and fragment, so a presigned URL stays usable. Importing the engine also attaches `logging.Filter`s to the `httpx` logger and to httpcore's `httpcore.connection`, `httpcore.http11`, `httpcore.http2`, `httpcore.proxy` and `httpcore.socks` loggers, whatever level the application sets. The `httpx` filter rewrites the request URL in its `HTTP Request:` record to the display form (method and status stay). The httpcore filter reduces records that carry request or response data (header lists, request objects) to their event name; connection records such as `connect_tcp.started host='h' port=443` stay.
 
 ```python
 import socket
@@ -254,10 +256,10 @@ no_retry = RequestPolicy(retry=RetryPolicy(max_attempts=1))
 with httpx.Client() as client:
     engine = HttpRequestEngine(client, no_retry)
     try:
-        engine.request("GET", f"http://analyst:s3cret@127.0.0.1:{port}/reports/old.csv")
+        engine.request("GET", f"http://analyst:s3cret@127.0.0.1:{port}/reports/old.csv?sig=abc123")
     except HttpNotFoundError as exc:
         print(exc)
-        print(exc.url, "|", exc.body_preview)
+        print(exc.url)
 
     for label, userinfo in (("with userinfo", "analyst:s3cret@"), ("no userinfo", "")):
         try:
@@ -269,13 +271,13 @@ with httpx.Client() as client:
 Output (the port differs on each run):
 
 ```text
-HTTP 404 GET http://***@127.0.0.1:43981/reports/old.csv
-http://***@127.0.0.1:43981/reports/old.csv | no such report
+HTTP 404 GET http://127.0.0.1:34933/reports/old.csv
+http://127.0.0.1:34933/reports/old.csv
 with userinfo: cause shown = False
-no userinfo: cause shown = True
+no userinfo: cause shown = False
 ```
 
-!!! warning "Redaction covers display, not memory"
-    Only URL userinfo is redacted. Tokens in query strings, headers and response bodies (including `body_preview`) are not. The hidden `__context__` of an exception, httpx request objects and traceback locals can still hold the credential, so configure error reporters that capture locals or full exception state accordingly. See the [support matrix and known limits](../../reference/support-matrix.md#known-limits).
+!!! warning "Traceback locals and path segments are not hidden"
+    Path segments are shown, so keep credentials in auth profiles rather than in URLs or path templates. The local variables of the frames in a traceback, such as the URL you passed in, are outside the guarantee, so configure error reporters that capture frame locals accordingly.
 
-Location-policy errors redact credentials the same way ([Policy on the facade](../08-location-policy/index.md#policy-on-the-facade)). The redaction helper is `src/mountainash_transport/_core/http/redact.py`; its tests are in `tests/_core/http/test_url_userinfo_redaction.py`.
+Location-policy errors use the same display form ([What errors show of a location](../08-location-policy/index.md#what-errors-show-of-a-location)). The helpers are in `src/mountainash_transport/_core/safe_display.py`; the HTTP tests are in `tests/_core/http/test_http_safe_display.py`.

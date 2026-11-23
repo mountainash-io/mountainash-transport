@@ -11,7 +11,9 @@ from mountainash_transport.connections.errors import (
     ConnectionTimeoutError,
     TransportConnectionError,
 )
+from .._core.extras import raise_for_missing_extra
 from .._core.protocols import ConnectionProtocol
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 _HOST_KEY_POLICIES: dict[str, str] = {
@@ -32,10 +34,7 @@ class SSHConnection(ConnectionProtocol):
         try:
             import paramiko
         except ImportError as exc:
-            raise TransportConnectionError(
-                "paramiko is required for SSH connections — "
-                "install with: pip install mountainash-transport[sftp]"
-            ) from exc
+            raise_for_missing_extra("SSH and SFTP connections", "sftp", exc)
 
         if self._client is not None:
             self.disconnect()
@@ -61,21 +60,29 @@ class SSHConnection(ConnectionProtocol):
             if known_hosts:
                 client.load_host_keys(known_hosts)
 
+            sock_address = post_connect.get("sock_address")
             try:
+                if sock_address is not None:
+                    # Tunnelled: dial the tunnel listener, but keep hostname/port as
+                    # the real target so its host key is checked under its own name.
+                    kwargs["sock"] = socket.create_connection(sock_address, timeout=kwargs.get("timeout"))
                 client.connect(**kwargs)
             except socket.timeout as exc:
-                raise ConnectionTimeoutError(f"SSH connection timed out: {exc}") from exc
+                raise_safe(ConnectionTimeoutError(f"SSH connection timed out ({safe_detail(exc)})"), exc)
             except socket.gaierror as exc:
-                raise TransportConnectionError(f"SSH DNS resolution failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH DNS resolution failed ({safe_detail(exc)})"), exc)
             except OSError as exc:
-                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH connection failed ({safe_detail(exc)})"), exc)
             except Exception as exc:
-                raise TransportConnectionError(f"SSH connection failed: {exc}") from exc
+                raise_safe(TransportConnectionError(f"SSH connection failed ({safe_detail(exc)})"), exc)
         except BaseException as primary:
+            sock = kwargs.get("sock")
+            if sock is not None:
+                sock.close()
             try:
                 self.disconnect()
             except BaseException as cleanup:
-                primary.add_note(f"Connection cleanup also failed: {cleanup!r}")
+                add_cleanup_note(primary, "Connection cleanup also failed", cleanup)
             raise
         return self
 
@@ -85,7 +92,7 @@ class SSHConnection(ConnectionProtocol):
             try:
                 client.close()
             except Exception as exc:
-                raise TransportConnectionError(f"Failed to close SSH client: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to close SSH client ({safe_detail(exc)})"), exc)
 
     @property
     def client(self) -> t.Any:
@@ -107,6 +114,4 @@ class SSHConnection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Connection cleanup also failed", cleanup)

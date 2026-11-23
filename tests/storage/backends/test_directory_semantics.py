@@ -1,4 +1,4 @@
-"""Shared filesystem contracts, with SFTP SDK calls backed by temporary files."""
+"""Shared filesystem contracts: Local, SFTP with a file-backed fake client, and SFTP over a real paramiko server."""
 from __future__ import annotations
 
 import errno
@@ -19,6 +19,13 @@ from mountainash_transport._core.dataclasses.storage_entry import EntryType
 from mountainash_transport.storage.backends.local import LocalStorageBackend
 from mountainash_transport.storage.backends.sftp import SFTPStorageBackend
 from mountainash_transport import Gzip, StorageFacade
+
+from ._safe_chain import assert_safe_chain
+
+def _single_attempt(client: t.Any) -> SFTPStorageBackend:
+    """A fake-client backend; one attempt, since the fake connection cannot reconnect."""
+    return SFTPStorageBackend(SimpleNamespace(RETRY_MAX_ATTEMPTS=1), connection=SimpleNamespace(client=client))
+
 
 
 class _FilesystemSFTP:
@@ -43,12 +50,45 @@ class _FilesystemSFTP:
     def listdir_attr(self, path: str) -> list[SFTPAttributes]:
         return [SFTPAttributes.from_stat(os.lstat(os.path.join(path, name)), name) for name in os.listdir(path)]
 
+    def rmdir(self, path: str) -> None:
+        os.rmdir(path)
 
-@pytest.fixture(params=["local", "sftp"])
+    def remove(self, path: str) -> None:
+        os.remove(path)
+
+    def putfo(self, fl: t.BinaryIO, path: str) -> SFTPAttributes:
+        with open(path, "wb") as target:
+            while chunk := fl.read(32768):  # paramiko's transfer chunk
+                target.write(chunk)
+        return SFTPAttributes.from_stat(os.stat(path))  # paramiko's confirming stat
+
+
+@pytest.fixture(scope="module")
+def sftp_server_connection(tmp_path_factory: pytest.TempPathFactory) -> t.Iterator[t.Any]:
+    """A connected SFTPConnection to an in-process paramiko server serving host paths."""
+    from connections.tunnel_rig import DirectorySFTPTarget
+    from mountainash_auth_client import PasswordAuthProfile
+    from mountainash_transport import create_connection
+    from mountainash_transport.settings.storage.profiles import SFTPStorageProfile
+
+    server = DirectorySFTPTarget()
+    known = tmp_path_factory.mktemp("sftp") / "known_hosts"
+    known.write_text(server.known_hosts_line("127.0.0.1"))
+    profile = SFTPStorageProfile(HOST="127.0.0.1", PORT=server.port, USERNAME="u",
+                                 KNOWN_HOSTS_FILE=str(known), LOOK_FOR_KEYS=False, ALLOW_AGENT=False)
+    connection = create_connection(profile, PasswordAuthProfile(USERNAME="u", PASSWORD="p")).connect()
+    yield connection
+    connection.disconnect()
+    server.close()
+
+
+@pytest.fixture(params=["local", "sftp", "sftp_server"])
 def backend(request: pytest.FixtureRequest) -> LocalStorageBackend | SFTPStorageBackend:
     if request.param == "local":
         return LocalStorageBackend()
-    return SFTPStorageBackend(connection=SimpleNamespace(client=_FilesystemSFTP()))
+    if request.param == "sftp_server":
+        return SFTPStorageBackend(connection=request.getfixturevalue("sftp_server_connection"))
+    return _single_attempt(_FilesystemSFTP())
 
 
 @pytest.mark.parametrize("mode", ["bytes", "stream", "gzip"])
@@ -146,6 +186,85 @@ def test_metadata_and_listing_timestamps_are_utc(backend: t.Any, tmp_path: Path)
     assert backend.list_dir(str(tmp_path))[0].last_modified == expected
 
 
+def _tree(root: Path) -> Path:
+    target = root / "doomed"
+    (target / "sub" / "deeper").mkdir(parents=True)
+    (target / "a.txt").write_bytes(b"a")
+    (target / "sub" / "b.txt").write_bytes(b"b")
+    return target
+
+
+def test_rmdir_removes_empty_directory(backend: t.Any, tmp_path: Path) -> None:
+    (tmp_path / "empty").mkdir()
+    backend.rmdir(str(tmp_path / "empty"))
+    assert not (tmp_path / "empty").exists()
+
+
+def test_rmdir_refuses_non_empty_directory_by_default(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    with pytest.raises(StorageError):
+        backend.rmdir(str(target))
+    assert (target / "a.txt").read_bytes() == b"a" and (target / "sub" / "b.txt").exists()
+
+
+def test_recursive_rmdir_removes_tree(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    backend.rmdir(str(target), recursive=True)
+    assert not target.exists() and tmp_path.exists()
+
+
+def test_recursive_rmdir_removes_links_without_following_them(backend: t.Any, tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.txt").write_bytes(b"keep")
+    (target / "sub" / "link").symlink_to(outside)
+    backend.rmdir(str(target), recursive=True)
+    assert not target.exists()
+    assert (outside / "keep.txt").read_bytes() == b"keep"
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+def test_rmdir_missing_path_is_not_found(backend: t.Any, tmp_path: Path, recursive: bool) -> None:
+    with pytest.raises(PathNotFoundError):
+        backend.rmdir(str(tmp_path / "missing"), recursive=recursive)
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+@pytest.mark.parametrize("kind", ["file", "directory-link"])
+def test_rmdir_refuses_non_directories(backend: t.Any, tmp_path: Path, recursive: bool, kind: str) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "keep.txt").write_bytes(b"keep")
+    target = tmp_path / "target"
+    if kind == "file":
+        target.write_bytes(b"file")
+    else:
+        target.symlink_to(real)
+    with pytest.raises(StorageError) as caught:
+        backend.rmdir(str(target), recursive=recursive)
+    assert not isinstance(caught.value, PathNotFoundError)
+    assert os.path.lexists(target) and (real / "keep.txt").exists()
+
+
+@pytest.mark.parametrize("recursive", [False, True])
+def test_rmdir_below_a_file_is_not_absence(backend: t.Any, tmp_path: Path, recursive: bool) -> None:
+    (tmp_path / "file").write_bytes(b"file")
+    with pytest.raises(StorageError) as caught:
+        backend.rmdir(str(tmp_path / "file" / "child"), recursive=recursive)
+    assert not isinstance(caught.value, PathNotFoundError)
+    assert (tmp_path / "file").read_bytes() == b"file"
+
+
+def test_facade_rmdir_passes_recursive(tmp_path: Path) -> None:
+    target = _tree(tmp_path)
+    storage = StorageFacade.for_local()
+    with pytest.raises(StorageError):
+        storage.rmdir(str(target))
+    storage.rmdir(str(target), recursive=True)
+    assert not target.exists()
+
+
 @pytest.mark.parametrize("winner", ["directory", "file", "absent"])
 def test_sftp_mkdir_race_requires_a_directory(tmp_path: Path, winner: str) -> None:
     client = _FilesystemSFTP()
@@ -164,14 +283,14 @@ def test_sftp_mkdir_race_requires_a_directory(tmp_path: Path, winner: str) -> No
 
     mock = MagicMock(wraps=client)
     mock.mkdir.side_effect = race
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=mock))
+    backend = _single_attempt(mock)
     if winner == "directory":
         backend.mkdir(str(path))
         assert path.is_dir()
     else:
         with pytest.raises(StorageError) as caught:
             backend.mkdir(str(path))
-        assert caught.value.__cause__ is original
+        assert_safe_chain(caught.value, original)
         if winner == "file":
             assert path.read_bytes() == b"winner"
 
@@ -186,10 +305,10 @@ def test_sftp_recursive_mkdir_preserves_failures(
 ) -> None:
     client = MagicMock(wraps=_FilesystemSFTP())
     getattr(client, fault).side_effect = original
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     with pytest.raises(expected) as caught:
         backend.mkdir(str(tmp_path / "new"))
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
     assert not (tmp_path / "new").exists()
 
 
@@ -199,7 +318,7 @@ def test_sftp_missing_attributes_remain_optional() -> None:
     client = MagicMock()
     client.stat.return_value = attrs
     client.listdir_attr.return_value = [attrs]
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     for entry in [backend.get_metadata("file"), *backend.list_dir(".")]:
         assert entry.entry_type == EntryType.FILE
         assert entry.last_modified is None
@@ -216,7 +335,7 @@ def test_sftp_mkdir_accepts_ancestors_with_omitted_modes(tmp_path: Path, suffix:
         return attrs
 
     mock.stat.side_effect = stat_without_mode
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=mock))
+    backend = _single_attempt(mock)
     backend.mkdir(str(tmp_path / "new/deep") + suffix)
     assert (tmp_path / "new/deep").is_dir()
 
@@ -237,10 +356,10 @@ def test_sftp_mkdir_does_not_hide_failure_after_server_creation(
         raise original
 
     client.mkdir.side_effect = create_then_fail
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     with pytest.raises(expected) as caught:
         backend.mkdir(str(path))
-    assert caught.value.__cause__ is original
+    assert_safe_chain(caught.value, original)
     assert path.is_dir()  # Failure does not imply rollback.
 
 
@@ -366,7 +485,7 @@ class TestFilesystemEnumeration:
         else:
             with pytest.raises(PermissionDeniedError) as caught:
                 backend.list_objects(str(tmp_path))
-            assert caught.value.__cause__ is fault
+            assert_safe_chain(caught.value, fault)
 
     @pytest.mark.parametrize("delimiter", [None, "/"])
     def test_enumeration_link_policy(
@@ -426,7 +545,7 @@ class TestFilesystemEnumeration:
         monkeypatch.setattr(owner, method, denied)
         with pytest.raises(PermissionDeniedError) as caught:
             getattr(backend, operation)(str(tmp_path))
-        assert caught.value.__cause__ is fault
+        assert_safe_chain(caught.value, fault)
 
 
 @pytest.mark.parametrize("operation, suffix", [
@@ -449,7 +568,7 @@ def test_sftp_enumeration_recovers_not_directory_status(
 
     client.stat.side_effect = lambda name: protocol_call("stat", name)
     client.listdir_attr.side_effect = lambda name: protocol_call("listdir_attr", name)
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     with pytest.raises(StorageError) as caught:
         getattr(backend, operation)(str(path) + suffix)
     assert not isinstance(caught.value, PathNotFoundError)
@@ -489,7 +608,7 @@ def test_sftp_enumeration_requires_native_file_type(
     client.stat.side_effect = lambda path: attributes("stat", path)
     client.lstat.side_effect = lambda path: attributes("lstat", path)
     client.listdir_attr.side_effect = listing
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     selection = str(root / "absent") if location == "ancestor" else str(root)
     with pytest.raises(StorageError) as caught:
         backend.list_objects(selection)
@@ -512,7 +631,7 @@ def test_sftp_enumeration_recovers_listing_type_and_preserves_links(tmp_path: Pa
         return entries
 
     client.listdir_attr.side_effect = missing_modes
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     result = backend.list_objects(str(tmp_path))
     assert {entry.path for entry in result.objects} == {str(tmp_path / "real/payload"), str(tmp_path / "file-link")}
     assert result.common_prefixes == ()
@@ -547,11 +666,11 @@ def test_sftp_enumeration_propagates_native_failures(
         client.listdir_attr.side_effect = fault
     else:
         client.stat.side_effect = fail
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     selection = str(tmp_path / "absent") if fault_at == "ancestor" else str(tmp_path)
     with pytest.raises(expected) as caught:
         backend.list_objects(selection)
-    assert caught.value.__cause__ is fault
+    assert_safe_chain(caught.value, fault)
 
 
 def test_sftp_enumeration_preserves_optional_file_metadata(tmp_path: Path) -> None:
@@ -561,7 +680,7 @@ def test_sftp_enumeration_preserves_optional_file_metadata(tmp_path: Path) -> No
     attrs.st_size = attrs.st_mtime = None
     client = MagicMock()
     client.stat.return_value = attrs
-    backend = SFTPStorageBackend(connection=SimpleNamespace(client=client))
+    backend = _single_attempt(client)
     result = backend.list_objects(str(path))
     assert [(entry.path, entry.size, entry.last_modified) for entry in result.objects] == [(str(path), None, None)]
 

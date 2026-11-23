@@ -1,6 +1,8 @@
 """S3MetadataMixin — metadata operations for AWS S3."""
 from __future__ import annotations
 
+import typing as t
+
 from mountainash_transport._core.dataclasses.storage_entry import StorageEntry
 from mountainash_transport.storage.protocols import StorageMetadataProtocol
 from mountainash_transport._core.exceptions import PathNotFoundError
@@ -25,6 +27,33 @@ def _pick_checksum(response: dict) -> tuple[str, str]:
     return "", ""
 
 
+def entry_from_response(
+    bucket: str, key: str, response: t.Mapping[str, t.Any] | None, size: int | None,
+) -> StorageEntry:
+    """The StorageEntry for ``s3://bucket/key`` from an S3 response already in hand.
+
+    Accepts HeadObject, PutObject, CompleteMultipartUpload and CopyObject
+    responses (whose ETag and LastModified sit under ``CopyObjectResult``).
+    *size* is supplied by the caller; a None *response* gives path, name and size only.
+    """
+    response = response or {}
+    result = response.get("CopyObjectResult") or response
+    checksum, checksum_algorithm = _pick_checksum(t.cast(dict, result))
+    return StorageEntry(
+        path=f"s3://{bucket}/{key}",
+        name=key.rsplit("/", 1)[-1] if "/" in key else key,
+        size=size,
+        last_modified=result.get("LastModified"),
+        etag=result.get("ETag", "").strip('"'),
+        content_type=response.get("ContentType", ""),
+        storage_class=response.get("StorageClass", ""),
+        source="s3",
+        version_id=response.get("VersionId", ""),
+        checksum=checksum,
+        checksum_algorithm=checksum_algorithm,
+    )
+
+
 class S3MetadataMixin(StorageMetadataProtocol):
     """Metadata mixin for AWS S3."""
 
@@ -32,21 +61,7 @@ class S3MetadataMixin(StorageMetadataProtocol):
         bucket, key = parse_s3_path(path)
         with _mapped(path):
             response = self._client.head_object(Bucket=bucket, Key=key)  # type: ignore[attr-defined]
-        name = key.rsplit("/", 1)[-1] if "/" in key else key
-        checksum, checksum_algorithm = _pick_checksum(response)
-        return StorageEntry(
-            path=f"s3://{bucket}/{key}",
-            name=name,
-            size=response.get("ContentLength", 0),
-            last_modified=response.get("LastModified"),
-            etag=response.get("ETag", "").strip('"'),
-            content_type=response.get("ContentType", ""),
-            storage_class=response.get("StorageClass", ""),
-            source="s3",
-            version_id=response.get("VersionId", ""),
-            checksum=checksum,
-            checksum_algorithm=checksum_algorithm,
-        )
+        return entry_from_response(bucket, key, response, response.get("ContentLength", 0))
 
     def path_exists(self, path: str) -> bool:
         bucket, key = parse_s3_path(path)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import httpx
 from dataclasses import FrozenInstanceError
 import typing as t
 from unittest.mock import MagicMock
@@ -70,18 +71,20 @@ class TestHttpResponse:
         r = self._make(content=b'"\xff"')
         with pytest.raises(HttpDecodeError) as exc_info:
             r.json()
-        assert isinstance(exc_info.value.__cause__, UnicodeDecodeError)
+        assert str(exc_info.value).endswith("(UnicodeDecodeError)")
+        assert exc_info.value.__cause__ is None
 
     def test_json_is_a_method_not_a_property(self):
         r = self._make()
         # Calling .json should return a callable, not the parsed data
         assert callable(r.json)
 
-    def test_json_error_chained_from_original(self):
+    def test_json_error_names_native_class_without_chaining(self):
         r = self._make(content=b"bad")
         with pytest.raises(HttpDecodeError) as exc_info:
             r.json()
-        assert exc_info.value.__cause__ is not None
+        assert str(exc_info.value).endswith("(JSONDecodeError)")
+        assert exc_info.value.__cause__ is None and exc_info.value.__context__ is None
 
 
 # ---------------------------------------------------------------------------
@@ -94,8 +97,7 @@ class TestHttpStreamResponse:
         mock = MagicMock()
         mock.status_code = kwargs.get("status_code", 200)
         mock.headers = kwargs.get("headers", {"content-type": "text/plain"})
-        mock.url = kwargs.get("url", MagicMock())
-        mock.url.__str__ = lambda self: "https://example.com/stream"
+        mock.url = kwargs.get("url", httpx.URL("https://example.com/stream"))
         mock.request = MagicMock()
         mock.request.method = kwargs.get("method", "GET")
         return mock

@@ -38,9 +38,6 @@ http = [
 s3 = [
     "mountainash-transport[http]",
     "boto3>=1.29.4",
-    "s3fs>=2023.1.0",
-    "aiobotocore[boto3]>=2.19.0",
-    "minio>=7.2.7",
 ]
 gcs = [
     "mountainash-transport[http]",
@@ -55,17 +52,12 @@ azure = [
 sftp = [
     "mountainash-transport[http]",
     "paramiko>=5.0.0",
-    "smart-open[ssh]>=7.0.4",
 ]
 encryption = ["python-gnupg>=0.5.2"]
 oauth1 = ["mountainash-transport[http]", "authlib>=1.9.1"]
 all = [
     "mountainash-transport[http]",
     "boto3>=1.29.4",
-    "s3fs>=2023.1.0",
-    "aiobotocore[boto3]>=2.19.0",
-    "minio>=7.2.7",
-    "smart-open[all]>=7.0.4",
     "google-cloud-storage>=2.9.0",
     "gcsfs>=2023.1.0",
     "azure-storage-blob>=12.13.0",

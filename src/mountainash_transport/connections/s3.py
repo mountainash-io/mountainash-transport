@@ -8,7 +8,10 @@ from typing_extensions import Self
 
 from mountainash_transport.connections.errors import TransportConnectionError
 
+from .._core.extras import raise_for_missing_extra
 from .._core.protocols import ConnectionProtocol
+from .._core.s3_capture import install_client_hooks
+from .._core.safe_display import add_cleanup_note, raise_safe, safe_detail
 
 
 class S3Connection(ConnectionProtocol):
@@ -22,12 +25,15 @@ class S3Connection(ConnectionProtocol):
         try:
             import boto3
         except ImportError as exc:
-            raise TransportConnectionError(
-                "boto3 is required for S3 connections — install with: "
-                "pip install mountainash-transport[s3]"
-            ) from exc
+            raise_for_missing_extra("S3 connections", "s3", exc)
 
         self.disconnect()
+        session = self._connect_kwargs.get("session") if "client_config" in self._connect_kwargs else None
+        if session and session.get("profile_name") and "aws_access_key_id" in session:
+            raise ValueError(
+                "Ambiguous S3 credentials: set either PROFILE_NAME or explicit "
+                "keys on the IAMAuthProfile, not both."
+            )
         try:
             if "client_config" in self._connect_kwargs:
                 self._client = self._build_via_session(boto3)
@@ -35,10 +41,11 @@ class S3Connection(ConnectionProtocol):
                 kwargs = dict(self._connect_kwargs)
                 kwargs.pop("service_name", None)
                 self._client = boto3.client("s3", **kwargs)
-        except (ValueError, TransportConnectionError):
+            install_client_hooks(self._client)  # before the client is shared
+        except TransportConnectionError:
             raise
         except Exception as exc:
-            raise TransportConnectionError(f"Failed to create S3 client: {exc}") from exc
+            raise_safe(TransportConnectionError(f"Failed to create S3 client ({safe_detail(exc)})"), exc)
 
         return self
 
@@ -52,11 +59,6 @@ class S3Connection(ConnectionProtocol):
 
         profile_name = session_inputs.pop("profile_name", None)
         has_keys = "aws_access_key_id" in session_inputs
-        if profile_name and has_keys:
-            raise ValueError(
-                "Ambiguous S3 credentials: set either PROFILE_NAME or explicit "
-                "keys on the IAMAuthProfile, not both."
-            )
         region = session_inputs.get("region_name")
 
         if profile_name:
@@ -75,16 +77,16 @@ class S3Connection(ConnectionProtocol):
                 AssumeRoleCredentialFetcher,
                 DeferredRefreshableCredentials,
             )
-        except ImportError as exc:  # pragma: no cover - botocore ships with boto3
-            raise TransportConnectionError(
-                "botocore is required for assume-role S3 connections"
-            ) from exc
+        except ImportError as exc:
+            raise_for_missing_extra("assume-role S3 connections", "s3", exc)
 
         bc = source._session
-        verify = client_config.get("verify", True)
+        # No default: an absent verify lets botocore resolve AWS_CA_BUNDLE / ca_bundle.
+        verify = client_config.get("verify")
 
         def _sts_creator(*a: t.Any, **k: t.Any) -> t.Any:
-            k.setdefault("verify", verify)
+            if verify is not None:
+                k.setdefault("verify", verify)
             return bc.create_client(*a, **k)
 
         src_creds = bc.get_credentials()
@@ -110,13 +112,36 @@ class S3Connection(ConnectionProtocol):
             target.set_config_variable("region", region)
         return boto3.Session(botocore_session=target).client("s3", **client_config)
 
+    def _assumes_role(self) -> bool:
+        """True if connecting calls AWS STS: an explicit ROLE_ARN, or a named AWS
+        profile whose config sets ``role_arn`` (botocore then assumes the role)."""
+        env = self._connect_kwargs
+        if "client_config" not in env:
+            return False
+        if env.get("role_arn"):
+            return True
+        profile_name = env["session"].get("profile_name")
+        if not profile_name:
+            return False
+        try:
+            import boto3
+            import botocore.exceptions
+        except ImportError as exc:
+            raise_for_missing_extra("S3 connections", "s3", exc)
+
+        try:
+            config = boto3.Session(profile_name=profile_name)._session.full_config
+        except botocore.exceptions.ProfileNotFound:
+            return False  # connect() reports the missing profile
+        return bool(config.get("profiles", {}).get(profile_name, {}).get("role_arn"))
+
     def disconnect(self) -> None:
         client, self._client = self._client, None
         if client is not None:
             try:
                 client.close()
             except Exception as exc:
-                raise TransportConnectionError(f"Failed to close S3 client: {exc}") from exc
+                raise_safe(TransportConnectionError(f"Failed to close S3 client ({safe_detail(exc)})"), exc)
 
     @property
     def client(self) -> t.Any:
@@ -138,6 +163,4 @@ class S3Connection(ConnectionProtocol):
         except BaseException as cleanup:
             if exc_value is None:
                 raise
-            exc_value.add_note(f"Connection cleanup also failed: {cleanup!r}")
-            for note in getattr(cleanup, "__notes__", ()):
-                exc_value.add_note(note)
+            add_cleanup_note(exc_value, "Connection cleanup also failed", cleanup)

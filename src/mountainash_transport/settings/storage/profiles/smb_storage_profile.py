@@ -1,23 +1,10 @@
-"""SMB / CIFS settings.
+"""SMB / CIFS profile.
 
-Descriptor-driven SMB settings for the :mod:`smbprotocol` SDK. Scope is
-the connection layer only — SHARE and per-file parameters are not
-connection-level config and belong to call-site API.
-
-The legacy ``SMBStorageAuthSettings`` carried a sea of protocol-version
-knobs (``VERSION`` / ``MIN_VERSION`` / ``MAX_VERSION`` / ``PREFERRED_DIALECT`` /
-``FALLBACK_VERSIONS``) that are not real smbprotocol params — the SMB
-dialect is auto-negotiated at session registration time. All five
-fake fields are dropped.
-
-Kerberos configuration folds into :class:`KerberosAuth` (upstream);
-the legacy ``USE_KERBEROS`` / ``KERBEROS_KDC`` / ``KERBEROS_REALM`` /
-``KERBEROS_KEYTAB`` flat fields are retired.
-
-Adapter
-(:func:`mountainash_transport.settings.adapters.smb.build_handler_kwargs`)
-produces kwargs for :func:`smbprotocol.session.Session.register_session`-style
-client construction.
+Connection-level settings for the :mod:`smbprotocol` SDK; the share and
+per-file parameters belong to individual calls. The SMB dialect is
+negotiated at session registration, and Kerberos is configured through the
+auth profile. :meth:`SMBStorageProfile.to_handler_kwargs` returns kwargs for
+``smbprotocol`` session registration. Transport has no SMB backend yet.
 """
 
 from __future__ import annotations
@@ -119,7 +106,7 @@ class SMBStorageProfile(Profile):
     Fields are installed from :data:`SMB_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass.
     Auth is resolved via the discriminated ``auth`` union; see
-    :func:`~mountainash_transport.settings.adapters.smb.build_handler_kwargs`.
+    :meth:`to_handler_kwargs`.
 
     Auth maps onto smbprotocol ``register_session`` kwargs as follows:
         - :class:`PasswordAuth`  → ``auth_protocol="negotiate"`` (NTLM +

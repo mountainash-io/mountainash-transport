@@ -1,15 +1,10 @@
-"""Consolidated S3-family settings (AWS S3, S3 Express, R2, MinIO, B2).
+"""S3-family profile (AWS S3, S3 Express, R2, MinIO, B2).
 
-Collapses five per-flavor settings classes into one :class:`S3StorageProfile`
-class discriminated by a ``FLAVOR`` field. All five flavors wrap boto3 for
-data-plane operations; the only structural differences are endpoint URL,
-addressing-style constraints, and a couple of flavor-specific fields
-(``ACCOUNT_ID`` for R2 endpoint templating).
-
-Mirrors the Phase 3 ``AWSSecretsSettings`` pattern: the class is a two-line
-shell; all parameters live on the descriptor; the adapter
-(:func:`mountainash_transport.settings.adapters.s3.build_handler_kwargs`)
-produces boto3 kwargs.
+One :class:`S3StorageProfile` class for five flavors, selected by ``FLAVOR``.
+All of them use boto3; they differ in endpoint URL, addressing-style
+constraints and a few flavor-specific fields (``ACCOUNT_ID`` for the R2
+endpoint). Parameters live on :data:`S3_SPEC`; ``emit(TargetFamily.BOTO)``
+(``_s3_boto_kwargs``) produces the boto3 kwargs.
 """
 
 from __future__ import annotations
@@ -68,6 +63,21 @@ S3_SPEC = StorageProfileSpec(
                       description="Random-read cache block/read-ahead size in bytes."),
         ParameterSpec(name="RANGE_MAX_BLOCKS", type=t.Optional[int], default=None, tier="advanced",
                       description="Maximum retained blocks for blockcache."),
+        ParameterSpec(name="BUFFER_MEMORY_LIMIT", type=t.Optional[int], default=None, tier="advanced",
+                      description="access='buffered' keeps up to this many bytes in memory, then spills to "
+                                  "a temp file. None keeps the default (64 MiB)."),
+        ParameterSpec(name="MULTIPART_THRESHOLD", type=t.Optional[int], default=None, tier="advanced",
+                      description="Stream uploads at or above this size in bytes use multipart upload. "
+                                  "None keeps boto3's default (8 MiB)."),
+        ParameterSpec(name="MULTIPART_CHUNKSIZE", type=t.Optional[int], default=None, tier="advanced",
+                      description="Multipart upload part size in bytes (S3 minimum 5 MiB). "
+                                  "None keeps boto3's default (8 MiB)."),
+        ParameterSpec(name="MAX_CONCURRENCY", type=t.Optional[int], default=None, tier="advanced",
+                      description="Parallel part uploads for one stream upload. None keeps boto3's default (10)."),
+        ParameterSpec(name="RETRY_MAX_ATTEMPTS", type=t.Optional[int], default=None, tier="advanced",
+                      description="Total attempts per request, retried by botocore in standard mode; 1 disables "
+                                  "retry. None leaves retries to botocore's own settings (AWS_MAX_ATTEMPTS, "
+                                  "AWS_RETRY_MODE, ~/.aws/config)."),
         ParameterSpec(
             name="FLAVOR",
             type=str,
@@ -153,6 +163,16 @@ S3_SPEC = StorageProfileSpec(
             description="Whether to verify SSL certificates.",
         ),
         ParameterSpec(
+            name="CA_BUNDLE",
+            type=t.Optional[str],
+            tier="advanced",
+            default=None,
+            description=(
+                "Path to a CA bundle that signs the endpoint's certificate. Unset: "
+                "botocore resolves AWS_CA_BUNDLE / ca_bundle. Ignored when VERIFY_SSL is False."
+            ),
+        ),
+        ParameterSpec(
             name="CONNECT_TIMEOUT",
             type=t.Optional[float],
             tier="advanced",
@@ -213,6 +233,7 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     accelerate = bool(getattr(profile, "ACCELERATE_ENDPOINT", False))
     dualstack = bool(getattr(profile, "DUALSTACK_ENDPOINT", False))
     verify_ssl = getattr(profile, "VERIFY_SSL", True)
+    ca_bundle = getattr(profile, "CA_BUNDLE", None)
 
     effective_region = "auto" if flavor == "r2" else region
 
@@ -220,7 +241,12 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
     base["service_name"] = "s3"
     base["region_name"] = effective_region
     base["use_ssl"] = use_ssl
-    base["verify"] = verify_ssl
+    # Omitting verify lets botocore resolve AWS_CA_BUNDLE / ca_bundle; an
+    # explicit True would override them.
+    if not verify_ssl:
+        base["verify"] = False
+    elif ca_bundle:
+        base["verify"] = ca_bundle
 
     resolved_endpoint = profile._resolve_endpoint_url(
         flavor, region, endpoint_url, account_id
@@ -244,6 +270,10 @@ def _s3_boto_kwargs(profile: Profile, kw: dict[str, t.Any]) -> dict[str, t.Any]:
             config_kwargs["connect_timeout"] = connect_timeout
         if read_timeout is not None:
             config_kwargs["read_timeout"] = read_timeout
+        max_attempts = getattr(profile, "RETRY_MAX_ATTEMPTS", None)
+        if max_attempts is not None:
+            # botocore retries S3 requests itself; total_max_attempts counts the first request.
+            config_kwargs["retries"] = {"total_max_attempts": max_attempts, "mode": "standard"}
         base["config"] = _botocore_config.Config(**config_kwargs)
 
     return base
@@ -255,15 +285,19 @@ class S3StorageProfile(Profile):
 
     Fields are installed from :data:`S3_SPEC` by the
     :class:`~mountainash_settings.profiles.Profile` metaclass. The
-    ``FLAVOR`` field discriminates per-flavor endpoint defaults and
-    addressing-style constraints; see
-    :func:`~mountainash_transport.settings.adapters.s3.build_handler_kwargs`.
+    ``FLAVOR`` field selects per-flavor endpoint defaults and
+    addressing-style constraints; see ``_s3_boto_kwargs``.
     """
 
     if t.TYPE_CHECKING:
         RANGE_CACHE: str | None
         RANGE_BLOCK_SIZE: int | None
         RANGE_MAX_BLOCKS: int | None
+        BUFFER_MEMORY_LIMIT: int | None
+        MULTIPART_THRESHOLD: int | None
+        MULTIPART_CHUNKSIZE: int | None
+        MAX_CONCURRENCY: int | None
+        RETRY_MAX_ATTEMPTS: int | None
         # Static view of the fields generated from __spec__ (kept in sync by tests).
         FLAVOR: str
         REGION: str
@@ -275,6 +309,7 @@ class S3StorageProfile(Profile):
         ACCELERATE_ENDPOINT: bool
         DUALSTACK_ENDPOINT: bool
         VERIFY_SSL: bool
+        CA_BUNDLE: str | None
         CONNECT_TIMEOUT: float | None
         READ_TIMEOUT: float | None
 
@@ -345,9 +380,9 @@ class S3StorageProfile(Profile):
 
 
     def to_handler_kwargs(self) -> dict[str, t.Any]:
-        """Deprecated shim — kept for downstream callers (Phase 4 D2a).
+        """Return the boto3 kwargs ``emit(TargetFamily.BOTO)`` produces.
 
-        Delegates to the unified ``emit()`` pipeline. Internal callers should
-        use ``emit(TargetFamily.BOTO)`` directly. Slated for removal in a later major.
+        Required by :class:`ProfileProtocol`; auth credentials are layered on
+        by ``create_connection``.
         """
         return self.emit(self._sdk_family())
