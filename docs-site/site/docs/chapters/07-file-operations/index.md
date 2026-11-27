@@ -294,7 +294,7 @@ The first pair of lines is the local store and the second is S3.
 - Local and SFTP have no batch delete, so they delete one path at a time; SFTP retries each delete as it would a single `delete()`.
 - Every path is checked against the location policy before anything is deleted. A path outside the allowed root raises at once, and nothing is removed.
 
-If any path cannot be deleted, `delete_many` raises one `BulkDeleteError` at the end. Its `failures` attribute lists, in input order, each path that remains with the storage error it raised (for example `PermissionDeniedError`); every other path is gone. A directory is not a file, so a directory path fails here as it does with `delete()`.
+If any path cannot be deleted, `delete_many` raises one `BulkDeleteError` at the end. Its `failures` attribute lists, in input order, each path that remains with the storage error it raised (for example `PermissionDeniedError`); every other path is gone. Each listed path is its display form, with userinfo, query and fragment removed, so `sftp://user:pw@host:22/x` is listed as `sftp://host:22/x`. A directory is not a file, so a directory path fails here as it does with `delete()`.
 
 ```python
 from mountainash_transport import BulkDeleteError

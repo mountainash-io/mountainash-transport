@@ -76,7 +76,7 @@ Explained in [Buffered access](chapters/09-read-access-modes/index.md#buffered-a
 
 ## `BulkDeleteError`
 
-The `StorageError` raised once at the end of `delete_many` when some paths could not be deleted. Its `failures` attribute lists, in input order, each remaining path with the storage error it raised; every other path was deleted, and missing paths are never listed.
+The `StorageError` raised once at the end of `delete_many` when some paths could not be deleted. Its `failures` attribute lists, in input order, each remaining path (display form: userinfo, query and fragment removed) with the storage error it raised; every other path was deleted, and missing paths are never listed.
 
 Related: [`StorageDeleteProtocol`](#storagedeleteprotocol).
 

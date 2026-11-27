@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing as t
 
 from mountainash_transport._core.exceptions import BulkDeleteError, PathNotFoundError, StorageError
+from mountainash_transport._core.safe_display import safe_location
 
 from .s3_path import parse_s3_path
 from ._helpers import _map_error, _mapped
@@ -74,5 +75,5 @@ class S3DeleteMixin(StorageDeleteProtocol):
             index, path = by_key[item["Key"]]
             error = ClientError({"Error": {"Code": item.get("Code", ""), "Message": item.get("Message", "")}},
                                 "DeleteObjects")
-            failed.append((index, path, _map_error(error, path) or StorageError(path)))
+            failed.append((index, path, _map_error(error, path) or StorageError(safe_location(path))))
         return failed
