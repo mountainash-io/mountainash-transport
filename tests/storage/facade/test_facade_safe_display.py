@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from mountainash_transport._core.exceptions import BulkDeleteError, PermissionDeniedError, StorageConnectionError
-from mountainash_transport import StorageError, StorageFacade, UnsupportedOperationError
+from mountainash_transport import StorageError, StorageFacade, UnsupportedOperationError, copy_between
 from mountainash_transport.location import LocationPolicy
 
 SENT = ("SENTU", "SENTP", "SENTQ", "SENTF")
@@ -37,6 +37,7 @@ OPERATIONS = {
     "move": lambda f, p: f.move(p, p + "-moved"),
     "presign": lambda f, p: f.presign(p),
     "local_path": lambda f, p: f.local_path(p),
+    "copy_between": lambda f, p: copy_between(p, p + "-copy", f, f),  # native copy where supported, else streams
 }
 UNSUPPORTED = {
     "http": {"delete", "delete_many", "list_objects", "list_dir", "mkdir", "rmdir", "copy", "move", "presign"},
