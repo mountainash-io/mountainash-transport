@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mountainash_transport._core.exceptions import PermissionDeniedError, StorageConnectionError
+from mountainash_transport._core.exceptions import BulkDeleteError, PermissionDeniedError, StorageConnectionError
 from mountainash_transport import StorageError, StorageFacade, UnsupportedOperationError
 from mountainash_transport.location import LocationPolicy
 
@@ -33,20 +33,38 @@ OPERATIONS = {
     "mkdir": lambda f, p: f.mkdir(p),
     "rmdir": lambda f, p: f.rmdir(p),
     "copy": lambda f, p: f.copy(p, p + "-copy"),
+    "delete_many": lambda f, p: f.delete_many([p]),
+    "move": lambda f, p: f.move(p, p + "-moved"),
+    "presign": lambda f, p: f.presign(p),
+    "local_path": lambda f, p: f.local_path(p),
 }
 UNSUPPORTED = {
-    "http": {"delete", "list_objects", "list_dir", "mkdir", "rmdir", "copy"},
-    "s3": {"list_dir", "mkdir", "rmdir"},
-    "sftp": {"copy"},
+    "http": {"delete", "delete_many", "list_objects", "list_dir", "mkdir", "rmdir", "copy", "move", "presign"},
+    "s3": {"list_dir", "mkdir", "rmdir", "move"},
+    "sftp": {"copy", "presign"},
 }
+NO_IO = {"local_path"}  # remote backends answer None without touching the store
 
 
 def _expect(kind, operation):
-    """Exception the operation must raise: unsupported ops fail before any I/O."""
+    """Exception the operation must raise: unsupported ops fail before any I/O.
+
+    ``None``: remote ``local_path`` answers ``None`` without I/O, or a policy refusal.
+    """
+    if operation == "local_path":
+        return None
     return UnsupportedOperationError if operation in UNSUPPORTED[kind] else StorageError
 
 
 def _run(facade, operation, path, expected, caplog):
+    if expected is None:
+        try:
+            assert OPERATIONS[operation](facade, path) is None
+        except (ValueError, StorageError) as exc:
+            _walk(exc, caplog.records)
+            return exc
+        _walk(None, caplog.records)
+        return None
     with pytest.raises(expected) as info:
         OPERATIONS[operation](facade, path)
     if expected is StorageError:
@@ -56,8 +74,9 @@ def _run(facade, operation, path, expected, caplog):
 
 
 def _walk(exc, records):
-    text = "".join(traceback.format_exception(exc))
-    pending, seen = [exc], set()
+    """Assert no sentinel in *exc*, its cause/context chain, ``BulkDeleteError`` failures, or *records*."""
+    text = "" if exc is None else "".join(traceback.format_exception(exc))
+    pending, seen = [] if exc is None else [exc], set()
     while pending:
         link = pending.pop()
         if id(link) in seen:
@@ -65,9 +84,17 @@ def _walk(exc, records):
         seen.add(id(link))
         text += str(link) + repr(link) + repr(link.args) + repr(vars(link))
         pending.extend(e for e in (link.__cause__, link.__context__) if e is not None)
+        pending.extend(error for _, error in getattr(link, "failures", ()))
     text += "".join(r.getMessage() for r in records)
     for sentinel in SENT:
         assert sentinel not in text, sentinel
+
+
+def test_bulk_delete_error_failures_hold_display_forms():
+    error = StorageError("delete failed")
+    exc = BulkDeleteError((("sftp://SENTU:SENTP@host:22/x?sig=SENTQ#SENTF", error),))
+    _walk(exc, [])
+    assert exc.failures == (("sftp://host:22/x", error),)
 
 
 @pytest.fixture
@@ -99,7 +126,7 @@ def test_http_walk(failing_server, policy, operation, caplog, library_loggers_de
     url = f"http://SENTU:SENTP@127.0.0.1:{port}/x.csv?sig=SENTQ#SENTF"
     with StorageFacade.from_path(url, policy=policy) as facade:
         _run(facade, operation, url, _expect("http", operation), caplog)
-    if operation not in UNSUPPORTED["http"]:
+    if operation not in UNSUPPORTED["http"] | NO_IO:
         assert hits, "backend never reached the server"
 
 
@@ -112,8 +139,8 @@ def _s3_facade(monkeypatch, policy):
 
     error = ClientError({"Error": {"Code": "InternalError", "Message": "SENTP"}}, "Op")
     client = MagicMock()
-    for name in ("get_object", "put_object", "head_object", "delete_object", "list_objects_v2",
-                 "copy_object", "copy", "upload_fileobj", "get_paginator"):
+    for name in ("get_object", "put_object", "head_object", "delete_object", "delete_objects", "list_objects_v2",
+                 "copy_object", "copy", "upload_fileobj", "get_paginator", "generate_presigned_url"):
         getattr(client, name).side_effect = error
     backend = S3StorageBackend(None)
     backend._client = client
@@ -130,10 +157,13 @@ def test_s3_credential_url_rejected(monkeypatch, policy, operation, caplog):
     facade, client = _s3_facade(monkeypatch, policy)
     path = "s3://SENTU:SENTP@bucket/x.csv?sig=SENTQ#SENTF"
     with facade:
-        expected = UnsupportedOperationError if operation in UNSUPPORTED["s3"] else (ValueError, StorageError)
-        with pytest.raises(expected) as info:
-            OPERATIONS[operation](facade, path)
-        _walk(info.value, caplog.records)
+        if operation == "local_path":
+            _run(facade, operation, path, None, caplog)
+        else:
+            expected = UnsupportedOperationError if operation in UNSUPPORTED["s3"] else (ValueError, StorageError)
+            with pytest.raises(expected) as info:
+                OPERATIONS[operation](facade, path)
+            _walk(info.value, caplog.records)
     assert not client.method_calls
 
 
@@ -146,7 +176,7 @@ def test_s3_walk(monkeypatch, policy, operation, caplog):
     path = "s3://bucket/x.csv?sig=SENTQ#SENTF"
     with facade:
         _run(facade, operation, path, _expect("s3", operation), caplog)
-    assert bool(client.method_calls) == (operation not in UNSUPPORTED["s3"])
+    assert bool(client.method_calls) == (operation not in UNSUPPORTED["s3"] | NO_IO)
 
 
 REACHABLE_SFTP = ("/dir/x.csv", "sftp://SENTU:SENTP@host:22/dir/x.csv")
@@ -173,7 +203,7 @@ def test_sftp_walk(monkeypatch, policy, operation, path, caplog):
                         "get_storage_backend", lambda *args, **kwargs: backend)
     with StorageFacade(CONST_STORAGE_PROVIDER_TYPE.SFTP, policy=policy) as facade:
         _run(facade, operation, path, _expect("sftp", operation), caplog)
-    assert bool(client.method_calls) == (operation not in UNSUPPORTED["sftp"] and path in REACHABLE_SFTP
+    assert bool(client.method_calls) == (operation not in UNSUPPORTED["sftp"] | NO_IO and path in REACHABLE_SFTP
                                                        and (path == "/dir/x.csv" or policy is not POLICIES[2]))
 
 
@@ -197,7 +227,8 @@ LOCAL_ERRORS = {
     "connection": (ConnectionResetError(104, "Connection reset by peer", "/x/SENTP"), StorageConnectionError),
     "errnoless": (OSError("SENTP native text"), StorageError),
 }
-LOCAL_OPERATIONS = sorted(set(OPERATIONS) - {"exists"})  # exists answers False on a failing stat
+# exists answers False on a failing stat; presign is unsupported locally and fails before any I/O
+LOCAL_OPERATIONS = sorted(set(OPERATIONS) - {"exists", "presign"})
 LOCAL_IO = {"stat", "lstat", "remove", "rmdir", "mkdir", "makedirs", "scandir"}
 LOCAL_SHUTIL = {"copy2", "copyfile", "rmtree"}
 
@@ -235,7 +266,8 @@ def test_local_native_oserrors_walk(monkeypatch, tmp_path, kind, operation, poli
     with StorageFacade.from_path(path, policy=policy) as facade:
         with pytest.raises(StorageError) as info:
             OPERATIONS[operation](facade, path)
-    assert isinstance(info.value, expected), repr(info.value)
+    raised = info.value.failures[0][1] if isinstance(info.value, BulkDeleteError) else info.value
+    assert isinstance(raised, expected), repr(info.value)
     assert not isinstance(info.value, UnsupportedOperationError)
     _walk(info.value, caplog.records)
 
