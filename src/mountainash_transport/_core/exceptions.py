@@ -40,12 +40,13 @@ class BulkDeleteError(StorageError):
 
     Every path was attempted; those listed in ``failures`` (input order, with
     the error each raised) remain, and every other path is gone. Missing paths
-    count as deleted and are never listed.
+    count as deleted and are never listed. Each listed path is its display form
+    (``safe_location``): userinfo, query and fragment are removed.
     """
 
     def __init__(self, failures: tuple[tuple[str, StorageError], ...]) -> None:
-        self.failures = failures
-        shown = ", ".join(safe_location(path) for path, _ in failures[:_SHOWN_FAILURES])
+        self.failures = tuple((safe_location(path), error) for path, error in failures)
+        shown = ", ".join(path for path, _ in self.failures[:_SHOWN_FAILURES])
         more = f" (+{len(failures) - _SHOWN_FAILURES} more)" if len(failures) > _SHOWN_FAILURES else ""
         super().__init__(f"{len(failures)} path(s) could not be deleted: {shown}{more}")
 
