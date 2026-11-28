@@ -23,11 +23,11 @@ on:
         type: choice
         options: [production, rc, beta]
       fallback_branch:
-        description: Fallback branch for sibling dependencies
+        description: Fallback branch for sibling dependencies (main qualifies against released siblings)
         required: true
-        default: develop
+        default: main
         type: choice
-        options: [develop, main]
+        options: [main, develop]
 
 permissions:
   contents: read

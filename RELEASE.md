@@ -10,7 +10,9 @@ changes or candidate builds alone do not establish publication.
    reviewed `release/*` or `hotfix/*` changes. Never push directly to protected branches.
 2. CI reads `.github/config/mountainash_dependencies.yml` and checks out settings,
    secrets, and auth-client under `temp/`. It selects a matching source branch,
-   falling back to the PR base branch or manual `fallback_branch` input.
+   falling back to the PR base branch or manual `fallback_branch` input. Manual
+   dispatches default to `main`, so release runs qualify against the released
+   sibling mains; pass `fallback_branch=develop` only for development rehearsals.
 3. Hatch installs all three siblings before installing transport. Runtime version
    bounds remain enforced; local paths do not bypass compatibility checks.
 4. `build-and-release-package.yml` builds one transport wheel and sdist plus sibling
